@@ -1,0 +1,23 @@
+# ==============================================================================
+# IndoBot Signal (IBS) — Requirements
+# Python 3.9+
+# ==============================================================================
+
+# --- Core HTTP & Data ---
+requests==2.31.0
+pandas>=2.2.0
+
+# --- Technical Analysis (pure Python, zero C-dependency) ---
+pandas-ta>=0.4.67b0
+
+# --- Telegram Integration (async, v20+) ---
+python-telegram-bot==20.7
+
+# --- Scheduler (in-process, menjaga state antar job) ---
+APScheduler==3.10.4
+
+# --- Configuration ---
+python-dotenv==1.0.0
+
+# --- Utilities ---
+pytz==2024.1

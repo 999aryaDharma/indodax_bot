@@ -1,0 +1,26 @@
+[Unit]
+Description=IndoBot Signal (IBS) - Crypto Trading Signal Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ibs
+WorkingDirectory=/home/ibs/indobot-signal
+ExecStart=/home/ibs/indobot-signal/.venv/bin/python src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ibs
+
+# Keamanan: proses tidak bisa menulis ke direktori sistem
+ProtectSystem=strict
+ReadWritePaths=/home/ibs/indobot-signal/logs
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ibs/indobot-signal/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,30 @@
+# === SECRETS — NEVER COMMIT ===
+.env
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# === Logs ===
+logs/*.log
+logs/*.log.*
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
