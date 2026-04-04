@@ -10,8 +10,8 @@ pandas>=2.2.0
 # --- Technical Analysis (pure Python, zero C-dependency) ---
 pandas-ta>=0.4.67b0
 
-# --- Telegram Integration (async, v20+) ---
-python-telegram-bot==20.7
+# --- Telegram Integration (async, v21+ supports Python 3.13) ---
+python-telegram-bot>=21.0
 
 # --- Scheduler (in-process, menjaga state antar job) ---
 APScheduler==3.10.4
