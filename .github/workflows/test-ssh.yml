@@ -12,8 +12,11 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
+          # Gunakan printf untuk menghindari newline issues
+          printf '%s\n' "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
+          # Validate key
+          ssh-keygen -y -f ~/.ssh/gcp_key > /dev/null 2>&1 && echo "✅ SSH key valid" || echo "❌ SSH key invalid!"
           ssh-keyscan -H ${{ secrets.GCP_VM_EXTERNAL_IP }} >> ~/.ssh/known_hosts
 
       - name: Test SSH Connection
@@ -24,22 +27,22 @@ jobs:
           echo "🔍 Testing SSH connection..."
           echo "📍 User: $VM_USER"
           echo "📍 IP: $VM_IP"
-          
+
           # Test 1: Simple whoami command
           echo ""
           echo "Test 1: whoami"
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "whoami"
-          
+
           # Test 2: Check directory
           echo ""
           echo "Test 2: ls /home/aryadharmawm22/"
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "ls -la /home/aryadharmawm22/"
-          
+
           # Test 3: Check git repo
           echo ""
           echo "Test 3: git repo check"
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "cd /home/aryadharmawm22/indodax_bot && git log -1 --oneline"
-          
+
           echo ""
           echo "✅ All SSH tests passed!"
 

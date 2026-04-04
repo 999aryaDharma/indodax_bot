@@ -19,9 +19,12 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
+          # Gunakan printf untuk menghindari newline issues dari echo
+          printf '%s\n' "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
-          # Add known hosts untuk menghindari host key verification prompt
+          # Debug: cek apakah key valid
+          ssh-keygen -y -f ~/.ssh/gcp_key > /dev/null 2>&1 && echo "✅ SSH key valid" || echo "❌ SSH key tidak valid!"
+          # Add known hosts
           ssh-keyscan -H ${{ secrets.GCP_VM_EXTERNAL_IP }} >> ~/.ssh/known_hosts
 
       - name: Deploy to VM
@@ -31,9 +34,9 @@ jobs:
           APP_DIR: "/home/aryadharmawm22/indodax_bot"
         run: |
           echo "🚀 Starting deployment to GCP VM..."
+          echo "📍 Connecting to ${VM_USER}@${VM_IP}..."
 
           # SSH ke VM dan jalankan deployment commands
-          # Export APP_DIR agar tersedia di remote shell
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
             export APP_DIR='/home/aryadharmawm22/indodax_bot'
             set -e
