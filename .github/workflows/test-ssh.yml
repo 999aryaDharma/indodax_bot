@@ -12,11 +12,19 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          # Gunakan printf untuk menghindari newline issues
+          # Gunakan printf untuk memastikan newline benar
           printf '%s\n' "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
-          # Validate key
-          ssh-keygen -y -f ~/.ssh/gcp_key > /dev/null 2>&1 && echo "✅ SSH key valid" || echo "❌ SSH key invalid!"
+          
+          # Validate SSH key
+          echo "🔑 Validating SSH key..."
+          if ssh-keygen -y -f ~/.ssh/gcp_key > /dev/null 2>&1; then
+            echo "✅ SSH key valid!"
+          else
+            echo "❌ SSH key INVALID! Check GitHub Secret format."
+            exit 1
+          fi
+          
           ssh-keyscan -H ${{ secrets.GCP_VM_EXTERNAL_IP }} >> ~/.ssh/known_hosts
 
       - name: Test SSH Connection
@@ -50,10 +58,9 @@ jobs:
         if: failure()
         run: |
           echo "❌ SSH test failed! Possible issues:"
-          echo "1. SSH private key format salah di GitHub Secrets"
+          echo "1. SSH private key belum di-update di GitHub Secrets"
           echo "2. Public key belum ditambahkan ke VM authorized_keys"
           echo "3. User atau IP salah"
           echo ""
-          echo "Debug: Pastikan public key ada di VM:"
-          echo "ssh <user>@<ip> 'cat ~/.ssh/authorized_keys'"
+          echo "Solution: Generate key baru, add public key ke VM, update secret."
           exit 1
