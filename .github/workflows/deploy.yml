@@ -1,0 +1,68 @@
+name: Deploy to GCP VM
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy:
+    name: Deploy to GCP e2-micro
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git operations
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
+          chmod 600 ~/.ssh/gcp_key
+          # Add known hosts untuk menghindari host key verification prompt
+          ssh-keyscan -H ${{ secrets.GCP_VM_EXTERNAL_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VM
+        env:
+          VM_USER: ${{ secrets.GCP_VM_USER }}
+          VM_IP: ${{ secrets.GCP_VM_EXTERNAL_IP }}
+          APP_DIR: "/home/aryadharmawm22/indobot-signal"
+        run: |
+          echo "🚀 Starting deployment to GCP VM..."
+          
+          # SSH ke VM dan jalankan deployment commands
+          ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} << 'EOF'
+            set -e
+            
+            echo "📍 Current commit:"
+            cd ${APP_DIR}
+            git log -1 --oneline
+            
+            echo "🔄 Pulling latest code from main..."
+            git pull origin main
+            
+            echo "📦 Installing dependencies..."
+            ${APP_DIR}/.venv/bin/pip install -r ${APP_DIR}/requirements.txt --quiet
+            
+            echo "🔧 Restarting service..."
+            sudo systemctl restart ibs.service
+            
+            echo "⏳ Waiting for service to start..."
+            sleep 3
+            
+            echo "✅ Deployment complete! Service status:"
+            sudo systemctl status ibs.service --no-pager | head -10
+            
+            echo "📊 Latest commit:"
+            git log -1 --oneline
+          EOF
+          
+          echo "✅ Successfully deployed to GCP VM!"
+
+      - name: Handle deployment failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Check the logs above for details."
+          exit 1
