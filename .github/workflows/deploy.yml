@@ -28,14 +28,14 @@ jobs:
         env:
           VM_USER: ${{ secrets.GCP_VM_USER }}
           VM_IP: ${{ secrets.GCP_VM_EXTERNAL_IP }}
-          APP_DIR: "/home/aryadharmawm22/indobot-signal"
+          APP_DIR: "/home/aryadharmawm22/indodax_bot"
         run: |
           echo "🚀 Starting deployment to GCP VM..."
 
           # SSH ke VM dan jalankan deployment commands
           # Export APP_DIR agar tersedia di remote shell
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
-            export APP_DIR='/home/aryadharmawm22/indobot-signal'
+            export APP_DIR='/home/aryadharmawm22/indodax_bot'
             set -e
 
             echo '📍 Navigate to app directory...'
@@ -52,7 +52,7 @@ jobs:
             git pull origin main
 
             echo '📦 Installing dependencies...'
-            \$APP_DIR/.venv/bin/pip install -r \$APP_DIR/requirements.txt --quiet
+            \$APP_DIR/venv/bin/pip install -r \$APP_DIR/requirements.txt --quiet
 
             echo '🔧 Restarting service...'
             sudo systemctl restart ibs.service
