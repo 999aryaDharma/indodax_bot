@@ -30,7 +30,7 @@ from indodax_api import (
     is_pair_already_held,
 )
 from risk_manager import calculate_trading_plan
-from signal_logic import confirm_signal_sent, evaluate_signal
+from signal_logic import confirm_entry_15m, confirm_signal_sent, evaluate_signal
 from ta_processor import calculate
 from telegram_bot import (
     build_application,

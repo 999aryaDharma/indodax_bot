@@ -46,8 +46,11 @@ class TAResult:
     timeframe: str
     candle_count: int
 
-    # Harga terakhir
+    # Harga
+    open: float         # Open price candle terakhir (untuk 15m confirmation)
     close: float
+    high: float         # High candle terakhir (untuk analisis tambahan)
+    low: float          # Low candle terakhir (untuk analisis tambahan)
     volume: float
 
     # EMA
@@ -350,7 +353,10 @@ def _extract_last_values(
         pair=pair,
         timeframe=timeframe,
         candle_count=candle_count,
+        open=float(df["open"].iloc[-1]),
         close=float(df["close"].iloc[-1]),
+        high=float(df["high"].iloc[-1]),
+        low=float(df["low"].iloc[-1]),
         volume=float(df["volume"].iloc[-1]),
 
         ema_fast=_get(ema_fast_col),

@@ -120,6 +120,7 @@ TIMEFRAMES: Final[Dict[str, str]] = {
 PRIMARY_TIMEFRAME: Final[str] = "1h"   # entry timing
 TREND_TIMEFRAME: Final[str]   = "4h"   # konfirmasi trend mayor
 DAILY_TIMEFRAME: Final[str]   = "1d"   # MTF Confluence — gambaran besar
+ENTRY_TIMEFRAME: Final[str]   = "15m"  # lazy fetch — konfirmasi entry timing (hanya jika skor >= 65%)
 
 
 # ==============================================================================

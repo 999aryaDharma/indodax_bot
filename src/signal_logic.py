@@ -798,6 +798,66 @@ def evaluate_signal(
 
 
 # ==============================================================================
+# 15m ENTRY CONFIRMATION (Lazy Fetch Gate)
+# ==============================================================================
+
+def confirm_entry_15m(ta_15m: 'TAResult') -> bool:
+    """
+    Konfirmasi entry timing menggunakan timeframe 15m.
+    Dipanggil HANYA untuk pair yang sudah lolos scoring 1H (skor >= 65%).
+
+    Logika konfirmasi:
+    1. Candle body 15m terakhir tidak terlalu besar (bukan spike candle)
+    2. StochRSI 15m belum overbought (tidak kejar harga)
+
+    Args:
+        ta_15m: TAResult dari timeframe 15m
+
+    Returns:
+        True jika entry timing di 15m masih bagus, False jika sudah telat
+    """
+    if ta_15m is None:
+        logger.warning("confirm_entry_15m: data 15m tidak tersedia, skip konfirmasi")
+        return True  # kalau data tidak ada, tidak memblokir sinyal
+
+    # Check 1: Harga tidak sedang spike terlalu jauh (bukan candle raksasa)
+    candle_body = abs(ta_15m.close - ta_15m.open)
+    # Gunakan ATR sebagai acuan volatilitas normal
+    if ta_15m.atr is not None and ta_15m.atr > 0:
+        body_to_atr_ratio = candle_body / ta_15m.atr
+        if body_to_atr_ratio > 2.0:
+            # Candle body > 2x ATR = spike yang tidak wajar, kemungkinan sudah telat
+            logger.info(
+                f"confirm_entry_15m [{ta_15m.pair}] REJECTED — "
+                f"candle body terlalu besar: {candle_body:,.0f} ({body_to_atr_ratio:.1f}x ATR)"
+            )
+            return False
+
+    # Check 2: StochRSI 15m belum overbought (tidak kejar harga)
+    if ta_15m.stoch_k is not None and ta_15m.stoch_k >= 80:
+        logger.info(
+            f"confirm_entry_15m [{ta_15m.pair}] REJECTED — "
+            f"StochRSI 15m sudah overbought: K={ta_15m.stoch_k:.1f}"
+        )
+        return False
+
+    # Check 3: Pastikan StochRSI tidak sedang turun tajam (bearish divergence di 15m)
+    if (ta_15m.stoch_k is not None and ta_15m.stoch_k_prev is not None
+            and ta_15m.stoch_k < 50 and ta_15m.stoch_k < ta_15m.stoch_k_prev - 10):
+        logger.info(
+            f"confirm_entry_15m [{ta_15m.pair}] REJECTED — "
+            f"StochRSI 15m sedang turun tajam: K={ta_15m.stoch_k:.1f} (prev={ta_15m.stoch_k_prev:.1f})"
+        )
+        return False
+
+    logger.info(
+        f"confirm_entry_15m [{ta_15m.pair}] PASSED — "
+        f"entry timing 15m terkonfirmasi"
+    )
+    return True
+
+
+# ==============================================================================
 # PUBLIC HELPERS
 # ==============================================================================
 
