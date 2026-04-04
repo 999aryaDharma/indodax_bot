@@ -269,8 +269,9 @@ class BreakoutConfig:
     weight_ema_bullish_4h: float        = 0.20
     weight_dmp_gt_dmn: float            = 0.10
 
-    # Threshold kelulusan — sama dengan Sniper
-    min_score_to_signal: float          = 0.80
+    # v1.2: Diturunkan dari 80% → 70%. Masih lebih ketat dari Sniper
+    # karena setup breakout lebih agresif (ikut momentum).
+    min_score_to_signal: float          = 0.70
 
 
 BREAKOUT_CONFIG: Final[BreakoutConfig] = BreakoutConfig()
@@ -342,8 +343,11 @@ class ScoringConfig:
     weight_volume_surge: float      = 0.20   # Volume ≥ 1.5× MA20 (1H)
     weight_ema_bullish: float       = 0.10   # EMA20 > EMA50 (1H)
 
-    # Sinyal hanya dikirim jika skor total ≥ threshold ini
-    min_score_to_signal: float      = 0.80   # 80%
+    # v1.2: Diturunkan dari 80% → 65%.
+    # Dengan bobot di atas, 80% membutuhkan ~4/5 kondisi terpenuhi sekaligus
+    # — terlalu jarang di crypto 1H. 65% masih memfilter noise (butuh min.
+    # MACD+StochRSI+Volume = 70%) tapi realistis untuk 1-2 sinyal/hari.
+    min_score_to_signal: float      = 0.65
 
 
 SCORING_CONFIG: Final[ScoringConfig] = ScoringConfig()
@@ -379,14 +383,14 @@ CONTEXT_CONFIG: Final[ContextConfig] = ContextConfig()
 @dataclass(frozen=True)
 class AppConfig:
     scan_interval_minutes: int      = 5
-    signal_cooldown_minutes: int    = 60
+    signal_cooldown_minutes: int    = 30   # v1.2: 60 → 30 menit
     context_fetch_interval_hours: int = 1
     health_check_interval_hours: int  = 6
 
     timezone: str               = "Asia/Jakarta"
     datetime_format: str        = "%A, %d %b %Y | %H:%M WIB"
 
-    app_version: str            = "1.1.0"
+    app_version: str            = "1.2.0"
     app_name: str               = "IndoBot Signal (IBS)"
 
 
@@ -400,6 +404,7 @@ logger.info(
     f"✅ Config loaded | "
     f"Pairs: {len(ASSET_WHITELIST)} | "
     f"Scan: {APP_CONFIG.scan_interval_minutes}m | "
+    f"Cooldown: {APP_CONFIG.signal_cooldown_minutes}m | "
     f"Min score (Sniper): {int(SCORING_CONFIG.min_score_to_signal * 100)}% | "
     f"Min score (Breakout): {int(BREAKOUT_CONFIG.min_score_to_signal * 100)}% | "
     f"Bear Bounce RR: 1:{BEAR_BOUNCE_CONFIG.min_rr_ratio:.0f} | "
