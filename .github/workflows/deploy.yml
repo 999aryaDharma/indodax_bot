@@ -2,8 +2,8 @@ name: Deploy to GCP VM
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:  # Manual trigger
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -13,67 +13,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for git operations
 
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          # Gunakan printf untuk menghindari newline issues dari echo
-          printf '%s\n' "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
-          chmod 600 ~/.ssh/gcp_key
-          # Debug: cek apakah key valid
-          ssh-keygen -y -f ~/.ssh/gcp_key > /dev/null 2>&1 && echo "✅ SSH key valid" || echo "❌ SSH key tidak valid!"
-          # Add known hosts
-          ssh-keyscan -H ${{ secrets.GCP_VM_EXTERNAL_IP }} >> ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to VM
-        env:
-          VM_USER: ${{ secrets.GCP_VM_USER }}
-          VM_IP: ${{ secrets.GCP_VM_EXTERNAL_IP }}
-          APP_DIR: "/home/aryadharmawm22/indodax_bot"
+      - name: Test SSH connection
         run: |
-          echo "🚀 Starting deployment to GCP VM..."
-          echo "📍 Connecting to ${VM_USER}@${VM_IP}..."
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} \
+              "echo '✅ SSH OK — $(hostname)'"
 
-          # SSH ke VM dan jalankan deployment commands
-          ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} "
-            export APP_DIR='/home/aryadharmawm22/indodax_bot'
+      - name: Pull & restart service
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} << 'EOF'
             set -e
-
-            echo '📍 Navigate to app directory...'
-            if [ ! -d \"\$APP_DIR\" ]; then
-              echo '❌ Directory tidak ada! Pastikan repo sudah di-clone ke VM.'
-              exit 1
-            fi
-            cd \$APP_DIR
-
-            echo '📍 Current commit:'
-            git log -1 --oneline
-
-            echo '🔄 Pulling latest code from main...'
+            cd ~/indodax_bot
             git pull origin main
-
-            echo '📦 Installing dependencies...'
-            \$APP_DIR/venv/bin/pip install -r \$APP_DIR/requirements.txt --quiet
-
-            echo '🔧 Restarting service...'
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
             sudo systemctl restart ibs.service
-
-            echo '⏳ Waiting for service to start...'
-            sleep 3
-
-            echo '✅ Deployment complete! Service status:'
-            sudo systemctl status ibs.service --no-pager | head -10
-
-            echo '📊 Latest commit:'
-            git log -1 --oneline
-          "
-
-          echo "✅ Successfully deployed to GCP VM!"
-
-      - name: Handle deployment failure
-        if: failure()
-        run: |
-          echo "❌ Deployment failed! Check the logs above for details."
-          exit 1
+            echo "✅ Deploy selesai — $(date)"
+            sudo systemctl status ibs.service --no-pager -l
+          EOF
