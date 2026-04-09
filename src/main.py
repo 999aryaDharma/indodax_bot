@@ -442,28 +442,157 @@ async def _send_weekly_report() -> None:
 # ==============================================================================
 
 async def health_check() -> None:
+    """
+    Health check diperkaya — dikirim setiap 6 jam.
+
+    Berisi:
+      - Uptime & konteks makro
+      - Status Daily Gate per pair (BULL / BEAR / SKIP + alasan)
+      - Posisi aktif (real + paper)
+      - Sinyal terakhir yang dikirim
+      - Pair yang sedang cooldown
+    """
     import time
+    from position_tracker import tracker
+    from signal_logic import get_cooldown_status, classify_daily_mode
+    from telegram_bot import _signal_history
+
     uptime_hours = (time.time() - _start_time) / 3600
     now_str = datetime.now(WIB).strftime(APP_CONFIG.datetime_format)
 
-    ctx_str = "Tidak tersedia"
+    # --- 1. Konteks makro ---
     if _market_context:
-        ctx_str = (
-            f"F&G {_market_context.fear_greed_value} "
-            f"({_market_context.fear_greed_label}) | "
-            f"BTC Dom {_market_context.btc_dominance_pct:.1f}%"
-        )
+        fg = _market_context.fear_greed_value
+        fg_label = _market_context.fear_greed_label
+        btc_dom = _market_context.btc_dominance_pct
+        fg_emoji = "🩸" if fg <= 25 else ("😨" if fg <= 49 else ("😤" if fg >= 75 else "😐"))
+        ctx_line = f"{fg_emoji} F&G: {fg} ({fg_label}) | BTC Dom: {btc_dom:.1f}%"
+    else:
+        ctx_line = "⚠️ Context tidak tersedia"
 
+    # --- 2. Daily Gate status per pair ---
+    loop = asyncio.get_event_loop()
+    gate_lines = []
+
+    for pair in sorted(ASSET_WHITELIST):
+        coin = pair.replace("_idr", "").upper()
+        try:
+            candles_1d = await loop.run_in_executor(None, fetch_ohlcv, pair, DAILY_TIMEFRAME)
+            if not candles_1d:
+                gate_lines.append(f"  ⬜ {coin:<5} : NO DATA")
+                continue
+
+            ta_1d = calculate(candles_1d, pair, DAILY_TIMEFRAME)
+            if ta_1d is None:
+                gate_lines.append(f"  ⬜ {coin:<5} : TA GAGAL")
+                continue
+
+            mode = classify_daily_mode(ta_1d)
+
+            price_vs_ema = ""
+            if ta_1d.ema_slow:
+                diff_pct = ((ta_1d.close - ta_1d.ema_slow) / ta_1d.ema_slow) * 100
+                price_vs_ema = f"EMA50 {diff_pct:+.1f}%"
+
+            stoch_k = f"StochK={ta_1d.stoch_k:.0f}" if ta_1d.stoch_k is not None else ""
+
+            if mode.value == "BULL_TREND":
+                gate_lines.append(f"  🟢 {coin:<5} : BULL    | {price_vs_ema}")
+            elif mode.value == "BEAR_BOUNCE":
+                gate_lines.append(f"  🟡 {coin:<5} : BOUNCE  | {stoch_k} oversold")
+            else:  # SKIP
+                bb_gap = ""
+                if ta_1d.bb_lower and ta_1d.close > ta_1d.bb_lower:
+                    pct = ((ta_1d.close - ta_1d.bb_lower) / ta_1d.close) * 100
+                    bb_gap = f" LoBB+{pct:.1f}%"
+                gate_lines.append(f"  🔴 {coin:<5} : SKIP    | {price_vs_ema}{bb_gap} {stoch_k}")
+
+        except Exception as e:
+            logger.warning(f"[health_check] Gagal cek gate {pair}: {e}")
+            gate_lines.append(f"  ⬜ {coin:<5} : ERROR")
+
+    gate_block = "\n".join(gate_lines)
+
+    # --- 3. Posisi aktif ---
+    open_positions = tracker.get_all_open()
+    if open_positions:
+        pos_parts = []
+        for pos in open_positions:
+            coin = pos.pair.replace("_idr", "").upper()
+            current = await loop.run_in_executor(
+                None, __import__("indodax_api").fetch_ticker, pos.pair)
+            if current:
+                pnl = ((current - pos.actual_entry_price) / pos.actual_entry_price) * 100
+                trail = " 🔒" if pos.trailing_active else ""
+                pos_parts.append(f"  • {coin}: {pnl:+.1f}%{trail}")
+            else:
+                pos_parts.append(f"  • {coin}: (harga N/A)")
+        pos_block = "\n".join(pos_parts)
+    else:
+        pos_block = "  Tidak ada posisi aktif"
+
+    # Paper trading open count
+    try:
+        import sqlite3 as _sqlite3
+        from config import PAPER_CONFIG as _pc
+        conn = _sqlite3.connect(_pc.db_path, timeout=5.0)
+        paper_open = conn.execute(
+            "SELECT COUNT(*) FROM paper_trades WHERE closed = 0"
+        ).fetchone()[0]
+        conn.close()
+        paper_str = f" | Paper open: {paper_open}"
+    except Exception:
+        paper_str = ""
+
+    # --- 4. Sinyal terakhir ---
+    if _signal_history:
+        last = _signal_history[-1]
+        from datetime import datetime as _dt
+        last_dt = _dt.fromtimestamp(last["sent_at"], tz=WIB).strftime("%d/%m %H:%M")
+        last_coin = last["pair"].replace("_idr", "").upper()
+        last_signal_str = (
+            f"  {last_coin} | {last['strategy']} {last['score_pct']}% | {last_dt}"
+        )
+    else:
+        last_signal_str = "  Belum ada sinyal sejak startup"
+
+    # --- 5. Cooldown ---
+    cooldowns = get_cooldown_status()
+    if cooldowns:
+        cd_parts = [
+            f"  {p.replace('_idr','').upper()}: {m}m"
+            for p, m in cooldowns.items()
+        ]
+        cooldown_str = "\n".join(cd_parts)
+    else:
+        cooldown_str = "  Tidak ada"
+
+    # --- Susun pesan final ---
     msg = (
-        f"💚 *IBS Health Check*\n\n"
-        f"<code>{now_str}</code>\n"
-        f"<code>Uptime: {uptime_hours:.1f} jam</code>\n"
-        f"<code>Context: {ctx_str}</code>\n"
-        f"<code>Status: ✅ Berjalan normal</code>"
+        f"💚 <b>IBS Health Check</b>\n"
+        f"<code>{now_str} | Uptime: {uptime_hours:.1f}j</code>\n"
+        f"<code>{ctx_line}</code>\n"
+        f"\n"
+        f"<b>📊 Daily Gate Status:</b>\n"
+        f"<code>{gate_block}</code>\n"
+        f"\n"
+        f"<b>💼 Posisi Real{paper_str}:</b>\n"
+        f"<code>{pos_block}</code>\n"
+        f"\n"
+        f"<b>📤 Sinyal Terakhir:</b>\n"
+        f"<code>{last_signal_str}</code>\n"
+        f"\n"
+        f"<b>⏸️ Cooldown Aktif:</b>\n"
+        f"<code>{cooldown_str}</code>"
     )
 
     await send_text(msg, parse_mode=ParseMode.HTML)
-    logger.info(f"Health check dikirim — uptime {uptime_hours:.1f} jam")
+    logger.info(
+        f"Health check dikirim — uptime {uptime_hours:.1f}j | "
+        f"Gate: {sum(1 for l in gate_lines if 'BULL' in l)}B "
+        f"{sum(1 for l in gate_lines if 'BOUNCE' in l)}Bo "
+        f"{sum(1 for l in gate_lines if 'SKIP' in l)}S"
+    )
 
 
 # ==============================================================================
