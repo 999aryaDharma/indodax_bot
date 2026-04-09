@@ -223,6 +223,19 @@ async def _process_pair(pair: str) -> Optional[dict]:
         f"Mode: {decision.market_mode.value}"
     )
 
+    # --- Step 3b: Konfirmasi entry timing 15m (lazy fetch) ---
+    logger.info(f"[{pair}] ⏱️  Fetching 15m candles untuk konfirmasi entry...")
+    candles_15m = await loop.run_in_executor(None, fetch_ohlcv, pair, "15m")
+    if candles_15m:
+        from config import ENTRY_TIMEFRAME
+        ta_15m = calculate(candles_15m, pair, ENTRY_TIMEFRAME)
+        if not confirm_entry_15m(ta_15m):
+            logger.info(f"[{pair}] ⏭️  15m confirmation FAILED — entry timing buruk, sinyal dibatalkan")
+            return stats
+        logger.info(f"[{pair}] ✅ 15m confirmation PASSED")
+    else:
+        logger.warning(f"[{pair}] ⚠️  15m data tidak tersedia — skip konfirmasi, lanjut")
+
     # --- Step 4: Cek apakah pair sudah dipegang di Indodax ---
     logger.info(f"[{pair}] 🔍 Cek posisi di Indodax (trade history V2)...")
     already_held = await loop.run_in_executor(None, is_pair_already_held, pair)

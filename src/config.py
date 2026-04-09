@@ -322,8 +322,12 @@ class PaperConfig:
     weekly_report_day: int          = 6     # Minggu
     weekly_report_hour: int         = 20    # Jam 20.00 WIB
 
-    # Asumsi biaya trading Indodax (taker fee) untuk kalkulasi simulasi
-    trading_fee_pct: float          = 0.003  # 0.3%
+    # Fee Indodax IDR Market PRO Mode (Taker, berlaku sejak 1 Agt 2025, PMK 50/2025)
+    # BUY : Service 0.20% + Tax 0% + CFX 0.0111% = 0.2111%
+    # SELL: Service 0.20% + Tax 0.21% + CFX 0.0111% = 0.4211%
+    buy_fee_pct: float              = 0.002111   # 0.2111%
+    sell_fee_pct: float             = 0.004211   # 0.4211%
+    # Round-trip worst case = 0.6322%
 
 
 # Set paper trading db path using absolute path

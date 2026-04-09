@@ -117,8 +117,8 @@ class PaperTrader:
         Buka paper trade baru. Mengembalikan ID trade.
         Fee sudah diperhitungkan dari position_idr.
         """
-        # Kurangi fee dari position simulasi
-        effective_idr = position_idr * (1 - PAPER_CONFIG.trading_fee_pct)
+        # Kurangi fee beli (taker BUY) dari position simulasi
+        effective_idr = position_idr * (1 - PAPER_CONFIG.buy_fee_pct)
 
         try:
             conn = _get_conn()
@@ -157,10 +157,9 @@ class PaperTrader:
 
             entry = row["entry_price"]
             position = row["position_idr"]
-            fee = PAPER_CONFIG.trading_fee_pct
 
-            # Revenue setelah fee jual
-            revenue = (close_price / entry) * position * (1 - fee)
+            # Revenue setelah fee jual (taker SELL)
+            revenue = (close_price / entry) * position * (1 - PAPER_CONFIG.sell_fee_pct)
             pnl_idr = revenue - position
             pnl_pct = (pnl_idr / position) * 100
 

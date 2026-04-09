@@ -363,7 +363,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "`/market`  — Snapshot kondisi TA semua pair\n"
         "`/history` — 5 sinyal terakhir\n"
         "`/posisi`  — Posisi aktif saat ini\n"
-        "`/raport`  — Weekly paper trading report\n\n"
+        "`/raport`  — Weekly paper trading report\n"
+        "`/gate`    — Status Daily Gate semua pair\n\n"
         "_Bot hanya mengirim sinyal\\. Eksekusi tetap manual\\._"
     )
     await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN_V2)
@@ -714,6 +715,75 @@ async def cmd_raport(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await update.message.reply_text(report, parse_mode=ParseMode.MARKDOWN_V2)
 
 
+async def cmd_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler untuk /gate — tampilkan Daily Gate status semua pair saat ini."""
+    from indodax_api import fetch_ohlcv
+    from ta_processor import calculate
+    from signal_logic import classify_daily_mode
+    from config import ASSET_WHITELIST, DAILY_TIMEFRAME
+    import asyncio
+
+    await update.message.reply_text(
+        "⏳ Mengecek Daily Gate semua pair\\.\\.\\.",
+        parse_mode=ParseMode.MARKDOWN_V2
+    )
+
+    loop = asyncio.get_event_loop()
+    lines = []
+
+    for pair in sorted(ASSET_WHITELIST):
+        coin = pair.replace("_idr", "").upper()
+        try:
+            candles = await loop.run_in_executor(None, fetch_ohlcv, pair, DAILY_TIMEFRAME)
+            if not candles:
+                lines.append(f"  ⬜ {coin:<5} : NO DATA")
+                continue
+
+            ta_1d = calculate(candles, pair, DAILY_TIMEFRAME)
+            if ta_1d is None:
+                lines.append(f"  ⬜ {coin:<5} : TA GAGAL")
+                continue
+
+            mode = classify_daily_mode(ta_1d)
+
+            price_vs_ema = ""
+            if ta_1d.ema_slow:
+                diff_pct = ((ta_1d.close - ta_1d.ema_slow) / ta_1d.ema_slow) * 100
+                price_vs_ema = f"EMA50 {diff_pct:+.1f}%"
+
+            stoch_k = f"StochK={ta_1d.stoch_k:.0f}" if ta_1d.stoch_k is not None else ""
+
+            if mode.value == "BULL_TREND":
+                lines.append(f"  🟢 {coin:<5} : BULL    | {price_vs_ema}")
+            elif mode.value == "BEAR_BOUNCE":
+                lines.append(f"  🟡 {coin:<5} : BOUNCE  | {stoch_k} oversold")
+            else:
+                bb_gap = ""
+                if ta_1d.bb_lower and ta_1d.close > ta_1d.bb_lower:
+                    pct = ((ta_1d.close - ta_1d.bb_lower) / ta_1d.close) * 100
+                    bb_gap = f" LoBB+{pct:.1f}%"
+                lines.append(f"  🔴 {coin:<5} : SKIP    | {price_vs_ema}{bb_gap} {stoch_k}")
+
+        except Exception as e:
+            lines.append(f"  ⬜ {coin:<5} : ERROR")
+            logger.warning(f"[cmd_gate] {pair}: {e}")
+
+    now_str = datetime.now(WIB).strftime("%d/%m %Y %H:%M WIB")
+    bull  = sum(1 for l in lines if "BULL" in l)
+    skip  = sum(1 for l in lines if "SKIP" in l)
+    bounce = sum(1 for l in lines if "BOUNCE" in l)
+
+    gate_block = "\n".join(lines)
+    msg = (
+        f"<b>📊 Daily Gate Status</b>\n"
+        f"<code>{now_str}</code>\n"
+        f"<code>🟢 BULL: {bull}  🟡 BOUNCE: {bounce}  🔴 SKIP: {skip}</code>\n\n"
+        f"<code>{gate_block}</code>\n\n"
+        f"<i>🟢 sinyal normal | 🟡 counter-trend kecil | 🔴 bot diam</i>"
+    )
+    await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
+
+
 # ==============================================================================
 # ALERT FORMATTERS — dipanggil dari main.py
 # ==============================================================================
@@ -763,6 +833,7 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("history", cmd_history))
     app.add_handler(CommandHandler("posisi",  cmd_posisi))
     app.add_handler(CommandHandler("raport",  cmd_raport))
+    app.add_handler(CommandHandler("gate",    cmd_gate))
 
     app.add_handler(CallbackQueryHandler(callback_exec,  pattern=r"^exec_"))
     app.add_handler(CallbackQueryHandler(callback_paper, pattern=r"^paper_"))
