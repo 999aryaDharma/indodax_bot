@@ -1,10 +1,15 @@
 # Indodax Strategy Research Lab — Design Specification
 
-**Status:** Draft untuk review pemilik  
-**Tanggal:** 2026-08-06  
-**Repository:** `999aryaDharma/indodax_bot`  
-**Baseline:** `main@70a9fd611a2db36d5e0b8917498ee47a30d15c47`  
-**Ruang lingkup:** riset, backtest, evaluasi, dan paper/shadow trading; tidak mencakup auto-trading uang nyata
+| Metadata | Nilai |
+|---|---|
+| Versi | 1.1 |
+| Status | Implementation-ready draft; paper/shadow only |
+| Tanggal | 2026-08-06 |
+| Repository | `999aryaDharma/indodax_bot` |
+| Baseline | `main@70a9fd611a2db36d5e0b8917498ee47a30d15c47` |
+| Audit literatur terakhir | 2026-08-06 |
+| Ruang lingkup | Riset, backtest, evaluasi, dan paper/shadow trading; tidak mencakup auto-trading uang nyata |
+| Dokumen pendamping | [`dataset-feature-contracts.md`](../../research/dataset-feature-contracts.md) dan [`implementation plan`](../plans/2026-08-06-strategy-research-lab-implementation.md) |
 
 ## 1. Ringkasan eksekutif
 
@@ -17,6 +22,7 @@ Dokumen ini merancang evolusi `indodax_bot` dari bot sinyal dengan whitelist sta
 5. mengulang siklus riset secara otomatis saat perangkat yang sesuai sedang idle;
 6. mempromosikan hanya strategi yang lolos pengujian kronologis dan paper/shadow trading;
 7. menggunakan Codex sebagai pembuat dan pengulas *challenger*, bukan sebagai pengambil keputusan trading langsung.
+8. membedakan kegagalan teknis, kandidat yang benar-benar buruk, dan kandidat *near miss* agar automasi tidak melakukan tuning tanpa batas.
 
 Prinsip utama sistem adalah **judge before strategy**: data, backtester, model biaya, dan aturan evaluasi harus dipercaya sebelum hasil strategi dipercaya. Sistem tidak menargetkan *win rate* tertentu, tidak menjanjikan profit, dan tidak mengizinkan martingale, averaging-down tanpa batas, atau eksekusi live otomatis.
 
@@ -30,6 +36,9 @@ Prinsip utama sistem adalah **judge before strategy**: data, backtester, model b
 | Validasi | Split kronologis tahunan sebagai tahap pertama; tidak ada random shuffle untuk data time series. |
 | Multiple testing | Semua percobaan dicatat. Probability of Backtest Overfitting (PBO) dan Deflated Sharpe Ratio (DSR) digunakan saat jumlah varian sudah memadai. |
 | ML/DL | Model kompleks harus mengalahkan baseline sederhana setelah biaya, bukan sekadar memiliki akurasi lebih tinggi. |
+| Target model | Prioritas pada return setelah biaya, rank cross-sectional, volatility/quantile, meta-label, dan risk gate; prediksi harga mentah bukan target utama. |
+| Kandidat gagal | Run invalid diperbaiki lalu diulang; kandidat valid tetapi buruk diarsipkan; hanya *near miss* dengan hipotesis diagnostik dan budget tersisa yang boleh dituning sebagai versi baru. |
+| Tuning | Tuning hanya memakai train + inner validation. Sealed test dan forward paper tidak pernah menjadi objective tuner. Tidak ada loop retry/tuning tanpa batas. |
 | Eksekusi | Paper/shadow only. Kunci trade dan withdrawal tidak digunakan. |
 | Automasi | Worker sistem menjalankan data/paper loop; Codex menghasilkan riset atau perubahan kode pada worktree/branch terisolasi dan tidak melakukan auto-merge. |
 | Sumber data | Endpoint/stream resmi didahulukan. Sumber tidak resmi tidak boleh diam-diam menggantikan data resmi. |
@@ -122,10 +131,11 @@ flowchart TD
 | `data_sentry` | Gap, duplikat, timestamp, OHLC invariants, stale stream, outlier flag | ASUS |
 | `universe_builder` | Snapshot cap, volume, spread, depth, listing age, eligibility reason | ASUS/Lenovo |
 | `snapshot_builder` | Membentuk dataset immutable dan manifest | ASUS |
+| `bar_builder` | Membentuk time bars serta CUSUM/range/volume/dollar bars tanpa mengubah raw event | ASUS/Lenovo |
 | `backtest_engine` | Event-driven replay, fill, fee, slippage, ledger, metrics | Lenovo |
 | `strategy_workers` | Menjalankan kandidat klasik big-cap/small-cap | Lenovo |
 | `ml_worker` | Feature build, train, calibration, inference replay | Lenovo |
-| `dl_worker` | TCN/LSTM/Transformer/LOB experiments dengan idle guard | Lenovo |
+| `dl_worker` | ResNet-LSTM/iTransformer/GNN/foundation/LOB experiments dengan idle guard | Lenovo |
 | `evaluator` | Gates, PBO/DSR, rank, comparison, promotion state | Lenovo |
 | `paper_shadow` | Menjalankan champion/challenger secara forward tanpa order nyata | ASUS |
 | `codex_curator` | Mengusulkan hipotesis, code/tests/docs di worktree, membuka draft PR bila diminta | Lenovo |
@@ -140,28 +150,46 @@ flowchart TD
 
 ## 7. Layout logis repository
 
+Baseline saat ini memakai modul Python datar di `src/` dan belum memiliki test suite. Implementasi lab dilakukan **secara berdampingan** agar bot sinyal yang berjalan tidak rusak oleh migrasi package besar. Modul lama hanya disentuh untuk perbaikan Phase 0 dan adapter kompatibilitas yang sudah diuji.
+
 ```text
 configs/
   universe/
   costs/
+  features/
   strategies/
   schedules/
 docs/
   research/
+  superpowers/plans/
   superpowers/specs/
 research/
   catalog/
   notebooks/
   reports/
-src/indodax_bot/
-  data/
-  universe/
-  backtest/
-  strategies/
-  models/
-  evaluation/
-  paper/
-  orchestration/
+src/
+  config.py                 # baseline, dipertahankan sementara
+  indodax_api.py            # baseline adapter, diperbaiki di Phase 0
+  main.py                   # baseline runtime, tidak dimigrasi sekaligus
+  paper_trader.py           # baseline paper adapter
+  position_tracker.py       # baseline real-position reader
+  risk_manager.py           # baseline risk calculator
+  signal_logic.py           # baseline strategies/signals
+  ta_processor.py           # baseline technical indicators
+  telegram_bot.py           # baseline UI/read-only commands
+  indodax_lab/
+    contracts/
+    cli/
+    data/
+    features/
+    labels/
+    universe/
+    backtest/
+    strategies/
+    models/
+    evaluation/
+    paper/
+    orchestration/
 tests/
   fixtures/
   unit/
@@ -191,12 +219,13 @@ lab-artifacts/reports/
 - Snapshot diberi `dataset_snapshot_id` berbasis manifest dan checksums.
 - REST dan WebSocket harus memakai endpoint/stream resmi yang didokumentasikan.
 - Rate limit, syarat penggunaan, dan lisensi provider eksternal dipatuhi.
+- Kontrak lengkap tabel, feature registry, label, split, dan contoh row ditetapkan di [`docs/research/dataset-feature-contracts.md`](../../research/dataset-feature-contracts.md); dokumen itu menjadi sumber kebenaran implementasi dataset.
 
 ### 8.2 Candle canonical
 
 | Field | Tipe | Ketentuan |
 |---|---|---|
-| `pair` | string | Canonical lowercase, mis. `btcidr` |
+| `pair` | string | Canonical internal kompatibel baseline, mis. `btc_idr`; symbol venue `btcidr` disimpan terpisah |
 | `interval` | enum | `1m`, `5m`, `15m`, `1h`, `4h`, `1d` yang benar-benar tersedia/diturunkan |
 | `open_time` | timestamp UTC | Primary time key |
 | `close_time` | timestamp UTC | Eksklusif atau inklusif harus konsisten per schema version |
@@ -220,7 +249,13 @@ Aturan recovery:
 - duplikat dide-duplikasi berdasarkan pair + sequence/offset + event identity;
 - LOB feature hanya dibuat dari rentang `quality_status=PASS`.
 
-### 8.4 Universe snapshot
+### 8.4 Curated bars dan availability time
+
+Time bars (`1m` sampai `1d`) tetap menjadi baseline. Setelah public trade collector stabil, builder boleh menambah CUSUM-filtered events, range bars, volume bars, dan dollar bars. Setiap bar menyimpan `open_time`, `close_time`, `feature_ready_at`, sumber event, dan quality status. Bar tidak boleh dianggap tersedia sebelum benar-benar tertutup serta melewati latency allowance yang dikonfigurasi.
+
+Informasi-driven bars merupakan *challenger representation*, bukan pengganti otomatis time bars. Keunggulannya harus dinilai pada split dan execution policy yang sama.
+
+### 8.5 Universe snapshot
 
 | Field | Tujuan |
 |---|---|
@@ -237,7 +272,7 @@ Aturan recovery:
 | `reason_codes` | Penjelasan include/exclude |
 | `source`, `source_ts` | Audit provider |
 
-### 8.5 Run manifest
+### 8.6 Run manifest
 
 Setiap run wajib menyimpan:
 
@@ -310,23 +345,27 @@ Eligibility dihitung menggunakan data yang tersedia sampai `as_of_date`. Deliste
 
 ### 10.3 ML, DL, dan RL research tracks
 
-| ID | Model | Target | Status awal |
+| ID | Model/pendekatan | Target utama | Status awal |
 |---|---|---|---|
-| M01 | Logistic/elastic-net | Probabilitas return net positif | Wave 1 baseline |
-| M02 | Gradient-boosted trees | Rank expected return net | Wave 1 challenger |
-| M03 | Random forest | Regime classification | Wave 2 |
-| M04 | Regularized regression | Forward return/volatility | Wave 2 |
+| M01 | Logistic/elastic-net terkalibrasi | `P(return_after_cost > 0)` / meta-label | Wave 1 baseline |
+| M02 | XGBoost/gradient-boosted trees | Expected return net atau rank | Wave 1 challenger |
+| M03 | Random forest | Regime/risk classification | Wave 2 |
+| M04 | Regularized/quantile regression | Forward return, volatility, tail quantile | Wave 2 |
 | M05 | Calibrated meta-label | Ambil/skip sinyal klasik | Wave 2 |
-| M06 | Quantile regression | Return distribution/tail | Wave 3 |
-| M07 | Anomaly detector | Illiquidity/pump risk gate | Wave 2 |
+| M06 | Anomaly detector | Illiquidity/pump/data-risk gate | Wave 2 |
 | D01 | Small MLP | Nonlinear tabular baseline | Wave 2 |
-| D02 | TCN/1D CNN | Multi-horizon candle sequence | Wave 3 |
-| D03 | GRU/LSTM | Sequence return/risk | Wave 3 |
-| D04 | TFT/compact Transformer | Multi-horizon panel | Wave 3 |
-| D05 | DeepLOB-style network | Short-horizon LOB movement | Forward-data only |
-| R01 | Constrained allocation agent | Portfolio weights/cash | Research-only setelah baseline |
+| D02 | TCN/1D CNN | Multi-horizon bar sequence | Wave 3 |
+| D03 | ResNet-LSTM | Triple-barrier/event-bar classification | Wave 3 challenger |
+| D04 | iTransformer compact | Panel multivariate/multi-horizon | Wave 3 challenger |
+| G01 | Cross-asset GAT/CryptoGAT-style | Rank/relative return antar-aset | Experimental setelah panel stabil |
+| F01 | Kronos finance foundation model | Zero-shot/frozen/fine-tuned K-line forecast | Experimental, provenance-gated |
+| L01 | DeepLOB reproduction | Short-horizon LOB movement | Forward LOB baseline |
+| L02 | TLOB/LiT-style challenger | Spread-aware LOB target | Forward LOB experimental |
+| R01 | Constrained allocation agent | Portfolio weights/cash | Research-only, prioritas terendah |
 
 **Wave 1 wajib:** C01, C02, C03, C04, C07, C10, S01, S02, M01, dan M02. Sepuluh kandidat ini memberi variasi trend, mean-reversion, cross-sectional, small-cap, linear ML, dan tree ML tanpa langsung membebani lab dengan DL.
+
+Audit literatur 2024–2026 tidak mendukung asumsi bahwa model paling baru otomatis paling cocok. Bukti terbaru menunjukkan bahwa (a) simple/tree models sering tetap kuat, (b) mapping prediksi ke eksekusi yang sadar biaya dapat lebih menentukan daripada arsitektur, (c) event bars + Triple Barrier layak diuji, dan (d) cross-asset dependency layak menjadi challenger. Karena itu D03/D04/G01/F01/L02 ditambahkan, tetapi tetap berada di belakang baseline klasik dan tabular.
 
 ## 11. Strategy registry dan lifecycle
 
@@ -365,6 +404,34 @@ stateDiagram-v2
 ```
 
 Promosi hanya dilakukan oleh evaluator berdasarkan policy versioned. Perubahan logic, target, feature, universe, atau parameter setelah sealed test menaikkan strategy version dan mengulang gate yang relevan.
+
+### 11.1 Apa yang terjadi bila hasil satu plan buruk?
+
+Evaluator wajib membedakan status berikut; kata “gagal” tidak cukup sebagai diagnosis:
+
+| Hasil | Contoh | Aksi otomatis |
+|---|---|---|
+| `INVALID_RUN` | Data gap, parser salah, ledger tidak balance, worker crash | Perbaiki penyebab teknis lalu ulang **konfigurasi yang sama**; hasil tidak masuk ranking. |
+| `HARD_FAIL` | Net expectancy negatif, drawdown breach, edge hilang pada biaya base, hasil bergantung pada satu outlier | `REJECTED` dan archive dengan reason code; tidak dituning hanya untuk “mencari profit”. |
+| `NEAR_MISS` | Lolos safety, net positive, tetapi satu soft metric sedikit di bawah gate dan hasil stabil lintas fold | Boleh satu tuning round terdaftar pada train/validation jika budget trial masih ada; menghasilkan version baru. |
+| `REGIME_EDGE` | Edge konsisten hanya pada regime yang dapat diketahui point-in-time | Buat hipotesis/filter regime baru sebagai challenger version; kandidat lama tetap immutable. |
+| `PASS` | Semua hard gate dan evidence gate lolos | Freeze config, buka sealed gate berikutnya, lalu shadow bila lolos. |
+
+Tidak ada mekanisme “hasil buruk → tambah epoch → coba terus”. Pergantian seed tidak boleh dipakai untuk menyulap `HARD_FAIL` menjadi kandidat. Setelah maksimal dua revision rounds per hypothesis family pada dataset snapshot yang sama, keluarga tersebut masuk `COOLDOWN_RESEARCH` sampai ada data baru, bukti baru, atau perubahan hipotesis yang benar-benar material.
+
+### 11.2 Budget tuning dan training default
+
+| Track | Budget awal per model/horizon/snapshot | Early stop / seed | Catatan |
+|---|---:|---|---|
+| Classical | 24 coarse + 12 refinement trials | Deterministik | Cari plateau, bukan titik optimum tunggal. |
+| Logistic/tree | Maks. 30 inner-CV trials | 1 seed saat search; 3 seed untuk finalist stochastic | Objective adalah utility validation net-of-cost + calibration penalty. |
+| MLP/TCN/ResNet-LSTM/iTransformer | Maks. 12 configs, 50 epochs/config | Patience 7, simpan best validation checkpoint; finalist 3 seed | Epoch 50 adalah batas, bukan target yang harus dihabiskan. |
+| GNN | Maks. 8 configs setelah panel baseline stabil | Patience 7, finalist 3 seed | Adjacency hanya dari train/available-at-time data. |
+| Foundation model | Zero-shot → frozen representation/linear probe → adapter fine-tune | Fine-tune hanya bila cutoff pretraining dapat diaudit dan hardware lolos guard | Full fine-tune bukan default. |
+| LOB | Maks. 8 configs setelah minimum data gate | Patience 7, chronological folds | DeepLOB/MLP baseline wajib sebelum TLOB/LiT challenger. |
+| RL | Tidak masuk scheduler default | Manual research approval | Tidak boleh menggantikan supervised/classical baseline tanpa proyek baru. |
+
+**Retraining** berarti menjalankan recipe/config yang sudah dibekukan pada expanding window baru; ini tidak mengubah hyperparameter. **Tuning/fine-tuning** mengubah parameter model dan selalu membuat challenger/version baru. Champion tetap aktif di shadow sampai challenger melewati gate historis serta forward replacement gate.
 
 ## 12. Backtest dan execution model
 
@@ -436,12 +503,15 @@ Karena minimum order Rp25.000 adalah 5% dari modal Rp500.000, sizing engine haru
 ### 14.1 Feature families
 
 - return/momentum multi-horizon;
-- realized volatility, ATR, downside volatility, jump/gap;
+- **indikator teknikal** yang versioned: EMA/slope, RSI dan StochRSI, MACD, Bollinger position/width, ATR, ADX/+DI/-DI, Donchian, VWAP deviation, dan volume z-score;
+- realized volatility, Parkinson/Garman–Klass range volatility, ATR, downside volatility, jump/gap;
 - volume, turnover, volume surprise, zero-volume ratio;
 - spread, depth, order-flow imbalance, trade imbalance;
 - cross-sectional rank dan BTC/market regime;
 - calendar features yang diketahui di event time;
 - listing age dan liquidity tier.
+
+Indikator teknikal **memang digunakan sebagai feature**, tetapi diperlakukan sebagai transformasi deterministik atas price/volume, bukan “sinyal sakti”. Feature set inti dibatasi untuk menghindari ratusan indikator yang saling duplikat. Setiap feature memiliki formula/library, parameter, lookback, lag availability, dtype, missing policy, dan version. Semua rolling transform dihitung dari bar yang sudah tertutup; scaler, winsorizer, imputasi, dan feature selection hanya di-fit pada train.
 
 On-chain, news, dan sentiment tidak masuk Phase 1 karena timestamp alignment dan licensing risk lebih besar. Jika ditambahkan kemudian, publikasi/ingestion timestamp—bukan tanggal artikel yang diedit—menjadi event time.
 
@@ -449,8 +519,9 @@ On-chain, news, dan sentiment tidak masuk Phase 1 karena timestamp alignment dan
 
 - Klasifikasi diarahkan pada probabilitas `forward_return_after_cost > 0`, bukan sekadar up/down sebelum biaya.
 - Regression memprediksi return atau quantile pada horizon yang sama dengan execution policy.
-- Triple-barrier/meta-label hanya boleh menggunakan barrier setelah entry dan purging/embargo yang sesuai.
+- CUSUM/event-bar Triple Barrier menjadi challenger label: barrier baru dimulai setelah harga eksekusi, menyimpan `label_end_ts`, dan memakai purging/embargo yang sesuai.
 - Label overlap harus dicatat; sample weight dapat mengoreksi concurrency.
+- Cross-sectional model memprediksi rank/relative return pada universe point-in-time, bukan memakai daftar aset hari ini untuk masa lalu.
 
 ### 14.3 Baseline hierarchy
 
@@ -465,9 +536,15 @@ Setiap model dibandingkan dengan:
 
 Model lebih kompleks hanya dipromosikan bila memberi peningkatan out-of-sample net-of-cost yang stabil, calibration yang layak, dan biaya komputasi/operasional yang masuk akal.
 
-### 14.4 DL/LOB constraint
+Forecast tidak langsung diubah menjadi trade berdasarkan tanda positif/negatif. Execution mapper menerapkan `expected_edge > estimated_round_trip_cost + safety_margin`, position/risk gate, dan abstain/no-trade zone. Threshold tersebut di-fit hanya pada inner validation lalu dibekukan untuk outer test.
 
-DeepLOB-style research memerlukan snapshot/order-flow yang kontinu dan berkualitas. Candle OHLCV tidak boleh dipasarkan sebagai pengganti LOB. D05 tetap berstatus `IDEA`, sedangkan run-nya berstatus `BLOCKED_DATA`, sampai tersedia sekurang-kurangnya 90 hari data LOB PASS dan cukup event pada beberapa regime; kelayakan final ditentukan oleh effective sample size dan coverage, bukan hanya jumlah row.
+### 14.4 DL, foundation model, dan LOB constraint
+
+DeepLOB/TLOB-style research memerlukan snapshot/order-flow yang kontinu dan berkualitas. Candle OHLCV tidak boleh dipasarkan sebagai pengganti LOB. L01/L02 tetap berstatus `IDEA`, sedangkan run-nya berstatus `BLOCKED_DATA`, sampai tersedia sekurang-kurangnya 90 hari data LOB PASS dan cukup event pada beberapa regime; kelayakan final ditentukan oleh effective sample size dan coverage, bukan hanya jumlah row.
+
+Kronos/F01 diperlakukan sebagai external pretrained artifact. Manifest wajib menyimpan model revision, checksum, license, declared pretraining cutoff/sources, inference mode, dan kemungkinan overlap dengan evaluation period. Jika cutoff atau corpus tidak dapat diaudit, hasil hanya `EXPLORATORY`; evaluasi utama menggunakan data Indodax yang benar-benar terjadi setelah cutoff dan, idealnya, setelah model release untuk mengurangi contamination/memorization risk.
+
+G01 membentuk graph hanya dari informasi yang tersedia sampai decision time. Hubungan berbasis full-sample correlation, full-history similarity, atau future universe dilarang.
 
 ## 15. Evaluation framework
 
@@ -527,6 +604,7 @@ Score tidak boleh menutupi gate failure seperti lookahead, data gap, drawdown br
 | Job | Trigger/cadence | Resource class | Output |
 |---|---|---|---|
 | `data_sentry` | Continuously + daily report | LOW | Quality status, gap queue |
+| `bar_feature_build` | Setelah raw partition final | LOW/MEDIUM | Curated bars + versioned features |
 | `universe_refresh` | Daily after market snapshot | LOW | Universe snapshot |
 | `classic_big_worker` | Nightly/idle | MEDIUM | C-series run artifacts |
 | `classic_small_worker` | Nightly/idle | MEDIUM | S-series run artifacts |
@@ -573,6 +651,8 @@ flowchart LR
 ```
 
 Loop tidak mengubah rule candidate yang sedang diuji. Challenger baru selalu versioned dan tidak menggantikan champion sampai promotion gate lengkap.
+
+`Archive reason` bukan selalu umpan untuk mencoba ulang. Hanya `INVALID_RUN` masuk retry queue otomatis. `NEAR_MISS` masuk hypothesis-review queue dan tetap tunduk pada trial/revision budget. `HARD_FAIL` ditutup; scheduler tidak membuka kembali kandidat itu hanya karena mesin sedang idle.
 
 ## 17. Fault handling dan observability
 
@@ -661,7 +741,7 @@ Retention default: raw market data dipertahankan; verbose logs 30 hari; checkpoi
 
 ### Phase 1 — Data + classical judge
 
-- Raw/curated lake, manifest, data sentry, dynamic universe.
+- Raw/curated lake, manifest, data sentry, dynamic universe, feature registry v1, dan time bars.
 - Backtester event-driven dan cost schedule versioning.
 - C01, C02, C03, C04, C07, C10, S01, S02.
 
@@ -670,6 +750,8 @@ Retention default: raw market data dipertahankan; verbose logs 30 hari; checkpoi
 ### Phase 2 — ML baselines + tournament
 
 - M01 logistic/elastic-net, M02 gradient boosting.
+- Cost-aware abstain/execution mapper, walk-forward training, calibration, dan model artifact contract.
+- CUSUM/information-driven bars + Triple Barrier sebagai challenger terhadap time-bar labels.
 - Experiment registry, leaderboard, DSR, PBO bila sample trial memadai.
 - Independent dan shared Rp500k ledgers.
 
@@ -678,7 +760,7 @@ Retention default: raw market data dipertahankan; verbose logs 30 hari; checkpoi
 ### Phase 3 — Forward paper + selective DL
 
 - Paper champion/challenger, portfolio risk gates, 90-day forward evidence.
-- D01–D04 hanya setelah ML baseline stabil; D05 setelah LOB dataset layak.
+- D01–D04 hanya setelah ML baseline stabil; G01 dan F01 setelah provenance/panel gate; L01/L02 setelah LOB dataset layak.
 
 **Exit:** kandidat champion bertahan sekurang-kurangnya 90 hari dan 100 pooled closed trades forward, mana yang lebih lama, tanpa policy breach.
 
@@ -705,7 +787,9 @@ Sistem desain ini dianggap terimplementasi ketika:
 9. background workers dapat resume dan fail closed saat data/policy invalid;
 10. Codex hanya menghasilkan branch/worktree/draft review output dan tidak bisa trade/merge sendiri;
 11. DL tidak dipromosikan tanpa mengalahkan baseline net-of-cost;
-12. tidak ada live trading tanpa proyek, threat review, dan persetujuan baru.
+12. candidate lifecycle membedakan invalid, hard fail, near miss, dan pass serta menegakkan tuning budget;
+13. technical indicators yang digunakan tercatat dalam feature registry dan lolos availability/leakage tests;
+14. tidak ada live trading tanpa proyek, threat review, dan persetujuan baru.
 
 ## 22. Keputusan yang sengaja ditunda
 
@@ -732,10 +816,16 @@ Hal berikut tidak memblokir implementasi awal dan memiliki default aman:
 
 - Bailey et al., [The Probability of Backtest Overfitting](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253)
 - Bailey & López de Prado, [The Deflated Sharpe Ratio](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2460551)
-- Liu et al., [Forecasting cryptocurrency returns with machine learning](https://doi.org/10.1016/j.ribaf.2023.101905)
-- Liu & Tsyvinski, [Risks and Returns of Cryptocurrency](https://www.nber.org/papers/w24877)
+- Cakici et al. (2024, peer reviewed), [Machine learning and the cross-section of cryptocurrency returns](https://doi.org/10.1016/j.irfa.2024.103244)
+- Grądzki et al. (2025, peer reviewed), [Algorithmic crypto trading using information-driven bars, triple barrier labeling and deep learning](https://doi.org/10.1186/s40854-025-00866-w)
+- Bysik & Ślepaczuk (2026, preprint), [Machine Learning-Based Bitcoin Trading Under Transaction Costs](https://arxiv.org/abs/2606.00060)
+- Peng et al. (2026, preprint), [CryptoGAT: Are Time Series Models Effective for Cryptocurrency Forecasting?](https://arxiv.org/abs/2606.27670)
+- Shi et al. (2025, preprint), [Kronos: A Foundation Model for the Language of Financial Markets](https://arxiv.org/abs/2508.02739)
+- Meyer et al. (2025, preprint), [Time Series Foundation Models: Benchmarking Challenges and Requirements](https://arxiv.org/abs/2510.13654)
 - Zhang, Zohren & Roberts, [DeepLOB](https://arxiv.org/abs/1808.03668)
-- Peik et al., [Temporal Fusion Transformers for cryptocurrency forecasting](https://arxiv.org/abs/2412.14529)
+- Berti & Kasneci (2025, preprint), [TLOB: A Novel Transformer Model with Dual Attention](https://arxiv.org/abs/2502.15757)
+
+Referensi model terbaru di atas adalah sumber ide dan benchmark, bukan bukti langsung bahwa model akan profit pada Indodax. Perbedaan venue, spot long-only, pair IDR, biaya, spread, kedalaman, dan modal Rp500.000 tetap harus diuji lokal.
 
 ### Codex background work
 
@@ -743,4 +833,4 @@ Hal berikut tidak memblokir implementasi awal dan memiliki default aman:
 
 ## 24. Review gate
 
-Dokumen ini adalah **design specification**, bukan implementation plan. Setelah pemilik menyetujui atau mengoreksi keputusan desain, langkah berikutnya adalah memecahnya menjadi implementation plan per phase dengan file, test, urutan migrasi, dan checkpoint yang konkret. Tidak ada automation atau live execution yang diaktifkan oleh dokumen ini.
+Dokumen ini tetap menjadi **design specification**. Urutan file, test, migrasi, dan checkpoint konkret berada di implementation plan pendamping. Dokumen-dokumen ini tidak mengaktifkan automation, paper runner baru, atau live execution; perubahan runtime hanya terjadi ketika task implementasi dikerjakan, direview, dan diverifikasi secara terpisah.
