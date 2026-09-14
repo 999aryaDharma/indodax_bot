@@ -1,0 +1,215 @@
+"""Verified training dataset assembly and role-restricted tables (TRAIN-01).
+
+Contract:
+dataset/feature/label/split/universe/cost IDs -> training manifest and role-restricted tables.
+Duplicate sample join ditolak.
+Target kolom tidak boleh berada dalam inference feature list.
+Checksum atau availability mismatch memblokir output.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+import hashlib
+from typing import Any, Sequence
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from indodax_lab.labels.splits import FoldAssignment, SampleRole, SplitManifest
+
+
+def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
+    if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
+        raise ValueError(f"UTC_TIMEZONE_AWARE_REQUIRED:{field_name}")
+    return dt
+
+
+class DuplicateSampleError(ValueError):
+    """Raised when duplicate sample IDs are detected in inputs."""
+
+
+class TargetLeakageError(ValueError):
+    """Raised when target or future label columns leak into the inference feature list."""
+
+
+class ArtifactIntegrityError(ValueError):
+    """Raised when input artifact checksums do not match expected cryptographic hashes."""
+
+
+class AvailabilityMismatchError(ValueError):
+    """Raised when row availability or label end timestamps violate temporal causality."""
+
+
+class TrainingDatasetManifest(BaseModel):
+    """Metadata and lineage manifest for an immutable training dataset."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dataset_id: str
+    dataset_snapshot_id: str
+    feature_registry_version: str
+    features_manifest_id: str
+    labels_manifest_id: str
+    split_policy_id: str
+    cost_schedule_id: str
+    target_column: str
+    inference_feature_columns: list[str]
+    sample_counts_by_role: dict[str, int]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("created_at", mode="after")
+    @classmethod
+    def validate_created_at(cls, value: datetime) -> datetime:
+        return _ensure_utc(value, "created_at")
+
+
+class TrainingDatasetArtifact:
+    """Materialized training dataset containing manifest and role-restricted sample partitions."""
+
+    def __init__(
+        self,
+        manifest: TrainingDatasetManifest,
+        data: pd.DataFrame,
+    ) -> None:
+        self.manifest = manifest
+        self._data = data
+
+    @property
+    def data(self) -> pd.DataFrame:
+        return self._data.copy()
+
+    def get_role_data(self, role: SampleRole | str) -> pd.DataFrame:
+        """Return role-restricted subset of samples (e.g. TRAIN, VALIDATION, SEALED_TEST)."""
+        role_str = role.value if isinstance(role, SampleRole) else str(role).upper()
+        subset = self._data[self._data["role"] == role_str].copy()
+        return subset
+
+
+def materialize_training_dataset(
+    features_df: pd.DataFrame,
+    labels_df: pd.DataFrame,
+    split_manifest: SplitManifest,
+    target_column: str,
+    inference_feature_columns: Sequence[str],
+    dataset_snapshot_id: str,
+    feature_registry_version: str,
+    cost_schedule_id: str,
+    features_checksum: str | None = None,
+    labels_checksum: str | None = None,
+    features_manifest_id: str = "features_manifest_v1",
+    labels_manifest_id: str = "labels_manifest_v1",
+) -> TrainingDatasetArtifact:
+    """Materialize verified training dataset with strict anti-leakage and causality checks.
+
+    Guarantees:
+    - Verifies cryptographic artifact checksums.
+    - Rejects duplicate sample IDs fail-closed.
+    - Prevents target or future columns from entering inference features.
+    - Rejects causality/availability violations (row_ready_at > decision_ts).
+    - Segregates data cleanly by split role.
+    """
+    # 1. Checksum verification (TRAIN-01-AC3)
+    if features_checksum is not None:
+        feat_bytes = features_df.to_parquet()
+        actual_feat_sha = hashlib.sha256(feat_bytes).hexdigest()
+        if actual_feat_sha != features_checksum:
+            raise ArtifactIntegrityError(
+                f"CHECKSUM_MISMATCH:features expected {features_checksum}, got {actual_feat_sha}"
+            )
+
+    if labels_checksum is not None:
+        label_bytes = labels_df.to_parquet()
+        actual_label_sha = hashlib.sha256(label_bytes).hexdigest()
+        if actual_label_sha != labels_checksum:
+            raise ArtifactIntegrityError(
+                f"CHECKSUM_MISMATCH:labels expected {labels_checksum}, got {actual_label_sha}"
+            )
+
+    # 2. Duplicate sample join rejection (TRAIN-01-AC1)
+    if features_df["sample_id"].duplicated().any():
+        dups = features_df.loc[features_df["sample_id"].duplicated(), "sample_id"].tolist()
+        raise DuplicateSampleError(f"DUPLICATE_SAMPLE_ID_DETECTED: features dataframe contains duplicate sample_ids: {dups[:5]}")
+
+    if labels_df["sample_id"].duplicated().any():
+        dups = labels_df.loc[labels_df["sample_id"].duplicated(), "sample_id"].tolist()
+        raise DuplicateSampleError(f"DUPLICATE_SAMPLE_ID_DETECTED: labels dataframe contains duplicate sample_ids: {dups[:5]}")
+
+    # 3. Target leakage guard (TRAIN-01-AC2)
+    inf_features_set = set(inference_feature_columns)
+    prohibited_names = {target_column, "net_return", "binary_label"}
+    for col in inf_features_set:
+        if col in prohibited_names or col.startswith(("label_", "future_", "exit_")):
+            raise TargetLeakageError(
+                f"TARGET_COLUMN_IN_FEATURE_LIST: column '{col}' is a target or future outcome and cannot be in inference features"
+            )
+
+    # 4. Availability & Causality check (TRAIN-01-AC3)
+    if "row_ready_at" in features_df.columns and "decision_ts" in features_df.columns:
+        invalid = features_df["row_ready_at"] > features_df["decision_ts"]
+        if invalid.any():
+            violators = features_df.loc[invalid, "sample_id"].tolist()
+            raise AvailabilityMismatchError(
+                f"AVAILABILITY_MISMATCH: row_ready_at > decision_ts detected for samples: {violators[:5]}"
+            )
+
+    if "label_end_ts" in labels_df.columns and "decision_ts" in labels_df.columns:
+        invalid = labels_df["label_end_ts"] < labels_df["decision_ts"]
+        if invalid.any():
+            violators = labels_df.loc[invalid, "sample_id"].tolist()
+            raise AvailabilityMismatchError(
+                f"AVAILABILITY_MISMATCH: label_end_ts < decision_ts detected for samples: {violators[:5]}"
+            )
+
+    # 5. Build split assignments table
+    split_records = []
+    assignments_iter = (
+        split_manifest.assignments.values()
+        if isinstance(split_manifest.assignments, dict)
+        else split_manifest.assignments
+    )
+    for assignment in assignments_iter:
+        split_records.append(
+            {
+                "sample_id": assignment.sample_id,
+                "role": assignment.role.value if isinstance(assignment.role, SampleRole) else str(assignment.role),
+                "fold_role": assignment.fold_role.value if assignment.fold_role else None,
+                "split_reason": assignment.purge_reason,
+            }
+        )
+    split_df = pd.DataFrame(split_records)
+
+    if split_df["sample_id"].duplicated().any():
+        dups = split_df.loc[split_df["sample_id"].duplicated(), "sample_id"].tolist()
+        raise DuplicateSampleError(f"DUPLICATE_SAMPLE_ID_DETECTED: split manifest contains duplicate sample_ids: {dups[:5]}")
+
+    # Join features, labels, and splits on sample_id
+    merged = pd.merge(features_df, labels_df[["sample_id", target_column, "label_end_ts"]], on="sample_id", how="inner")
+    merged = pd.merge(merged, split_df, on="sample_id", how="inner")
+
+    # Count samples per role
+    sample_counts_by_role: dict[str, int] = {}
+    for role_name in SampleRole:
+        count = int((merged["role"] == role_name.value).sum())
+        sample_counts_by_role[role_name.value] = count
+
+    # Content-addressed dataset ID
+    id_source = (
+        f"{dataset_snapshot_id}:{feature_registry_version}:{split_manifest.policy_id}:{target_column}:{len(merged)}"
+    )
+    dataset_id = f"ds_train_{hashlib.sha256(id_source.encode('utf-8')).hexdigest()[:16]}"
+
+    manifest = TrainingDatasetManifest(
+        dataset_id=dataset_id,
+        dataset_snapshot_id=dataset_snapshot_id,
+        feature_registry_version=feature_registry_version,
+        features_manifest_id=features_manifest_id,
+        labels_manifest_id=labels_manifest_id,
+        split_policy_id=split_manifest.policy_id,
+        cost_schedule_id=cost_schedule_id,
+        target_column=target_column,
+        inference_feature_columns=list(inference_feature_columns),
+        sample_counts_by_role=sample_counts_by_role,
+        created_at=datetime.now(UTC),
+    )
+
+    return TrainingDatasetArtifact(manifest=manifest, data=merged)
