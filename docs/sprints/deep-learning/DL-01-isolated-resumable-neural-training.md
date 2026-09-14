@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P1 | Type: feature | Domain: deep-learning | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/dl-01-isolated-resumable-neural-training`
 
@@ -195,10 +195,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **DL-01-AC0** Optional DL worker membuat checkpoint lengkap dan tidak membebani core runtime. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **DL-01-AC1** Missing torch tidak mematahkan core CI. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **DL-01-AC2** Resume input hash mismatch ditolak. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **DL-01-AC3** Epoch cap 50 patience 7 memakai validation terbaik. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **DL-01-AC0** Optional DL worker membuat checkpoint lengkap dan tidak membebani core runtime. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **DL-01-AC1** Missing torch tidak mematahkan core CI. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **DL-01-AC2** Resume input hash mismatch ditolak. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **DL-01-AC3** Epoch cap 50 patience 7 memakai validation terbaik. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
