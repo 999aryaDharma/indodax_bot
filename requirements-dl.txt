@@ -1,0 +1,3 @@
+# Optional deep learning dependencies for Indodax Research Lab (DL-01)
+# Isolated from core CI runtime.
+torch>=2.0.0
