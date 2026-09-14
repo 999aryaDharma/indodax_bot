@@ -19,6 +19,15 @@ from indodax_lab.paper.portfolio import (
     SharedCapitalLedger,
     SharedLedgerCheckpoint,
 )
+from indodax_lab.paper.promotion import (
+    ChallengerEvidence,
+    ChampionRegistry,
+    InsufficientForwardDurationError,
+    InsufficientForwardTradesError,
+    PolicyBreachPromotionError,
+    PromotionDecision,
+    UnsealedCandidatePromotionError,
+)
 
 __all__ = [
     # SHADOW-01
@@ -38,4 +47,12 @@ __all__ = [
     "PaperPosition",
     "SharedCapitalLedger",
     "SharedLedgerCheckpoint",
+    # SHADOW-03
+    "ChallengerEvidence",
+    "ChampionRegistry",
+    "InsufficientForwardDurationError",
+    "InsufficientForwardTradesError",
+    "PolicyBreachPromotionError",
+    "PromotionDecision",
+    "UnsealedCandidatePromotionError",
 ]
