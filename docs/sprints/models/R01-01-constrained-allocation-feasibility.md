@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P2 | Type: spike | Domain: models | Portfolio: EXPERIMENTAL
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/r01-01-constrained-allocation-feasibility`
 
@@ -193,10 +193,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **R01-01-AC0** Spike menilai apakah RL layak diteruskan dengan reward bersih biaya dan constraints modal. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **R01-01-AC1** Reward hack diuji melalui turnover dan cash. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **R01-01-AC2** Same budget versus inverse-vol baseline. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **R01-01-AC3** Tidak ada order live atau policy export otomatis. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **R01-01-AC0** Spike menilai apakah RL layak diteruskan dengan reward bersih biaya dan constraints modal. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **R01-01-AC1** Reward hack diuji melalui turnover dan cash. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **R01-01-AC2** Same budget versus inverse-vol baseline. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **R01-01-AC3** Tidak ada order live atau policy export otomatis. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

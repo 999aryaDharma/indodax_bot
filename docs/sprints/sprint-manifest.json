@@ -4560,9 +4560,9 @@ Total output lines: 7539
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/R01-01-constrained-allocation-feasibility.md",
       "priority": "P2",
-      "status": "PLANNED",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "REVIEW",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "UNASSIGNED (pending independent review)",
       "recommended_branch": "feat/r01-01-constrained-allocation-feasibility",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
