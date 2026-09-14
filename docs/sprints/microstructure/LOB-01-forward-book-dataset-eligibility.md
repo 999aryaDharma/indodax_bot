@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P2 | Type: data | Domain: microstructure | Portfolio: EXPERIMENTAL
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: PENDING
 
 Recommended Branch: `feat/lob-01-forward-book-dataset-eligibility`
 
