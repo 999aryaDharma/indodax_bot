@@ -49,6 +49,13 @@ from indodax_lab.models.tuning import (
     TrialOutcome,
     TrialStatus,
 )
+from indodax_lab.models.artifacts import (
+    BundleChecksumMismatchError,
+    BundleFeatureMismatchError,
+    MissingCalibrationMetadataError,
+    PortableBundle,
+    PortableBundleLoader,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -93,4 +100,10 @@ __all__ = [
     "M02SeedResult",
     "M02XGBoostTrainer",
     "SealedPartitionLeakageError",
+    # ML-04 Portable Model Bundles and Replay
+    "BundleChecksumMismatchError",
+    "BundleFeatureMismatchError",
+    "MissingCalibrationMetadataError",
+    "PortableBundle",
+    "PortableBundleLoader",
 ]
