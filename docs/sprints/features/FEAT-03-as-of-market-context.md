@@ -32,7 +32,7 @@ Direct consumers: FEAT-04
 
 ## Unlocks
 
-FEAT-04
+FEAT-04, C14-01
 
 ## Required Reading
 

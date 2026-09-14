@@ -33,7 +33,7 @@ Direct consumers: LABEL-01, TRAIN-01, STRAT-01, LOB-01
 
 ## Unlocks
 
-LABEL-01, TRAIN-01, STRAT-01, LOB-01
+LABEL-01, TRAIN-01, STRAT-01, LOB-01, C13-01, C14-01, C15-01
 
 ## Required Reading
 

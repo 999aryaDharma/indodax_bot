@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 70133)
-Total output lines: 7539
-
 {
   "schema_version": "1.0.0",
   "baseline_commit": "8a8e9f2",
@@ -1418,7 +1415,8 @@ Total output lines: 7539
       "external_gates": [],
       "current_context": "Legacy Task 15 contains uncommitted WIP in original worktree; inspect registry/technical/liquidity and tests before reuse. No WIP has been imported into this docs branch; do not claim it verified.",
       "unlocks": [
-        "FEAT-04"
+        "FEAT-04",
+        "C14-01"
       ],
       "requirements": [
         "FR-05"
@@ -1502,7 +1500,10 @@ Total output lines: 7539
         "LABEL-01",
         "TRAIN-01",
         "STRAT-01",
-        "LOB-01"
+        "LOB-01",
+        "C13-01",
+        "C14-01",
+        "C15-01"
       ],
       "requirements": [
         "FR-05"
@@ -1583,7 +1584,8 @@ Total output lines: 7539
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
         "LED-01",
-        "SIM-01"
+        "SIM-01",
+        "S10-01"
       ],
       "requirements": [
         "FR-06"
@@ -1745,7 +1747,8 @@ Total output lines: 7539
       "unlocks": [
         "SIM-02",
         "LABEL-01",
-        "ML-02"
+        "ML-02",
+        "S10-01"
       ],
       "requirements": [
         "FR-06"
@@ -1825,7 +1828,8 @@ Total output lines: 7539
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
         "SIM-03",
-        "SHADOW-02"
+        "SHADOW-02",
+        "C15-01"
       ],
       "requirements": [
         "FR-06"
@@ -1907,7 +1911,11 @@ Total output lines: 7539
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
         "SIM-04",
-        "STRAT-01"
+        "STRAT-01",
+        "C13-01",
+        "C14-01",
+        "S10-01",
+        "C15-01"
       ],
       "requirements": [
         "FR-06"
@@ -2066,7 +2074,8 @@ Total output lines: 7539
       "external_gates": [],
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
-        "LABEL-02"
+        "LABEL-02",
+        "M07-01"
       ],
       "requirements": [
         "FR-07"
@@ -2228,7 +2237,9 @@ Total output lines: 7539
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
         "TRAIN-01",
-        "EVAL-03"
+        "EVAL-03",
+        "C13-01",
+        "M07-01"
       ],
       "requirements": [
         "FR-07"
@@ -2407,7 +2418,8 @@ Total output lines: 7539
         "S05-01",
         "S06-01",
         "S08-01",
-        "S09-01"
+        "S09-01",
+        "C13-01"
       ],
       "requirements": [
         "FR-08"
@@ -2568,7 +2580,8 @@ Total output lines: 7539
       "current_context": "New capability; dependencies must be DONE before implementation.",
       "unlocks": [
         "C10-01",
-        "QA-01"
+        "QA-01",
+        "C13-01"
       ],
       "requirements": [
         "FR-08"
@@ -2663,7 +2676,2194 @@ Total output lines: 7539
       "acceptance_test_mapping": [
         {
           "criterion": "C02-01-AC0",
-          "test_case": "…20133 tokens truncated…  24
+          "test_case": "test_c02_01_valid_contract",
+          "behavior": "Kandidat C02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C02-01-AC1",
+          "test_case": "test_c02_01_contract_1",
+          "behavior": "Downtrend menolak buy",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C02-01-AC2",
+          "test_case": "test_c02_01_contract_2",
+          "behavior": "Pullback belum recovered tidak entry",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C02-01-AC3",
+          "test_case": "test_c02_01_contract_3",
+          "behavior": "Recovery closed bar memberi intent",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C03-01",
+      "title": "Time series momentum",
+      "domain": "strategies",
+      "legacy_tasks": [
+        20
+      ],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Positive lookback return with volatility target and cash fallback -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Negative momentum tetap cash",
+        "Zero volatility memberi reject",
+        "Future return tidak mengubah sizing"
+      ],
+      "files": [
+        "configs/strategies/C03_v1.yaml",
+        "src/indodax_lab/strategies/c03.py",
+        "tests/unit/lab/strategies/test_c03.py"
+      ],
+      "type": "feature",
+      "tier": "CORE",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C03-01-time-series-momentum.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c03-01-time-series-momentum",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "QA-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C03-01-AC0",
+          "test_case": "test_c03_01_valid_contract",
+          "behavior": "Kandidat C03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C03-01-AC1",
+          "test_case": "test_c03_01_contract_1",
+          "behavior": "Negative momentum tetap cash",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C03-01-AC2",
+          "test_case": "test_c03_01_contract_2",
+          "behavior": "Zero volatility memberi reject",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C03-01-AC3",
+          "test_case": "test_c03_01_contract_3",
+          "behavior": "Future return tidak mengubah sizing",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C04-01",
+      "title": "Cross sectional momentum",
+      "domain": "strategies",
+      "legacy_tasks": [
+        20
+      ],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "PIT rank return top-K with liquidity and stable tie break -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Future listing tidak masuk rank",
+        "Rank tie konsisten antar run",
+        "Cash reserved sekali pada rotasi"
+      ],
+      "files": [
+        "configs/strategies/C04_v1.yaml",
+        "src/indodax_lab/strategies/c04.py",
+        "tests/unit/lab/strategies/test_c04.py"
+      ],
+      "type": "feature",
+      "tier": "CORE",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C04-01-cross-sectional-momentum.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c04-01-cross-sectional-momentum",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "C12-01",
+        "S07-01",
+        "QA-01",
+        "G01-01",
+        "C13-01",
+        "C14-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C04-01-AC0",
+          "test_case": "test_c04_01_valid_contract",
+          "behavior": "Kandidat C04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C04-01-AC1",
+          "test_case": "test_c04_01_contract_1",
+          "behavior": "Future listing tidak masuk rank",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C04-01-AC2",
+          "test_case": "test_c04_01_contract_2",
+          "behavior": "Rank tie konsisten antar run",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C04-01-AC3",
+          "test_case": "test_c04_01_contract_3",
+          "behavior": "Cash reserved sekali pada rotasi",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C10-01",
+      "title": "Regime ensemble",
+      "domain": "strategies",
+      "legacy_tasks": [
+        20
+      ],
+      "dependencies": [
+        "C01-01",
+        "C07-01"
+      ],
+      "goal": "Kandidat C10 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Deterministic trend/reversion switch using available regime and frozen members -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Unknown regime menghasilkan cash",
+        "Perubahan future regime tidak mengubah decision",
+        "Member version tercatat di intent"
+      ],
+      "files": [
+        "configs/strategies/C10_v1.yaml",
+        "src/indodax_lab/strategies/c10.py",
+        "tests/unit/lab/strategies/test_c10.py"
+      ],
+      "type": "feature",
+      "tier": "CORE",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C10-01-regime-ensemble.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c10-01-regime-ensemble",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "QA-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C10-01-AC0",
+          "test_case": "test_c10_01_valid_contract",
+          "behavior": "Kandidat C10 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C10-01-AC1",
+          "test_case": "test_c10_01_contract_1",
+          "behavior": "Unknown regime menghasilkan cash",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C10-01-AC2",
+          "test_case": "test_c10_01_contract_2",
+          "behavior": "Perubahan future regime tidak mengubah decision",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C10-01-AC3",
+          "test_case": "test_c10_01_contract_3",
+          "behavior": "Member version tercatat di intent",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S01-01",
+      "title": "Liquidity screened breakout",
+      "domain": "strategies",
+      "legacy_tasks": [
+        20
+      ],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S01 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Breakout with spread/depth gate relative to simulated size -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Wide spread menolak",
+        "Depth kurang membatasi size",
+        "Missing liquidity memblokir trade"
+      ],
+      "files": [
+        "configs/strategies/S01_v1.yaml",
+        "src/indodax_lab/strategies/s01.py",
+        "tests/unit/lab/strategies/test_s01.py"
+      ],
+      "type": "feature",
+      "tier": "CORE",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S01-01-liquidity-screened-breakout.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s01-01-liquidity-screened-breakout",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "S07-01",
+        "QA-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S01-01-AC0",
+          "test_case": "test_s01_01_valid_contract",
+          "behavior": "Kandidat S01 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S01-01-AC1",
+          "test_case": "test_s01_01_contract_1",
+          "behavior": "Wide spread menolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S01-01-AC2",
+          "test_case": "test_s01_01_contract_2",
+          "behavior": "Depth kurang membatasi size",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S01-01-AC3",
+          "test_case": "test_s01_01_contract_3",
+          "behavior": "Missing liquidity memblokir trade",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S02-01",
+      "title": "Squeeze expansion",
+      "domain": "strategies",
+      "legacy_tasks": [
+        20
+      ],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "BB/Keltner squeeze followed by volume expansion and no-chase cap -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Squeeze saja belum entry",
+        "Expansion tanpa volume ditolak",
+        "Gap di atas chase cap ditolak"
+      ],
+      "files": [
+        "configs/strategies/S02_v1.yaml",
+        "src/indodax_lab/strategies/s02.py",
+        "tests/unit/lab/strategies/test_s02.py"
+      ],
+      "type": "feature",
+      "tier": "CORE",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S02-01-squeeze-expansion.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s02-01-squeeze-expansion",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "QA-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S02-01-AC0",
+          "test_case": "test_s02_01_valid_contract",
+          "behavior": "Kandidat S02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S02-01-AC1",
+          "test_case": "test_s02_01_contract_1",
+          "behavior": "Squeeze saja belum entry",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S02-01-AC2",
+          "test_case": "test_s02_01_contract_2",
+          "behavior": "Expansion tanpa volume ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S02-01-AC3",
+          "test_case": "test_s02_01_contract_3",
+          "behavior": "Gap di atas chase cap ditolak",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C05-01",
+      "title": "Volatility breakout",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Prior contraction then range expansion with registered ATR risk -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Future range tidak membentuk contraction",
+        "Expansion memberi intent",
+        "Degenerate range abstain"
+      ],
+      "files": [
+        "configs/strategies/C05_v1.yaml",
+        "src/indodax_lab/strategies/c05.py",
+        "tests/unit/lab/strategies/test_c05.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C05-01-volatility-breakout.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c05-01-volatility-breakout",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C05-01-AC0",
+          "test_case": "test_c05_01_valid_contract",
+          "behavior": "Kandidat C05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C05-01-AC1",
+          "test_case": "test_c05_01_contract_1",
+          "behavior": "Future range tidak membentuk contraction",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C05-01-AC2",
+          "test_case": "test_c05_01_contract_2",
+          "behavior": "Expansion memberi intent",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C05-01-AC3",
+          "test_case": "test_c05_01_contract_3",
+          "behavior": "Degenerate range abstain",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C06-01",
+      "title": "Directional trend strength",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "ADX strength and signed DI with ATR protection -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "High ADX negative DI tidak buy",
+        "Warmup belum lengkap abstain",
+        "Threshold equality deterministik"
+      ],
+      "files": [
+        "configs/strategies/C06_v1.yaml",
+        "src/indodax_lab/strategies/c06.py",
+        "tests/unit/lab/strategies/test_c06.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C06-01-directional-trend-strength.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c06-01-directional-trend-strength",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C06-01-AC0",
+          "test_case": "test_c06_01_valid_contract",
+          "behavior": "Kandidat C06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C06-01-AC1",
+          "test_case": "test_c06_01_contract_1",
+          "behavior": "High ADX negative DI tidak buy",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C06-01-AC2",
+          "test_case": "test_c06_01_contract_2",
+          "behavior": "Warmup belum lengkap abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C06-01-AC3",
+          "test_case": "test_c06_01_contract_3",
+          "behavior": "Threshold equality deterministik",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C08-01",
+      "title": "Multi timeframe confirmation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Closed daily/4h trend and lower timeframe trigger as-of decision -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Partial daily trend ditolak",
+        "Stale higher timeframe abstain",
+        "Confirmed alignment memberi LONG"
+      ],
+      "files": [
+        "configs/strategies/C08_v1.yaml",
+        "src/indodax_lab/strategies/c08.py",
+        "tests/unit/lab/strategies/test_c08.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C08-01-multi-timeframe-confirmation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c08-01-multi-timeframe-confirmation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C08-01-AC0",
+          "test_case": "test_c08_01_valid_contract",
+          "behavior": "Kandidat C08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C08-01-AC1",
+          "test_case": "test_c08_01_contract_1",
+          "behavior": "Partial daily trend ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C08-01-AC2",
+          "test_case": "test_c08_01_contract_2",
+          "behavior": "Stale higher timeframe abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C08-01-AC3",
+          "test_case": "test_c08_01_contract_3",
+          "behavior": "Confirmed alignment memberi LONG",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C09-01",
+      "title": "VWAP deviation reversion",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Rolling VWAP deviation in eligible reversion regime -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Zero denominator abstain",
+        "Trend risk gate menolak falling price",
+        "Missing volume tidak diisi nol"
+      ],
+      "files": [
+        "configs/strategies/C09_v1.yaml",
+        "src/indodax_lab/strategies/c09.py",
+        "tests/unit/lab/strategies/test_c09.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C09-01-vwap-deviation-reversion.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c09-01-vwap-deviation-reversion",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C09-01-AC0",
+          "test_case": "test_c09_01_valid_contract",
+          "behavior": "Kandidat C09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C09-01-AC1",
+          "test_case": "test_c09_01_contract_1",
+          "behavior": "Zero denominator abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C09-01-AC2",
+          "test_case": "test_c09_01_contract_2",
+          "behavior": "Trend risk gate menolak falling price",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C09-01-AC3",
+          "test_case": "test_c09_01_contract_3",
+          "behavior": "Missing volume tidak diisi nol",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C11-01",
+      "title": "Volatility allocation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat C11 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Inverse volatility long-only weights with asset and cash constraints -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Zero volatility tidak mendapat infinite weight",
+        "Sum allocation tidak melebihi cash",
+        "Small universe fallback explicit"
+      ],
+      "files": [
+        "configs/strategies/C11_v1.yaml",
+        "src/indodax_lab/strategies/c11.py",
+        "tests/unit/lab/strategies/test_c11.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C11-01-volatility-allocation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c11-01-volatility-allocation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "C15-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C11-01-AC0",
+          "test_case": "test_c11_01_valid_contract",
+          "behavior": "Kandidat C11 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C11-01-AC1",
+          "test_case": "test_c11_01_contract_1",
+          "behavior": "Zero volatility tidak mendapat infinite weight",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C11-01-AC2",
+          "test_case": "test_c11_01_contract_2",
+          "behavior": "Sum allocation tidak melebihi cash",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C11-01-AC3",
+          "test_case": "test_c11_01_contract_3",
+          "behavior": "Small universe fallback explicit",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C12-01",
+      "title": "Relative strength rotation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "C04-01"
+      ],
+      "goal": "Kandidat C12 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "PIT strength rotation with turnover and cash regime gate -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Delisted pair tetap ada dalam histori",
+        "Cash regime memblokir reentry",
+        "Tie rank stable"
+      ],
+      "files": [
+        "configs/strategies/C12_v1.yaml",
+        "src/indodax_lab/strategies/c12.py",
+        "tests/unit/lab/strategies/test_c12.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/C12-01-relative-strength-rotation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c12-01-relative-strength-rotation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C12-01-AC0",
+          "test_case": "test_c12_01_valid_contract",
+          "behavior": "Kandidat C12 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C12-01-AC1",
+          "test_case": "test_c12_01_contract_1",
+          "behavior": "Delisted pair tetap ada dalam histori",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C12-01-AC2",
+          "test_case": "test_c12_01_contract_2",
+          "behavior": "Cash regime memblokir reentry",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C12-01-AC3",
+          "test_case": "test_c12_01_contract_3",
+          "behavior": "Tie rank stable",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S03-01",
+      "title": "Abnormal volume continuation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Volume surprise plus price confirmation with manipulation flags -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Volume spike tanpa price follow-through ditolak",
+        "Flagged pump abstain",
+        "Missing volume tidak menjadi surprise"
+      ],
+      "files": [
+        "configs/strategies/S03_v1.yaml",
+        "src/indodax_lab/strategies/s03.py",
+        "tests/unit/lab/strategies/test_s03.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S03-01-abnormal-volume-continuation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s03-01-abnormal-volume-continuation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S03-01-AC0",
+          "test_case": "test_s03_01_valid_contract",
+          "behavior": "Kandidat S03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S03-01-AC1",
+          "test_case": "test_s03_01_contract_1",
+          "behavior": "Volume spike tanpa price follow-through ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S03-01-AC2",
+          "test_case": "test_s03_01_contract_2",
+          "behavior": "Flagged pump abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S03-01-AC3",
+          "test_case": "test_s03_01_contract_3",
+          "behavior": "Missing volume tidak menjadi surprise",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S04-01",
+      "title": "Order flow imbalance",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01",
+        "LOB-01"
+      ],
+      "goal": "Kandidat S04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Reliable-session trade/book imbalance over registered horizon -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Sequence gap abstain",
+        "Stale book abstain",
+        "Imbalance timestamp setelah decision ditolak"
+      ],
+      "files": [
+        "configs/strategies/S04_v1.yaml",
+        "src/indodax_lab/strategies/s04.py",
+        "tests/unit/lab/strategies/test_s04.py"
+      ],
+      "type": "feature",
+      "tier": "EXPERIMENTAL",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S04-01-order-flow-imbalance.md",
+      "priority": "P2",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s04-01-order-flow-imbalance",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "S10-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S04-01-AC0",
+          "test_case": "test_s04_01_valid_contract",
+          "behavior": "Kandidat S04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S04-01-AC1",
+          "test_case": "test_s04_01_contract_1",
+          "behavior": "Sequence gap abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S04-01-AC2",
+          "test_case": "test_s04_01_contract_2",
+          "behavior": "Stale book abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S04-01-AC3",
+          "test_case": "test_s04_01_contract_3",
+          "behavior": "Imbalance timestamp setelah decision ditolak",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S05-01",
+      "title": "Micro pullback",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Short pullback within liquid impulse with spread-aware timing -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Wide spread menolak",
+        "Price chase di luar band menolak",
+        "Partial fill tidak menjadi full size"
+      ],
+      "files": [
+        "configs/strategies/S05_v1.yaml",
+        "src/indodax_lab/strategies/s05.py",
+        "tests/unit/lab/strategies/test_s05.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S05-01-micro-pullback.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s05-01-micro-pullback",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S05-01-AC0",
+          "test_case": "test_s05_01_valid_contract",
+          "behavior": "Kandidat S05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S05-01-AC1",
+          "test_case": "test_s05_01_contract_1",
+          "behavior": "Wide spread menolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S05-01-AC2",
+          "test_case": "test_s05_01_contract_2",
+          "behavior": "Price chase di luar band menolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S05-01-AC3",
+          "test_case": "test_s05_01_contract_3",
+          "behavior": "Partial fill tidak menjadi full size",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S06-01",
+      "title": "Post listing maturation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Momentum only after registered minimum age and reliable history -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Initial listing spike ditolak",
+        "Age boundary memakai available listing evidence",
+        "Unknown listing date abstain"
+      ],
+      "files": [
+        "configs/strategies/S06_v1.yaml",
+        "src/indodax_lab/strategies/s06.py",
+        "tests/unit/lab/strategies/test_s06.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S06-01-post-listing-maturation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s06-01-post-listing-maturation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S06-01-AC0",
+          "test_case": "test_s06_01_valid_contract",
+          "behavior": "Kandidat S06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S06-01-AC1",
+          "test_case": "test_s06_01_contract_1",
+          "behavior": "Initial listing spike ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S06-01-AC2",
+          "test_case": "test_s06_01_contract_2",
+          "behavior": "Age boundary memakai available listing evidence",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S06-01-AC3",
+          "test_case": "test_s06_01_contract_3",
+          "behavior": "Unknown listing date abstain",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S07-01",
+      "title": "Small cap rotation",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "C04-01",
+        "S01-01"
+      ],
+      "goal": "Kandidat S07 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Liquidity capacity constrained cross-sectional rank turnover -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Illiquid top rank tidak otomatis eligible",
+        "Order di atas capacity ditolak",
+        "Rotation respects shared cash"
+      ],
+      "files": [
+        "configs/strategies/S07_v1.yaml",
+        "src/indodax_lab/strategies/s07.py",
+        "tests/unit/lab/strategies/test_s07.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S07-01-small-cap-rotation.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s07-01-small-cap-rotation",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S07-01-AC0",
+          "test_case": "test_s07_01_valid_contract",
+          "behavior": "Kandidat S07 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S07-01-AC1",
+          "test_case": "test_s07_01_contract_1",
+          "behavior": "Illiquid top rank tidak otomatis eligible",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S07-01-AC2",
+          "test_case": "test_s07_01_contract_2",
+          "behavior": "Order di atas capacity ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S07-01-AC3",
+          "test_case": "test_s07_01_contract_3",
+          "behavior": "Rotation respects shared cash",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S08-01",
+      "title": "Passive mean reversion",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01",
+        "LOB-01"
+      ],
+      "goal": "Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Conservative queue-based passive order simulation without guaranteed maker fills -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Price touches quote tidak otomatis fill",
+        "Queue unknown memblokir promotion",
+        "Partial cancel menjaga ledger balance"
+      ],
+      "files": [
+        "configs/strategies/S08_v1.yaml",
+        "src/indodax_lab/strategies/s08.py",
+        "tests/unit/lab/strategies/test_s08.py"
+      ],
+      "type": "feature",
+      "tier": "EXPERIMENTAL",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S08-01-passive-mean-reversion.md",
+      "priority": "P2",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s08-01-passive-mean-reversion",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S08-01-AC0",
+          "test_case": "test_s08_01_valid_contract",
+          "behavior": "Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S08-01-AC1",
+          "test_case": "test_s08_01_contract_1",
+          "behavior": "Price touches quote tidak otomatis fill",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S08-01-AC2",
+          "test_case": "test_s08_01_contract_2",
+          "behavior": "Queue unknown memblokir promotion",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S08-01-AC3",
+          "test_case": "test_s08_01_contract_3",
+          "behavior": "Partial cancel menjaga ledger balance",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S09-01",
+      "title": "Tail risk abstention",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01"
+      ],
+      "goal": "Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
+      "contract": "Available pump gap and illiquidity state blocks new risk -> versioned LONG/FLAT intent, never direct orders.",
+      "checks": [
+        "Unknown data quality fail closed",
+        "Existing exposure ditangani registered exit policy",
+        "Gate reset tidak menghapus historical breach"
+      ],
+      "files": [
+        "configs/strategies/S09_v1.yaml",
+        "src/indodax_lab/strategies/s09.py",
+        "tests/unit/lab/strategies/test_s09.py"
+      ],
+      "type": "feature",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
+      "path": "docs/sprints/strategies/S09-01-tail-risk-abstention.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s09-01-tail-risk-abstention",
+      "external_gates": [
+        "Portfolio backlog activation by owner; not in default scheduler"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/10-strategy-catalog-and-protocol.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S09-01-AC0",
+          "test_case": "test_s09_01_valid_contract",
+          "behavior": "Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S09-01-AC1",
+          "test_case": "test_s09_01_contract_1",
+          "behavior": "Unknown data quality fail closed",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S09-01-AC2",
+          "test_case": "test_s09_01_contract_2",
+          "behavior": "Existing exposure ditangani registered exit policy",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S09-01-AC3",
+          "test_case": "test_s09_01_contract_3",
+          "behavior": "Gate reset tidak menghapus historical breach",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "EVAL-01",
+      "title": "Immutable experiment registry",
+      "domain": "evaluation",
+      "legacy_tasks": [
+        21
+      ],
+      "dependencies": [
+        "SIM-04"
+      ],
+      "goal": "Setiap percobaan termasuk gagal tersimpan dengan konfigurasi dan ancestry yang dapat diaudit.",
+      "contract": "run_id + parent + git SHA + environment/data/config/cost/execution hashes -> immutable run record.",
+      "checks": [
+        "Dirty worktree tidak memenuhi promotable run",
+        "Failed trial ikut trial count",
+        "Duplicate run key tidak menimpa hasil berbeda"
+      ],
+      "files": [
+        "src/indodax_lab/evaluation/registry.py",
+        "tests/unit/lab/evaluation/test_registry.py"
+      ],
+      "type": "data",
+      "tier": "CORE",
+      "spec": "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+      "path": "docs/sprints/evaluation/EVAL-01-immutable-experiment-registry.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/eval-01-immutable-experiment-registry",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "EVAL-02",
+        "ML-03",
+        "JOB-01",
+        "OPS-03",
+        "C13-01",
+        "C14-01",
+        "S10-01",
+        "C15-01",
+        "M07-01"
+      ],
+      "requirements": [
+        "FR-09"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "EVAL-01-AC0",
+          "test_case": "test_eval_01_valid_contract",
+          "behavior": "Setiap percobaan termasuk gagal tersimpan dengan konfigurasi dan ancestry yang dapat diaudit",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-01-AC1",
+          "test_case": "test_eval_01_contract_1",
+          "behavior": "Dirty worktree tidak memenuhi promotable run",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-01-AC2",
+          "test_case": "test_eval_01_contract_2",
+          "behavior": "Failed trial ikut trial count",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-01-AC3",
+          "test_case": "test_eval_01_contract_3",
+          "behavior": "Duplicate run key tidak menimpa hasil berbeda",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "high",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "EVAL-02",
+      "title": "Hard gates and selection diagnostics",
+      "domain": "evaluation",
+      "legacy_tasks": [
+        21
+      ],
+      "dependencies": [
+        "EVAL-01"
+      ],
+      "goal": "Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned.",
+      "contract": "metrics + policy + trial family -> INVALID_RUN/HARD_FAIL/NEAR_MISS/REGIME_EDGE/PASS, DSR/PBO when eligible.",
+      "checks": [
+        "Score tinggi tidak menutupi cost unknown",
+        "Sample kecil menghasilkan insufficient evidence",
+        "Best seed tidak dipilih sebagai hasil finalist"
+      ],
+      "files": [
+        "src/indodax_lab/evaluation/gates.py",
+        "src/indodax_lab/evaluation/statistics.py",
+        "tests/unit/lab/evaluation/test_gates.py"
+      ],
+      "type": "research",
+      "tier": "CORE",
+      "spec": "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+      "path": "docs/sprints/evaluation/EVAL-02-hard-gates-and-selection-diagnostics.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/eval-02-hard-gates-and-selection-diagnostics",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "EVAL-03",
+        "M07-01"
+      ],
+      "requirements": [
+        "FR-09"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "EVAL-02-AC0",
+          "test_case": "test_eval_02_valid_contract",
+          "behavior": "Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-02-AC1",
+          "test_case": "test_eval_02_contract_1",
+          "behavior": "Score tinggi tidak menutupi cost unknown",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-02-AC2",
+          "test_case": "test_eval_02_contract_2",
+          "behavior": "Sample kecil menghasilkan insufficient evidence",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-02-AC3",
+          "test_case": "test_eval_02_contract_3",
+          "behavior": "Best seed tidak dipilih sebagai hasil finalist",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "high",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "EVAL-03",
+      "title": "Sealed candidate lifecycle",
+      "domain": "evaluation",
+      "legacy_tasks": [
+        21
+      ],
+      "dependencies": [
+        "EVAL-02",
+        "SPLIT-01"
+      ],
+      "goal": "Promosi mengikuti freeze dan exposure audit sebelum gate berikutnya dibuka.",
+      "contract": "IDEA -> IMPLEMENTED -> BACKTESTED -> VALIDATED -> SEALED_PASS -> SHADOW -> CHAMPION; immutable transitions.",
+      "checks": [
+        "Config berubah setelah sealed menjadi challenger baru",
+        "Gate dibuka sekali dan dicatat",
+        "Invalid run tidak masuk ranking"
+      ],
+      "files": [
+        "src/indodax_lab/evaluation/lifecycle.py",
+        "tests/unit/lab/evaluation/test_lifecycle.py"
+      ],
+      "type": "safety",
+      "tier": "CORE",
+      "spec": "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+      "path": "docs/sprints/evaluation/EVAL-03-sealed-candidate-lifecycle.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/eval-03-sealed-candidate-lifecycle",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "ML-04",
+        "JOB-03",
+        "SHADOW-01",
+        "SHADOW-03",
+        "REPORT-01"
+      ],
+      "requirements": [
+        "FR-09"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/11-evaluation-and-experiment-lifecycle.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "EVAL-03-AC0",
+          "test_case": "test_eval_03_valid_contract",
+          "behavior": "Promosi mengikuti freeze dan exposure audit sebelum gate berikutnya dibuka",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-03-AC1",
+          "test_case": "test_eval_03_contract_1",
+          "behavior": "Config berubah setelah sealed menjadi challenger baru",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-03-AC2",
+          "test_case": "test_eval_03_contract_2",
+          "behavior": "Gate dibuka sekali dan dicatat",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "EVAL-03-AC3",
+          "test_case": "test_eval_03_contract_3",
+          "behavior": "Invalid run tidak masuk ranking",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "high",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "ML-01",
+      "title": "Train-only preprocessing",
+      "domain": "models",
+      "legacy_tasks": [
+        22
+      ],
+      "dependencies": [
+        "TRAIN-01"
+      ],
+      "goal": "Preprocessor menyimpan fitted statistics dan feature order tanpa mengakses test.",
+      "contract": "train features -> imputer/scaler/pruner artifact; validation transform only.",
+      "checks": [
+        "Test extreme value tidak memengaruhi train median",
+        "Missing extra reordered feature ditolak",
+        "Transform tidak menjalankan fit"
+      ],
+      "files": [
+        "src/indodax_lab/models/preprocessing.py",
+        "tests/unit/lab/models/test_preprocessing.py"
+      ],
+      "type": "data",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/ML-01-train-only-preprocessing.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ml-01-train-only-preprocessing",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "ML-02",
+        "M07-01"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "ML-01-AC0",
+          "test_case": "test_ml_01_valid_contract",
+          "behavior": "Preprocessor menyimpan fitted statistics dan feature order tanpa mengakses test",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-01-AC1",
+          "test_case": "test_ml_01_contract_1",
+          "behavior": "Test extreme value tidak memengaruhi train median",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-01-AC2",
+          "test_case": "test_ml_01_contract_2",
+          "behavior": "Missing extra reordered feature ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-01-AC3",
+          "test_case": "test_ml_01_contract_3",
+          "behavior": "Transform tidak menjalankan fit",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "ML-02",
+      "title": "Held-out calibration and cost mapper",
+      "domain": "models",
+      "legacy_tasks": [
+        22
+      ],
+      "dependencies": [
+        "ML-01",
+        "SIM-01"
+      ],
+      "goal": "Forecast terkalibrasi hanya menjadi intent ketika net edge melampaui margin.",
+      "contract": "forecast(kind=NET_RETURN/GROSS_RETURN/PROBABILITY) + payoff/cost basis -> abstain or intent; net costs applied once.",
+      "checks": [
+        "Calibrator memakai inner held-out segment",
+        "Dataset calibration terlalu kecil memblokir",
+        "Gross dan net equivalent forecast menghasilkan keputusan sama"
+      ],
+      "files": [
+        "src/indodax_lab/models/calibration.py",
+        "src/indodax_lab/models/execution_mapper.py",
+        "tests/unit/lab/models/test_execution_mapper.py"
+      ],
+      "type": "safety",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/ML-02-held-out-calibration-and-cost-mapper.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ml-02-held-out-calibration-and-cost-mapper",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "ML-03"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "ML-02-AC0",
+          "test_case": "test_ml_02_valid_contract",
+          "behavior": "Forecast terkalibrasi hanya menjadi intent ketika net edge melampaui margin",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-02-AC1",
+          "test_case": "test_ml_02_contract_1",
+          "behavior": "Calibrator memakai inner held-out segment",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-02-AC2",
+          "test_case": "test_ml_02_contract_2",
+          "behavior": "Dataset calibration terlalu kecil memblokir",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-02-AC3",
+          "test_case": "test_ml_02_contract_3",
+          "behavior": "Gross dan net equivalent forecast menghasilkan keputusan sama",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "ML-03",
+      "title": "Bounded trial search",
+      "domain": "models",
+      "legacy_tasks": [
+        23
+      ],
+      "dependencies": [
+        "ML-02",
+        "EVAL-01"
+      ],
+      "goal": "Search mencatat trial budget dan tidak memakai sealed test sebagai objective.",
+      "contract": "versioned search space + inner folds + family budget -> frozen winning recipe, all trial outcomes.",
+      "checks": [
+        "Trial gagal tetap menghabiskan budget",
+        "Resume config mismatch ditolak",
+        "Maksimum 30 trial dan satu near-miss revision per model"
+      ],
+      "files": [
+        "src/indodax_lab/models/tuning.py",
+        "tests/unit/lab/models/test_tuning_budget.py"
+      ],
+      "type": "research",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/ML-03-bounded-trial-search.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ml-03-bounded-trial-search",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "M01-01",
+        "M02-01"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "ML-03-AC0",
+          "test_case": "test_ml_03_valid_contract",
+          "behavior": "Search mencatat trial budget dan tidak memakai sealed test sebagai objective",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-03-AC1",
+          "test_case": "test_ml_03_contract_1",
+          "behavior": "Trial gagal tetap menghabiskan budget",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-03-AC2",
+          "test_case": "test_ml_03_contract_2",
+          "behavior": "Resume config mismatch ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-03-AC3",
+          "test_case": "test_ml_03_contract_3",
+          "behavior": "Maksimum 30 trial dan satu near-miss revision per model",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "M01-01",
+      "title": "Calibrated logistic baseline",
+      "domain": "models",
+      "legacy_tasks": [
+        23
+      ],
+      "dependencies": [
+        "ML-03"
+      ],
+      "goal": "M01 memberi probabilitas net-positive dengan recipe linear teratur yang reproducible.",
+      "contract": "Logistic elastic-net solver-compatible config -> fitted preprocessor/model/calibrator bundle.",
+      "checks": [
+        "Invalid solver penalty ditolak",
+        "Tiny class imbalance diproses atau blocked dengan reason",
+        "Output dinilai net utility bersama cash dan naive baseline"
+      ],
+      "files": [
+        "src/indodax_lab/models/m01_logistic.py",
+        "configs/models/M01_logistic_v1.yaml",
+        "tests/unit/lab/models/test_m01_logistic.py"
+      ],
+      "type": "research",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/M01-01-calibrated-logistic-baseline.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/m01-01-calibrated-logistic-baseline",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "M02-01",
+        "ML-04"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "M01-01-AC0",
+          "test_case": "test_m01_01_valid_contract",
+          "behavior": "M01 memberi probabilitas net-positive dengan recipe linear teratur yang reproducible",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M01-01-AC1",
+          "test_case": "test_m01_01_contract_1",
+          "behavior": "Invalid solver penalty ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M01-01-AC2",
+          "test_case": "test_m01_01_contract_2",
+          "behavior": "Tiny class imbalance diproses atau blocked dengan reason",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M01-01-AC3",
+          "test_case": "test_m01_01_contract_3",
+          "behavior": "Output dinilai net utility bersama cash dan naive baseline",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "M02-01",
+      "title": "XGBoost challenger",
+      "domain": "models",
+      "legacy_tasks": [
+        23
+      ],
+      "dependencies": [
+        "ML-03",
+        "M01-01"
+      ],
+      "goal": "M02 dibandingkan secara fair dengan linear dan classical pada outer folds yang sama.",
+      "contract": "Versioned tree search + early stopping -> best iteration and frozen artifact.",
+      "checks": [
+        "Early stop tidak melihat sealed labels",
+        "Finalist median dan worst tiga seed dicatat",
+        "Tree pipeline tetap menjaga feature order"
+      ],
+      "files": [
+        "src/indodax_lab/models/m02_xgboost.py",
+        "configs/models/M02_xgboost_v1.yaml",
+        "tests/unit/lab/models/test_m02_xgboost.py"
+      ],
+      "type": "research",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/M02-01-xgboost-challenger.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/m02-01-xgboost-challenger",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "ML-04"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "M02-01-AC0",
+          "test_case": "test_m02_01_valid_contract",
+          "behavior": "M02 dibandingkan secara fair dengan linear dan classical pada outer folds yang sama",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M02-01-AC1",
+          "test_case": "test_m02_01_contract_1",
+          "behavior": "Early stop tidak melihat sealed labels",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M02-01-AC2",
+          "test_case": "test_m02_01_contract_2",
+          "behavior": "Finalist median dan worst tiga seed dicatat",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M02-01-AC3",
+          "test_case": "test_m02_01_contract_3",
+          "behavior": "Tree pipeline tetap menjaga feature order",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "ML-04",
+      "title": "Portable model bundles and replay",
+      "domain": "models",
+      "legacy_tasks": [
+        23
+      ],
+      "dependencies": [
+        "M01-01",
+        "M02-01",
+        "EVAL-03"
+      ],
+      "goal": "Trainer mempublikasikan bundle lengkap yang bisa diload ulang dan diuji inference identik.",
+      "contract": "model + preprocessor + calibrator + thresholds + hashes + feature order -> verified bundle, replay forecast.",
+      "checks": [
+        "Checksum weights mismatch menolak load",
+        "Missing calibration metadata memblokir",
+        "Reload memberi prediksi ekuivalen pada fixture"
+      ],
+      "files": [
+        "src/indodax_lab/models/artifacts.py",
+        "src/indodax_lab/models/trainer.py",
+        "src/indodax_lab/cli/train_model.py",
+        "tests/integration/lab/test_ml_walk_forward.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/specs/12-tabular-models-and-training.md",
+      "path": "docs/sprints/models/ML-04-portable-model-bundles-and-replay.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ml-04-portable-model-bundles-and-replay",
+      "external_gates": [],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "JOB-03",
+        "SHADOW-01",
+        "QA-01",
+        "M03-01",
+        "M04-01",
+        "M05-01",
+        "M06-01",
+        "M07-01"
+      ],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/12-tabular-models-and-training.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "ML-04-AC0",
+          "test_case": "test_ml_04_valid_contract",
+          "behavior": "Trainer mempublikasikan bundle lengkap yang bisa diload ulang dan diuji inference identik",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-04-AC1",
+          "test_case": "test_ml_04_contract_1",
+          "behavior": "Checksum weights mismatch menolak load",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-04-AC2",
+          "test_case": "test_ml_04_contract_2",
+          "behavior": "Missing calibration metadata memblokir",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "ML-04-AC3",
+          "test_case": "test_ml_04_contract_3",
+          "behavior": "Reload memberi prediksi ekuivalen pada fixture",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "JOB-01",
+      "title": "Durable leased jobs",
+      "domain": "orchestration",
+      "legacy_tasks": [
+        24
       ],
       "dependencies": [
         "EVAL-01"
@@ -4017,7 +6217,8 @@ Total output lines: 7539
       "unlocks": [
         "S04-01",
         "S08-01",
-        "L01-01"
+        "L01-01",
+        "S10-01"
       ],
       "requirements": [
         "FR-14"
@@ -4335,7 +6536,9 @@ Total output lines: 7539
         "Portfolio backlog activation by owner; not in default scheduler"
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.",
-      "unlocks": [],
+      "unlocks": [
+        "M07-01"
+      ],
       "requirements": [
         "FR-10"
       ],
@@ -4553,7 +6756,10 @@ Total output lines: 7539
       ],
       "files": [
         "docs/research/rl-feasibility.md",
-        "tests/research/test_rl_reward_contract.py"
+        "tests/research/test_rl_reward_contract.py",
+        "src/indodax_lab/models/rl/environment.py",
+        "src/indodax_lab/models/rl/train.py",
+        "configs/research/rl_allocation_v1.yaml"
       ],
       "type": "spike",
       "tier": "EXPERIMENTAL",
@@ -4573,6 +6779,7 @@ Total output lines: 7539
         "FR-10"
       ],
       "required_reading": [
+        "docs/specs/23-rl-allocation-feasibility.md",
         "AGENTS.md",
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/12-tabular-models-and-training.md",
@@ -4604,6 +6811,78 @@ Total output lines: 7539
           "criterion": "R01-01-AC3",
           "test_case": "test_r01_01_contract_3",
           "behavior": "Tidak ada order live atau policy export otomatis",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-A",
+          "test_case": "test_rl_a",
+          "behavior": "RL-A from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-B",
+          "test_case": "test_rl_b",
+          "behavior": "RL-B from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-C",
+          "test_case": "test_rl_c",
+          "behavior": "RL-C from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-D",
+          "test_case": "test_rl_d",
+          "behavior": "RL-D from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-E",
+          "test_case": "test_rl_e",
+          "behavior": "RL-E from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-F",
+          "test_case": "test_rl_f",
+          "behavior": "RL-F from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-G",
+          "test_case": "test_rl_g",
+          "behavior": "RL-G from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-H",
+          "test_case": "test_rl_h",
+          "behavior": "RL-H from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-I",
+          "test_case": "test_rl_i",
+          "behavior": "RL-I from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-J",
+          "test_case": "test_rl_j",
+          "behavior": "RL-J from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-K",
+          "test_case": "test_rl_k",
+          "behavior": "RL-K from spec 23 must pass through public judge adapter",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "R01-01-RL-L",
+          "test_case": "test_rl_l",
+          "behavior": "RL-L from spec 23 must pass through public judge adapter",
           "status": "PLANNED_TEST"
         }
       ],
@@ -5320,6 +7599,495 @@ Total output lines: 7539
           "criterion": "REL-01-AC3",
           "test_case": "test_rel_01_contract_3",
           "behavior": "Unmet forward gate terlihat jelas sebagai pending champion qualification",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C13-01",
+      "title": "Cross-sectional reversal",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "STRAT-01",
+        "FEAT-04",
+        "C04-01",
+        "C07-01",
+        "SIM-03",
+        "SPLIT-01",
+        "EVAL-01"
+      ],
+      "goal": "Cross-sectional reversal dengan causal input, frozen recipe dan shared judge.",
+      "contract": "EXP-H01 canonical frame/artifact -> intent atau allocation/filter; bukan fill.",
+      "checks": [
+        "H01-A: golden tepat",
+        "H01-B: benchmark future tidak memengaruhi keputusan",
+        "H01-C: 19 aset abstain",
+        "H01-D: stop dan time exit judge dengan partial fills tidak mereset horizon",
+        "H01-E: satu modal bersama tidak overspend saat rotasi",
+        "H01-F: no fill pada signal close"
+      ],
+      "files": [
+        "src/indodax_lab/strategies/cross_sectional_reversal.py",
+        "configs/strategies/c13-01.yaml",
+        "tests/unit/lab/strategies/test_cross_sectional_reversal.py"
+      ],
+      "type": "research",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/22-catalog-expansion-and-rl.md",
+      "path": "docs/sprints/strategies/C13-01-cross-sectional-reversal.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c13-01-cross-sectional-reversal",
+      "external_gates": [
+        "Owner activation for experiment execution; no default scheduling",
+        "Verified data eligibility and remaining family budget before experiment"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [
+        "C14-01"
+      ],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/22-catalog-expansion-and-rl.md",
+        "docs/research/catalog-expansion/02-experiment-contract.md",
+        "docs/research/catalog-expansion/03-candidate-specifications.md",
+        "docs/decisions/ADR-003-state-and-budgets.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C13-01-AC0",
+          "test_case": "test_c13_01_0",
+          "behavior": "H01-A: golden tepat",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C13-01-AC1",
+          "test_case": "test_c13_01_1",
+          "behavior": "H01-B: benchmark future tidak memengaruhi keputusan",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C13-01-AC2",
+          "test_case": "test_c13_01_2",
+          "behavior": "H01-C: 19 aset abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C13-01-AC3",
+          "test_case": "test_c13_01_3",
+          "behavior": "H01-D: stop dan time exit judge dengan partial fills tidak mereset horizon",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C13-01-AC4",
+          "test_case": "test_c13_01_4",
+          "behavior": "H01-E: satu modal bersama tidak overspend saat rotasi",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C13-01-AC5",
+          "test_case": "test_c13_01_5",
+          "behavior": "H01-F: no fill pada signal close",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C14-01",
+      "title": "Size-conditioned momentum reversal",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "C13-01",
+        "C04-01",
+        "FEAT-03",
+        "FEAT-04",
+        "SIM-03",
+        "EVAL-01"
+      ],
+      "goal": "Size-conditioned momentum reversal dengan causal input, frozen recipe dan shared judge.",
+      "contract": "EXP-H02 canonical frame/artifact -> intent atau allocation/filter; bukan fill.",
+      "checks": [
+        "H02-A: cohort dan bobot tepat",
+        "H02-B: future cap revision tidak mengubah histori",
+        "H02-C: cap missing/expired dan survivor exclusion tercatat",
+        "H02-D: slot kosong tidak direalokasikan",
+        "H02-E: baseline momentum-only dan reversal-only memakai intersection universe yang sama"
+      ],
+      "files": [
+        "src/indodax_lab/strategies/size_conditioned.py",
+        "configs/strategies/c14-01.yaml",
+        "tests/unit/lab/strategies/test_size_conditioned.py"
+      ],
+      "type": "research",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/22-catalog-expansion-and-rl.md",
+      "path": "docs/sprints/strategies/C14-01-size-conditioned.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c14-01-size-conditioned",
+      "external_gates": [
+        "Owner activation for experiment execution; no default scheduling",
+        "Verified data eligibility and remaining family budget before experiment"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/22-catalog-expansion-and-rl.md",
+        "docs/research/catalog-expansion/02-experiment-contract.md",
+        "docs/research/catalog-expansion/03-candidate-specifications.md",
+        "docs/decisions/ADR-003-state-and-budgets.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C14-01-AC0",
+          "test_case": "test_c14_01_0",
+          "behavior": "H02-A: cohort dan bobot tepat",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C14-01-AC1",
+          "test_case": "test_c14_01_1",
+          "behavior": "H02-B: future cap revision tidak mengubah histori",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C14-01-AC2",
+          "test_case": "test_c14_01_2",
+          "behavior": "H02-C: cap missing/expired dan survivor exclusion tercatat",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C14-01-AC3",
+          "test_case": "test_c14_01_3",
+          "behavior": "H02-D: slot kosong tidak direalokasikan",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C14-01-AC4",
+          "test_case": "test_c14_01_4",
+          "behavior": "H02-E: baseline momentum-only dan reversal-only memakai intersection universe yang sama",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "S10-01",
+      "title": "Microprice continuation benchmark",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "S04-01",
+        "LOB-01",
+        "SIM-01",
+        "SIM-03",
+        "COST-01",
+        "EVAL-01"
+      ],
+      "goal": "Microprice continuation benchmark dengan causal input, frozen recipe dan shared judge.",
+      "contract": "EXP-H03 canonical frame/artifact -> intent atau allocation/filter; bukan fill.",
+      "checks": [
+        "H03-A: dua golden di atas dengan toleransi absolute 1e-8 bps",
+        "H03-B: equality edge threshold tidak entry",
+        "H03-C: stale/crossed/zero depth/GAP abstain",
+        "H03-D: delayed fill menggunakan depth sesudah latency",
+        "H03-E: restart tidak menggandakan intent/time horizon",
+        "H03-F: no historical L2 fabricated from candles"
+      ],
+      "files": [
+        "src/indodax_lab/strategies/microprice.py",
+        "configs/strategies/s10-01.yaml",
+        "tests/unit/lab/strategies/test_microprice.py"
+      ],
+      "type": "research",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/22-catalog-expansion-and-rl.md",
+      "path": "docs/sprints/strategies/S10-01-microprice.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/s10-01-microprice",
+      "external_gates": [
+        "Owner activation for experiment execution; no default scheduling",
+        "Verified data eligibility and remaining family budget before experiment"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/22-catalog-expansion-and-rl.md",
+        "docs/research/catalog-expansion/02-experiment-contract.md",
+        "docs/research/catalog-expansion/03-candidate-specifications.md",
+        "docs/decisions/ADR-003-state-and-budgets.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "S10-01-AC0",
+          "test_case": "test_s10_01_0",
+          "behavior": "H03-A: dua golden di atas dengan toleransi absolute 1e-8 bps",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S10-01-AC1",
+          "test_case": "test_s10_01_1",
+          "behavior": "H03-B: equality edge threshold tidak entry",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S10-01-AC2",
+          "test_case": "test_s10_01_2",
+          "behavior": "H03-C: stale/crossed/zero depth/GAP abstain",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S10-01-AC3",
+          "test_case": "test_s10_01_3",
+          "behavior": "H03-D: delayed fill menggunakan depth sesudah latency",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S10-01-AC4",
+          "test_case": "test_s10_01_4",
+          "behavior": "H03-E: restart tidak menggandakan intent/time horizon",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "S10-01-AC5",
+          "test_case": "test_s10_01_5",
+          "behavior": "H03-F: no historical L2 fabricated from candles",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "C15-01",
+      "title": "Equal risk contribution overlay",
+      "domain": "strategies",
+      "legacy_tasks": [],
+      "dependencies": [
+        "C11-01",
+        "SIM-02",
+        "SIM-03",
+        "FEAT-04",
+        "EVAL-01"
+      ],
+      "goal": "Equal risk contribution overlay dengan causal input, frozen recipe dan shared judge.",
+      "contract": "EXP-O01 canonical frame/artifact -> intent atau allocation/filter; bukan fill.",
+      "checks": [
+        "O01-A golden tolerance 1e-4",
+        "O01-B future return perturbation invariant",
+        "O01-C covariance singular/zero variance rejection",
+        "O01-D nonconvergence diagnostic",
+        "O01-E exposure/turnover/fees dibanding C11 dengan input sinyal identik"
+      ],
+      "files": [
+        "src/indodax_lab/strategies/risk_contribution.py",
+        "configs/strategies/c15-01.yaml",
+        "tests/unit/lab/strategies/test_risk_contribution.py"
+      ],
+      "type": "research",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/22-catalog-expansion-and-rl.md",
+      "path": "docs/sprints/strategies/C15-01-risk-contribution.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/c15-01-risk-contribution",
+      "external_gates": [
+        "Owner activation for experiment execution; no default scheduling",
+        "Verified data eligibility and remaining family budget before experiment"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-08"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/22-catalog-expansion-and-rl.md",
+        "docs/research/catalog-expansion/02-experiment-contract.md",
+        "docs/research/catalog-expansion/03-candidate-specifications.md",
+        "docs/decisions/ADR-003-state-and-budgets.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "C15-01-AC0",
+          "test_case": "test_c15_01_0",
+          "behavior": "O01-A golden tolerance 1e-4",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C15-01-AC1",
+          "test_case": "test_c15_01_1",
+          "behavior": "O01-B future return perturbation invariant",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C15-01-AC2",
+          "test_case": "test_c15_01_2",
+          "behavior": "O01-C covariance singular/zero variance rejection",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C15-01-AC3",
+          "test_case": "test_c15_01_3",
+          "behavior": "O01-D nonconvergence diagnostic",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "C15-01-AC4",
+          "test_case": "test_c15_01_4",
+          "behavior": "O01-E exposure/turnover/fees dibanding C11 dengan input sinyal identik",
+          "status": "PLANNED_TEST"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "medium",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance."
+    },
+    {
+      "id": "M07-01",
+      "title": "Conformal abstention filter",
+      "domain": "models",
+      "legacy_tasks": [],
+      "dependencies": [
+        "M04-01",
+        "ML-01",
+        "ML-04",
+        "SPLIT-01",
+        "LABEL-01",
+        "EVAL-01",
+        "EVAL-02"
+      ],
+      "goal": "Conformal abstention filter dengan causal input, frozen recipe dan shared judge.",
+      "contract": "EXP-O02 canonical frame/artifact -> intent atau allocation/filter; bukan fill.",
+      "checks": [
+        "O02-A golden exact quantile",
+        "O02-B overlap calibration/evaluation ditolak",
+        "O02-C label unavailable ditolak",
+        "O02-D basic strategy no-entry tetap no-entry",
+        "O02-E exits tetap diteruskan",
+        "O02-F coverage/width/trade retention dilaporkan per fold tanpa janji coverage 90% pasti"
+      ],
+      "files": [
+        "src/indodax_lab/models/conformal_filter.py",
+        "configs/strategies/m07-01.yaml",
+        "tests/unit/lab/models/test_conformal_filter.py"
+      ],
+      "type": "research",
+      "tier": "EXTENSION",
+      "spec": "docs/specs/22-catalog-expansion-and-rl.md",
+      "path": "docs/sprints/models/M07-01-conformal-filter.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/m07-01-conformal-filter",
+      "external_gates": [
+        "Owner activation for experiment execution; no default scheduling",
+        "Verified data eligibility and remaining family budget before experiment"
+      ],
+      "current_context": "New capability; dependencies must be DONE before implementation.",
+      "unlocks": [],
+      "requirements": [
+        "FR-10"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/specs/00-master-product-technical-spec.md",
+        "docs/specs/22-catalog-expansion-and-rl.md",
+        "docs/research/catalog-expansion/02-experiment-contract.md",
+        "docs/research/catalog-expansion/03-candidate-specifications.md",
+        "docs/decisions/ADR-003-state-and-budgets.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "evidence": null,
+      "acceptance_test_mapping": [
+        {
+          "criterion": "M07-01-AC0",
+          "test_case": "test_m07_01_0",
+          "behavior": "O02-A golden exact quantile",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M07-01-AC1",
+          "test_case": "test_m07_01_1",
+          "behavior": "O02-B overlap calibration/evaluation ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M07-01-AC2",
+          "test_case": "test_m07_01_2",
+          "behavior": "O02-C label unavailable ditolak",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M07-01-AC3",
+          "test_case": "test_m07_01_3",
+          "behavior": "O02-D basic strategy no-entry tetap no-entry",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M07-01-AC4",
+          "test_case": "test_m07_01_4",
+          "behavior": "O02-E exits tetap diteruskan",
+          "status": "PLANNED_TEST"
+        },
+        {
+          "criterion": "M07-01-AC5",
+          "test_case": "test_m07_01_5",
+          "behavior": "O02-F coverage/width/trade retention dilaporkan per fold tanpa janji coverage 90% pasti",
           "status": "PLANNED_TEST"
         }
       ],

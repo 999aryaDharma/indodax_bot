@@ -32,7 +32,7 @@ Direct consumers: Release or owner-reviewed research comparison; no required dow
 
 ## Unlocks
 
-No mandatory dependent sprint.
+M07-01
 
 ## Required Reading
 

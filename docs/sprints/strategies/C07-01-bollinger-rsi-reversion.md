@@ -32,7 +32,7 @@ Direct consumers: C10-01, QA-01
 
 ## Unlocks
 
-C10-01, QA-01
+C10-01, QA-01, C13-01
 
 ## Required Reading
 

@@ -34,7 +34,7 @@ Direct consumers: JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01
 
 ## Unlocks
 
-JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01
+JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01, M07-01
 
 ## Required Reading
 

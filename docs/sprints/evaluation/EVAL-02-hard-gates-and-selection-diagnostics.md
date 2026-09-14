@@ -32,7 +32,7 @@ Direct consumers: EVAL-03
 
 ## Unlocks
 
-EVAL-03
+EVAL-03, M07-01
 
 ## Required Reading
 

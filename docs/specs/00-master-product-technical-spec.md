@@ -122,3 +122,7 @@ All catalog extensions have named sprints but no default scheduling activation. 
 - [ ] No production promise based solely on synthetic offline fixtures.
 
 Unchecked release acceptance is deliberate: this document is planning, not proof of full implementation.
+
+## Integrated catalog extension
+
+Technical contracts: [catalog expansion](22-catalog-expansion-and-rl.md) and [RL allocation spike](23-rl-allocation-feasibility.md). C13-01/C14-01/S10-01/C15-01/M07-01 are PLANNED additions; R01-01 remains EXPERIMENTAL with original dependencies. No default scheduler activation.

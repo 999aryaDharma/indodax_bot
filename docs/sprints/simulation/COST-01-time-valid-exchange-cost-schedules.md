@@ -32,7 +32,7 @@ Direct consumers: LED-01, SIM-01
 
 ## Unlocks
 
-LED-01, SIM-01
+LED-01, SIM-01, S10-01
 
 ## Required Reading
 

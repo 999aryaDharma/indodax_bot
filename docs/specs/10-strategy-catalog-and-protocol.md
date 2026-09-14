@@ -284,3 +284,7 @@ Keep stable catalog identity separate from sprint ID: C01 strategy lives in C01-
 C01 uses previous N completed bars excluding the decision bar for breakout threshold. C07 combines registered BB/RSI extremity with causal sideways gate; falling strong downtrend does not qualify. C04/S07 rank only eligible PIT assets and reserve turnover/cash through shared judge. C10 references frozen C01/C07 member versions; never mutates member rules during regime switching. All produce []/FLAT for incomplete data rather than guessing.
 
 `decide(DecisionFrame)->list[SignalIntent]`: frame includes as_of, ordered eligible pairs, closed feature rows, raw ATR when needed for price-denominated stops and immutable universe/config IDs. Inputs read-only; stable pair ordering. Output has no direct DB/network side effects. Integration compares each strategy against cash and naive baseline on identical snapshot/cost/risk. A correctly implemented strategy can fail evaluation; do not change its goal into guaranteed profit.
+
+## Integrated catalog extension
+
+Technical contracts: [catalog expansion](22-catalog-expansion-and-rl.md) and [RL allocation spike](23-rl-allocation-feasibility.md). C13-01/C14-01/S10-01/C15-01/M07-01 are PLANNED additions; R01-01 remains EXPERIMENTAL with original dependencies. No default scheduler activation.

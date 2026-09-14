@@ -33,7 +33,7 @@ Direct consumers: LABEL-02
 
 ## Unlocks
 
-LABEL-02
+LABEL-02, M07-01
 
 ## Required Reading
 

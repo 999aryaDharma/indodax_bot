@@ -94,6 +94,11 @@ Full edge list; prerequisite → consumer. Manifest is authoritative.
 | QA-02 | REPORT-02, AGENT-01, OPS-02 |
 | QA-03 | OPS-01, OPS-03, QA-01 |
 | REL-01 | QA-02, QA-03, QA-01, REPORT-02 |
+| C13-01 | STRAT-01, FEAT-04, C04-01, C07-01, SIM-03, SPLIT-01, EVAL-01 |
+| C14-01 | C13-01, C04-01, FEAT-03, FEAT-04, SIM-03, EVAL-01 |
+| S10-01 | S04-01, LOB-01, SIM-01, SIM-03, COST-01, EVAL-01 |
+| C15-01 | C11-01, SIM-02, SIM-03, FEAT-04, EVAL-01 |
+| M07-01 | M04-01, ML-01, ML-04, SPLIT-01, LABEL-01, EVAL-01, EVAL-02 |
 
 ## Selected critical boundaries
 
@@ -113,4 +118,4 @@ flowchart TD
   EVAL_03["EVAL-03 sealed lifecycle"] --> SHADOW_03
 ```
 
-Nodes: 92. Edges: 153. Cycles must equal 0; enforced by validator.
+Nodes: 97. Edges: 184. Cycles must equal 0; enforced by validator.

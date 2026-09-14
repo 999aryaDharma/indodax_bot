@@ -33,7 +33,7 @@ Direct consumers: SIM-04, STRAT-01
 
 ## Unlocks
 
-SIM-04, STRAT-01
+SIM-04, STRAT-01, C13-01, C14-01, S10-01, C15-01
 
 ## Required Reading
 

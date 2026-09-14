@@ -75,6 +75,10 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [S07-01 — Small cap rotation](strategies/S07-01-small-cap-rotation.md) — EXTENSION; Kandidat S07 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
 - [S08-01 — Passive mean reversion](strategies/S08-01-passive-mean-reversion.md) — EXPERIMENTAL; Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
 - [S09-01 — Tail risk abstention](strategies/S09-01-tail-risk-abstention.md) — EXTENSION; Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
+- [C13-01 — Cross-sectional reversal](strategies/C13-01-cross-sectional-reversal.md) — EXTENSION; Cross-sectional reversal dengan causal input, frozen recipe dan shared judge.
+- [C14-01 — Size-conditioned momentum reversal](strategies/C14-01-size-conditioned.md) — EXTENSION; Size-conditioned momentum reversal dengan causal input, frozen recipe dan shared judge.
+- [S10-01 — Microprice continuation benchmark](strategies/S10-01-microprice.md) — EXTENSION; Microprice continuation benchmark dengan causal input, frozen recipe dan shared judge.
+- [C15-01 — Equal risk contribution overlay](strategies/C15-01-risk-contribution.md) — EXTENSION; Equal risk contribution overlay dengan causal input, frozen recipe dan shared judge.
 
 ## evaluation
 
@@ -95,6 +99,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [M05-01 — Meta-label signal filter](models/M05-01-meta-label-signal-filter.md) — EXTENSION; Kandidat M05-01 menambah hipotesis risk/forecast yang terukur setelah Wave 1.
 - [M06-01 — Market anomaly risk gate](models/M06-01-market-anomaly-risk-gate.md) — EXTENSION; Kandidat M06-01 menambah hipotesis risk/forecast yang terukur setelah Wave 1.
 - [R01-01 — Constrained allocation feasibility](models/R01-01-constrained-allocation-feasibility.md) — EXPERIMENTAL; Spike menilai apakah RL layak diteruskan dengan reward bersih biaya dan constraints modal.
+- [M07-01 — Conformal abstention filter](models/M07-01-conformal-filter.md) — EXTENSION; Conformal abstention filter dengan causal input, frozen recipe dan shared judge.
 
 ## orchestration
 

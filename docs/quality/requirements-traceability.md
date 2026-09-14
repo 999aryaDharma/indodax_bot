@@ -9,9 +9,9 @@ AC behavior-test mappings and evidence references are in manifest/sprint handoff
 | FR-05 | features | FEAT-01, FEAT-02, FEAT-03, FEAT-04 | Sprint handoff / historical evidence |
 | FR-06 | simulation | COST-01, LED-01, SIM-01, SIM-02, SIM-03, SIM-04 | Sprint handoff / historical evidence |
 | FR-07 | labels | LABEL-01, LABEL-02, SPLIT-01, TRAIN-01 | Sprint handoff / historical evidence |
-| FR-08 | strategies | STRAT-01, C01-01, C07-01, C02-01, C03-01, C04-01, C10-01, S01-01, S02-01, C05-01, C06-01, C08-01, C09-01, C11-01, C12-01, S03-01, S04-01, S05-01, S06-01, S07-01, S08-01, S09-01 | Sprint handoff / historical evidence |
+| FR-08 | strategies | STRAT-01, C01-01, C07-01, C02-01, C03-01, C04-01, C10-01, S01-01, S02-01, C05-01, C06-01, C08-01, C09-01, C11-01, C12-01, S03-01, S04-01, S05-01, S06-01, S07-01, S08-01, S09-01, C13-01, C14-01, S10-01, C15-01 | Sprint handoff / historical evidence |
 | FR-09 | evaluation | EVAL-01, EVAL-02, EVAL-03 | Sprint handoff / historical evidence |
-| FR-10 | models | ML-01, ML-02, ML-03, M01-01, M02-01, ML-04, M03-01, M04-01, M05-01, M06-01, R01-01 | Sprint handoff / historical evidence |
+| FR-10 | models | ML-01, ML-02, ML-03, M01-01, M02-01, ML-04, M03-01, M04-01, M05-01, M06-01, R01-01, M07-01 | Sprint handoff / historical evidence |
 | FR-11 | orchestration | JOB-01, JOB-02, JOB-03 | Sprint handoff / historical evidence |
 | FR-12 | shadow | SHADOW-01, SHADOW-02, SHADOW-03 | Sprint handoff / historical evidence |
 | FR-18 | verification | QA-01, QA-02, QA-03, REL-01 | Sprint handoff / historical evidence |

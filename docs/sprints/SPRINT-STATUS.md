@@ -1,6 +1,6 @@
 # Sprint status model
 
-Status source: `sprint-manifest.json`. Initial counts: {'DONE': 14, 'READY': 2, 'PLANNED': 76}.
+Status source: `sprint-manifest.json`. Current counts: {'DONE': 14, 'READY': 2, 'PLANNED': 81}.
 Initial READY: FEAT-01, COST-01. Recommended first: FEAT-01.
 
 | State | Meaning and allowed progression |

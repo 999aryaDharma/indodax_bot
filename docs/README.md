@@ -18,7 +18,7 @@ Status berasal dari [manifest](sprints/sprint-manifest.json); seluruh 35 task la
 | Lokasi | Isi |
 |---|---|
 | `specs/` | Master, arsitektur, model data, subsystem contracts, roadmap |
-| `sprints/` | Feature map, 92 unit kapabilitas, DAG, status, waves, handoffs |
+| `sprints/` | Feature map, 97 unit kapabilitas, DAG, status, waves, handoffs |
 | `research/` | Kontrak dataset rinci dan evidence checkpoint yang dipertahankan |
 | `decisions/` | ADR, policy, batas ruang lingkup dan conflict resolutions |
 | `quality/` | Audit repo, traceability, risk, validasi, release gates |
@@ -30,3 +30,11 @@ Status berasal dari [manifest](sprints/sprint-manifest.json); seluruh 35 task la
 `docs/superpowers/` dipertahankan sebagai arsip baseline desain/plan. Bagian yang konflik mengikuti precedence master dan ADR v2. Dokumen baru tidak menyatakan provider terms, fee, kapasitas host, atau profitabilitas sudah diverifikasi saat ini.
 
 Jalankan `python docs/quality/validate_planning.py` dari root repo untuk memeriksa struktur, DAG, status, reading links, dan pemetaan requirement.
+
+## Usulan perluasan katalog
+
+[Paket spesifikasi agent](research/catalog-expansion/README.md) memuat audit duplikasi, tiga hipotesis baru, dua eksperimen pendukung, kontrak, task dan prompt. Terintegrasi ke manifest melalui EXP-00; lima sprint baru PLANNED, belum hasil backtest.
+
+## Technical catalog extension (current)
+
+[Spec 22](specs/22-catalog-expansion-and-rl.md) integrates five new PLANNED sprints; [spec 23](specs/23-rl-allocation-feasibility.md) details the existing RL allocation spike. Manifest now has 97 capabilities. Earlier proposal-only wording in research package is superseded by this integration.

@@ -94,3 +94,8 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | QA-02 | Boundary security verification | verification | P0 | security | REPORT-02, AGENT-01, OPS-02 | PLANNED | [Spec](verification/QA-02-boundary-security-verification.md) |
 | QA-03 | Capacity and crash recovery qualification | verification | P0 | performance | OPS-01, OPS-03, QA-01 | PLANNED | [Spec](verification/QA-03-capacity-and-crash-recovery-qualification.md) |
 | REL-01 | Paper research release candidate | verification | P0 | release | QA-02, QA-03, QA-01, REPORT-02 | PLANNED | [Spec](verification/REL-01-paper-research-release-candidate.md) |
+| C13-01 | Cross-sectional reversal | strategies | P1 | research | STRAT-01, FEAT-04, C04-01, C07-01, SIM-03, SPLIT-01, EVAL-01 | PLANNED | [Spec](strategies/C13-01-cross-sectional-reversal.md) |
+| C14-01 | Size-conditioned momentum reversal | strategies | P1 | research | C13-01, C04-01, FEAT-03, FEAT-04, SIM-03, EVAL-01 | PLANNED | [Spec](strategies/C14-01-size-conditioned.md) |
+| S10-01 | Microprice continuation benchmark | strategies | P1 | research | S04-01, LOB-01, SIM-01, SIM-03, COST-01, EVAL-01 | PLANNED | [Spec](strategies/S10-01-microprice.md) |
+| C15-01 | Equal risk contribution overlay | strategies | P1 | research | C11-01, SIM-02, SIM-03, FEAT-04, EVAL-01 | PLANNED | [Spec](strategies/C15-01-risk-contribution.md) |
+| M07-01 | Conformal abstention filter | models | P1 | research | M04-01, ML-01, ML-04, SPLIT-01, LABEL-01, EVAL-01, EVAL-02 | PLANNED | [Spec](models/M07-01-conformal-filter.md) |

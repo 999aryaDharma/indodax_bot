@@ -32,7 +32,7 @@ Direct consumers: TRAIN-01, EVAL-03
 
 ## Unlocks
 
-TRAIN-01, EVAL-03
+TRAIN-01, EVAL-03, C13-01, M07-01
 
 ## Required Reading
 

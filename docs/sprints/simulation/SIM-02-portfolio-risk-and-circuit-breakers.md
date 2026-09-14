@@ -33,7 +33,7 @@ Direct consumers: SIM-03, SHADOW-02
 
 ## Unlocks
 
-SIM-03, SHADOW-02
+SIM-03, SHADOW-02, C15-01
 
 ## Required Reading
 

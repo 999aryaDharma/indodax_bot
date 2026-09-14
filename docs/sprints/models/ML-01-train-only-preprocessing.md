@@ -32,7 +32,7 @@ Direct consumers: ML-02
 
 ## Unlocks
 
-ML-02
+ML-02, M07-01
 
 ## Required Reading
 

@@ -174,3 +174,7 @@ Every acceptance boundary above must map to named tests in its sprint handoff. I
 M01 logistic/elastic-net checks solver/penalty compatibility; M02 XGBoost uses bounded depth, learning rate, estimators/early-stop, subsample, column fraction and regularization from versioned config. Their actual search ranges are a registered research recipe established before trial execution. Search <=30 trials including failed trials; resume uses study+config/data identity. Calibration uses dedicated held-out inner data, with Brier/log-loss/reliability diagnostics; too-small set yields BLOCKED_DATA.
 
 `map_forecast(kind,value,payoff,cost,margin)` handles NET_RETURN, GROSS_RETURN and calibrated PROBABILITY explicitly (ADR-002). The mapper also requires risk/universe eligibility; probability above0.5 alone never authorizes a trade. A frozen finalist bundle records feature order, preprocessor, model, calibrator, threshold, best iteration, environment lock, data/label/split/cost/execution/Git IDs. Stochastic finalist reports median and worst of3 fixed seeds; never select the lucky seed. Verify reload equality through common execution mapper and evaluator, not accuracy alone.
+
+## Integrated catalog extension
+
+Technical contracts: [catalog expansion](22-catalog-expansion-and-rl.md) and [RL allocation spike](23-rl-allocation-feasibility.md). C13-01/C14-01/S10-01/C15-01/M07-01 are PLANNED additions; R01-01 remains EXPERIMENTAL with original dependencies. No default scheduler activation.

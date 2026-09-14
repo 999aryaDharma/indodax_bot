@@ -103,17 +103,21 @@ FEAT-01, COST-01. Verify external gates and shared-file ownership before claim.
 - S07-01 — Small cap rotation [PLANNED; EXTENSION]
 - JOB-02 — Resource-aware idle admission [PLANNED; CORE]
 - OPS-02 — Snapshot transfer and restore [PLANNED; CORE]
+- S10-01 — Microprice continuation benchmark [PLANNED; EXTENSION]
+- C15-01 — Equal risk contribution overlay [PLANNED; EXTENSION]
 
 ## Wave 13
 
 - TRAIN-01 — Verified training dataset assembly [PLANNED; CORE]
 - EVAL-03 — Sealed candidate lifecycle [PLANNED; CORE]
 - OPS-03 — Storage retention and integrity maintenance [PLANNED; CORE]
+- C13-01 — Cross-sectional reversal [PLANNED; EXTENSION]
 
 ## Wave 14
 
 - ML-01 — Train-only preprocessing [PLANNED; CORE]
 - REPORT-01 — Compact experiment reports [PLANNED; CORE]
+- C14-01 — Size-conditioned momentum reversal [PLANNED; EXTENSION]
 
 ## Wave 15
 
@@ -148,6 +152,7 @@ FEAT-01, COST-01. Verify external gates and shared-file ownership before claim.
 
 - SHADOW-02 — Shared capital reconciliation [PLANNED; CORE]
 - AGENT-01 — Governed research curator [PLANNED; CORE]
+- M07-01 — Conformal abstention filter [PLANNED; EXTENSION]
 
 ## Wave 22
 

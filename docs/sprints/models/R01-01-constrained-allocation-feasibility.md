@@ -37,6 +37,7 @@ No mandatory dependent sprint.
 
 ## Required Reading
 
+- `docs/specs/23-rl-allocation-feasibility.md`
 - `AGENTS.md`
 - `docs/specs/00-master-product-technical-spec.md`
 - `docs/specs/12-tabular-models-and-training.md`
@@ -245,3 +246,31 @@ Commit scoped changes, record exact SHA/commands/AC evidence in handoff, self-re
 Stop at REVIEW for an independent reviewer; coordinator alone records DONE after PASS.
 If blocked, report root cause and preserve work; do not fabricate test or review evidence.
 ```
+
+## Detailed RL implementation contract
+
+Normative specification: [RL allocation feasibility](../../specs/23-rl-allocation-feasibility.md). Implement observation/action/reward/transition, budget and tests RL-A through RL-L exactly as defined there. Existing dependency gates remain.
+
+- [ ] R01-01-RL-A: RL-A from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-B: RL-B from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-C: RL-C from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-D: RL-D from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-E: RL-E from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-F: RL-F from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-G: RL-G from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-H: RL-H from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-I: RL-I from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-J: RL-J from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-K: RL-K from spec 23 must pass through public judge adapter
+
+- [ ] R01-01-RL-L: RL-L from spec 23 must pass through public judge adapter

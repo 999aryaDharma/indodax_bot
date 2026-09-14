@@ -32,7 +32,7 @@ Direct consumers: EVAL-02, ML-03, JOB-01, OPS-03
 
 ## Unlocks
 
-EVAL-02, ML-03, JOB-01, OPS-03
+EVAL-02, ML-03, JOB-01, OPS-03, C13-01, C14-01, S10-01, C15-01, M07-01
 
 ## Required Reading
 

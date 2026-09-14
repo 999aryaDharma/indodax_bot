@@ -33,7 +33,7 @@ Direct consumers: S04-01, S08-01, L01-01
 
 ## Unlocks
 
-S04-01, S08-01, L01-01
+S04-01, S08-01, L01-01, S10-01
 
 ## Required Reading
 
