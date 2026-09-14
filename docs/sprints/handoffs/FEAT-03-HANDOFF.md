@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `feat/feat-03-as-of-market-context`
 - Base SHA: `0db1c8f`
 - Code target: `feat(feat-03): as-of market context`
-- Evidence SHA relation: recorded in this handoff
+- Evidence SHA relation: `63f96d2`
 
 ## Files and contracts
 - Planned files:
@@ -27,14 +27,14 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| FEAT-03-AC0 (RED) | `test_feat_03_valid_contract` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | working tree |
-| FEAT-03-AC0 (GREEN) | `test_feat_03_valid_contract` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_valid_contract` | Exit 0 (Passed, validates PIT universe context calculation) | working tree |
-| FEAT-03-AC1 (RED) | `test_feat_03_contract_1` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | working tree |
-| FEAT-03-AC1 (GREEN) | `test_feat_03_contract_1` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_1` | Exit 0 (Passed, daily / 4h partial bars excluded) | working tree |
-| FEAT-03-AC2 (RED) | `test_feat_03_contract_2` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | working tree |
-| FEAT-03-AC2 (GREEN) | `test_feat_03_contract_2` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_2` | Exit 0 (Passed, future universe state does not alter historical rank) | working tree |
-| FEAT-03-AC3 (RED) | `test_feat_03_contract_3` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | working tree |
-| FEAT-03-AC3 (GREEN) | `test_feat_03_contract_3` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_3` | Exit 0 (Passed, missing BTC history yields null, not backfill) | working tree |
+| FEAT-03-AC0 (RED) | `test_feat_03_valid_contract` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| FEAT-03-AC0 (GREEN) | `test_feat_03_valid_contract` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_valid_contract` | Exit 0 (Passed, validates PIT universe context calculation) | `63f96d2` |
+| FEAT-03-AC1 (RED) | `test_feat_03_contract_1` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| FEAT-03-AC1 (GREEN) | `test_feat_03_contract_1` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_1` | Exit 0 (Passed, daily / 4h partial bars excluded) | `63f96d2` |
+| FEAT-03-AC2 (RED) | `test_feat_03_contract_2` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| FEAT-03-AC2 (GREEN) | `test_feat_03_contract_2` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_2` | Exit 0 (Passed, future universe state does not alter historical rank) | `63f96d2` |
+| FEAT-03-AC3 (RED) | `test_feat_03_contract_3` | `python -m pytest tests/unit/lab/features/test_availability.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| FEAT-03-AC3 (GREEN) | `test_feat_03_contract_3` | `python -m pytest tests/unit/lab/features/test_availability.py::test_feat_03_contract_3` | Exit 0 (Passed, missing BTC history yields null, not backfill) | `63f96d2` |
 
 All 6 tests in `tests/unit/lab/features/test_availability.py` passed (1.12s).
 Combined suite verification (40 passed, 2 skipped across all capabilities) passed (1.88s).
