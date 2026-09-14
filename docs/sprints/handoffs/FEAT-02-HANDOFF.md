@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `feat/feat-02-golden-technical-and-liquidity-transforms`
 - Base SHA: `47b55e8`
 - Code target: `feat(feat-02): golden technical and liquidity transforms`
-- Evidence SHA relation: recorded in this handoff
+- Evidence SHA relation: `a978533`
 
 ## Files and contracts
 - Planned files:
@@ -29,10 +29,10 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| FEAT-02-AC0 | `test_feat_02_valid_contract` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_valid_contract` | Exit 0 (Passed, validates continuous outputs & auditable warmup) | working tree |
-| FEAT-02-AC1 | `test_feat_02_contract_1` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_1` | Exit 0 (Passed, golden expected within explicit tolerances) | working tree |
-| FEAT-02-AC2 | `test_feat_02_contract_2` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_2` | Exit 0 (Passed, flat price / zero volume produce no infs) | working tree |
-| FEAT-02-AC3 | `test_feat_02_contract_3` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_3` | Exit 0 (Passed, future perturbation does not alter history) | working tree |
+| FEAT-02-AC0 | `test_feat_02_valid_contract` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_valid_contract` | Exit 0 (Passed, validates continuous outputs & auditable warmup) | `a978533` |
+| FEAT-02-AC1 | `test_feat_02_contract_1` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_1` | Exit 0 (Passed, golden expected within explicit tolerances) | `a978533` |
+| FEAT-02-AC2 | `test_feat_02_contract_2` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_2` | Exit 0 (Passed, flat price / zero volume produce no infs) | `a978533` |
+| FEAT-02-AC3 | `test_feat_02_contract_3` | `python -m pytest tests/unit/lab/features/test_technical.py::test_feat_02_contract_3` | Exit 0 (Passed, future perturbation does not alter history) | `a978533` |
 
 All 6 tests in `tests/unit/lab/features/test_technical.py` passed (0.89s).
 Combined suite verification (19 tests) passed (1.40s).
