@@ -1,0 +1,188 @@
+schedule_set_id: indodax_idr
+version: 1.0.0
+intervals:
+  # ============================================================================
+  # Period 1: Pre-PMK 68 (2021-01-01 to 2022-05-01)
+  # ============================================================================
+  - schedule_id: indodax_idr_pre_pmk68_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2021-01-01T00:00:00Z'
+    valid_to: '2022-05-01T00:00:00Z'
+    service_fee_rate: '0.000000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'Indodax Historical Fee Schedule 2021'
+
+  - schedule_id: indodax_idr_pre_pmk68_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2021-01-01T00:00:00Z'
+    valid_to: '2022-05-01T00:00:00Z'
+    service_fee_rate: '0.003000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'Indodax Historical Fee Schedule 2021'
+
+  - schedule_id: indodax_idr_pre_pmk68_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2021-01-01T00:00:00Z'
+    valid_to: '2022-05-01T00:00:00Z'
+    service_fee_rate: '0.000000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'Indodax Historical Fee Schedule 2021'
+
+  - schedule_id: indodax_idr_pre_pmk68_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2021-01-01T00:00:00Z'
+    valid_to: '2022-05-01T00:00:00Z'
+    service_fee_rate: '0.003000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'Indodax Historical Fee Schedule 2021'
+
+  # ============================================================================
+  # Period 2: PMK 68 Tax Era (2022-05-01 to 2024-01-01)
+  # ============================================================================
+  - schedule_id: indodax_idr_pmk68_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2022-05-01T00:00:00Z'
+    valid_to: '2024-01-01T00:00:00Z'
+    service_fee_rate: '0.000000'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax Announcement May 2022'
+
+  - schedule_id: indodax_idr_pmk68_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2022-05-01T00:00:00Z'
+    valid_to: '2024-01-01T00:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax Announcement May 2022'
+
+  - schedule_id: indodax_idr_pmk68_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2022-05-01T00:00:00Z'
+    valid_to: '2024-01-01T00:00:00Z'
+    service_fee_rate: '0.000000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax Announcement May 2022'
+
+  - schedule_id: indodax_idr_pmk68_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2022-05-01T00:00:00Z'
+    valid_to: '2024-01-01T00:00:00Z'
+    service_fee_rate: '0.003000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000000'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax Announcement May 2022'
+
+  # ============================================================================
+  # Period 3: CFX Integration & Current Schedule (2024-01-01 onward)
+  # Matches paper trader parameters: buy 0.2111%, sell 0.4211%
+  # ============================================================================
+  - schedule_id: indodax_idr_cfx_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2024-01-01T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.000811'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000200'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax CFX Fee Schedule 2024'
+
+  - schedule_id: indodax_idr_cfx_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2024-01-01T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.000811'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000200'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax CFX Fee Schedule 2024'
+
+  - schedule_id: indodax_idr_cfx_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2024-01-01T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.003011'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000200'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax CFX Fee Schedule 2024'
+
+  - schedule_id: indodax_idr_cfx_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2024-01-01T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.003011'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000200'
+    min_notional: '10000'
+    precision: 0
+    sources:
+      - 'PMK 68/PMK.03/2022'
+      - 'Indodax CFX Fee Schedule 2024'
