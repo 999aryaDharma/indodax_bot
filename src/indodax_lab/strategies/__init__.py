@@ -1,4 +1,4 @@
-"""Declarative strategy catalog and protocol (STRAT-01)."""
+"""Declarative strategy catalog and protocol (STRAT-01..C01-01)."""
 
 from indodax_lab.strategies.base import (
     DecisionFrame,
@@ -6,6 +6,7 @@ from indodax_lab.strategies.base import (
     StrategySpecification,
     create_decision_frame,
 )
+from indodax_lab.strategies.c01 import c01_decide, load_c01_specification
 from indodax_lab.strategies.registry import StrategyRegistry
 
 __all__ = [
@@ -14,4 +15,6 @@ __all__ = [
     "StrategySpecification",
     "StrategyRegistry",
     "create_decision_frame",
+    "c01_decide",
+    "load_c01_specification",
 ]

@@ -1,0 +1,19 @@
+strategy_id: "C01"
+version: "1.0.0"
+family: "breakout"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 20
+  volume_multiplier: 1.0
+  atr_multiplier: 2.0
+  desired_qty: "0.1"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Donchian N-bar high breakout with volume gate and ATR stop loss"
