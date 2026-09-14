@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P1 | Type: data | Domain: deep-learning | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/dl-02-causal-sequence-datasets`
 

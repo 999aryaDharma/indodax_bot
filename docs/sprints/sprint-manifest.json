@@ -3432,9 +3432,9 @@ Total output lines: 7539
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/DL-02-causal-sequence-datasets.md",
       "priority": "P1",
-      "status": "PLANNED",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "REVIEW",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "UNASSIGNED (pending independent review)",
       "recommended_branch": "feat/dl-02-causal-sequence-datasets",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
