@@ -20,6 +20,13 @@ from indodax_lab.models.dl.d01_mlp import (
     SampleComparatorMismatchError,
     SearchBudgetExceededError,
 )
+from indodax_lab.models.dl.d02_tcn import (
+    CausalTCNConfig,
+    CausalTCNModel,
+    CausalTCNTrainedBundle,
+    CausalTCNTrainer,
+    TCNComputeBudgetSummary,
+)
 from indodax_lab.models.dl.dataset import (
     CausalSequenceBatch,
     CausalSequenceBuilder,
@@ -37,6 +44,10 @@ __all__ = [
     "CausalSequenceBatch",
     "CausalSequenceBuilder",
     "CausalSequenceConfig",
+    "CausalTCNConfig",
+    "CausalTCNModel",
+    "CausalTCNTrainedBundle",
+    "CausalTCNTrainer",
     "D01FinalistEvaluation",
     "D01MLPConfig",
     "D01MLPFittedBundle",
@@ -53,6 +64,7 @@ __all__ = [
     "SearchBudgetExceededError",
     "SessionGapBrokenWindowError",
     "TargetLeakageForbiddenError",
+    "TCNComputeBudgetSummary",
     "TorchNotAvailableError",
     "check_torch_availability",
     "load_checkpoint",
