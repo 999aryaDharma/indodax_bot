@@ -1,0 +1,19 @@
+strategy_id: "C03"
+version: "1.0.0"
+family: "time_series_momentum"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 24
+  target_volatility: 0.15
+  base_qty: "0.1"
+  atr_multiplier: 2.0
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Time series momentum with volatility targeting and cash fallback"
