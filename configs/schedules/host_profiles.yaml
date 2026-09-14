@@ -1,0 +1,19 @@
+# Indodax Research Lab Host Profiles & Service Schedules
+
+hosts:
+  lenovo_thinkpad:
+    role: "primary_compute_worker"
+    allowed_worker_threads: 8
+    allow_training_jobs: true
+    data_root: "/var/data/indodax_lab"
+    services:
+      - lab-worker.service
+      - lab-collector.service
+
+  asus_zenbook:
+    role: "light_collector_and_shadow"
+    allowed_worker_threads: 2
+    allow_training_jobs: false  # strictly forbidden per Asus profile invariant
+    data_root: "/var/data/indodax_lab"
+    services:
+      - lab-shadow.service

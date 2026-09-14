@@ -1,0 +1,17 @@
+[Unit]
+Description=Indodax Research Lab Forward Shadow Trading Service
+After=network.target lab-collector.service
+
+[Service]
+Type=simple
+User=indodax_lab
+WorkingDirectory=/var/data/indodax_lab
+EnvironmentFile=/etc/indodax_lab/lab.env
+ExecStart=/opt/conda/envs/indodax_lab/bin/python -m indodax_lab.cli.shadow
+Restart=on-failure
+RestartSec=15s
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+
+[Install]
+WantedBy=multi-user.target

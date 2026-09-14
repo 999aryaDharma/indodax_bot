@@ -18,6 +18,14 @@ from indodax_lab.operations.staging import (
     stage_and_publish_transfer,
     verify_bundle,
 )
+from indodax_lab.operations.service_lifecycle import (
+    ConcurrentWriterLockError,
+    HostServiceProfile,
+    ManagedService,
+    MissingSecretError,
+    ServiceManager,
+    SingleWriterLock,
+)
 
 __all__ = [
     "ChecksumMismatchError",
@@ -32,4 +40,11 @@ __all__ = [
     "restore_snapshot_bundle",
     "stage_and_publish_transfer",
     "verify_bundle",
+    # OPS-01 Service Lifecycle
+    "ConcurrentWriterLockError",
+    "HostServiceProfile",
+    "ManagedService",
+    "MissingSecretError",
+    "ServiceManager",
+    "SingleWriterLock",
 ]
