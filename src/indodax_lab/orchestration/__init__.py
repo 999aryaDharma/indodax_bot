@@ -34,6 +34,18 @@ from indodax_lab.orchestration.worker import (
     ResearchWorker,
     WorkerConfig,
 )
+from indodax_lab.orchestration.dag import (
+    DAGScheduler,
+    ExperimentRecipe,
+    HardFailCannotBeReopenedError,
+    InvalidRunRetryConfig,
+    InvalidRunRetryLimitExceededError,
+    NearMissMustHaveNewVersionError,
+    RepeatDecision,
+    RepeatOutcome,
+    RepeatPolicy,
+    ResearchDAGJob,
+)
 
 __all__ = [
     "AdmissionDecision",
@@ -62,4 +74,15 @@ __all__ = [
     "guard_asus_training_import",
     "is_training_job",
     "resolve_resource_class",
+    # JOB-03 Evaluator-controlled research DAG
+    "DAGScheduler",
+    "ExperimentRecipe",
+    "HardFailCannotBeReopenedError",
+    "InvalidRunRetryConfig",
+    "InvalidRunRetryLimitExceededError",
+    "NearMissMustHaveNewVersionError",
+    "RepeatDecision",
+    "RepeatOutcome",
+    "RepeatPolicy",
+    "ResearchDAGJob",
 ]
