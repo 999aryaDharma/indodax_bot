@@ -1,0 +1,5 @@
+label_set_id: "triple_barrier"
+version: "1.0.0"
+pt_multiplier: "2.0"
+sl_multiplier: "1.5"
+vertical_horizon_hours: 24
