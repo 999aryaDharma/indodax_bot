@@ -1,0 +1,28 @@
+strategy_id: "C10"
+version: "1.0.0"
+family: "regime_ensemble"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  trend_member_id: "C01"
+  trend_member_version: "1.0.0"
+  reversion_member_id: "C07"
+  reversion_member_version: "1.0.0"
+  regime_feature: "regime"
+  trend_regimes:
+    - "trending"
+    - "trend_up"
+    - "bull"
+  reversion_regimes:
+    - "sideways"
+    - "range"
+    - "neutral"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Deterministic trend/reversion regime ensemble delegating to frozen C01 and C07 members"
