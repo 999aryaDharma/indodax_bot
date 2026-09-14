@@ -1,0 +1,13 @@
+{
+  "result": {
+    "channel": "market:order-book-btcidr",
+    "data": {
+      "data": {
+        "pair": "btcidr",
+        "ask": [{"btc_volume": "0.09000000", "idr_volume": "28749330", "price": "319437000"}],
+        "bid": [{"btc_volume": "0.40000000", "idr_volume": "127774400", "price": "319436000"}]
+      },
+      "offset": 67412
+    }
+  }
+}

@@ -181,7 +181,7 @@ class RiskConfig:
 
     # ATR multiplier untuk SL dan TP
     sl_atr_multiplier: float    = 1.5    # ruang gerak vs noise market
-    tp_atr_multiplier: float    = 2.5    # menghasilkan RR ≥ 1:1.67
+    tp_atr_multiplier: float    = 3.0    # gross RR 1:2 sebelum biaya
 
     # Minimum RR yang diterima; jika < ini sinyal diabaikan
     min_rr_ratio: float         = 2.0    # 1:2
@@ -317,6 +317,12 @@ TRAILING_CONFIG: Final[TrailingConfig] = TrailingConfig()
 class PaperConfig:
     """Konfigurasi Paper Trading (Ghost Mode / simulasi)."""
     db_path: str                    = ""  # Set dynamically below
+    shadow_observations_enabled: bool = field(
+        default_factory=lambda: os.getenv("PAPER_SHADOW_ENABLED", "false")
+        .strip()
+        .lower() in {"1", "true", "yes", "on"}
+    )
+    shadow_policy_version: str      = "shadow_policy_v1"
 
     # Hari pengiriman weekly report (0=Senin, 6=Minggu)
     weekly_report_day: int          = 6     # Minggu

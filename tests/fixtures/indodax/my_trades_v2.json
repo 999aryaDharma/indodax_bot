@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "tradeId": "72057594037936570",
+      "orderId": "aaveidr-limit-3568",
+      "clientOrderId": "clientx-1",
+      "symbol": "aaveidr",
+      "price": "1564455",
+      "qty": "0.1",
+      "quoteQty": "156445.5",
+      "commission": "468",
+      "commissionAsset": "idr",
+      "isBuyer": false,
+      "isMaker": false,
+      "time": 1723442692520
+    }
+  ]
+}

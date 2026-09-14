@@ -34,7 +34,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Cont
 from config import APP_CONFIG, CREDENTIALS, RISK_CONFIG, SCORING_CONFIG
 from indodax_api import MarketContext, WalletBalance, fetch_wallet_balance
 from risk_manager import TradingPlan
-from signal_cache import get_entry, set_entry
+from signal_cache import set_entry
 from signal_logic import MarketMode, SignalDecision, SignalStrategy, confirm_signal_sent, get_cooldown_status
 
 logger = logging.getLogger(__name__)
@@ -235,23 +235,20 @@ def format_signal_message(
 # INLINE KEYBOARD BUILDER
 # ==============================================================================
 
-def _build_signal_keyboard(plan: TradingPlan) -> InlineKeyboardMarkup:
+def _build_signal_keyboard(
+    plan: TradingPlan,
+    observation_id: int,
+) -> InlineKeyboardMarkup:
     """
     Membuat inline keyboard tiga tombol di bawah pesan sinyal.
 
     Tombol ke-3 (👻 Paper Trade) memungkinkan simulasi tanpa modal nyata.
-    Callback data format:
-      exec_{pair}_{sl_int}_{tp_int}
-      skip_{pair}
-      paper_{pair}_{entry_int}_{sl_int}_{tp_int}_{position_idr_int}_{score_pct}
+    Callback data contains only the action and observation ID. The full plan is
+    loaded from the observation ledger, keeping every payload under 64 bytes.
     """
-    exec_data  = f"exec_{plan.pair}_{int(plan.stop_loss)}_{int(plan.take_profit)}"
-    skip_data  = f"skip_{plan.pair}"
-    paper_data = (
-        f"paper_{plan.pair}_{int(plan.entry_price)}_"
-        f"{int(plan.stop_loss)}_{int(plan.take_profit)}_"
-        f"{int(plan.position_idr)}_{plan.position_pct:.0f}"
-    )
+    exec_data = f"exec:{observation_id}"
+    skip_data = f"skip:{observation_id}"
+    paper_data = f"paper:{observation_id}"
 
     keyboard = [
         [InlineKeyboardButton("✅ Saya Eksekusi / Sudah Beli", callback_data=exec_data)],
@@ -265,7 +262,12 @@ def _build_signal_keyboard(plan: TradingPlan) -> InlineKeyboardMarkup:
 # SEND FUNCTIONS
 # ==============================================================================
 
-async def send_signal(decision: SignalDecision, plan: TradingPlan) -> Optional[int]:
+async def send_signal(
+    decision: SignalDecision,
+    plan: TradingPlan,
+    *,
+    observation_id: int,
+) -> Optional[int]:
     """
     Kirim pesan sinyal ke Telegram dengan InlineKeyboard dua tombol.
 
@@ -275,7 +277,7 @@ async def send_signal(decision: SignalDecision, plan: TradingPlan) -> Optional[i
     try:
         bot = Bot(token=CREDENTIALS.telegram_bot_token)
         message = format_signal_message(decision, plan)
-        keyboard = _build_signal_keyboard(plan)
+        keyboard = _build_signal_keyboard(plan, observation_id)
 
         sent = await bot.send_message(
             chat_id=CREDENTIALS.telegram_chat_id,
@@ -452,6 +454,35 @@ async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 # CALLBACK QUERY HANDLERS (Tombol Inline Keyboard)
 # ==============================================================================
 
+async def _record_callback_intent(query, expected_action: str, intent: str):
+    """Load an observation-backed callback and persist intent before action."""
+    prefix = f"{expected_action}:"
+    if not query.data.startswith(prefix):
+        await query.answer(
+            "Sinyal lama tidak memiliki observation ID; aksi dibatalkan.",
+            show_alert=True,
+        )
+        return None
+    try:
+        observation_id = int(query.data[len(prefix):])
+    except ValueError:
+        await query.answer("Observation ID tidak valid.", show_alert=True)
+        return None
+
+    from signal_observer import get_runtime_observer
+
+    observer = get_runtime_observer()
+    observation = observer.get_observation(observation_id)
+    if observation is None:
+        await query.answer("Observation tidak ditemukan.", show_alert=True)
+        return None
+    observer.record_action_intent(
+        observation_id=observation_id,
+        action=intent,
+        source="telegram_callback",
+    )
+    return observation
+
 async def callback_exec(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Handler untuk tombol [ ✅ Saya Eksekusi / Sudah Beli ].
@@ -459,24 +490,17 @@ async def callback_exec(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Parse callback_data → panggil position_tracker.open_position()
     → kirim konfirmasi dengan real trading plan.
     """
-    from position_tracker import tracker
-
     query = update.callback_query
-    await query.answer("⏳ Memvalidasi eksekusi...")
-
-    # Parse: "exec_{pair}_{sl_int}_{tp_int}"
-    try:
-        parts = query.data.split("_")
-        pair_parts = parts[1:-2]
-        pair = "_".join(pair_parts)
-        signal_sl = float(parts[-2])
-        signal_tp = float(parts[-1])
-        # Ambil entry price dari signal_cache (di-set oleh send_signal setelah kirim ke Telegram)
-        signal_entry = get_entry(pair, signal_sl * 1.03)
-    except (IndexError, ValueError) as e:
-        logger.error(f"Gagal parse callback exec: {query.data} — {e}")
-        await query.edit_message_reply_markup(reply_markup=None)
+    observation = await _record_callback_intent(query, "exec", "EXECUTE")
+    if observation is None:
         return
+    await query.answer("⏳ Memvalidasi eksekusi...")
+    pair = observation["pair"]
+    signal_entry = float(observation["planned_entry"])
+    signal_sl = float(observation["planned_stop_loss"])
+    signal_tp = float(observation["planned_take_profit"])
+
+    from position_tracker import tracker
 
     # Edit tombol → loading state
     await query.edit_message_reply_markup(
@@ -553,15 +577,14 @@ async def callback_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Handler untuk tombol [ ❌ Skip Sinyal Ini ].
     Hapus cooldown pair agar bot bisa kirim sinyal lagi lebih cepat.
     """
-    from signal_logic import _cooldown_mgr
-
     query = update.callback_query
+    observation = await _record_callback_intent(query, "skip", "SKIP")
+    if observation is None:
+        return
     await query.answer("Skip dicatat.")
+    pair = observation["pair"]
 
-    try:
-        pair = "_".join(query.data.split("_")[1:])
-    except IndexError:
-        pair = ""
+    from signal_logic import _cooldown_mgr
 
     await query.edit_message_reply_markup(reply_markup=None)
 
@@ -586,25 +609,19 @@ async def callback_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def callback_paper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk tombol Paper Trading — buka simulasi trade."""
-    from paper_trader import paper_trader
-    
     query = update.callback_query
-    await query.answer("⏳ Membuka paper trade simulasi...")
-
-    # Parse: "paper_{pair}_{entry}_{sl}_{tp}_{pos_idr}_{score_pct}"
-    try:
-        parts = query.data.split("_")
-        pair_parts = parts[1:-5]
-        pair = "_".join(pair_parts)
-        entry = float(parts[-5])
-        sl = float(parts[-4])
-        tp = float(parts[-3])
-        pos_idr = float(parts[-2])
-        score_pct = int(parts[-1])
-    except (IndexError, ValueError) as e:
-        logger.error(f"Gagal parse callback paper: {query.data} — {e}")
-        await query.answer("❌ Error parsing paper trade data", show_alert=True)
+    observation = await _record_callback_intent(query, "paper", "PAPER")
+    if observation is None:
         return
+    await query.answer("⏳ Membuka paper trade simulasi...")
+    pair = observation["pair"]
+    entry = float(observation["planned_entry"])
+    sl = float(observation["planned_stop_loss"])
+    tp = float(observation["planned_take_profit"])
+    pos_idr = float(observation["planned_position_idr"])
+    score_pct = round(float(observation["score"]) * 100)
+
+    from paper_trader import paper_trader
 
     # Edit tombol → loading state
     await query.edit_message_reply_markup(
@@ -835,9 +852,9 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("raport",  cmd_raport))
     app.add_handler(CommandHandler("gate",    cmd_gate))
 
-    app.add_handler(CallbackQueryHandler(callback_exec,  pattern=r"^exec_"))
-    app.add_handler(CallbackQueryHandler(callback_paper, pattern=r"^paper_"))
-    app.add_handler(CallbackQueryHandler(callback_skip,  pattern=r"^skip_"))
+    app.add_handler(CallbackQueryHandler(callback_exec,  pattern=r"^exec(?::|_)"))
+    app.add_handler(CallbackQueryHandler(callback_paper, pattern=r"^paper(?::|_)"))
+    app.add_handler(CallbackQueryHandler(callback_skip,  pattern=r"^skip(?::|_)"))
     app.add_handler(CallbackQueryHandler(callback_noop,  pattern=r"^noop$"))
 
     logger.info("✅ Telegram: 6 commands + 4 callback handlers terdaftar")

@@ -1,0 +1,15 @@
+config_id: event-bars-v1
+availability_lag_seconds: 5
+thresholds:
+  - config_id: cusum-fixed-v1
+    bar_type: CUSUM
+    fixed_threshold: "100000"
+  - config_id: range-fixed-v1
+    bar_type: RANGE
+    fixed_threshold: "100000"
+  - config_id: volume-fixed-v1
+    bar_type: VOLUME
+    fixed_threshold: "10"
+  - config_id: dollar-fixed-v1
+    bar_type: DOLLAR
+    fixed_threshold: "10000000"

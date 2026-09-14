@@ -3,6 +3,8 @@
 
 # === Python ===
 __pycache__/
+.pytest_cache/
+.ruff_cache/
 *.py[cod]
 *.pyo
 .Python
@@ -18,6 +20,10 @@ env/
 # === Logs ===
 logs/*.log
 logs/*.log.*
+
+# === Strategy research lab ===
+lab-data/
+lab-artifacts/
 
 # === OS ===
 .DS_Store
