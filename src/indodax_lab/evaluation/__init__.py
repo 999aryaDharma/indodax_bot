@@ -1,4 +1,4 @@
-"""Evaluation and experiment lifecycle package (EVAL-01, EVAL-02)."""
+"""Evaluation and experiment lifecycle package (EVAL-01, EVAL-02, EVAL-03)."""
 
 from indodax_lab.evaluation.gates import (
     EvaluationOutcome,
@@ -7,6 +7,18 @@ from indodax_lab.evaluation.gates import (
     MultiSeedEvaluationResult,
     evaluate_multi_seed_runs,
     evaluate_run,
+)
+from indodax_lab.evaluation.lifecycle import (
+    CandidateFrozenError,
+    CandidateLifecycleManager,
+    CandidateNotFoundError,
+    CandidateRecord,
+    CandidateStage,
+    ExposureAuditRecord,
+    GateAlreadyOpenedError,
+    InvalidTransitionError,
+    LeaderboardEntry,
+    TransitionRecord,
 )
 from indodax_lab.evaluation.registry import (
     ExperimentRegistry,
@@ -19,15 +31,25 @@ from indodax_lab.evaluation.statistics import (
 )
 
 __all__ = [
-    "ExperimentRegistry",
-    "ExperimentRunRecord",
-    "ExperimentRunStatus",
+    "CandidateFrozenError",
+    "CandidateLifecycleManager",
+    "CandidateNotFoundError",
+    "CandidateRecord",
+    "CandidateStage",
     "EvaluationOutcome",
     "EvaluationPolicy",
     "EvaluationResult",
+    "ExperimentRegistry",
+    "ExperimentRunRecord",
+    "ExperimentRunStatus",
+    "ExposureAuditRecord",
+    "GateAlreadyOpenedError",
+    "InvalidTransitionError",
+    "LeaderboardEntry",
     "MultiSeedEvaluationResult",
-    "evaluate_run",
-    "evaluate_multi_seed_runs",
+    "TransitionRecord",
     "compute_deflated_sharpe_ratio",
     "compute_pbo",
+    "evaluate_multi_seed_runs",
+    "evaluate_run",
 ]
