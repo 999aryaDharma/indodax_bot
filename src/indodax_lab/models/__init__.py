@@ -64,6 +64,14 @@ from indodax_lab.models.m03_rf_regime import (
     RegimeLabel,
     RegimeUtilityReport,
 )
+from indodax_lab.models.m04_quantile_risk import (
+    M04Config,
+    M04FittedBundle,
+    M04QuantileTrainer,
+    QuantileCoverageReport,
+    QuantileCrossingError,
+    TailTargetLeakageError,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -121,4 +129,11 @@ __all__ = [
     "RegimeAbstainError",
     "RegimeLabel",
     "RegimeUtilityReport",
+    # M04-01 Quantile Risk Regression
+    "M04Config",
+    "M04FittedBundle",
+    "M04QuantileTrainer",
+    "QuantileCoverageReport",
+    "QuantileCrossingError",
+    "TailTargetLeakageError",
 ]
