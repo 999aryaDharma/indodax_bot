@@ -1,0 +1,7 @@
+label_set_id: net_return
+version: 1.0.0
+decision_interval: 1h
+horizon: 4h
+edge_margin: 0.001
+execution_model_version: conservative_v1
+cost_schedule_id: default_cost_schedule
