@@ -91,7 +91,8 @@ class ResearchLedger:
         init_timestamp: datetime | None = None,
     ) -> None:
         self.valuation_currency = valuation_currency
-        self._cash = Decimal(str(initial_cash))
+        self._initial_cash = Decimal(str(initial_cash))
+        self._cash = self._initial_cash
         self.transactions: list[LedgerTransaction] = []
         self._positions: dict[str, Position] = {}
         self._processed_fill_ids: set[str] = set()
@@ -120,6 +121,11 @@ class ResearchLedger:
                 pair=None,
             )
             self.transactions.append(init_tx)
+
+    @property
+    def initial_cash(self) -> Decimal:
+        """Initial deposited quote-currency cash."""
+        return self._initial_cash
 
     @property
     def cash(self) -> Decimal:

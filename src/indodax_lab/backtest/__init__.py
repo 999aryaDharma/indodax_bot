@@ -27,6 +27,13 @@ from indodax_lab.backtest.ledger import (
     Posting,
     ResearchLedger,
 )
+from indodax_lab.backtest.metrics import (
+    CostStressMetrics,
+    PerformanceMetrics,
+    ProfitFactorResult,
+    calculate_equity,
+    compute_performance_metrics,
+)
 from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.result import BacktestResult
 from indodax_lab.backtest.risk import (
@@ -42,6 +49,7 @@ __all__ = [
     "CostScheduleInterval",
     "CostScheduleResolution",
     "CostScheduleTable",
+    "CostStressMetrics",
     "DuplicateFillError",
     "ExecutionResult",
     "ExecutionStatus",
@@ -51,15 +59,20 @@ __all__ = [
     "MarketBar",
     "OrderRole",
     "OrderSide",
+    "PerformanceMetrics",
     "PortfolioRiskManager",
     "Position",
     "Posting",
+    "ProfitFactorResult",
     "ReplayBacktestEngine",
     "ResearchLedger",
     "RiskAssessmentResult",
     "RiskPolicy",
     "SignalIntent",
     "UnknownCostScheduleError",
+    "calculate_equity",
+    "compute_performance_metrics",
     "load_cost_schedule_table",
     "lookup_cost",
 ]
+
