@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: security | Domain: verification | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/qa-02-boundary-security-verification`
 
@@ -193,10 +193,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **QA-02-AC0** Audit membuktikan akses secret, artifact loader dan destructive paths tertutup pada release candidate. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **QA-02-AC1** Traversal dan malicious artifact ditolak. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **QA-02-AC2** Tidak ada trade-withdraw credentials. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **QA-02-AC3** Allowlist Telegram ditegakkan. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-02-AC0** Audit membuktikan akses secret, artifact loader dan destructive paths tertutup pada release candidate. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **QA-02-AC1** Traversal dan malicious artifact ditolak. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-02-AC2** Tidak ada trade-withdraw credentials. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-02-AC3** Allowlist Telegram ditegakkan. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
