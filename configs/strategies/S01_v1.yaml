@@ -1,0 +1,21 @@
+strategy_id: "S01"
+version: "1.0.0"
+family: "liquidity_screened_breakout"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 20
+  volume_multiplier: 1.0
+  max_spread_bps: 30.0
+  min_depth: 0.01
+  base_qty: "0.1"
+  atr_multiplier: 2.0
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Breakout with spread and depth gates relative to simulated size"
