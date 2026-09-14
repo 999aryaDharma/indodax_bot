@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `feat/sim-01-conservative-execution-simulator`
 - Base SHA: `e68aa83`
 - Code target: `feat(sim-01): conservative execution simulator`
-- Evidence SHA relation: recorded in this handoff
+- Evidence SHA relation: `ce1e724`
 
 ## Files and contracts
 - Planned files:
@@ -29,14 +29,14 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| SIM-01-AC0 (RED) | `test_sim_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-01-AC0 (GREEN) | `test_sim_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_valid_contract` | Exit 0 (Passed, next-open execution with realistic schedule costs) | working tree |
-| SIM-01-AC1 (RED) | `test_sim_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-01-AC1 (GREEN) | `test_sim_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_1` | Exit 0 (Passed, same-close execution rejected) | working tree |
-| SIM-01-AC2 (RED) | `test_sim_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-01-AC2 (GREEN) | `test_sim_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_2` | Exit 0 (Passed, min-notional rejection & partial fill on depth limit) | working tree |
-| SIM-01-AC3 (RED) | `test_sim_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-01-AC3 (GREEN) | `test_sim_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_3` | Exit 0 (Passed, limit touch without trade through rejected) | working tree |
+| SIM-01-AC0 (RED) | `test_sim_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-01-AC0 (GREEN) | `test_sim_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_valid_contract` | Exit 0 (Passed, next-open execution with realistic schedule costs) | `ce1e724` |
+| SIM-01-AC1 (RED) | `test_sim_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-01-AC1 (GREEN) | `test_sim_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_1` | Exit 0 (Passed, same-close execution rejected) | `ce1e724` |
+| SIM-01-AC2 (RED) | `test_sim_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-01-AC2 (GREEN) | `test_sim_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_2` | Exit 0 (Passed, min-notional rejection & partial fill on depth limit) | `ce1e724` |
+| SIM-01-AC3 (RED) | `test_sim_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_execution.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-01-AC3 (GREEN) | `test_sim_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_execution.py::test_sim_01_contract_3` | Exit 0 (Passed, limit touch without trade through rejected) | `ce1e724` |
 
 All 4 tests in `tests/unit/lab/backtest/test_execution.py` passed (0.43s).
 Combined suite verification (30 tests across backtest, execution, ledger, costs, features) passed (1.84s).
