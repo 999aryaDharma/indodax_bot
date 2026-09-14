@@ -81,6 +81,14 @@ from indodax_lab.models.m05_meta_label import (
     MetaTradeSample,
     purge_overlapping_trades,
 )
+from indodax_lab.models.m06_anomaly_gate import (
+    AnomalyDecision,
+    DirectionalClaimForbiddenError,
+    M06AnomalyGate,
+    M06Config,
+    M06FittedBundle,
+    MissingDataDistinctFromAnomalyError,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -153,4 +161,11 @@ __all__ = [
     "MetaFilterComparisonReport",
     "MetaTradeSample",
     "purge_overlapping_trades",
+    # M06-01 Market Anomaly Risk Gate
+    "AnomalyDecision",
+    "DirectionalClaimForbiddenError",
+    "M06AnomalyGate",
+    "M06Config",
+    "M06FittedBundle",
+    "MissingDataDistinctFromAnomalyError",
 ]
