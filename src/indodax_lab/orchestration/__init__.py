@@ -1,4 +1,4 @@
-"""Background research job orchestration, durable leased queues, and resource guards (JOB-01, JOB-02)."""
+"""Background research job orchestration, queues, resource guards, and maintenance (JOB-01, JOB-02, OPS-03)."""
 
 from indodax_lab.orchestration.jobs import (
     JobDefinition,
@@ -6,6 +6,12 @@ from indodax_lab.orchestration.jobs import (
     JobStatus,
     LeaseFencingError,
     PartialArtifactError,
+)
+from indodax_lab.orchestration.maintenance import (
+    CleanupReport,
+    RetentionPolicy,
+    StorageCleaner,
+    SymlinkEscapeError,
 )
 from indodax_lab.orchestration.queue import SqliteJobQueue
 from indodax_lab.orchestration.resources import (
@@ -33,6 +39,7 @@ __all__ = [
     "AdmissionDecision",
     "AdmissionPolicy",
     "AsusProfileTrainingProhibitedError",
+    "CleanupReport",
     "ExecutionResult",
     "HostProfile",
     "JobDefinition",
@@ -44,8 +51,11 @@ __all__ = [
     "ResourceClass",
     "ResourceProbe",
     "ResourceThresholds",
+    "RetentionPolicy",
     "SqliteJobQueue",
     "StaticResourceProbe",
+    "StorageCleaner",
+    "SymlinkEscapeError",
     "SystemResourceReading",
     "WorkerConfig",
     "evaluate_admission",
