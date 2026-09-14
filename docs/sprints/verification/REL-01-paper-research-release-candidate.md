@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: release | Domain: verification | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/rel-01-paper-research-release-candidate`
 
@@ -196,10 +196,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **REL-01-AC0** Release paper/research terpaket dengan lock, runbook dan rollback yang diverifikasi. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **REL-01-AC1** Restore previous compatible artifact terbukti. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **REL-01-AC2** Optional experimental work tidak diam-diam dipromosikan. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **REL-01-AC3** Unmet forward gate terlihat jelas sebagai pending champion qualification. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REL-01-AC0** Release paper/research terpaket dengan lock, runbook dan rollback yang diverifikasi. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **REL-01-AC1** Restore previous compatible artifact terbukti. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REL-01-AC2** Optional experimental work tidak diam-diam dipromosikan. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REL-01-AC3** Unmet forward gate terlihat jelas sebagai pending champion qualification. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
