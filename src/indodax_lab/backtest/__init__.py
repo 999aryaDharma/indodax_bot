@@ -27,6 +27,11 @@ from indodax_lab.backtest.ledger import (
     ResearchLedger,
 )
 from indodax_lab.backtest.orders import Fill
+from indodax_lab.backtest.risk import (
+    PortfolioRiskManager,
+    RiskAssessmentResult,
+    RiskPolicy,
+)
 
 __all__ = [
     "AccountType",
@@ -43,9 +48,12 @@ __all__ = [
     "MarketBar",
     "OrderRole",
     "OrderSide",
+    "PortfolioRiskManager",
     "Position",
     "Posting",
     "ResearchLedger",
+    "RiskAssessmentResult",
+    "RiskPolicy",
     "SignalIntent",
     "UnknownCostScheduleError",
     "load_cost_schedule_table",
