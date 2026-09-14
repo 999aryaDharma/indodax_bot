@@ -10,6 +10,7 @@ from indodax_lab.backtest.costs import (
     load_cost_schedule_table,
     lookup_cost,
 )
+from indodax_lab.backtest.engine import ReplayBacktestEngine
 from indodax_lab.backtest.events import (
     ExecutionResult,
     ExecutionStatus,
@@ -27,6 +28,7 @@ from indodax_lab.backtest.ledger import (
     ResearchLedger,
 )
 from indodax_lab.backtest.orders import Fill
+from indodax_lab.backtest.result import BacktestResult
 from indodax_lab.backtest.risk import (
     PortfolioRiskManager,
     RiskAssessmentResult,
@@ -35,6 +37,7 @@ from indodax_lab.backtest.risk import (
 
 __all__ = [
     "AccountType",
+    "BacktestResult",
     "ConservativeExecutionSimulator",
     "CostScheduleInterval",
     "CostScheduleResolution",
@@ -51,6 +54,7 @@ __all__ = [
     "PortfolioRiskManager",
     "Position",
     "Posting",
+    "ReplayBacktestEngine",
     "ResearchLedger",
     "RiskAssessmentResult",
     "RiskPolicy",
