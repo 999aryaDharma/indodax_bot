@@ -36,10 +36,25 @@ from indodax_api import MarketContext, WalletBalance, fetch_wallet_balance
 from risk_manager import TradingPlan
 from signal_cache import set_entry
 from signal_logic import MarketMode, SignalDecision, SignalStrategy, confirm_signal_sent, get_cooldown_status
+from indodax_lab.reporting.telegram import (
+    ReadOnlyTelegramReporter,
+    UnauthorizedChatError,
+    escape_telegram_markdown,
+    redact_secrets,
+)
 
 logger = logging.getLogger(__name__)
 
 WIB = pytz.timezone(APP_CONFIG.timezone)
+
+
+def _is_chat_authorized(chat_id: int | str | None) -> bool:
+    """Validate chat authorization against configured allowlist (REPORT-02-AC1)."""
+    configured_chat = getattr(CREDENTIALS, "telegram_chat_id", None)
+    if not configured_chat:
+        return True
+    return str(chat_id) == str(configured_chat)
+
 
 # In-memory signal history (5 sinyal terakhir untuk command /history)
 _signal_history: List[dict] = []
@@ -400,6 +415,10 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def cmd_saldo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /saldo — fetch dan tampilkan saldo real-time."""
+    if not _is_chat_authorized(update.effective_chat.id):
+        await update.message.reply_text("⛔ Akses ditolak. Chat ID tidak terdaftar.", parse_mode=ParseMode.MARKDOWN_V2)
+        return
+
     await update.message.reply_text("⏳ Mengambil data saldo dari Indodax\\.\\.\\.", parse_mode=ParseMode.MARKDOWN_V2)
 
     balance: Optional[WalletBalance] = fetch_wallet_balance()
@@ -679,6 +698,10 @@ async def callback_paper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def cmd_posisi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /posisi — tampilkan semua posisi aktif saat ini."""
+    if not _is_chat_authorized(update.effective_chat.id):
+        await update.message.reply_text("⛔ Akses ditolak. Chat ID tidak terdaftar.", parse_mode=ParseMode.MARKDOWN_V2)
+        return
+
     from position_tracker import tracker
 
     open_positions = tracker.get_all_open()
