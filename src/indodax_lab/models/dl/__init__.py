@@ -27,6 +27,14 @@ from indodax_lab.models.dl.d02_tcn import (
     CausalTCNTrainer,
     TCNComputeBudgetSummary,
 )
+from indodax_lab.models.dl.d03_resnet_lstm import (
+    BidirectionalLeakageError,
+    ResNetLSTMConfig,
+    ResNetLSTMModel,
+    ResNetLSTMTrainedBundle,
+    ResNetLSTMTrainer,
+    ResNetLSTMUtilityComparison,
+)
 from indodax_lab.models.dl.dataset import (
     CausalSequenceBatch,
     CausalSequenceBuilder,
@@ -41,6 +49,7 @@ from indodax_lab.models.dl.training import (
 )
 
 __all__ = [
+    "BidirectionalLeakageError",
     "CausalSequenceBatch",
     "CausalSequenceBuilder",
     "CausalSequenceConfig",
@@ -58,6 +67,11 @@ __all__ = [
     "NeuralTrainingCheckpoint",
     "NeuralTrainingConfig",
     "ResumeInputMismatchError",
+    "ResNetLSTMConfig",
+    "ResNetLSTMModel",
+    "ResNetLSTMTrainedBundle",
+    "ResNetLSTMTrainer",
+    "ResNetLSTMUtilityComparison",
     "SameSampleComparator",
     "SameSampleComparisonResult",
     "SampleComparatorMismatchError",
