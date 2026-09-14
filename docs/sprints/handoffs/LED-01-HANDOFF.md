@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `feat/led-01-balanced-research-postings`
 - Base SHA: `61735bf`
 - Code target: `feat(led-01): balanced research postings`
-- Evidence SHA relation: recorded in this handoff
+- Evidence SHA relation: `e93575e`
 
 ## Files and contracts
 - Planned files:
@@ -32,15 +32,15 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| LED-01-AC0 (RED) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | working tree |
-| LED-01-AC0 (GREEN) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_valid_contract` | Exit 0 (Passed, validates exact cost basis & postings balance) | working tree |
-| LED-01-AC1 (RED) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | working tree |
-| LED-01-AC1 (GREEN) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_1` | Exit 0 (Passed, buy partial sell final sell keeps qty nonnegative) | working tree |
-| LED-01-AC2 (RED) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | working tree |
-| LED-01-AC2 (GREEN) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_2` | Exit 0 (Passed, higher fee cannot increase fixed-path PnL) | working tree |
-| LED-01-AC3 (RED) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | working tree |
-| LED-01-AC3 (GREEN) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_3` | Exit 0 (Passed, duplicate fill ID does not duplicate postings) | working tree |
-| LED-01-INV | `test_ledger_invariants.py` | `python -m pytest tests/property/lab/test_ledger_invariants.py` | Exit 0 (Passed, transaction balance, unit separation, COST-01 integration) | working tree |
+| LED-01-AC0 (RED) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| LED-01-AC0 (GREEN) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_valid_contract` | Exit 0 (Passed, validates exact cost basis & postings balance) | `e93575e` |
+| LED-01-AC1 (RED) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| LED-01-AC1 (GREEN) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_1` | Exit 0 (Passed, buy partial sell final sell keeps qty nonnegative) | `e93575e` |
+| LED-01-AC2 (RED) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| LED-01-AC2 (GREEN) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_2` | Exit 0 (Passed, higher fee cannot increase fixed-path PnL) | `e93575e` |
+| LED-01-AC3 (RED) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| LED-01-AC3 (GREEN) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_3` | Exit 0 (Passed, duplicate fill ID does not duplicate postings) | `e93575e` |
+| LED-01-INV | `test_ledger_invariants.py` | `python -m pytest tests/property/lab/test_ledger_invariants.py` | Exit 0 (Passed, transaction balance, unit separation, COST-01 integration) | `e93575e` |
 
 All 7 tests in `tests/unit/lab/backtest/test_ledger.py` and `tests/property/lab/test_ledger_invariants.py` passed (0.47s).
 Combined suite verification (26 tests across backtest, costs, features) passed (1.68s).
