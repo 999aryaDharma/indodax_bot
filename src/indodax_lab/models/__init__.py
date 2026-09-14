@@ -1,4 +1,4 @@
-"""Machine learning models, preprocessing, calibration, tuning, and execution mapping subsystem (ML-01, ML-02, ML-03)."""
+"""Machine learning models, preprocessing, calibration, tuning, baseline and challenger models subsystem."""
 
 from indodax_lab.models.calibration import (
     CalibrationSegmentError,
@@ -14,6 +14,14 @@ from indodax_lab.models.execution_mapper import (
     ForecastKind,
     ForecastPayload,
     PayoffStructure,
+)
+from indodax_lab.models.m01_logistic import (
+    ClassImbalanceError,
+    InvalidSolverPenaltyError,
+    M01Config,
+    M01FittedBundle,
+    M01LogisticTrainer,
+    ModelUtilityComparison,
 )
 from indodax_lab.models.preprocessing import (
     FeatureAlignmentError,
@@ -63,4 +71,11 @@ __all__ = [
     "TrialBudgetExhaustedError",
     "TrialOutcome",
     "TrialStatus",
+    # M01-01 Calibrated Logistic Baseline
+    "ClassImbalanceError",
+    "InvalidSolverPenaltyError",
+    "M01Config",
+    "M01FittedBundle",
+    "M01LogisticTrainer",
+    "ModelUtilityComparison",
 ]

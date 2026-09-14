@@ -40,6 +40,10 @@ class FittedCalibratorArtifact(BaseModel):
     n_negatives: int
     fitted_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
+    @property
+    def is_fitted(self) -> bool:
+        return True
+
 
 class HeldOutCalibrator:
     """Platt scaling sigmoid calibrator fitted strictly on inner held-out validation data."""
