@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: integration | Domain: reporting | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/report-02-read-only-telegram-research-status`
 
@@ -193,10 +193,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **REPORT-02-AC0** Telegram menampilkan queue, champion dan health secara read-only dengan otorisasi chat. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **REPORT-02-AC1** Unauthorized chat tidak mendapat holdings. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **REPORT-02-AC2** Markdown escaped dan token redacted. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **REPORT-02-AC3** Rate-limit retry tidak menggandakan notifikasi. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REPORT-02-AC0** Telegram menampilkan queue, champion dan health secara read-only dengan otorisasi chat. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **REPORT-02-AC1** Unauthorized chat tidak mendapat holdings. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REPORT-02-AC2** Markdown escaped dan token redacted. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **REPORT-02-AC3** Rate-limit retry tidak menggandakan notifikasi. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
