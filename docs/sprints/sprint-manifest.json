@@ -3923,9 +3923,9 @@ Total output lines: 7539
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/F01-02-staged-foundation-adaptation.md",
       "priority": "P2",
-      "status": "PLANNED",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "REVIEW",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "UNASSIGNED (pending independent review)",
       "recommended_branch": "feat/f01-02-staged-foundation-adaptation",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
