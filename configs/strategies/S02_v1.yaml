@@ -1,0 +1,22 @@
+strategy_id: "S02"
+version: "1.0.0"
+family: "squeeze_expansion"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 20
+  bb_std: 2.0
+  kc_atr_mult: 1.5
+  volume_multiplier: 1.5
+  max_chase_pct: 0.03
+  base_qty: "0.1"
+  atr_multiplier: 2.0
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Bollinger and Keltner squeeze followed by volume expansion with no-chase cap"
