@@ -56,6 +56,14 @@ from indodax_lab.models.artifacts import (
     PortableBundle,
     PortableBundleLoader,
 )
+from indodax_lab.models.m03_rf_regime import (
+    M03Config,
+    M03FittedBundle,
+    M03RFRegimeTrainer,
+    RegimeAbstainError,
+    RegimeLabel,
+    RegimeUtilityReport,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -106,4 +114,11 @@ __all__ = [
     "MissingCalibrationMetadataError",
     "PortableBundle",
     "PortableBundleLoader",
+    # M03-01 Random Forest Regime Gate
+    "M03Config",
+    "M03FittedBundle",
+    "M03RFRegimeTrainer",
+    "RegimeAbstainError",
+    "RegimeLabel",
+    "RegimeUtilityReport",
 ]
