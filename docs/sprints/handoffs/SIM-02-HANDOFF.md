@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `feat/sim-02-portfolio-risk-and-circuit-breakers`
 - Base SHA: `d045d5f`
 - Code target: `feat(sim-02): portfolio risk and circuit breakers`
-- Evidence SHA relation: recorded in this handoff
+- Evidence SHA relation: `f024999`
 
 ## Files and contracts
 - Planned files:
@@ -29,14 +29,14 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| SIM-02-AC0 (RED) | `test_sim_02_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-02-AC0 (GREEN) | `test_sim_02_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_valid_contract` | Exit 0 (Passed, sizing caps to position fraction) | working tree |
-| SIM-02-AC1 (RED) | `test_sim_02_contract_1` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-02-AC1 (GREEN) | `test_sim_02_contract_1` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_1` | Exit 0 (Passed, sub-minimum size rejected, not rounded up) | working tree |
-| SIM-02-AC2 (RED) | `test_sim_02_contract_2` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-02-AC2 (GREEN) | `test_sim_02_contract_2` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_2` | Exit 0 (Passed, daily loss includes unrealized mark losses) | working tree |
-| SIM-02-AC3 (RED) | `test_sim_02_contract_3` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | working tree |
-| SIM-02-AC3 (GREEN) | `test_sim_02_contract_3` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_3` | Exit 0 (Passed, drawdown halt persists after restart) | working tree |
+| SIM-02-AC0 (RED) | `test_sim_02_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-02-AC0 (GREEN) | `test_sim_02_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_valid_contract` | Exit 0 (Passed, sizing caps to position fraction) | `f024999` |
+| SIM-02-AC1 (RED) | `test_sim_02_contract_1` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-02-AC1 (GREEN) | `test_sim_02_contract_1` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_1` | Exit 0 (Passed, sub-minimum size rejected, not rounded up) | `f024999` |
+| SIM-02-AC2 (RED) | `test_sim_02_contract_2` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-02-AC2 (GREEN) | `test_sim_02_contract_2` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_2` | Exit 0 (Passed, daily loss includes unrealized mark losses) | `f024999` |
+| SIM-02-AC3 (RED) | `test_sim_02_contract_3` | `python -m pytest tests/unit/lab/backtest/test_risk.py` | Exit 1 (`NotImplementedError`) | `working tree` |
+| SIM-02-AC3 (GREEN) | `test_sim_02_contract_3` | `python -m pytest tests/unit/lab/backtest/test_risk.py::test_sim_02_contract_3` | Exit 0 (Passed, drawdown halt persists after restart) | `f024999` |
 
 All 4 tests in `tests/unit/lab/backtest/test_risk.py` passed (0.42s).
 Combined suite verification (34 tests across backtest, risk, execution, ledger, costs, features) passed (1.57s).
