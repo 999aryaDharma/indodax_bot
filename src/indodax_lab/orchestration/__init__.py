@@ -46,6 +46,15 @@ from indodax_lab.orchestration.dag import (
     RepeatPolicy,
     ResearchDAGJob,
 )
+from indodax_lab.orchestration.curator_policy import (
+    ChangeRequestProposal,
+    ChangeRequestRecord,
+    CuratorEngine,
+    HardFailTuningForbiddenError,
+    ProposalStatus,
+    SelfApprovalForbiddenError,
+    sanitize_curator_input,
+)
 
 __all__ = [
     "AdmissionDecision",
@@ -85,4 +94,12 @@ __all__ = [
     "RepeatOutcome",
     "RepeatPolicy",
     "ResearchDAGJob",
+    # AGENT-01 Governed research curator
+    "ChangeRequestProposal",
+    "ChangeRequestRecord",
+    "CuratorEngine",
+    "HardFailTuningForbiddenError",
+    "ProposalStatus",
+    "SelfApprovalForbiddenError",
+    "sanitize_curator_input",
 ]
