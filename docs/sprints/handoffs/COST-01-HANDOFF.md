@@ -8,7 +8,7 @@ Status: REVIEW
 - Independent reviewer: UNASSIGNED (pending independent review)
 - Branch / worktree: `feat/cost-01-time-valid-exchange-cost-schedules`
 - Base SHA: `faf1698`
-- Code target: `feat(cost-01): time-valid exchange cost schedules`
+- Code SHA: `9c9504feea4ca33320f7724fe282a5bc651ec30f`
 - Evidence SHA relation: recorded in this handoff
 
 ## Files and contracts
