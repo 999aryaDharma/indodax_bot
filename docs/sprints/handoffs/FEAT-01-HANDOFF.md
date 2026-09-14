@@ -8,7 +8,7 @@ Status: REVIEW
 - Independent reviewer: UNASSIGNED (pending independent review)
 - Branch / worktree: `feat/feat-01-versioned-feature-registry`
 - Base SHA: `4bf3262315ff2f336f87e28ff824b8bbbf648de8`
-- Code SHA: `5d4df455d4dbe8d4921844eb8f6f0437f13ba2db`
+- Code SHA: `080401c78a73f54ed9447e967ce80393220ca643`
 - Evidence SHA relation: recorded in this handoff
 
 ## Files and contracts
