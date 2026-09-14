@@ -1,4 +1,4 @@
-"""Machine learning models, preprocessing, calibration, and execution mapping subsystem (ML-01, ML-02)."""
+"""Machine learning models, preprocessing, calibration, tuning, and execution mapping subsystem (ML-01, ML-02, ML-03)."""
 
 from indodax_lab.models.calibration import (
     CalibrationSegmentError,
@@ -22,6 +22,17 @@ from indodax_lab.models.preprocessing import (
     PreprocessorConfig,
     TabularPreprocessor,
 )
+from indodax_lab.models.tuning import (
+    BoundedTrialSearch,
+    ResumeConfigMismatchError,
+    RevisionBudgetExhaustedError,
+    SealedTestObjectiveForbiddenError,
+    SearchSpace,
+    TrialBudget,
+    TrialBudgetExhaustedError,
+    TrialOutcome,
+    TrialStatus,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -42,4 +53,14 @@ __all__ = [
     "HeldOutCalibrator",
     "InsufficientCalibrationDataError",
     "PayoffStructure",
+    # ML-03 Bounded Trial Search
+    "BoundedTrialSearch",
+    "ResumeConfigMismatchError",
+    "RevisionBudgetExhaustedError",
+    "SealedTestObjectiveForbiddenError",
+    "SearchSpace",
+    "TrialBudget",
+    "TrialBudgetExhaustedError",
+    "TrialOutcome",
+    "TrialStatus",
 ]
