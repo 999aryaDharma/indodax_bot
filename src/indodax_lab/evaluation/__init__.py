@@ -29,6 +29,13 @@ from indodax_lab.evaluation.statistics import (
     compute_deflated_sharpe_ratio,
     compute_pbo,
 )
+from indodax_lab.evaluation.tournament import (
+    LiveProfitabilityClaimForbiddenError,
+    TournamentCandidate,
+    TournamentFollowUp,
+    TournamentReport,
+    run_wave1_tournament,
+)
 
 __all__ = [
     "CandidateFrozenError",
@@ -52,4 +59,10 @@ __all__ = [
     "compute_pbo",
     "evaluate_multi_seed_runs",
     "evaluate_run",
+    # QA-01 Tournament
+    "LiveProfitabilityClaimForbiddenError",
+    "TournamentCandidate",
+    "TournamentFollowUp",
+    "TournamentReport",
+    "run_wave1_tournament",
 ]
