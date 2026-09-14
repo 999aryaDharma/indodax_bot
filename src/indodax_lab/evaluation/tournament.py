@@ -85,6 +85,7 @@ def run_wave1_tournament(
     candidates: list[TournamentCandidate],
     snapshot_id: str,
     claim_live_profitability: bool = False,
+    evaluated_at_utc: datetime | None = None,
 ) -> TournamentReport:
     """Execute a deterministic offline tournament across multiple candidates.
 
@@ -154,10 +155,12 @@ def run_wave1_tournament(
             )
         )
 
+    kwargs = {"evaluated_at_utc": evaluated_at_utc} if evaluated_at_utc is not None else {}
     return TournamentReport(
         snapshot_id=snapshot_id,
         candidates_evaluated=len(evaluated_candidates),
         results=evaluated_candidates,
         follow_ups=follow_ups,
         is_real_market_evidence=False,
+        **kwargs,
     )

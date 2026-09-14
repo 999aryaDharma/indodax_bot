@@ -57,7 +57,10 @@ def test_qa_01_valid_contract():
     assert report1.snapshot_id == "snap_20240601"
     assert report1.candidates_evaluated == 2
     # Deterministic: identical input produces identical ranking/metrics
-    assert report1.model_dump() == report2.model_dump()
+    assert (
+        report1.model_dump(exclude={"evaluated_at_utc"})
+        == report2.model_dump(exclude={"evaluated_at_utc"})
+    )
 
 
 # ---------------------------------------------------------------------------
