@@ -168,3 +168,45 @@ def test_registry_requires_version_bump_when_content_changes(tmp_path: Path) -> 
     current = load_feature_registry(path, previous=previous)
     assert current.registry.version == "1.0.1"
 
+
+def test_feat_01_valid_contract() -> None:
+    """FEAT-01-AC0: Definisi fitur Wave 1 dapat dimuat dengan identitas versi dan metadata lengkap."""
+    test_canonical_registry_contains_exact_wave1_names_and_metadata()
+
+
+def test_feat_01_contract_1(tmp_path: Path) -> None:
+    """FEAT-01-AC1: Nama duplikat dan bfill ditolak."""
+    duplicate = tmp_path / "duplicate.yaml"
+    duplicate.write_text(
+        _registry_yaml(feature_block=_ema_feature() + _ema_feature()), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="DUPLICATE_FEATURE_NAME"):
+        load_feature_registry(duplicate)
+
+    bfill = tmp_path / "bfill.yaml"
+    bfill.write_text(
+        _registry_yaml(
+            feature_block=_ema_feature().replace(
+                "missing_policy: drop_sample_until_warm", "missing_policy: bfill"
+            )
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="BFILL_FORBIDDEN"):
+        load_feature_registry(bfill)
+
+
+def test_feat_01_contract_2(tmp_path: Path) -> None:
+    """FEAT-01-AC2: Lookback kurang dari kebutuhan rumus ditolak."""
+    too_short = tmp_path / "too-short.yaml"
+    too_short.write_text(
+        _registry_yaml(feature_block=_ema_feature(lookback=49)), encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="INSUFFICIENT_FEATURE_LOOKBACK"):
+        load_feature_registry(too_short)
+
+
+def test_feat_01_contract_3(tmp_path: Path) -> None:
+    """FEAT-01-AC3: Perubahan konten tanpa version bump ditolak."""
+    test_registry_requires_version_bump_when_content_changes(tmp_path)
+
