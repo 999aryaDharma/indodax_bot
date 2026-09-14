@@ -20,6 +20,13 @@ from indodax_lab.models.dl.d01_mlp import (
     SampleComparatorMismatchError,
     SearchBudgetExceededError,
 )
+from indodax_lab.models.dl.dataset import (
+    CausalSequenceBatch,
+    CausalSequenceBuilder,
+    CausalSequenceConfig,
+    SessionGapBrokenWindowError,
+    TargetLeakageForbiddenError,
+)
 from indodax_lab.models.dl.training import (
     EarlyStoppingTracker,
     NeuralTrainer,
@@ -27,6 +34,9 @@ from indodax_lab.models.dl.training import (
 )
 
 __all__ = [
+    "CausalSequenceBatch",
+    "CausalSequenceBuilder",
+    "CausalSequenceConfig",
     "D01FinalistEvaluation",
     "D01MLPConfig",
     "D01MLPFittedBundle",
@@ -41,6 +51,8 @@ __all__ = [
     "SameSampleComparisonResult",
     "SampleComparatorMismatchError",
     "SearchBudgetExceededError",
+    "SessionGapBrokenWindowError",
+    "TargetLeakageForbiddenError",
     "TorchNotAvailableError",
     "check_torch_availability",
     "load_checkpoint",
