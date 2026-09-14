@@ -1,0 +1,135 @@
+"""As-of market context, point-in-time universe, and higher-timeframe alignment (FEAT-03)."""
+
+from __future__ import annotations
+
+from typing import Sequence
+
+import numpy as np
+import pandas as pd
+
+
+def asof_join_features(
+    decisions: pd.DataFrame,
+    source: pd.DataFrame,
+    interval: str,
+    value_columns: Sequence[str],
+) -> pd.DataFrame:
+    """As-of join higher timeframe or benchmark features strictly available at decision time.
+
+    Enforces:
+    1. Exclusion of partial or in-progress bars (is_closed == False).
+    2. Strict causality (source.available_at <= decisions.decision_ts).
+    3. Missing history yields null/NaN, never backfilled.
+    """
+    res = decisions.copy()
+    res["decision_ts"] = pd.to_datetime(res["decision_ts"], utc=True)
+
+    # Filter source to only closed/complete bars
+    if "is_closed" in source.columns:
+        valid_source = source[source["is_closed"] == True].copy()
+    else:
+        valid_source = source.copy()
+
+    valid_source["available_at"] = pd.to_datetime(valid_source["available_at"], utc=True)
+
+    source_has_pair = "pair" in valid_source.columns
+    decisions_has_pair = "pair" in res.columns
+
+    by_pair = False
+    if source_has_pair and decisions_has_pair:
+        if valid_source["pair"].nunique() > 1 or set(decisions["pair"]).issubset(set(valid_source["pair"])):
+            by_pair = True
+
+    for col in value_columns:
+        res[col] = np.nan
+        res[f"{col}_available_at"] = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=res.index)
+
+    for idx, row in res.iterrows():
+        d_ts = row["decision_ts"]
+        candidates = valid_source[valid_source["available_at"] <= d_ts]
+        if by_pair:
+            candidates = candidates[candidates["pair"] == row["pair"]]
+
+        if not candidates.empty:
+            latest = candidates.sort_values("available_at").iloc[-1]
+            for col in value_columns:
+                if col in latest:
+                    res.at[idx, col] = latest[col]
+                    res.at[idx, f"{col}_available_at"] = latest["available_at"]
+
+    return res
+
+
+def point_in_time_market_context(
+    features: pd.DataFrame,
+    universe: pd.DataFrame,
+) -> pd.DataFrame:
+    """Compute point-in-time tier momentum rank, market breadth, and RV median.
+
+    Enforces:
+    1. Only universe snapshots available at decision_ts are considered (future rows ignored).
+    2. Only eligible universe assets contribute to cross-sectional ranks and market breadth.
+    3. Ineligible assets have NaN tier momentum rank.
+    """
+    res = features.copy()
+    res["decision_ts"] = pd.to_datetime(res["decision_ts"], utc=True)
+    universe_copy = universe.copy()
+    universe_copy["available_at"] = pd.to_datetime(universe_copy["available_at"], utc=True)
+
+    tier_momentum_rank = pd.Series(np.nan, index=res.index, dtype=float)
+    market_breadth_pos = pd.Series(np.nan, index=res.index, dtype=float)
+    market_rv_median = pd.Series(np.nan, index=res.index, dtype=float)
+    universe_snapshot_id = pd.Series(None, index=res.index, dtype=object)
+
+    for d_ts in res["decision_ts"].unique():
+        # Universe rows available at or before decision_ts
+        u_avail = universe_copy[universe_copy["available_at"] <= d_ts]
+        if u_avail.empty:
+            continue
+
+        # Point-in-time latest universe state per pair
+        pit_u = u_avail.sort_values("available_at").groupby("pair").last().reset_index()
+
+        f_mask = res["decision_ts"] == d_ts
+        f_subset = res[f_mask]
+
+        merged = f_subset.merge(
+            pit_u[["pair", "tier", "eligible", "universe_snapshot_id"]],
+            on="pair",
+            how="left",
+        )
+
+        for pos_idx, orig_idx in enumerate(f_subset.index):
+            universe_snapshot_id.loc[orig_idx] = merged.iloc[pos_idx]["universe_snapshot_id"]
+
+        # Eligible cross-section
+        eligible_sub = merged[merged["eligible"] == True]
+
+        if not eligible_sub.empty:
+            # Market breadth: fraction of eligible pairs with positive momentum
+            if "log_ret_24_1h" in eligible_sub.columns:
+                pos_count = (eligible_sub["log_ret_24_1h"] > 0).sum()
+                breadth = float(pos_count) / len(eligible_sub)
+                market_breadth_pos.loc[f_mask] = breadth
+
+            # Market RV median across eligible assets
+            if "rv_24_1h" in eligible_sub.columns:
+                rv_med = float(eligible_sub["rv_24_1h"].median())
+                market_rv_median.loc[f_mask] = rv_med
+
+            # Tier momentum rank
+            if "log_ret_24_1h" in eligible_sub.columns and "tier" in eligible_sub.columns:
+                for tier, group in eligible_sub.groupby("tier"):
+                    n_tier = len(group)
+                    ranks = group["log_ret_24_1h"].rank(method="min", ascending=True)
+                    tier_ranks = ranks / n_tier
+                    for pair, rank_val in zip(group["pair"], tier_ranks):
+                        pair_mask = f_mask & (res["pair"] == pair)
+                        tier_momentum_rank.loc[pair_mask] = float(rank_val)
+
+    res["tier_momentum_rank_24_1h"] = tier_momentum_rank
+    res["market_breadth_pos_24_1h"] = market_breadth_pos
+    res["market_rv_median_24_1h"] = market_rv_median
+    res["universe_snapshot_id"] = universe_snapshot_id
+
+    return res
