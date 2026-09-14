@@ -72,6 +72,15 @@ from indodax_lab.models.m04_quantile_risk import (
     QuantileCrossingError,
     TailTargetLeakageError,
 )
+from indodax_lab.models.m05_meta_label import (
+    M05Config,
+    M05FittedBundle,
+    M05MetaLabelTrainer,
+    ManualLabelForbiddenError,
+    MetaFilterComparisonReport,
+    MetaTradeSample,
+    purge_overlapping_trades,
+)
 
 __all__ = [
     # ML-01 Preprocessing
@@ -136,4 +145,12 @@ __all__ = [
     "QuantileCoverageReport",
     "QuantileCrossingError",
     "TailTargetLeakageError",
+    # M05-01 Meta-Label Signal Filter
+    "M05Config",
+    "M05FittedBundle",
+    "M05MetaLabelTrainer",
+    "ManualLabelForbiddenError",
+    "MetaFilterComparisonReport",
+    "MetaTradeSample",
+    "purge_overlapping_trades",
 ]
