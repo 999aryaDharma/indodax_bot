@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P2 | Type: research | Domain: deep-learning | Portfolio: EXPERIMENTAL
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: PENDING
 
 Recommended Branch: `feat/d04-01-compact-itransformer-challenger`
 
