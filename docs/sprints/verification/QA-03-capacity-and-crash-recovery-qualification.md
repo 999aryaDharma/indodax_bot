@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: performance | Domain: verification | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: UNASSIGNED (pending independent review)
 
 Recommended Branch: `feat/qa-03-capacity-and-crash-recovery-qualification`
 
@@ -193,10 +193,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **QA-03-AC0** Host yang dipilih punya bukti workload dan recovery sebelum release. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **QA-03-AC1** Disk-full tidak mengakui sukses. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **QA-03-AC2** Worker kill tidak duplicate metrics. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **QA-03-AC3** Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-03-AC0** Host yang dipilih punya bukti workload dan recovery sebelum release. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **QA-03-AC1** Disk-full tidak mengakui sukses. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-03-AC2** Worker kill tidak duplicate metrics. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-03-AC3** Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
