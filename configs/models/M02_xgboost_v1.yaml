@@ -1,0 +1,16 @@
+model_id: "M02"
+version: "1.0.0"
+family: "gradient_boosted_trees"
+description: "Calibrated XGBoost challenger with early stopping"
+parameters:
+  max_depth: 3
+  n_estimators: 100
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  early_stopping_rounds: 10
+  eval_metric: "logloss"
+  seed: 42
+thresholds:
+  min_positive_samples: 10
+  min_minority_ratio: 0.05

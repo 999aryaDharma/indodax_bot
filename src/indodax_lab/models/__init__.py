@@ -23,6 +23,14 @@ from indodax_lab.models.m01_logistic import (
     M01LogisticTrainer,
     ModelUtilityComparison,
 )
+from indodax_lab.models.m02_xgboost import (
+    M02Config,
+    M02FittedBundle,
+    M02MultiSeedAudit,
+    M02SeedResult,
+    M02XGBoostTrainer,
+    SealedPartitionLeakageError,
+)
 from indodax_lab.models.preprocessing import (
     FeatureAlignmentError,
     FittedPreprocessorArtifact,
@@ -78,4 +86,11 @@ __all__ = [
     "M01FittedBundle",
     "M01LogisticTrainer",
     "ModelUtilityComparison",
+    # M02-01 XGBoost Challenger
+    "M02Config",
+    "M02FittedBundle",
+    "M02MultiSeedAudit",
+    "M02SeedResult",
+    "M02XGBoostTrainer",
+    "SealedPartitionLeakageError",
 ]
