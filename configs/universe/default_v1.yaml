@@ -1,0 +1,17 @@
+policy_version: universe-v1
+cap_rank_boundary: 100
+cap_source: coingecko
+cap_source_ttl_seconds: 172800
+fallback_tier: LIQUIDITY_ONLY
+big:
+  listing_age_days_min: 180
+  zero_volume_ratio_30d_max: "0.02"
+  median_spread_bps_7d_max: "75"
+  depth_band_bps: 50
+  depth_to_order_multiple_min: "20"
+small:
+  listing_age_days_min: 180
+  zero_volume_ratio_30d_max: "0.05"
+  median_spread_bps_7d_max: "150"
+  depth_band_bps: 50
+  depth_to_order_multiple_min: "10"

@@ -1,0 +1,11 @@
+{
+  "result": {
+    "channel": "market:trade-activity-btcidr",
+    "data": {
+      "data": [
+        ["btcidr", 1722902400, 21999427, "buy", "881991000", "29740", "0.00003372"]
+      ],
+      "offset": 243556
+    }
+  }
+}

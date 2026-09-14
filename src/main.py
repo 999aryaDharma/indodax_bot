@@ -21,7 +21,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from telegram.constants import ParseMode
 
-from config import APP_CONFIG, ASSET_WHITELIST, DAILY_TIMEFRAME, PRIMARY_TIMEFRAME, TREND_TIMEFRAME
+from config import (
+    APP_CONFIG,
+    ASSET_WHITELIST,
+    DAILY_TIMEFRAME,
+    PRIMARY_TIMEFRAME,
+    TREND_TIMEFRAME,
+)
 from indodax_api import (
     MarketContext,
     fetch_market_context,
@@ -30,6 +36,7 @@ from indodax_api import (
     is_pair_already_held,
 )
 from risk_manager import calculate_trading_plan
+from signal_observer import SignalObserver, get_runtime_observer
 from signal_logic import confirm_entry_15m, confirm_signal_sent, evaluate_signal
 from ta_processor import calculate
 from telegram_bot import (
@@ -47,6 +54,19 @@ _market_context: Optional[MarketContext] = None
 _scheduler: Optional[AsyncIOScheduler] = None
 _start_time: float = 0.0
 _signal_entry_cache: dict = {}
+_signal_observer: Optional[SignalObserver] = None
+
+_STRATEGY_VERSION = "signal_logic_v1"
+_DATASET_VERSION = "live_ohlcv_v1"
+_RUNTIME_VERSION = "ibs_runtime_v1"
+
+
+def _get_signal_observer() -> SignalObserver:
+    """Create the runtime observer lazily so imports never migrate a database."""
+    global _signal_observer
+    if _signal_observer is None:
+        _signal_observer = get_runtime_observer()
+    return _signal_observer
 
 
 # ==============================================================================
@@ -123,12 +143,20 @@ async def scan_market() -> None:
     )
 
 
-async def _process_pair(pair: str) -> Optional[dict]:
+async def _process_pair(
+    pair: str,
+    *,
+    observer: Optional[SignalObserver] = None,
+    tracker_instance=None,
+) -> Optional[dict]:
     """
     Proses satu pair dari fetch sampai (potensial) kirim sinyal.
     Log verbose di setiap step — waktu, jumlah candle, nilai aktual.
     """
-    from position_tracker import tracker
+    if tracker_instance is None:
+        from position_tracker import tracker as tracker_instance
+
+    active_observer = observer or _get_signal_observer()
 
     stats = {
         "data_fetched": 0, "ta_calculated": 0,
@@ -141,7 +169,7 @@ async def _process_pair(pair: str) -> Optional[dict]:
     pair_start = _time.monotonic()
 
     # Skip pair yang sudah ada posisi aktif
-    if tracker.has_open_position(pair):
+    if tracker_instance.has_open_position(pair):
         logger.info(f"[{pair}] ⏭️  Posisi aktif sedang dimonitor — skip scan sinyal baru")
         return stats
 
@@ -198,8 +226,25 @@ async def _process_pair(pair: str) -> Optional[dict]:
         ta_1d=ta_1d,
     )
 
+    def record_final(passed: bool, reason: str, plan=None) -> int:
+        return active_observer.record_candidate(
+            pair=pair,
+            strategy=decision.strategy.value,
+            strategy_version=_STRATEGY_VERSION,
+            score=decision.score,
+            passed=passed,
+            reason=reason,
+            planned_entry=plan.entry_price if plan else None,
+            planned_stop_loss=plan.stop_loss if plan else None,
+            planned_take_profit=plan.take_profit if plan else None,
+            planned_position_idr=plan.position_idr if plan else None,
+            dataset_version=_DATASET_VERSION,
+            runtime_version=_RUNTIME_VERSION,
+        )
+
     if not decision.should_signal:
         reason = decision.rejection_reason
+        record_final(False, reason)
 
         # Kategorikan rejection untuk summary stats
         if "Cooldown" in reason:
@@ -230,6 +275,7 @@ async def _process_pair(pair: str) -> Optional[dict]:
         from config import ENTRY_TIMEFRAME
         ta_15m = calculate(candles_15m, pair, ENTRY_TIMEFRAME)
         if not confirm_entry_15m(ta_15m):
+            record_final(False, "15m confirmation failed")
             logger.info(f"[{pair}] ⏭️  15m confirmation FAILED — entry timing buruk, sinyal dibatalkan")
             return stats
         logger.info(f"[{pair}] ✅ 15m confirmation PASSED")
@@ -240,6 +286,7 @@ async def _process_pair(pair: str) -> Optional[dict]:
     logger.info(f"[{pair}] 🔍 Cek posisi di Indodax (trade history V2)...")
     already_held = await loop.run_in_executor(None, is_pair_already_held, pair)
     if already_held:
+        record_final(False, "pair already held")
         stats["already_held"] = 1
         logger.info(f"[{pair}] ⏭️  Sudah hold posisi di Indodax — sinyal tidak dikirim")
         return stats
@@ -249,6 +296,7 @@ async def _process_pair(pair: str) -> Optional[dict]:
     logger.info(f"[{pair}] 💰 Fetching saldo wallet...")
     balance = await loop.run_in_executor(None, fetch_wallet_balance)
     if balance is None:
+        record_final(False, "wallet unavailable")
         logger.warning(f"[{pair}] ❌ Gagal fetch saldo wallet — sinyal dibatalkan")
         return stats
     logger.info(
@@ -262,6 +310,7 @@ async def _process_pair(pair: str) -> Optional[dict]:
     )
     plan = calculate_trading_plan(decision, balance)
     if plan is None:
+        record_final(False, "risk plan unavailable")
         logger.info(
             f"[{pair}] ⏭️  Trading plan gagal — "
             f"kemungkinan: RR < minimum atau saldo IDR < Rp 50.000"
@@ -281,9 +330,13 @@ async def _process_pair(pair: str) -> Optional[dict]:
         f"  ATR (1h)    → {plan.atr_value:,.0f}"
     )
 
+    observation_id = record_final(True, "all gates passed", plan)
+
     # --- Step 7: Kirim sinyal ke Telegram ---
     logger.info(f"[{pair}] 📤 Mengirim sinyal ke Telegram...")
-    message_id = await send_signal(decision, plan)
+    message_id = await send_signal(
+        decision, plan, observation_id=observation_id
+    )
     if message_id:
         stats["signals_sent"] = 1
         confirm_signal_sent(pair)
@@ -373,6 +426,17 @@ async def _monitor_active_positions() -> None:
                 f"<code>PnL: Rp {trade.pnl_idr:,.0f} ({trade.pnl_pct:.2f}%)</code>",
                 parse_mode=ParseMode.HTML
             )
+
+    observation_events = await loop.run_in_executor(
+        None, _get_signal_observer().monitor_all
+    )
+    for event in observation_events:
+        coin = event["pair"].replace("_idr", "").upper()
+        await send_text(
+            f"🔬 *[SHADOW] {event['reason']} — {coin}/IDR*\n"
+            f"<code>Fill canonical: Rp {event['price']:,.0f}</code>",
+            parse_mode=ParseMode.HTML,
+        )
 
 
 async def _try_close_position(pair: str, reason: str) -> None:

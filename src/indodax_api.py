@@ -64,10 +64,26 @@ class WalletBalance:
 class TradeRecord:
     """Satu record trade dari trade history."""
     pair: str
-    trade_type: str   # "buy" | "sell"
+    trade_id: str
+    order_id: str
     price: float
     amount: float     # Jumlah koin
-    timestamp: int
+    quote_amount: float
+    commission: float
+    commission_asset: str
+    is_buyer: bool
+    is_maker: bool
+    timestamp_ms: int
+
+    @property
+    def trade_type(self) -> str:
+        """Compatibility view of the V2 buyer flag."""
+        return "buy" if self.is_buyer else "sell"
+
+    @property
+    def timestamp(self) -> float:
+        """Compatibility view of the millisecond V2 timestamp in seconds."""
+        return self.timestamp_ms / 1000.0
 
 
 @dataclass
@@ -400,6 +416,43 @@ def fetch_wallet_balance() -> Optional[WalletBalance]:
 # Subdomain berbeda: tapi.indodax.com
 # ==============================================================================
 
+def _parse_my_trades_v2(payload: Dict[str, Any], pair: str) -> List[TradeRecord]:
+    """Parse a Trade API V2 response without performing HTTP I/O."""
+    trades: List[TradeRecord] = []
+    if not isinstance(payload, dict):
+        return trades
+
+    raw_trades = payload.get("data", [])
+
+    if not isinstance(raw_trades, list):
+        return trades
+
+    for item in raw_trades:
+        try:
+            is_buyer = item["isBuyer"]
+            is_maker = item["isMaker"]
+            if type(is_buyer) is not bool or type(is_maker) is not bool:
+                raise ValueError("isBuyer and isMaker must be booleans")
+
+            trades.append(TradeRecord(
+                pair=pair,
+                trade_id=str(item["tradeId"]),
+                order_id=str(item["orderId"]),
+                price=float(item["price"]),
+                amount=float(item["qty"]),
+                quote_amount=float(item["quoteQty"]),
+                commission=float(item["commission"]),
+                commission_asset=str(item["commissionAsset"]),
+                is_buyer=is_buyer,
+                is_maker=is_maker,
+                timestamp_ms=int(item["time"]),
+            ))
+        except (KeyError, TypeError, ValueError) as e:
+            logger.debug(f"[{pair}] Skip trade record: {e}")
+
+    return trades
+
+
 def fetch_recent_trades(pair: str, limit: int = 10) -> List[TradeRecord]:
     """
     Mengambil riwayat trade terakhir pengguna untuk satu pair.
@@ -442,21 +495,7 @@ def fetch_recent_trades(pair: str, limit: int = 10) -> List[TradeRecord]:
         response.raise_for_status()
         data = response.json()
 
-        trades: List[TradeRecord] = []
-        raw_trades = data if isinstance(data, list) else data.get("data", [])
-
-        for item in raw_trades:
-            try:
-                trades.append(TradeRecord(
-                    pair=pair,
-                    trade_type=str(item.get("type", "")).lower(),
-                    price=float(item.get("price", 0)),
-                    amount=float(item.get("amount", 0)),
-                    timestamp=int(item.get("time", 0)),
-                ))
-            except (ValueError, KeyError) as e:
-                logger.debug(f"[{pair}] Skip trade record: {e}")
-                continue
+        trades = _parse_my_trades_v2(data, pair)
 
         logger.debug(f"[{pair}] Fetched {len(trades)} trade records")
         return trades
@@ -491,7 +530,7 @@ def is_pair_already_held(pair: str) -> bool:
         return False
 
     # Urutkan dari terbaru
-    trades.sort(key=lambda t: t.timestamp, reverse=True)
+    trades.sort(key=lambda t: t.timestamp_ms, reverse=True)
 
     # Jika trade terbaru adalah BUY → anggap masih pegang posisi
     if trades[0].trade_type == "buy":

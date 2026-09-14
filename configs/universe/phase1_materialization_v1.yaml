@@ -1,0 +1,5 @@
+profile_id: phase1-compact-1d-v1
+trade_lookback_days: 1
+spread_lookback_days: 1
+depth_band_bps: 50
+simulated_order_quote: "1000"

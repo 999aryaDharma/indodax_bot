@@ -1,0 +1,26 @@
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+  "no_network: regression behavior is executed with HTTP requests forbidden",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  "src/config.py",
+  "src/indodax_api.py",
+  "src/main.py",
+  "src/paper_trader.py",
+  "src/position_tracker.py",
+  "src/risk_manager.py",
+  "src/signal_cache.py",
+  "src/signal_logic.py",
+  "src/ta_processor.py",
+  "src/telegram_bot.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

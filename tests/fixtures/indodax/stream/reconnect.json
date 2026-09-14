@@ -1,0 +1,26 @@
+{
+  "id": 4,
+  "result": {
+    "recoverable": true,
+    "epoch": "1722902402",
+    "publications": [
+      {
+        "data": {
+          "pair": "btcidr",
+          "ask": [{"btc_volume": "0.09500000", "idr_volume": "30346515", "price": "319437000"}],
+          "bid": [{"btc_volume": "0.45000000", "idr_volume": "143746200", "price": "319436000"}]
+        },
+        "offset": 67411
+      },
+      {
+        "data": {
+          "pair": "btcidr",
+          "ask": [{"btc_volume": "0.09000000", "idr_volume": "28749330", "price": "319437000"}],
+          "bid": [{"btc_volume": "0.40000000", "idr_volume": "127774400", "price": "319436000"}]
+        },
+        "offset": 67412
+      }
+    ],
+    "offset": 67412
+  }
+}
