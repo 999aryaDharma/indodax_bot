@@ -14,6 +14,17 @@ from .triple_barrier import (
     compute_concurrency_weights,
 )
 
+from .splits import (
+    ExposedPeriodViolationError,
+    FoldAssignment,
+    FoldWindow,
+    SampleRecord,
+    SampleRole,
+    SplitManifest,
+    SplitPolicy,
+    assign_folds,
+)
+
 __all__ = [
     "NetReturnConfig",
     "NetReturnLabel",
@@ -24,4 +35,12 @@ __all__ = [
     "TripleBarrierLabel",
     "build_triple_barrier_label",
     "compute_concurrency_weights",
+    "ExposedPeriodViolationError",
+    "FoldAssignment",
+    "FoldWindow",
+    "SampleRecord",
+    "SampleRole",
+    "SplitManifest",
+    "SplitPolicy",
+    "assign_folds",
 ]
