@@ -378,3 +378,44 @@ def test_build_features_cli_dry_run_is_offline_and_non_mutating(tmp_path: Path) 
     assert result == 0
     assert stdout.getvalue() == "rows=5 eligible=2 dry_run=true\n"
     assert not output.exists()
+
+
+def test_build_features_cli_persists_parquet_and_companion_manifest(tmp_path: Path) -> None:
+    """Non-dry-run build_features creates output file and authoritative companion manifest JSON."""
+    import json
+    from indodax_lab.cli.build_features import main
+
+    config = tmp_path / "registry.yaml"
+    bars_path = tmp_path / "bars.parquet"
+    output = tmp_path / "out_features.parquet"
+    _minimal_config(config)
+
+    bars = _bars()
+    # Intentionally set available_at to future download time (e.g. 2026) to test --historical-availability
+    bars["available_at"] = BASE + timedelta(days=365 * 2)
+    bars.to_parquet(bars_path, index=False)
+
+    stdout = StringIO()
+    result = main(
+        [
+            "--config", str(config),
+            "--bars", str(bars_path),
+            "--dataset-snapshot-id", IDENTITY,
+            "--output", str(output),
+            "--historical-availability",
+        ],
+        stdout=stdout,
+    )
+
+    assert result == 0
+    assert output.exists()
+    manifest_path = tmp_path / "out_features_manifest.json"
+    assert manifest_path.exists()
+
+    manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest_data["manifest_version"] == "1.0.0"
+    assert manifest_data["dataset_snapshot_id"] == IDENTITY
+    assert manifest_data["total_rows"] == 5
+    assert manifest_data["eligible_rows"] == 2
+    assert "output_sha256" in manifest_data
+    assert manifest_data["output_file"] == "out_features.parquet"

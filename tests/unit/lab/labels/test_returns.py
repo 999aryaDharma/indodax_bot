@@ -341,3 +341,141 @@ def test_label_01_contract_3() -> None:
     assert label.status == "EXCLUDED"
     assert label.net_return is None
     assert label.exclusion_reason == "COST_SCHEDULE_UNAVAILABLE"
+
+
+# ---------------------------------------------------------------------------
+# TASK E: Cost-aware label materialization contract tests
+# ---------------------------------------------------------------------------
+
+
+def test_label_changes_when_cost_changes() -> None:
+    """TASK E: Label net return and costs change when cost schedule table changes."""
+
+    def _make_table_with_fee(fee: Decimal) -> CostScheduleTable:
+        intervals = [
+            CostScheduleInterval(
+                schedule_id=f"cs-{fee}",
+                market=PAIR,
+                side=side,
+                role=OrderRole.TAKER,
+                valid_from=BASE_TIME - timedelta(days=10),
+                valid_to=None,
+                service_fee_rate=fee,
+                tax_rate=Decimal("0.0"),
+                exchange_fee_rate=Decimal("0.0"),
+                min_notional=Decimal("10000"),
+                precision=0,
+                sources=("indodax",),
+            )
+            for side in (OrderSide.BUY, OrderSide.SELL)
+        ]
+        return CostScheduleTable(
+            schedule_set_id=f"cs-fee-{fee}", version="1.0.0", intervals=tuple(intervals)
+        )
+
+    bars = _make_market_bars(10)
+    decision = BASE_TIME + timedelta(hours=1)
+    cfg_low = NetReturnConfig(cost_schedule_table=_make_table_with_fee(Decimal("0.001")))
+    cfg_high = NetReturnConfig(cost_schedule_table=_make_table_with_fee(Decimal("0.005")))
+
+    label_low = build_net_return_label("low", PAIR, decision, bars, cfg_low)
+    label_high = build_net_return_label("high", PAIR, decision, bars, cfg_high)
+
+    assert label_low.status == "VALID" and label_high.status == "VALID"
+    assert label_low.gross_return == label_high.gross_return
+    assert label_low.buy_cost < label_high.buy_cost
+    assert label_low.sell_cost < label_high.sell_cost
+    assert label_low.net_return > label_high.net_return
+
+
+def test_delayed_label_excluded_from_training_cutoff() -> None:
+    """TASK E: A delayed label with availability after training cutoff is purged from training fold."""
+    from indodax_lab.labels.splits import (
+        FoldWindow,
+        SampleRecord,
+        SampleRole,
+        SplitPolicy,
+        assign_folds,
+    )
+
+    decision = BASE_TIME + timedelta(hours=1)
+    # exit is at decision + 4h = BASE_TIME + 5h. Delay available_at to BASE_TIME + 25h
+    bars = _make_market_bars(10)
+    bars[5]["available_at"] = BASE_TIME + timedelta(hours=25)
+
+    label = build_net_return_label(
+        "delayed-sample",
+        PAIR,
+        decision,
+        bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.status == "VALID"
+    assert label.label_available_at == BASE_TIME + timedelta(hours=25)
+
+    # Train fold ends at BASE_TIME + 24h
+    train_fold = FoldWindow(
+        role=SampleRole.TRAIN,
+        start_ts=BASE_TIME,
+        end_ts=BASE_TIME + timedelta(hours=24),
+    )
+    policy = SplitPolicy(
+        policy_id="test-p",
+        version="1.0.0",
+        max_horizon_hours=4,
+        embargo_hours=4,
+        folds=[train_fold],
+    )
+
+    record = SampleRecord(
+        sample_id=label.sample_id,
+        decision_ts=label.decision_ts,
+        label_end_ts=label.exit_ts,
+        pair=label.pair,
+        label_available_at=label.label_available_at,
+    )
+    manifest = assign_folds([record], policy)
+    assignment = manifest.assignments[label.sample_id]
+    assert assignment.role == SampleRole.PURGED
+    assert assignment.purge_reason == "LABEL_OVERLAPS_FOLD_BOUNDARY"
+
+
+def test_no_future_input_affects_earlier_labels() -> None:
+    """TASK E: Changing bars beyond the outcome horizon has zero causal effect on earlier labels."""
+    bars_orig = _make_market_bars(10)
+    decision = BASE_TIME + timedelta(hours=1)
+    cfg = NetReturnConfig(cost_schedule_table=_make_schedule_table())
+
+    label_orig = build_net_return_label("sample-causality", PAIR, decision, bars_orig, cfg)
+
+    # Alter bars after the exit bar (exit bar is index 5 at decision + 4h)
+    bars_mutated = [dict(b) for b in bars_orig]
+    bars_mutated[7]["open"] = Decimal("999999999")
+    bars_mutated[7]["close"] = Decimal("999999999")
+    bars_mutated[8]["open"] = Decimal("1")
+    bars_mutated[8]["close"] = Decimal("1")
+
+    label_mutated = build_net_return_label("sample-causality", PAIR, decision, bars_mutated, cfg)
+
+    assert label_orig.net_return == label_mutated.net_return
+    assert label_orig.gross_return == label_mutated.gross_return
+    assert label_orig.entry_price == label_mutated.entry_price
+    assert label_orig.exit_price == label_mutated.exit_price
+    assert label_orig.buy_cost == label_mutated.buy_cost
+    assert label_orig.sell_cost == label_mutated.sell_cost
+    assert label_orig.label_available_at == label_mutated.label_available_at
+
+
+def test_proxy_cannot_be_promoted() -> None:
+    """TASK E: Open-price research proxy must remain promotion_eligible=False and cannot claim simulator alignment."""
+    cfg = NetReturnConfig(cost_schedule_table=_make_schedule_table())
+    label = build_net_return_label(
+        "proxy-audit", PAIR, BASE_TIME + timedelta(hours=1), _make_market_bars(10), cfg
+    )
+
+    assert label.promotion_eligible is False
+    assert label.execution_fidelity == "RESEARCH_PRICE_PROXY_ONLY"
+    assert label.execution_model_version == "open_price_proxy_v2"
+
+    with pytest.raises(ValueError, match="UNSUPPORTED_EXECUTION_MODEL"):
+        NetReturnConfig(execution_model_version="simulator_v1")

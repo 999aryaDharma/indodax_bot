@@ -1,0 +1,306 @@
+feature_set_id: tabular_bar_5m
+version: 1.0.0
+decision_interval: 5m
+features:
+  # Return family — 5m equivalents of 1h feature set
+  - name: log_ret_1_5m
+    family: return
+    source_columns: [close]
+    formula: log(close_t / close_t-1)
+    implementation: indodax_lab.features.technical:log_return
+    params: {periods: 1}
+    lookback_bars: 2
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_log_return
+    monotonicity: positive
+
+  - name: log_ret_12_5m
+    family: return
+    source_columns: [close]
+    formula: log(close_t / close_t-12)
+    implementation: indodax_lab.features.technical:log_return
+    params: {periods: 12}
+    lookback_bars: 13
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_log_return
+    monotonicity: positive
+
+  - name: log_ret_36_5m
+    family: return
+    source_columns: [close]
+    formula: log(close_t / close_t-36)
+    implementation: indodax_lab.features.technical:log_return
+    params: {periods: 36}
+    lookback_bars: 37
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_log_return
+    monotonicity: positive
+
+  - name: log_ret_144_5m
+    family: return
+    source_columns: [close]
+    formula: log(close_t / close_t-144)
+    implementation: indodax_lab.features.technical:log_return
+    params: {periods: 144}
+    lookback_bars: 145
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_log_return
+    monotonicity: positive
+
+  # Range family
+  - name: dist_high_20_5m
+    family: range
+    source_columns: [close, high]
+    formula: (close - rolling_max(high, 20)) / close
+    implementation: indodax_lab.features.technical:rolling_distance
+    params: {period: 20, side: high}
+    lookback_bars: 20
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_ratio
+    monotonicity: positive
+
+  - name: dist_low_20_5m
+    family: range
+    source_columns: [close, low]
+    formula: (close - rolling_min(low, 20)) / close
+    implementation: indodax_lab.features.technical:rolling_distance
+    params: {period: 20, side: low}
+    lookback_bars: 20
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_ratio
+    monotonicity: positive
+
+  # Trend family
+  - name: ema_ratio_20_50_5m
+    family: trend
+    source_columns: [close]
+    formula: ema(close,20)/ema(close,50)-1
+    implementation: indodax_lab.features.technical:ema_ratio
+    params: {fast: 20, slow: 50}
+    lookback_bars: 50
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_ratio
+    monotonicity: none
+
+  - name: ema20_slope_5_5m
+    family: trend
+    source_columns: [close, high, low]
+    formula: (ema(close,20) - ema(close,20)[t-5]) / atr(high,low,close,14)
+    implementation: indodax_lab.features.technical:ema_slope_atr
+    params: {ema_period: 20, slope_bars: 5, atr_period: 14}
+    lookback_bars: 25
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: atr_normalized_slope
+    monotonicity: positive
+
+  - name: donchian_pos_20_5m
+    family: trend
+    source_columns: [close, high, low]
+    formula: (close - rolling_min(low,20)) / (rolling_max(high,20) - rolling_min(low,20))
+    implementation: indodax_lab.features.technical:donchian_position
+    params: {period: 20}
+    lookback_bars: 20
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unit_interval
+    monotonicity: positive
+
+  # Momentum family
+  - name: rsi_centered_14_5m
+    family: momentum
+    source_columns: [close]
+    formula: (rsi(close,14) - 50) / 50
+    implementation: indodax_lab.features.technical:rsi_centered
+    params: {period: 14}
+    lookback_bars: 15
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: centered_unit_interval
+    monotonicity: positive
+
+  - name: stochrsi_k_14_5m
+    family: momentum
+    source_columns: [close]
+    formula: stochrsi(close,14,3,3).k
+    implementation: indodax_lab.features.technical:stochrsi_component
+    params: {period: 14, smooth_k: 3, smooth_d: 3, component: k}
+    lookback_bars: 32
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unit_interval
+    monotonicity: positive
+
+  - name: macd_hist_atr_5m
+    family: momentum
+    source_columns: [close, high, low]
+    formula: macd_hist(close,12,26,9) / atr(high,low,close,14)
+    implementation: indodax_lab.features.technical:macd_hist_atr
+    params: {fast: 12, slow: 26, signal: 9, atr_period: 14}
+    lookback_bars: 35
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: atr_normalized_macd
+    monotonicity: positive
+
+  # Volatility family
+  - name: atr_pct_14_5m
+    family: volatility
+    source_columns: [high, low, close]
+    formula: atr(high,low,close,14) / close
+    implementation: indodax_lab.features.technical:atr_pct
+    params: {period: 14}
+    lookback_bars: 14
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_ratio
+    monotonicity: none
+
+  - name: rv_288_5m
+    family: volatility
+    source_columns: [close]
+    formula: std(log_ret_1, 288)
+    implementation: indodax_lab.features.technical:realized_volatility
+    params: {period: 288}
+    lookback_bars: 289
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: realized_volatility
+    monotonicity: none
+
+  # Bands family
+  - name: bb_z_20_5m
+    family: bands
+    source_columns: [close]
+    formula: (close - mean(close, 20)) / std(close, 20)
+    implementation: indodax_lab.features.technical:bollinger_component
+    params: {period: 20, stddev: 2.0, component: bb_z}
+    lookback_bars: 20
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: zscore
+    monotonicity: positive
+
+  # Volume family
+  - name: volume_z_20_5m
+    family: volume
+    source_columns: [base_volume]
+    formula: zscore(log1p(base_volume), 20)
+    implementation: indodax_lab.features.technical:volume_zscore
+    params: {period: 20}
+    lookback_bars: 20
+    availability: closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: zscore
+    monotonicity: none
+
+  # Calendar family (known at close_time, no interval suffix needed)
+  - name: hour_sin_utc
+    family: calendar
+    source_columns: [close_time]
+    formula: sin(2*pi*hour/24)
+    implementation: indodax_lab.features.context:hour_sin
+    params: {}
+    lookback_bars: 1
+    availability: known_at_time
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: sinusoid
+    monotonicity: cyclical
+
+  - name: hour_cos_utc
+    family: calendar
+    source_columns: [close_time]
+    formula: cos(2*pi*hour/24)
+    implementation: indodax_lab.features.context:hour_cos
+    params: {}
+    lookback_bars: 1
+    availability: known_at_time
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: sinusoid
+    monotonicity: cyclical
+
+  - name: dow_sin_utc
+    family: calendar
+    source_columns: [close_time]
+    formula: sin(2*pi*dow/7)
+    implementation: indodax_lab.features.context:dow_sin
+    params: {}
+    lookback_bars: 1
+    availability: known_at_time
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: sinusoid
+    monotonicity: cyclical
+
+  - name: dow_cos_utc
+    family: calendar
+    source_columns: [close_time]
+    formula: cos(2*pi*dow/7)
+    implementation: indodax_lab.features.context:dow_cos
+    params: {}
+    lookback_bars: 1
+    availability: known_at_time
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: sinusoid
+    monotonicity: cyclical
+
+  # Context family — BTC as regime context (asof_closed_bar: 1h BTC data joined as-of 5m decisions)
+  - name: btc_log_ret_1_1h
+    family: context
+    source_columns: [close]
+    formula: log(btc_close_t / btc_close_t-1)
+    implementation: indodax_lab.features.context:btc_log_return
+    params: {periods: 1}
+    lookback_bars: 2
+    availability: asof_closed_bar
+    lag_bars: 0
+    dtype: float64
+    missing_policy: drop_sample_until_warm
+    normalization: unitless_log_return
+    monotonicity: positive

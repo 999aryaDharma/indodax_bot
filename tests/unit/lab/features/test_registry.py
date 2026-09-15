@@ -210,3 +210,69 @@ def test_feat_01_contract_3(tmp_path: Path) -> None:
     """FEAT-01-AC3: Perubahan konten tanpa version bump ditolak."""
     test_registry_requires_version_bump_when_content_changes(tmp_path)
 
+
+# ---------------------------------------------------------------------------
+# 5m registry tests
+# ---------------------------------------------------------------------------
+
+CANONICAL_5M_CONFIG = ROOT / "configs" / "features" / "tabular_bar_5m_v1.yaml"
+
+EXPECTED_5M_FEATURES = {
+    "log_ret_1_5m",
+    "log_ret_12_5m",
+    "log_ret_36_5m",
+    "log_ret_144_5m",
+    "dist_high_20_5m",
+    "dist_low_20_5m",
+    "ema_ratio_20_50_5m",
+    "ema20_slope_5_5m",
+    "donchian_pos_20_5m",
+    "rsi_centered_14_5m",
+    "stochrsi_k_14_5m",
+    "macd_hist_atr_5m",
+    "atr_pct_14_5m",
+    "rv_288_5m",
+    "bb_z_20_5m",
+    "volume_z_20_5m",
+    "hour_sin_utc",
+    "hour_cos_utc",
+    "dow_sin_utc",
+    "dow_cos_utc",
+    "btc_log_ret_1_1h",
+}
+
+
+def test_5m_registry_loads_with_correct_interval_and_feature_count() -> None:
+    """Removing 5m from allowed intervals would break scalping feature materialization."""
+    loaded = load_feature_registry(CANONICAL_5M_CONFIG)
+
+    assert loaded.registry.feature_set_id == "tabular_bar_5m"
+    assert loaded.registry.version == "1.0.0"
+    assert loaded.registry.decision_interval == "5m"
+    assert {feature.name for feature in loaded.registry.features} == EXPECTED_5M_FEATURES
+    assert loaded.source_id.startswith("sha256:")
+
+
+def test_5m_registry_context_features_use_asof_policy() -> None:
+    """1h BTC context features in a 5m registry must use asof_closed_bar to avoid identity mixing."""
+    loaded = load_feature_registry(CANONICAL_5M_CONFIG)
+
+    context_features = [f for f in loaded.registry.features if f.family == "context"]
+    assert context_features, "no context features found"
+    for feat in context_features:
+        assert feat.availability == "asof_closed_bar", (
+            f"context feature {feat.name!r} must use asof_closed_bar in a 5m registry, "
+            f"got {feat.availability!r}"
+        )
+
+
+def test_5m_suffix_in_1h_registry_requires_asof_policy(tmp_path: Path) -> None:
+    """A feature named with _5m suffix inside a 1h registry must use asof_closed_bar."""
+    path = tmp_path / "mixed.yaml"
+    path.write_text(
+        _registry_yaml(feature_block=_ema_feature(name="ema_ratio_20_50_5m")),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="TIMEFRAME_AVAILABILITY_POLICY_REQUIRED"):
+        load_feature_registry(path)

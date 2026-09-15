@@ -15,7 +15,7 @@ from indodax_lab.data.checksums import sha256_bytes
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 _IMPLEMENTATION = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*:[a-zA-Z_][a-zA-Z0-9_]*$")
-_TIMEFRAME = re.compile(r"_(15m|1h|4h|1d)$")
+_TIMEFRAME = re.compile(r"_(5m|15m|1h|4h|1d)$")
 _IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
@@ -93,7 +93,7 @@ class FeatureRegistry(BaseModel):
 
     feature_set_id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     version: str
-    decision_interval: str = Field(pattern=r"^(15m|1h|4h|1d)$")
+    decision_interval: str = Field(pattern=r"^(5m|15m|1h|4h|1d)$")
     features: tuple[FeatureDefinition, ...]
 
     @field_validator("version")
