@@ -33,9 +33,10 @@ def test_r01_01_valid_contract() -> None:
     )
 
     assert isinstance(report, RLFeasibilityReport)
-    assert report.is_net_cost_evaluated is True
+    assert report.is_net_cost_evaluated is False
+    assert report.evidence_status == "UNEVALUATED"
     assert report.initial_capital == Decimal("500000.00")
-    assert report.recommendation in ("FEASIBLE", "INCONCLUSIVE", "NOT_RECOMMENDED")
+    assert report.recommendation == "INCONCLUSIVE"
     assert report.is_promoted_to_core is False
 
 
@@ -81,6 +82,10 @@ def test_r01_01_contract_2() -> None:
     # Total allocated budget never exceeds initial capital
     allocations = comparator.allocate_cash(baseline_weights)
     assert sum(allocations.values()) <= Decimal("500000.00")
+
+    # Decimal down-rounding must not overspend when many weights are equal.
+    equal_allocations = comparator.allocate_cash({f"asset_{i}": 1 / 6 for i in range(6)})
+    assert sum(equal_allocations.values()) <= Decimal("500000.00")
 
 
 def test_r01_01_contract_3() -> None:

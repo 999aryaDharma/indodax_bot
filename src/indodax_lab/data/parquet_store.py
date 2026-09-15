@@ -242,7 +242,10 @@ class ParquetStore:
 
     def _write_manifest(self, manifest: dict[str, object]) -> Path:
         snapshot_id = str(manifest["dataset_snapshot_id"])
-        manifest_path = self._data_root / "snapshots" / snapshot_id / "manifest.json"
+        # Content IDs retain the canonical ``sha256:<digest>`` form in the
+        # manifest, but ':' is not a legal Windows filename character.
+        path_component = snapshot_id.replace(":", "_")
+        manifest_path = self._data_root / "snapshots" / path_component / "manifest.json"
         _ensure_directory_tree(manifest_path.parent)
         expected_bytes = canonical_json_bytes(manifest)
         partial_path = manifest_path.parent / f".{uuid.uuid4().hex}.partial"

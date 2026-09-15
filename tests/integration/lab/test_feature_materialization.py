@@ -230,3 +230,76 @@ def test_canonical_wave1_feature_materialization() -> None:
     # Past lookback 169, rv_168_1h is populated
     assert not pd.isna(result.loc[175, "rv_168_1h"])
 
+
+def _small_registry():
+    registry = load_feature_registry(Path("configs/features/tabular_bar_v1.yaml")).registry
+    feat = registry.feature("ema_ratio_20_50_1h").model_copy(update={
+        "name": "ema_ratio_2_3_1h", "params": {"fast": 2, "slow": 3}, "lookback_bars": 3})
+    return registry.model_copy(update={"features": (feat,)})
+
+
+@pytest.mark.parametrize("defect", ["delay", "gap", "infinity", "missing_available", "missing_closed", "naive"])
+def test_feature_rejects_unusable_temporal_history(defect):
+    registry = _small_registry()
+    bars = _make_bars(6)
+    if defect == "delay":
+        bars.loc[1, "available_at"] = BASE + timedelta(hours=9)
+    elif defect == "gap":
+        bars = bars.drop(index=2).reset_index(drop=True)
+    elif defect == "infinity":
+        bars.loc[2, "close"] = np.inf
+    elif defect.startswith("missing"):
+        bars = bars.drop(columns="available_at" if defect == "missing_available" else "is_closed")
+    else:
+        bars["available_at"] = bars["available_at"].dt.tz_localize(None)
+    if defect.startswith("missing") or defect == "naive":
+        with pytest.raises(ValueError, match="REQUIRED|UTC"):
+            build_feature_frame(bars, registry=registry, dataset_snapshot_id=SNAPSHOT_ID)
+        return
+    result = build_feature_frame(bars, registry=registry, dataset_snapshot_id=SNAPSHOT_ID)
+    assert not result.loc[3 if defect == "infinity" else 2, "eligible"]
+    if defect == "delay":
+        assert result.loc[2, "row_ready_at"] >= bars.loc[1, "available_at"]
+
+
+def test_btc_feature_uses_available_benchmark_not_asset():
+    registry = _small_registry()
+    feature = registry.features[0].model_copy(update={
+        "name": "btc_log_ret_1_1h", "implementation": "indodax_lab.features.context:btc_log_return",
+        "params": {"periods": 1}, "lookback_bars": 2,
+    })
+    registry = registry.model_copy(update={"features": (feature,)})
+    asset = _make_bars(6, "eth_idr")
+    btc = _make_bars(6)
+    btc["close"] = [10., 20., 40., 80., 160., 320.]
+    btc.loc[2, "available_at"] = BASE + timedelta(hours=8)
+    result = build_feature_frame(asset, registry=registry, dataset_snapshot_id=SNAPSHOT_ID, btc_bars=btc)
+    assert result.loc[1, feature.name] == pytest.approx(np.log(2))
+    assert result.loc[2, feature.name] != pytest.approx(np.log(102 / 100))
+    missing = build_feature_frame(asset, registry=registry, dataset_snapshot_id=SNAPSHOT_ID)
+    assert not missing["eligible"].any()
+
+
+def test_builder_recomputes_cross_section_eligibility_after_context():
+    registry = load_feature_registry(Path("configs/features/tabular_bar_v1.yaml")).registry
+    registry = registry.model_copy(update={"features": tuple(registry.feature(n) for n in
+        ("log_ret_24_1h", "tier_momentum_rank_24_1h"))})
+    bars = _make_bars(28, "eth_idr")
+    universe = pd.DataFrame({"pair": ["eth_idr"], "available_at": [BASE], "eligible": [True],
+        "tier": ["BIG_CAP"], "universe_snapshot_id": ["u"]})
+    result = build_feature_frame(bars, registry=registry, dataset_snapshot_id=SNAPSHOT_ID, universe=universe)
+    assert result.loc[25, "eligible"]
+    assert result.loc[25, "tier_momentum_rank_24_1h"] == 1.
+    assert result.loc[25, "universe_available_at"] == BASE
+
+
+def test_optional_infinite_source_does_not_become_eligible():
+    from indodax_lab.features.registry import MissingPolicy
+    registry = _small_registry()
+    registry = registry.model_copy(update={"features": (registry.features[0].model_copy(
+        update={"missing_policy": MissingPolicy.NULLABLE_OPTIONAL}),)})
+    bars = _make_bars(5)
+    bars.loc[3, "close"] = np.inf
+    result = build_feature_frame(bars, registry=registry, dataset_snapshot_id=SNAPSHOT_ID)
+    assert not result.loc[3, "eligible"]
+    assert "INVALID_SOURCE_VALUE" in result.loc[3, "reason_codes"]

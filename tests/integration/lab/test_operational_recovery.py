@@ -27,7 +27,7 @@ from indodax_lab.operations.service_lifecycle import HostServiceProfile
 
 
 def test_qa_03_valid_contract(tmp_path: Path) -> None:
-    """AC0: Host yang dipilih punya bukti workload dan recovery sebelum release."""
+    """AC0: Synthetic probes are reported without self-qualifying a host."""
     profile = HostServiceProfile(
         host_name="LenovoThinkPad",
         allowed_worker_threads=2,
@@ -39,11 +39,29 @@ def test_qa_03_valid_contract(tmp_path: Path) -> None:
         target_dir=tmp_path,
     )
 
-    assert report.workload_status == "QUALIFIED"
+    assert report.workload_status == "UNVERIFIED"
     assert report.profile_valid is True
-    assert report.disk_recovery_verified is True
-    assert report.worker_crash_recovery_verified is True
+    assert report.disk_recovery_verified is False
+    assert report.worker_crash_recovery_verified is False
+    assert report.synthetic_storage_write_passed is True
+    assert report.synthetic_metric_replay_passed is True
     assert report.host_name == "LenovoThinkPad"
+
+
+def test_synthetic_smoke_checks_cannot_default_to_qualified(tmp_path: Path) -> None:
+    profile = HostServiceProfile(
+        host_name="unmeasured-host",
+        allowed_worker_threads=1,
+        data_root=str(tmp_path),
+    )
+
+    report = qualify_host_workload_and_recovery(profile=profile, target_dir=tmp_path)
+
+    assert report.workload_status != "QUALIFIED"
+    assert not report.disk_recovery_verified
+    assert not report.worker_crash_recovery_verified
+    assert (tmp_path / "qualification_test.bin").exists()
+    assert (tmp_path / "qualification_ledger.json").exists()
 
 
 def test_qa_03_contract_1(tmp_path: Path) -> None:

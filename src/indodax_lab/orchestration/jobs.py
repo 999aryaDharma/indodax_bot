@@ -51,8 +51,8 @@ class JobDefinition(BaseModel):
     input_ids: list[str]
     cadence_window: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
-    max_attempts: int = 3
-    lease_duration_seconds: int = 60
+    max_attempts: int = Field(default=3, ge=1)
+    lease_duration_seconds: int = Field(default=60, ge=1)
     created_at: datetime
 
     @field_validator("created_at", mode="after")
@@ -70,10 +70,10 @@ class JobRecord(BaseModel):
     job_type: str
     status: JobStatus
     owner_id: str | None = None
-    generation: int = 0
-    attempts: int = 0
-    max_attempts: int = 3
-    lease_duration_seconds: int = 60
+    generation: int = Field(default=0, ge=0)
+    attempts: int = Field(default=0, ge=0)
+    max_attempts: int = Field(default=3, ge=1)
+    lease_duration_seconds: int = Field(default=60, ge=1)
     lease_expires_at: datetime | None = None
     result_artifact_path: str | None = None
     result_artifact_hash: str | None = None

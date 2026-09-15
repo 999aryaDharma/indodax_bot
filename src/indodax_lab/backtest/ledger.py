@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
+from threading import RLock
 from typing import Mapping
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -92,6 +93,13 @@ class ResearchLedger:
     ) -> None:
         self.valuation_currency = valuation_currency
         self._initial_cash = Decimal(str(initial_cash))
+        if not self._initial_cash.is_finite() or self._initial_cash < 0:
+            raise ValueError("INVALID_INITIAL_CASH")
+        if init_timestamp is not None:
+            _ensure_utc(init_timestamp, "init_timestamp")
+        # In-process synchronization only; not a cross-process allocation lock.
+        self.allocation_lock = RLock()
+        self._reservations: dict[str, Decimal] = {}
         self._cash = self._initial_cash
         self.transactions: list[LedgerTransaction] = []
         self._positions: dict[str, Position] = {}
@@ -128,6 +136,31 @@ class ResearchLedger:
         return self._initial_cash
 
     @property
+    def reservations(self) -> Mapping[str, Decimal]:
+        with self.allocation_lock:
+            return dict(self._reservations)
+
+    @property
+    def available_cash(self) -> Decimal:
+        with self.allocation_lock:
+            return self._cash - sum(self._reservations.values(), Decimal("0"))
+
+    def reserve_cash(self, intent_id: str, amount: Decimal) -> None:
+        with self.allocation_lock:
+            if not amount.is_finite() or amount <= 0:
+                raise ValueError("INVALID_RESERVATION")
+            if intent_id in self._reservations:
+                raise ValueError("DUPLICATE_RESERVATION")
+            if amount > self.available_cash:
+                raise ValueError("INSUFFICIENT_UNRESERVED_CASH")
+            self._reservations[intent_id] = amount
+
+    def release_reservation(self, intent_id: str) -> Decimal:
+        """Release once; repeat cancellation is harmless."""
+        with self.allocation_lock:
+            return self._reservations.pop(intent_id, Decimal("0"))
+
+    @property
     def cash(self) -> Decimal:
         """Current quote-currency cash balance."""
         return self._cash
@@ -153,7 +186,11 @@ class ResearchLedger:
         return self._positions
 
     def get_position(self, pair: str) -> Position:
-        """Get or initialize position for a pair."""
+        """Get or initialize position; reacquire after a successfully posted fill.
+
+        Successful fills replace the position with a validated staged value.
+        A previously returned object does not track subsequent transactions.
+        """
         if pair not in self._positions:
             self._positions[pair] = Position(pair=pair)
         return self._positions[pair]
@@ -170,28 +207,44 @@ class ResearchLedger:
                 if pair not in mark_prices:
                     raise ValueError(f"MISSING_MARK_PRICE:{pair}")
                 mark_price = Decimal(str(mark_prices[pair]))
+                if not mark_price.is_finite() or mark_price <= 0:
+                    raise ValueError(f"INVALID_MARK_PRICE:{pair}")
                 asset_value += pos.base_qty * mark_price
         return self._cash + asset_value
 
     def process_fill(self, fill: Fill) -> LedgerTransaction:
         """Process an executed order fill and post balanced double-entry entries."""
+        with self.allocation_lock:
+            return self._process_fill_locked(fill)
+
+    def _process_fill_locked(self, fill: Fill) -> LedgerTransaction:
+        # model_copy/model_construct can bypass Pydantic field validation.
+        fill = Fill.model_validate(fill.model_dump())
         # LED-01-AC3: Duplicate fill ID tidak menggandakan posting
         if fill.fill_id in self._processed_fill_ids:
             raise DuplicateFillError(f"DUPLICATE_FILL_ID:{fill.fill_id}")
 
-        pos = self.get_position(fill.pair)
+        # Stage all arithmetic and model validation before changing live state.
+        current = self._positions.get(fill.pair)
+        pos = current.model_copy(deep=True) if current else Position(pair=fill.pair)
+        next_cash = self._cash
+        next_fees = self._total_fees_paid
+        next_net_pnl = self._total_net_pnl
+        next_gross_pnl = self._total_realized_gross_pnl
         gross = fill.gross
         fee = fill.fees
 
         if fill.side == OrderSide.BUY:
             # buy_cash_debit = gross_buy_notional + quote-denominated costs
             cash_debit = gross + fee
-            self._cash -= cash_debit
+            if cash_debit > self.available_cash:
+                raise ValueError("INSUFFICIENT_CASH_INCLUDING_FEES")
+            next_cash -= cash_debit
 
             pos.base_qty += fill.qty
             pos.cost_basis += gross
 
-            self._total_fees_paid += fee
+            next_fees += fee
 
             p_cash = Posting(
                 account=AccountType.CASH,
@@ -221,7 +274,9 @@ class ResearchLedger:
 
             # net_sell_credit = gross_sell_notional - quote-denominated costs
             net_credit = gross - fee
-            self._cash += net_credit
+            next_cash += net_credit
+            if next_cash < 0:
+                raise ValueError("INSUFFICIENT_CASH_INCLUDING_FEES")
 
             # Exact cost basis allocation
             if fill.qty == pos.base_qty:
@@ -237,9 +292,9 @@ class ResearchLedger:
             # net_pnl = net_sell_credit - allocated_basis = gross_pnl - fee
             net_pnl = net_credit - allocated_basis
 
-            self._total_fees_paid += fee
-            self._total_net_pnl += net_pnl
-            self._total_realized_gross_pnl += gross_pnl
+            next_fees += fee
+            next_net_pnl += net_pnl
+            next_gross_pnl += gross_pnl
 
             p_cash = Posting(
                 account=AccountType.CASH,
@@ -280,6 +335,11 @@ class ResearchLedger:
         if not tx.is_balanced:
             raise RuntimeError(f"UNBALANCED_TRANSACTION:{tx.transaction_id}")
 
+        self._cash = next_cash
+        self._positions[fill.pair] = pos
+        self._total_fees_paid = next_fees
+        self._total_net_pnl = next_net_pnl
+        self._total_realized_gross_pnl = next_gross_pnl
         self.transactions.append(tx)
         self._processed_fill_ids.add(fill.fill_id)
         return tx

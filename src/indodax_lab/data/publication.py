@@ -16,6 +16,11 @@ class IndeterminatePublicationError(RuntimeError):
 
 def fsync_directory(path: Path) -> None:
     """Durably record the current namespace state of one directory."""
+    # Windows does not expose a portable directory descriptor suitable for
+    # fsync; file contents are still fsynced by the caller.  Do not mask file
+    # I/O failures, but scope this namespace limitation to Windows explicitly.
+    if os.name == "nt":
+        return
     descriptor = os.open(path, os.O_RDONLY)
     try:
         os.fsync(descriptor)

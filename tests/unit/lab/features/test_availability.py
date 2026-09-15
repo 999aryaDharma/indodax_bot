@@ -18,6 +18,36 @@ BASE = datetime(2024, 1, 1, tzinfo=UTC)
 IDENTITY = "sha256:" + "a" * 64
 
 
+def test_context_preserves_feature_and_universe_eligibility():
+    features = pd.DataFrame({"pair": ["a_idr", "b_idr"], "decision_ts": [BASE] * 2,
+        "row_ready_at": [BASE] * 2, "eligible": [True, False],
+        "reason_codes": [(), ("MISSING_REQUIRED_FEATURE",)], "log_ret_24_1h": [.1, .9]})
+    universe = pd.DataFrame({"pair": ["a_idr", "b_idr"], "available_at": [BASE] * 2,
+        "eligible": [True, True], "tier": ["BIG_CAP"] * 2, "universe_snapshot_id": ["u"] * 2})
+    result = point_in_time_market_context(features, universe)
+    assert result["eligible"].tolist() == [True, False]
+    assert result["universe_eligible"].tolist() == [True, True]
+    assert result["universe_available_at"].tolist() == [BASE, BASE]
+    assert result.loc[0, "tier_momentum_rank_24_1h"] == 1.
+
+
+@pytest.mark.parametrize("column", ["row_ready_at", "eligible"])
+def test_context_requires_feature_evidence(column):
+    features = pd.DataFrame({"pair": ["btc_idr"], "decision_ts": [BASE],
+        "row_ready_at": [BASE], "eligible": [True]}).drop(columns=column)
+    universe = pd.DataFrame({"pair": ["btc_idr"], "available_at": [BASE],
+        "eligible": [True], "tier": ["BIG_CAP"], "universe_snapshot_id": ["u"]})
+    with pytest.raises(ValueError, match="REQUIRED"):
+        point_in_time_market_context(features, universe)
+
+
+@pytest.mark.parametrize("column", ["is_closed", "available_at", "close_time"])
+def test_asof_rejects_missing_closed_evidence(column):
+    with pytest.raises(ValueError, match="REQUIRED"):
+        asof_join_features(pd.DataFrame({"pair": ["btc_idr"], "decision_ts": [BASE]}),
+            _bars().drop(columns=column), "1h", ["close"])
+
+
 def _minimal_config(path: Path) -> None:
     path.write_text(
         "feature_set_id: tabular_bar\n"
@@ -142,6 +172,7 @@ def test_point_in_time_rank_and_breadth_ignore_ineligible_and_future_universe_ro
             "log_ret_24_1h": [0.1, 0.2, -0.1, 4.0],
             "rv_24_1h": [0.03, 0.02, 0.05, 9.0],
             "row_ready_at": [decision] * 4,
+            "eligible": [True] * 4,
         }
     )
     universe = pd.DataFrame(
@@ -219,6 +250,8 @@ def test_feat_03_valid_contract() -> None:
             "pair": ["btc_idr", "eth_idr"],
             "log_ret_24_1h": [0.05, 0.10],
             "rv_24_1h": [0.02, 0.04],
+            "row_ready_at": [decision_ts] * 2,
+            "eligible": [True] * 2,
         }
     )
     universe = pd.DataFrame(

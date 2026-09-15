@@ -30,6 +30,8 @@ class BacktestResult(BaseModel):
     transaction_count: int
     postings_hash: str
     status: str = "SUCCESS"
+    execution_version: str = "legacy-unversioned"
+    execution_assumptions: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -47,6 +49,8 @@ class BacktestResult(BaseModel):
             "transaction_count": self.transaction_count,
             "postings_hash": self.postings_hash,
             "status": self.status,
+            "execution_version": self.execution_version,
+            "execution_assumptions": list(self.execution_assumptions),
         }
 
     def save_json(self, path: Path) -> None:
@@ -73,6 +77,8 @@ class BacktestResult(BaseModel):
             transaction_count=data["transaction_count"],
             postings_hash=data["postings_hash"],
             status=data.get("status", "SUCCESS"),
+            execution_version=data.get("execution_version", "legacy-unversioned"),
+            execution_assumptions=tuple(data.get("execution_assumptions", ())),
         )
 
     @classmethod

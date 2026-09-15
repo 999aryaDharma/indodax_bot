@@ -11,11 +11,12 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from threading import RLock
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -44,10 +45,17 @@ class PaperOrderIntent(BaseModel):
     event_id: str
     candidate_id: str
     pair: str
-    side: str = "BUY"
-    allocated_cash: Decimal
-    entry_price: Decimal
+    side: Literal["BUY"] = "BUY"
+    allocated_cash: Decimal = Field(gt=0, allow_inf_nan=False)
+    entry_price: Decimal = Field(gt=0, allow_inf_nan=False)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("timestamp")
+    @classmethod
+    def require_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() != timedelta(0):
+            raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED")
+        return value
 
 
 class PaperPosition(BaseModel):
@@ -98,6 +106,12 @@ class SharedCapitalLedger:
         initial_cash: Decimal = Decimal("500000.00"),
         max_open_positions: int = 2,
     ) -> None:
+        initial_cash = Decimal(str(initial_cash))
+        if not initial_cash.is_finite() or initial_cash < 0:
+            raise ValueError("INVALID_INITIAL_CASH")
+        if isinstance(max_open_positions, bool) or not isinstance(max_open_positions, int) or max_open_positions <= 0:
+            raise ValueError("INVALID_MAX_OPEN_POSITIONS")
+        self._allocation_lock = RLock()  # Threads sharing this object, not processes.
         self.available_cash: Decimal = initial_cash
         self.max_open_positions: int = max_open_positions
         self._positions: dict[str, PaperPosition] = {}
@@ -112,6 +126,10 @@ class SharedCapitalLedger:
         return set(self._processed_event_ids)
 
     def process_intent(self, intent: PaperOrderIntent) -> IntentProcessingResult:
+        with self._allocation_lock:
+            return self._process_intent_locked(intent)
+
+    def _process_intent_locked(self, intent: PaperOrderIntent) -> IntentProcessingResult:
         """Process an order intent under shared capacity and cash constraints.
 
         Args:
@@ -123,6 +141,7 @@ class SharedCapitalLedger:
         Raises:
             MaxPositionsExceededError: If ``max_open_positions`` is reached (SHADOW-02-AC2).
         """
+        intent = PaperOrderIntent.model_validate(intent.model_dump())
         # AC1: Check for duplicate event ID (idempotency guard)
         if intent.event_id in self._processed_event_ids:
             return IntentProcessingResult(
@@ -145,7 +164,7 @@ class SharedCapitalLedger:
             )
 
         # Execute allocation
-        self.available_cash -= intent.allocated_cash
+        next_cash = self.available_cash - intent.allocated_cash
         quantity = intent.allocated_cash / intent.entry_price
 
         position = PaperPosition(
@@ -158,21 +177,21 @@ class SharedCapitalLedger:
             opened_at=intent.timestamp,
         )
 
+        result = IntentProcessingResult(approved=True, position=position)
+        self.available_cash = next_cash
         self._positions[intent.event_id] = position
         self._processed_event_ids.add(intent.event_id)
 
-        return IntentProcessingResult(
-            approved=True,
-            position=position,
-        )
+        return result
 
     def create_checkpoint(self) -> SharedLedgerCheckpoint:
         """Generate an immutable checkpoint of the ledger state (SHADOW-02-AC3)."""
-        return SharedLedgerCheckpoint(
-            available_cash=self.available_cash,
-            positions=list(self._positions.values()),
-            processed_event_ids=sorted(self._processed_event_ids),
-        )
+        with self._allocation_lock:
+            return SharedLedgerCheckpoint(
+                available_cash=self.available_cash,
+                positions=list(self._positions.values()),
+                processed_event_ids=sorted(self._processed_event_ids),
+            )
 
     @classmethod
     def from_checkpoint(cls, checkpoint: SharedLedgerCheckpoint) -> SharedCapitalLedger:

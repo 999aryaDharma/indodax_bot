@@ -50,6 +50,7 @@ class SqliteJobQueue:
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA busy_timeout = 5000;")
         conn.execute("PRAGMA synchronous = NORMAL;")
+        conn.execute("PRAGMA foreign_keys = ON;")
         return conn
 
     def _init_db(self) -> None:
@@ -127,15 +128,42 @@ class SqliteJobQueue:
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE;")
+            # Exhausted work is terminal regardless of which claimable state a
+            # previous process left behind. State/worker edits cannot reset budget.
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = ?, owner_id = NULL, lease_expires_at = NULL,
+                    error_message = ?, updated_at = ?
+                WHERE attempts >= max_attempts
+                  AND (
+                      status IN (?, ?, ?)
+                      OR (status = ? AND lease_expires_at <= ?)
+                  )
+                """,
+                (
+                    JobStatus.FAILED_FINAL.value,
+                    "ATTEMPT_BUDGET_EXHAUSTED",
+                    as_of_iso,
+                    JobStatus.PENDING.value,
+                    JobStatus.STALE.value,
+                    JobStatus.FAILED_RETRYABLE.value,
+                    JobStatus.RUNNING.value,
+                    as_of_iso,
+                ),
+            )
             # Eligible candidate: PENDING, STALE, retryable FAILED, or expired RUNNING
             cursor = conn.execute(
                 """
                 SELECT job_id, generation, attempts, max_attempts, lease_duration_seconds
                 FROM jobs
-                WHERE (status = ?)
-                   OR (status = ?)
-                   OR (status = ? AND attempts < max_attempts)
-                   OR (status = ? AND lease_expires_at <= ?)
+                WHERE attempts < max_attempts
+                  AND (
+                       status = ?
+                    OR status = ?
+                    OR status = ?
+                    OR (status = ? AND lease_expires_at <= ?)
+                  )
                 ORDER BY created_at ASC
                 LIMIT 1
                 """,
@@ -166,7 +194,7 @@ class SqliteJobQueue:
                     attempts = ?,
                     lease_expires_at = ?,
                     updated_at = ?
-                WHERE job_id = ? AND generation = ?
+                WHERE job_id = ? AND generation = ? AND attempts < max_attempts
                 """,
                 (
                     JobStatus.RUNNING.value,
@@ -186,6 +214,10 @@ class SqliteJobQueue:
 
             conn.execute("COMMIT;")
             return self.get_job(job_id)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 
@@ -206,7 +238,8 @@ class SqliteJobQueue:
         try:
             conn.execute("BEGIN IMMEDIATE;")
             cursor = conn.execute(
-                "SELECT status, owner_id, generation, lease_duration_seconds FROM jobs WHERE job_id = ?",
+                """SELECT status, owner_id, generation, lease_duration_seconds, lease_expires_at
+                   FROM jobs WHERE job_id = ?""",
                 (job_id,),
             )
             row = cursor.fetchone()
@@ -214,8 +247,14 @@ class SqliteJobQueue:
                 conn.execute("ROLLBACK;")
                 raise KeyError(f"JOB_NOT_FOUND:{job_id}")
 
-            status, owner, gen, lease_sec = row
-            if status != JobStatus.RUNNING.value or owner != worker_id or gen != generation:
+            status, owner, gen, lease_sec, lease_expires_at = row
+            if (
+                status != JobStatus.RUNNING.value
+                or owner != worker_id
+                or gen != generation
+                or lease_expires_at is None
+                or lease_expires_at <= as_of_iso
+            ):
                 conn.execute("ROLLBACK;")
                 raise LeaseFencingError(
                     f"STALE_LEASE_FENCED: worker {worker_id} generation {generation} does not match active lease"
@@ -223,10 +262,24 @@ class SqliteJobQueue:
 
             new_expires = (as_of + timedelta(seconds=lease_sec)).isoformat()
             conn.execute(
-                "UPDATE jobs SET lease_expires_at = ?, updated_at = ? WHERE job_id = ? AND generation = ?",
-                (new_expires, as_of_iso, job_id, generation),
+                """UPDATE jobs SET lease_expires_at = ?, updated_at = ?
+                   WHERE job_id = ? AND owner_id = ? AND generation = ?
+                     AND status = ? AND lease_expires_at > ?""",
+                (
+                    new_expires,
+                    as_of_iso,
+                    job_id,
+                    worker_id,
+                    generation,
+                    JobStatus.RUNNING.value,
+                    as_of_iso,
+                ),
             )
             conn.execute("COMMIT;")
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 
@@ -275,6 +328,7 @@ class SqliteJobQueue:
                     result_artifact_hash = ?,
                     updated_at = ?
                 WHERE job_id = ? AND owner_id = ? AND generation = ? AND status = ?
+                  AND lease_expires_at > ?
                 """,
                 (
                     JobStatus.SUCCESS.value,
@@ -285,6 +339,7 @@ class SqliteJobQueue:
                     worker_id,
                     generation,
                     JobStatus.RUNNING.value,
+                    as_of_iso,
                 ),
             )
             if cursor.rowcount == 0:
@@ -294,6 +349,10 @@ class SqliteJobQueue:
                 )
             conn.execute("COMMIT;")
             return self.get_job(job_id)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 
@@ -316,8 +375,10 @@ class SqliteJobQueue:
         try:
             conn.execute("BEGIN IMMEDIATE;")
             cur = conn.execute(
-                "SELECT attempts, max_attempts FROM jobs WHERE job_id = ? AND owner_id = ? AND generation = ?",
-                (job_id, worker_id, generation),
+                """SELECT attempts, max_attempts FROM jobs
+                   WHERE job_id = ? AND owner_id = ? AND generation = ?
+                     AND status = ? AND lease_expires_at > ?""",
+                (job_id, worker_id, generation, JobStatus.RUNNING.value, as_of_iso),
             )
             row = cur.fetchone()
             if not row:
@@ -343,6 +404,10 @@ class SqliteJobQueue:
             )
             conn.execute("COMMIT;")
             return self.get_job(job_id)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 

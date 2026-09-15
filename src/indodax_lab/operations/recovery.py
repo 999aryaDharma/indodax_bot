@@ -194,15 +194,17 @@ class EmpiricalHostCapacityValidator:
 
 
 class HostWorkloadQualificationReport(BaseModel):
-    """Audit report certifying host capacity and crash recovery qualification."""
+    """Audit report separating synthetic checks from real host qualification."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
 
     host_name: str
-    profile_valid: bool = True
-    disk_recovery_verified: bool = True
-    worker_crash_recovery_verified: bool = True
-    workload_status: str = "QUALIFIED"
+    profile_valid: bool = False
+    disk_recovery_verified: bool = False
+    worker_crash_recovery_verified: bool = False
+    synthetic_storage_write_passed: bool = False
+    synthetic_metric_replay_passed: bool = False
+    workload_status: str = "UNVERIFIED"
     as_of_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -210,39 +212,37 @@ def qualify_host_workload_and_recovery(
     profile: HostServiceProfile,
     target_dir: Path,
 ) -> HostWorkloadQualificationReport:
-    """Execute qualification checks on designated host profile."""
+    """Run bounded synthetic probes without claiming real host qualification.
+
+    Representative workload benchmarks, a process-kill rehearsal and measured
+    recovery evidence require an operator-owned procedure. This helper cannot
+    manufacture that evidence from a small local write/replay smoke check.
+    """
     # 1. Verify profile configuration
-    assert profile.allowed_worker_threads > 0
+    if profile.allowed_worker_threads <= 0:
+        raise ValueError("HOST_PROFILE_WORKER_LIMIT_INVALID")
 
     # 2. Verify disk guard writer
     writer = DiskGuardWriter()
     test_artifact = target_dir / "qualification_test.bin"
     writer.write_atomic(test_artifact, b"qualification_test_payload")
-    assert test_artifact.exists()
-    test_artifact.unlink()
+    if not test_artifact.exists():
+        raise RuntimeError("SYNTHETIC_STORAGE_WRITE_NOT_OBSERVED")
 
     # 3. Verify idempotent metric ledger
     ledger_path = target_dir / "qualification_ledger.json"
     ledger = IdempotentMetricLedger(ledger_path)
     ledger.record_metric("qual_run_01", "sharpe", 1.2, 0)
     ledger.record_metric("qual_run_01", "sharpe", 1.2, 0)  # Replay
-    assert ledger.metrics_count == 1
-    if ledger_path.exists():
-        ledger_path.unlink()
-
-    # 4. Verify capacity validator
-    validator = EmpiricalHostCapacityValidator(
-        host_name=profile.host_name,
-        max_allowed_workers=profile.allowed_worker_threads,
-        max_memory_mb=4096,
-        benchmark_verified=True,
-    )
-    validator.validate_admission(requested_workers=1, requested_memory_mb=1024)
+    if ledger.metrics_count != 1:
+        raise RuntimeError("SYNTHETIC_METRIC_REPLAY_NOT_IDEMPOTENT")
 
     return HostWorkloadQualificationReport(
         host_name=profile.host_name,
         profile_valid=True,
-        disk_recovery_verified=True,
-        worker_crash_recovery_verified=True,
-        workload_status="QUALIFIED",
+        disk_recovery_verified=False,
+        worker_crash_recovery_verified=False,
+        synthetic_storage_write_passed=True,
+        synthetic_metric_replay_passed=True,
+        workload_status="UNVERIFIED",
     )

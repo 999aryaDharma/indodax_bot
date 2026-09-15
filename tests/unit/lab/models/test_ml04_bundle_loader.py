@@ -184,3 +184,102 @@ def test_ml_04_bundle_hash_includes_feature_names():
     assert bundle_a.bundle_hash != bundle_b.bundle_hash, (
         "Bundles with different feature names must produce different hashes"
     )
+
+
+def _canonical_payload_hash(payload: dict) -> str:
+    """Independent contract helper: hash every serialized field except the hash itself."""
+    hash_payload = dict(payload)
+    hash_payload.pop("bundle_hash", None)
+    canonical = json.dumps(
+        hash_payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "replacement"),
+    [
+        ("calibration", "a", 999.0),
+        ("config_snapshot", "seed", 999),
+        (None, "feature_names", ["feat_1", "feat_0", "feat_2"]),
+        (None, "version", "9.9.9"),
+    ],
+)
+def test_loader_rejects_any_tampered_inference_metadata(
+    section: str | None,
+    key: str,
+    replacement: object,
+) -> None:
+    portable = _build_portable_bundle(["feat_0", "feat_1", "feat_2"])
+    payload = json.loads(portable.to_bytes())
+    recorded_hash = payload["bundle_hash"]
+    if section is None:
+        payload[key] = replacement
+    else:
+        payload[section][key] = replacement
+    assert payload["bundle_hash"] == recorded_hash
+
+    with pytest.raises(BundleChecksumMismatchError):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+def test_bundle_schema_carries_preprocessing_and_provenance() -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    assert payload["schema_version"] == "2.0.0"
+    assert payload["preprocessing"] == {
+        "mode": "identity",
+        "feature_names": ["feat_0", "feat_1"],
+    }
+    assert payload["provenance"]["source_bundle_hash"]
+
+
+@pytest.mark.parametrize(
+    ("section", "key", "replacement"),
+    [
+        ("preprocessing", "mode", "unverified"),
+        ("provenance", "source_bundle_hash", "forged"),
+        (None, "schema_version", "999.0.0"),
+    ],
+)
+def test_loader_rejects_tampered_schema_preprocessing_or_provenance(
+    section: str | None,
+    key: str,
+    replacement: object,
+) -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    if section is None:
+        payload[key] = replacement
+    else:
+        payload[section][key] = replacement
+
+    with pytest.raises(ValueError):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+def test_unverified_legacy_bundle_is_not_promoted_to_validated_schema() -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    payload.pop("schema_version", None)
+    payload.pop("preprocessing", None)
+    payload.pop("provenance", None)
+
+    with pytest.raises(ValueError, match="SCHEMA"):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+def test_nonfinite_parameters_are_rejected_even_with_matching_full_hash() -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    payload["intercept"] = "NaN"
+    payload["weights_checksum"] = hashlib.sha256(
+        json.dumps(
+            {"coefficients": payload["coefficients"], "intercept": "NaN"},
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    payload["bundle_hash"] = _canonical_payload_hash(payload)
+
+    with pytest.raises(ValueError, match="FINITE"):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))

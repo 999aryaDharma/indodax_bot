@@ -71,7 +71,15 @@ class UrllibTransport:
 
     def get(self, url: str, *, params, timeout: float) -> HttpResponse:
         request_url = f"{url}?{urllib.parse.urlencode(params)}"
-        request = urllib.request.Request(request_url, headers={"Accept": "application/json"})
+        request = urllib.request.Request(
+            request_url,
+            headers={
+                "Accept": "application/json",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://indodax.com/",
+                "User-Agent": "IndodaxResearchLab/1.0 (public historical data; offline research)",
+            },
+        )
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 return HttpResponse(

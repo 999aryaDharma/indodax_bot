@@ -57,9 +57,79 @@ def _generate_synthetic_bar_df(
             "volume": volumes,
             "return_15m": returns,
             "target_forward_return": targets,
+            "role": "TRAIN",
+            "row_ready_at": timestamps,
         }
     )
     return df
+
+
+def test_sequence_never_crosses_repeated_role_boundaries():
+    df = _generate_synthetic_bar_df(12)
+    df["role"] = ["TRAIN"] * 3 + ["SEALED_TEST"] * 3 + ["TRAIN"] * 6
+    batch = CausalSequenceBuilder(CausalSequenceConfig(sequence_length=4, feature_columns=["close"],
+        target_column="target_forward_return", allow_padding=False)).build(df)
+    assert len(batch) == 0
+
+
+@pytest.mark.parametrize("defect", ["future_return", "missing_role", "missing_ready", "delayed", "infinite", "gap_zero"])
+def test_sequence_rejects_unsafe_inputs(defect):
+    df = _generate_synthetic_bar_df(12)
+    columns = ["close"]
+    gap = 1800
+    if defect == "future_return":
+        df["future_return"] = 0.1
+        columns = ["future_return"]
+    elif defect == "missing_role":
+        df = df.drop(columns="role")
+    elif defect == "missing_ready":
+        df = df.drop(columns="row_ready_at")
+    elif defect == "delayed":
+        df.loc[0, "row_ready_at"] += timedelta(hours=1)
+    elif defect == "infinite":
+        df.loc[0, "close"] = np.inf
+    else:
+        gap = 0
+    with pytest.raises(ValueError):
+        CausalSequenceBuilder(CausalSequenceConfig(feature_columns=columns,
+            target_column="target_forward_return", max_gap_seconds=gap)).build(df)
+
+
+def test_sequence_arrays_are_immutable():
+    batch = CausalSequenceBuilder(CausalSequenceConfig(feature_columns=["close"],
+        target_column="target_forward_return")).build(_generate_synthetic_bar_df(12))
+    assert not batch.inputs.flags.writeable
+    assert not batch.masks.flags.writeable
+    assert not batch.targets.flags.writeable
+    with pytest.raises(ValueError):
+        batch.inputs.setflags(write=True)
+
+
+def test_sequence_torch_conversion_does_not_alias_immutable_numpy():
+    pytest.importorskip("torch")
+    batch = CausalSequenceBuilder(CausalSequenceConfig(feature_columns=["close"],
+        target_column="target_forward_return")).build(_generate_synthetic_bar_df(12))
+    original = batch.inputs.copy()
+    converted = batch.to_torch_dataset()
+    converted.tensors[0][0, -1, 0] = -123
+    np.testing.assert_array_equal(batch.inputs, original)
+
+
+def test_sequence_revalidates_mutated_allowlist_and_identity():
+    frame = _generate_synthetic_bar_df(12)
+    frame["future_return"] = .1
+    config = CausalSequenceConfig(feature_columns=["close"], target_column="target_forward_return")
+    config.feature_columns.append("future_return")
+    with pytest.raises(ValueError, match="TARGET_LEAKAGE"):
+        CausalSequenceBuilder(config).build(frame)
+
+
+def test_sequence_rejects_null_sample_identity():
+    frame = _generate_synthetic_bar_df(12)
+    frame["sample_id"] = None
+    with pytest.raises(ValueError, match="SAMPLE_ID"):
+        CausalSequenceBuilder(CausalSequenceConfig(feature_columns=["close"],
+            target_column="target_forward_return")).build(frame)
 
 
 def test_dl_02_valid_contract() -> None:

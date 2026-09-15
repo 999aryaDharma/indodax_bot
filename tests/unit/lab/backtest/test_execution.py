@@ -97,6 +97,8 @@ def test_sim_01_valid_contract(sample_cost_table: CostScheduleTable) -> None:
         low=Decimal("498000000"),
         close=Decimal("502000000"),
         base_volume=Decimal("1.0"),  # Ample volume
+        open_liquidity_base_volume=Decimal("1.0"),
+        open_liquidity_available_at=BASE_TS + timedelta(hours=1),
         quote_volume=Decimal("500000000"),
     )
 
@@ -175,6 +177,8 @@ def test_sim_01_contract_2(sample_cost_table: CostScheduleTable) -> None:
         low=Decimal("498000000"),
         close=Decimal("501000000"),
         base_volume=Decimal("10.0"),
+        open_liquidity_base_volume=Decimal("10.0"),
+        open_liquidity_available_at=BASE_TS + timedelta(hours=1),
         quote_volume=Decimal("5000000000"),
     )
     result_small = simulator.simulate_execution(small_intent, bar)
@@ -199,6 +203,8 @@ def test_sim_01_contract_2(sample_cost_table: CostScheduleTable) -> None:
         low=Decimal("498000000"),
         close=Decimal("501000000"),
         base_volume=Decimal("0.5"),  # 10% is 0.05 BTC
+        open_liquidity_base_volume=Decimal("0.5"),
+        open_liquidity_available_at=BASE_TS + timedelta(hours=1),
         quote_volume=Decimal("250000000"),
     )
     result_partial = simulator.simulate_execution(large_intent, thin_bar)

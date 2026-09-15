@@ -21,6 +21,7 @@ from indodax_lab.operations.staging import (
 from indodax_lab.operations.service_lifecycle import (
     ConcurrentWriterLockError,
     HostServiceProfile,
+    LifecycleOperationError,
     ManagedService,
     MissingSecretError,
     ServiceManager,
@@ -43,6 +44,7 @@ __all__ = [
     # OPS-01 Service Lifecycle
     "ConcurrentWriterLockError",
     "HostServiceProfile",
+    "LifecycleOperationError",
     "ManagedService",
     "MissingSecretError",
     "ServiceManager",

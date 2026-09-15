@@ -28,7 +28,11 @@ class ExecutionStatus(StrEnum):
 
 
 class MarketBar(BaseModel):
-    """Causal market bar for price execution and liquidity estimation."""
+    """Completed OHLCV observation; omission of availability declares close-time availability.
+
+    Open liquidity is separate, already available evidence, never outcome volume.
+    A prior closed volume is only a disclosed modeling proxy, not observed L2 depth.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -41,6 +45,10 @@ class MarketBar(BaseModel):
     close: Decimal
     base_volume: Decimal
     quote_volume: Decimal
+    available_at: datetime | None = None
+    is_closed: bool = True
+    open_liquidity_base_volume: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    open_liquidity_available_at: datetime | None = None
 
     @field_validator("open_time", "close_time", mode="after")
     @classmethod
@@ -57,6 +65,21 @@ class MarketBar(BaseModel):
 
     @model_validator(mode="after")
     def validate_chronology_and_bounds(self) -> MarketBar:
+        if not self.is_closed:
+            raise ValueError("CLOSED_BAR_REQUIRED")
+        if self.available_at is None:
+            object.__setattr__(self, "available_at", self.close_time)
+        _ensure_utc(self.available_at, "available_at")
+        if self.available_at < self.close_time:
+            raise ValueError("BAR_AVAILABLE_BEFORE_CLOSE")
+        if (self.open_liquidity_base_volume is None) != (self.open_liquidity_available_at is None):
+            raise ValueError("INCOMPLETE_LIQUIDITY_EVIDENCE")
+        if self.open_liquidity_available_at is not None:
+            _ensure_utc(self.open_liquidity_available_at, "open_liquidity_available_at")
+            if self.open_liquidity_available_at > self.open_time:
+                raise ValueError("FUTURE_OPEN_LIQUIDITY")
+        if min(self.open, self.high, self.low, self.close) <= 0:
+            raise ValueError("POSITIVE_BAR_PRICE_REQUIRED")
         if self.close_time <= self.open_time:
             raise ValueError(f"INVALID_BAR_CHRONOLOGY:{self.open_time} >= {self.close_time}")
         if self.high < max(self.open, self.close, self.low):

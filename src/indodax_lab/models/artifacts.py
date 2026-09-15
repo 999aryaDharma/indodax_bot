@@ -14,12 +14,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +45,36 @@ class BundleFeatureMismatchError(ValueError):
 # ---------------------------------------------------------------------------
 
 _REQUIRED_CALIBRATION_FIELDS = {"method", "a", "b", "n_samples", "n_positives", "n_negatives", "segment_type"}
+_SUPPORTED_SCHEMA_VERSION = "2.0.0"
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    """Encode JSON deterministically and reject non-standard non-finite values."""
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _bundle_content_hash(payload: dict[str, Any]) -> str:
+    hash_payload = dict(payload)
+    hash_payload.pop("bundle_hash", None)
+    return hashlib.sha256(_canonical_json_bytes(hash_payload)).hexdigest()
+
+
+def _assert_finite_json(value: Any, path: str) -> None:
+    """Reject non-finite numeric values anywhere in inference-affecting metadata."""
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"FINITE_VALUE_REQUIRED:{path}")
+    if isinstance(value, dict):
+        for key, member in value.items():
+            _assert_finite_json(member, f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, member in enumerate(value):
+            _assert_finite_json(member, f"{path}[{index}]")
 
 
 # ---------------------------------------------------------------------------
@@ -66,19 +97,52 @@ class PortableBundle(BaseModel):
 
     model_id: str
     version: str
+    schema_version: str
     feature_names: list[str]
     # Logistic weights
     coefficients: list[float]
     intercept: float
     # Platt calibration parameters
     calibration: dict[str, Any]
+    preprocessing: dict[str, Any]
+    provenance: dict[str, Any]
     # Config snapshot (arbitrary JSON-serializable dict)
     config_snapshot: dict[str, Any]
-    # Deterministic content hash (excludes wall-clock)
+    # Deterministic hash of every serialized field except this hash itself.
     bundle_hash: str
     # Weights checksum (SHA-256 of coefficients+intercept JSON for integrity guard)
     weights_checksum: str
-    fitted_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    fitted_at_utc: datetime
+
+    @field_validator("fitted_at_utc")
+    @classmethod
+    def _require_utc(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() != UTC.utcoffset(value):
+            raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED:fitted_at_utc")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_replay_contract(self) -> "PortableBundle":
+        if self.schema_version != _SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                f"SCHEMA_VERSION_UNSUPPORTED:{self.schema_version};expected={_SUPPORTED_SCHEMA_VERSION}"
+            )
+        if not self.feature_names or len(set(self.feature_names)) != len(self.feature_names):
+            raise ValueError("FEATURE_SCHEMA_INVALID: feature_names must be non-empty and unique")
+        if len(self.coefficients) != len(self.feature_names):
+            raise ValueError("FEATURE_WEIGHT_COUNT_MISMATCH")
+        if self.preprocessing.get("mode") != "identity":
+            raise ValueError("PREPROCESSING_UNSUPPORTED: only identity preprocessing is replayable")
+        if self.preprocessing.get("feature_names") != self.feature_names:
+            raise ValueError("PREPROCESSING_FEATURE_SCHEMA_MISMATCH")
+        if not self.provenance.get("source_bundle_hash"):
+            raise ValueError("PROVENANCE_SOURCE_BUNDLE_HASH_REQUIRED")
+        _assert_finite_json(self.coefficients, "coefficients")
+        _assert_finite_json(self.intercept, "intercept")
+        _assert_finite_json(self.calibration, "calibration")
+        _assert_finite_json(self.preprocessing, "preprocessing")
+        _assert_finite_json(self.config_snapshot, "config_snapshot")
+        return self
 
     # ------------------------------------------------------------------
     # Factory
@@ -120,17 +184,30 @@ class PortableBundle(BaseModel):
 
         config_snapshot = bundle.config.model_dump(mode="json")
 
-        return cls(
-            model_id=bundle.config.model_id,
-            version=bundle.config.version,
-            feature_names=feature_names,
-            coefficients=coefs,
-            intercept=intercept,
-            calibration=calibration_dict,
-            config_snapshot=config_snapshot,
-            bundle_hash=bundle.bundle_hash,
-            weights_checksum=weights_checksum,
-        )
+        fitted_at_utc = datetime.now(UTC)
+        payload: dict[str, Any] = {
+            "model_id": bundle.config.model_id,
+            "version": bundle.config.version,
+            "schema_version": _SUPPORTED_SCHEMA_VERSION,
+            "feature_names": feature_names,
+            "coefficients": coefs,
+            "intercept": intercept,
+            "calibration": calibration_dict,
+            "preprocessing": {"mode": "identity", "feature_names": feature_names},
+            "provenance": {
+                "source_bundle_hash": bundle.bundle_hash,
+                "source_bundle_type": type(bundle).__name__,
+            },
+            "config_snapshot": config_snapshot,
+            "weights_checksum": weights_checksum,
+            "fitted_at_utc": fitted_at_utc.isoformat(),
+        }
+        # Validate/coerce first so the digest covers the exact serialized form
+        # consumers receive (for example numpy scalar weights become JSON floats).
+        payload["bundle_hash"] = "0" * 64
+        candidate = cls.model_validate(payload)
+        serialized = candidate.model_dump(mode="json")
+        return candidate.model_copy(update={"bundle_hash": _bundle_content_hash(serialized)})
 
     # ------------------------------------------------------------------
     # Serialization
@@ -139,10 +216,7 @@ class PortableBundle(BaseModel):
     def to_bytes(self) -> bytes:
         """Serialize bundle to UTF-8 JSON bytes for storage or transmission."""
         payload = self.model_dump(mode="json")
-        # Ensure datetime is ISO string
-        if isinstance(payload.get("fitted_at_utc"), datetime):
-            payload["fitted_at_utc"] = payload["fitted_at_utc"].isoformat()
-        return json.dumps(payload, sort_keys=True).encode("utf-8")
+        return _canonical_json_bytes(payload)
 
     # ------------------------------------------------------------------
     # Inference
@@ -206,7 +280,21 @@ class PortableBundleLoader:
             BundleChecksumMismatchError: If the stored ``weights_checksum`` does not
                 match the recomputed checksum from the weights in the payload.
         """
-        payload: dict[str, Any] = json.loads(data.decode("utf-8"))
+        payload = json.loads(
+            data.decode("utf-8"),
+            parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError(f"FINITE_VALUE_REQUIRED: invalid JSON constant {value}")
+            ),
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("BUNDLE_OBJECT_REQUIRED")
+
+        if payload.get("schema_version") != _SUPPORTED_SCHEMA_VERSION:
+            raise ValueError(
+                "SCHEMA_VERSION_UNSUPPORTED_OR_MISSING: legacy bundles require an explicit migration"
+            )
+        if "preprocessing" not in payload or "provenance" not in payload:
+            raise ValueError("SCHEMA_REPLAY_METADATA_REQUIRED")
 
         # --- AC2: Validate calibration metadata first ---
         calibration = payload.get("calibration")
@@ -240,14 +328,14 @@ class PortableBundleLoader:
                 "Bundle may have been corrupted or tampered with."
             )
 
-        # --- Reconstruct PortableBundle ---
-        # Parse fitted_at_utc if it's a string
-        fitted_at_utc = payload.get("fitted_at_utc")
-        if isinstance(fitted_at_utc, str):
-            from datetime import timezone
-            dt = datetime.fromisoformat(fitted_at_utc)
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=UTC)
-            payload["fitted_at_utc"] = dt
+        # The full checksum covers every replay-critical field, including schema,
+        # preprocessing, feature order, calibration, config and provenance.
+        stored_bundle_hash = payload.get("bundle_hash", "")
+        computed_bundle_hash = _bundle_content_hash(payload)
+        if stored_bundle_hash != computed_bundle_hash:
+            raise BundleChecksumMismatchError(
+                f"BUNDLE_CHECKSUM_MISMATCH: Stored bundle hash '{str(stored_bundle_hash)[:16]}...' "
+                f"does not match recomputed '{computed_bundle_hash[:16]}...'"
+            )
 
-        return PortableBundle(**payload)
+        return PortableBundle.model_validate(payload)

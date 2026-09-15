@@ -12,8 +12,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
+import subprocess
+from unittest.mock import patch
 import pytest
 
 from indodax_lab.operations.backup import backup_sqlite_db, create_backup_bundle
@@ -22,6 +25,7 @@ from indodax_lab.operations.staging import (
     ChecksumMismatchError,
     CorruptTransferError,
     TransferManifest,
+    verify_bundle,
     stage_and_publish_transfer,
 )
 
@@ -87,11 +91,11 @@ def test_ops_02_valid_contract(tmp_path: Path) -> None:
     assert result.verified_file_count >= 3
 
     # 3. Verify destination integrity
-    dest_data_file = dest_root / "datasets" / "btc_idr_snapshot_v1" / "bars.parquet"
+    dest_data_file = result.published_root / "datasets" / "btc_idr_snapshot_v1" / "bars.parquet"
     assert dest_data_file.exists()
     assert dest_data_file.read_bytes() == b"PARQUET_FORMAT_SIMULATED_CONTENT_BYTES_12345"
 
-    dest_db = dest_root / "queue" / "jobs.db"
+    dest_db = result.published_root / "queue" / "jobs.db"
     assert dest_db.exists()
     conn = sqlite3.connect(str(dest_db))
     cur = conn.cursor()
@@ -194,15 +198,149 @@ def test_ops_02_contract_3(tmp_path: Path) -> None:
     assert restore_result.status == "SUCCESS"
 
     # Verify IDs are preserved exactly
-    manifest_file = restore_root / "datasets" / "btc_idr_snapshot_v1" / "manifest.json"
+    manifest_file = restore_result.target_root / "datasets" / "btc_idr_snapshot_v1" / "manifest.json"
     manifest_data = json.loads(manifest_file.read_text(encoding="utf-8"))
     assert manifest_data["snapshot_id"] == "btc_idr_snapshot_v1"
     assert manifest_data["pair"] == "btc_idr"
 
-    db_path = restore_root / "queue" / "jobs.db"
+    db_path = restore_result.target_root / "queue" / "jobs.db"
     conn = sqlite3.connect(str(db_path))
     cur = conn.cursor()
     cur.execute("SELECT job_id, recipe_hash FROM jobs;")
     row = cur.fetchone()
     assert row == ("job_001", "recipe_hash_alpha")
     conn.close()
+
+
+def _write_manifest(bundle_dir: Path, files: dict[str, str], total_bytes: int = 0) -> None:
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    (bundle_dir / "transfer_manifest.json").write_text(
+        json.dumps({
+            "bundle_id": "attack-fixture",
+            "source_host": "fixture",
+            "created_at": "2025-06-01T12:00:00+00:00",
+            "files": files,
+            "total_bytes": total_bytes,
+        }),
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize("member", ["../outside.bin", "/absolute.bin", "C:/drive.bin"])
+def test_transfer_rejects_unsafe_manifest_member_before_writing(
+    tmp_path: Path,
+    member: str,
+) -> None:
+    bundle = tmp_path / "bundle"
+    destination = tmp_path / "destination"
+    outside = tmp_path / "outside.bin"
+    _write_manifest(bundle, {member: hashlib.sha256(b"attack").hexdigest()})
+
+    with pytest.raises(CorruptTransferError, match="UNSAFE"):
+        stage_and_publish_transfer(bundle, destination)
+
+    assert not outside.exists()
+    assert not destination.exists()
+
+
+def test_transfer_rejects_duplicate_normalized_targets(tmp_path: Path) -> None:
+    bundle = tmp_path / "bundle"
+    _write_manifest(bundle, {
+        "data/file.bin": hashlib.sha256(b"one").hexdigest(),
+        "data\\file.bin": hashlib.sha256(b"two").hexdigest(),
+    })
+
+    with pytest.raises(CorruptTransferError, match="DUPLICATE"):
+        verify_bundle(bundle)
+
+
+def test_transfer_rejects_symlink_escape(tmp_path: Path) -> None:
+    bundle = tmp_path / "bundle"
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    outside = outside_dir / "outside.bin"
+    outside.write_bytes(b"outside")
+    bundle.mkdir()
+    link = bundle / "linked"
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(outside_dir)],
+            check=False,
+            capture_output=True,
+            text=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        assert completed.returncode == 0, completed.stderr or completed.stdout
+    else:
+        link.symlink_to(outside_dir, target_is_directory=True)
+    _write_manifest(
+        bundle,
+        {"linked/outside.bin": hashlib.sha256(b"outside").hexdigest()},
+        len(b"outside"),
+    )
+
+    with pytest.raises(CorruptTransferError, match="SYMLINK|ESCAPE"):
+        verify_bundle(bundle)
+
+
+def test_backup_rejects_source_traversal(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    outside = tmp_path / "outside.bin"
+    outside.write_bytes(b"outside")
+    bundle = tmp_path / "bundle"
+
+    with pytest.raises(ValueError, match="UNSAFE"):
+        create_backup_bundle(source, ["../outside.bin"], bundle)
+
+    assert not (bundle / "outside.bin").exists()
+
+
+def _simple_bundle(tmp_path: Path, name: str, values: tuple[bytes, bytes]) -> Path:
+    source = tmp_path / f"source-{name}"
+    source.mkdir()
+    (source / "a.bin").write_bytes(values[0])
+    (source / "b.bin").write_bytes(values[1])
+    return create_backup_bundle(source, ["a.bin", "b.bin"], tmp_path / f"bundle-{name}")
+
+
+def test_second_publish_failure_keeps_entire_old_active_view(tmp_path: Path) -> None:
+    destination = tmp_path / "destination"
+    old_result = stage_and_publish_transfer(
+        _simple_bundle(tmp_path, "old", (b"old-a", b"old-b")),
+        destination,
+    )
+    old_active_bytes = old_result.active_reference.read_bytes()
+    new_bundle = _simple_bundle(tmp_path, "new", (b"new-a", b"new-b"))
+
+    from indodax_lab.operations import staging
+
+    real_replace = staging.os.replace
+    calls = 0
+
+    def fail_second_replace(source, target):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("injected active-switch failure")
+        return real_replace(source, target)
+
+    with patch("indodax_lab.operations.staging.os.replace", side_effect=fail_second_replace):
+        with pytest.raises(OSError, match="active-switch"):
+            stage_and_publish_transfer(new_bundle, destination)
+
+    assert old_result.active_reference.read_bytes() == old_active_bytes
+    assert (old_result.published_root / "a.bin").read_bytes() == b"old-a"
+    assert (old_result.published_root / "b.bin").read_bytes() == b"old-b"
+
+
+def test_successful_transfer_retry_is_idempotent(tmp_path: Path) -> None:
+    bundle = _simple_bundle(tmp_path, "retry", (b"same-a", b"same-b"))
+    destination = tmp_path / "destination"
+
+    first = stage_and_publish_transfer(bundle, destination)
+    retry = stage_and_publish_transfer(bundle, destination)
+
+    assert retry.manifest_hash == first.manifest_hash
+    assert retry.published_root == first.published_root
+    assert retry.active_reference.read_bytes() == first.active_reference.read_bytes()

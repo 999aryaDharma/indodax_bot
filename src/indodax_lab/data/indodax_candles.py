@@ -19,7 +19,7 @@ from .wire_store import WireArtifact, WireRequest, WireStore
 
 HISTORY_V2_ENDPOINT = "https://indodax.com/tradingview/history_v2"
 SOURCE = "indodax-history-v2"
-PAIR_TO_VENUE_SYMBOL = {"btc_idr": "BTCIDR"}
+PAIR_TO_VENUE_SYMBOL = {"btc_idr": "BTCIDR", "eth_idr": "ETHIDR", "sol_idr": "SOLIDR"}
 INTERVAL_TO_SECONDS = {
     "1m": 60,
     "5m": 5 * 60,

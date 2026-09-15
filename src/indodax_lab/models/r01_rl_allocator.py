@@ -9,7 +9,7 @@ Guarantees:
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -82,10 +82,19 @@ class AllocationBaselineComparator:
 
     def allocate_cash(self, weights: dict[str, float]) -> dict[str, Decimal]:
         """Convert fractional weights into cash allocations bounded by initial capital."""
-        allocations = {}
+        if any(not isinstance(w, (int, float)) or not 0 <= float(w) <= 1 for w in weights.values()):
+            raise ValueError("ALLOCATION_WEIGHT_INVALID")
+        total = sum(float(w) for w in weights.values())
+        if total > 1.0 + 1e-12:
+            raise ValueError("ALLOCATION_WEIGHTS_EXCEED_SIMPLEX")
+        allocations: dict[str, Decimal] = {}
+        spent = Decimal("0")
         for k, w in weights.items():
-            alloc_amt = (self.initial_capital * Decimal(str(round(w, 4)))).quantize(Decimal("0.01"))
+            alloc_amt = (self.initial_capital * Decimal(str(w))).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
             allocations[k] = alloc_amt
+            spent += alloc_amt
+        if spent > self.initial_capital:
+            raise ValueError("ALLOCATION_CAP_EXCEEDED")
         return allocations
 
 
@@ -119,12 +128,13 @@ class RLFeasibilityReport(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
 
     initial_capital: Decimal
-    is_net_cost_evaluated: bool = True
-    recommendation: str = "NOT_RECOMMENDED"
+    is_net_cost_evaluated: bool = False
+    evidence_status: str = "UNEVALUATED"
+    recommendation: str = "INCONCLUSIVE"
     tier: str = "EXPERIMENTAL"
     is_promoted_to_core: bool = False
-    net_sharpe_rl: float = -0.45
-    net_sharpe_baseline: float = 0.65
+    net_sharpe_rl: float | None = None
+    net_sharpe_baseline: float | None = None
     findings: list[str] = Field(default_factory=list)
 
     def export_to_live_scheduler(self) -> None:
@@ -142,18 +152,19 @@ def evaluate_rl_allocation_feasibility(
 ) -> RLFeasibilityReport:
     """Execute feasibility study comparing RL allocation to fixed inverse-volatility baseline."""
     findings = [
-        "High transaction fee drag (0.3%) severely degrades unconstrained RL policy returns.",
-        "RL agents tend to overtrade (turnover > 1.2x/period) without heavy turnover penalty.",
-        "Fixed inverse-volatility baseline provides superior risk-adjusted net return with near-zero turnover.",
+        "UNEVALUATED: no deterministic offline RL trajectory/evaluator was supplied.",
+        "BLOCKED: net Sharpe and profitability claims require immutable out-of-sample evidence.",
+        "BASELINE_ONLY: inverse-volatility allocation is a comparator, not evidence of RL performance.",
     ]
 
     return RLFeasibilityReport(
         initial_capital=initial_cash,
-        is_net_cost_evaluated=True,
-        recommendation="NOT_RECOMMENDED",
+        is_net_cost_evaluated=False,
+        evidence_status="UNEVALUATED",
+        recommendation="INCONCLUSIVE",
         tier="EXPERIMENTAL",
         is_promoted_to_core=False,
-        net_sharpe_rl=-0.45,
-        net_sharpe_baseline=0.65,
+        net_sharpe_rl=None,
+        net_sharpe_baseline=None,
         findings=findings,
     )

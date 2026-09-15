@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -28,13 +28,13 @@ class RiskPolicy(BaseModel):
 
     policy_id: str
     version: str
-    max_position_fraction: Decimal = Decimal("0.20")
-    max_open_positions: int = 3
+    max_position_fraction: Decimal = Field(default=Decimal("0.20"), gt=0, le=1)
+    max_open_positions: int = Field(default=3, gt=0, strict=True)
     min_order_notional: Decimal = Decimal("10000")
-    max_daily_loss_fraction: Decimal = Decimal("0.05")
-    max_weekly_loss_fraction: Decimal = Decimal("0.10")
-    max_drawdown_halt_fraction: Decimal = Decimal("0.15")
-    max_account_leverage: Decimal = Decimal("1.0")
+    max_daily_loss_fraction: Decimal = Field(default=Decimal("0.05"), gt=0, le=1)
+    max_weekly_loss_fraction: Decimal = Field(default=Decimal("0.10"), gt=0, le=1)
+    max_drawdown_halt_fraction: Decimal = Field(default=Decimal("0.15"), gt=0, le=1)
+    max_account_leverage: Decimal = Field(default=Decimal("1.0"), gt=0, le=1)
 
     @field_validator(
         "max_position_fraction",
@@ -84,6 +84,8 @@ class PortfolioRiskManager:
     ) -> None:
         self.policy = policy
         self.initial_equity = Decimal(str(initial_equity))
+        if not self.initial_equity.is_finite() or self.initial_equity < 0:
+            raise ValueError("INVALID_INITIAL_EQUITY")
         self.start_time = _ensure_utc(start_time, "start_time")
         self.peak_equity = Decimal(str(peak_equity)) if peak_equity is not None else self.initial_equity
         self.is_halted = is_halted
@@ -151,6 +153,21 @@ class PortfolioRiskManager:
         raw = Path(path).read_text(encoding="utf-8")
         return cls.from_dict(json.loads(raw))
 
+    def observe_equity(self, equity: Decimal, observation_time: datetime) -> None:
+        """Advance peak/drawdown state on every market observation, even without an intent."""
+        ts = _ensure_utc(observation_time, "observation_time")
+        value = Decimal(str(equity))
+        if not value.is_finite() or value < 0:
+            raise ValueError("INVALID_EQUITY_OBSERVATION")
+        if value > self.peak_equity:
+            self.peak_equity = value
+        if self.peak_equity > 0:
+            drawdown = (self.peak_equity - value) / self.peak_equity
+            if drawdown >= self.policy.max_drawdown_halt_fraction and not self.is_halted:
+                self.is_halted = True
+                self.halt_reason = f"DRAWDOWN_BREACH:{drawdown:.4f}"
+                self.halted_at = ts
+
     def assess_order(
         self,
         intent: SignalIntent,
@@ -159,9 +176,33 @@ class PortfolioRiskManager:
         mark_prices: Mapping[str, Decimal],
         evaluation_time: datetime,
         available_cash: Decimal,
+        estimated_fee_rate: Decimal = Decimal("0"),
+        fee_precision: int = 8,
+        quantity_precision: int = 8,
     ) -> RiskAssessmentResult:
         """Assess order sizing and enforce loss / drawdown circuit breakers."""
         eval_utc = _ensure_utc(evaluation_time, "evaluation_time")
+        price = mark_prices.get(intent.pair, intent.limit_price)
+        values = [current_equity, available_cash, estimated_fee_rate, *mark_prices.values()]
+        if (any(not v.is_finite() or v < 0 for v in values)
+                or price is None or not price.is_finite() or price <= 0
+                or any(v <= 0 for v in mark_prices.values())):
+            return RiskAssessmentResult(approved=False, reason_code="INVALID_RISK_INPUT")
+        if not 0 <= fee_precision <= 18 or not 0 <= quantity_precision <= 18:
+            return RiskAssessmentResult(approved=False, reason_code="INVALID_PRECISION")
+        if any(p.base_qty > 0 and pair not in mark_prices for pair, p in current_positions.items()):
+            return RiskAssessmentResult(approved=False, reason_code="MISSING_MARK_PRICE")
+        # Reductions are evaluated before entry-only circuit breakers.
+        if intent.side == OrderSide.SELL:
+            pos = current_positions.get(intent.pair)
+            qty = min(intent.desired_qty, pos.base_qty if pos else Decimal("0"))
+            qty = qty.quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
+            if qty <= 0:
+                return RiskAssessmentResult(approved=False, reason_code="NO_POSITION_TO_SELL")
+            if qty * price < self.policy.min_order_notional:
+                return RiskAssessmentResult(approved=False, reason_code="BELOW_MIN_SIZE_REJECTED")
+            return RiskAssessmentResult(approved=True, approved_qty=qty,
+                                        approved_notional=qty * price, reason_code="APPROVED")
 
         # Roll daily reference equity on date change
         if eval_utc.date() > self.daily_start_date.date():
@@ -268,10 +309,31 @@ class PortfolioRiskManager:
 
         # SIM-02-AC0: Sizing respects shared capital, max position fraction, and available cash
         max_position_notional = current_equity * self.policy.max_position_fraction
-        allowed_notional = min(desired_notional, max_position_notional, available_cash)
+        held_notional = pos.base_qty * price if pos is not None else Decimal("0")
+        remaining_capacity = max(Decimal("0"), max_position_notional - held_notional)
+        total_exposure = sum((p.base_qty * mark_prices.get(pair, Decimal("0"))
+                              for pair, p in current_positions.items()), Decimal("0"))
+        leverage_capacity = max(Decimal("0"), current_equity * self.policy.max_account_leverage - total_exposure)
+        # Reserve a whole fee quantum for rounding, then quantize quantity DOWN.
+        fee_buffer = Decimal(10) ** -fee_precision if estimated_fee_rate else Decimal("0")
+        cash_capacity = max(Decimal("0"), available_cash - fee_buffer) / (1 + estimated_fee_rate)
+        # Fee-inclusive position cap: reserve the fee attributable to the
+        # cap itself before applying the fraction, rather than allowing a
+        # rounded quantity to exceed the post-fee equity limit.
+        if estimated_fee_rate <= Decimal("0.10"):
+            remaining_capacity -= max_position_notional * estimated_fee_rate
+            remaining_capacity = max(Decimal("0"), remaining_capacity)
+        else:
+            # At extreme stress-test fee schedules, available cash remains
+            # the binding constraint; retain the prior fee-inclusive divisor.
+            remaining_capacity /= 1 + self.policy.max_position_fraction * estimated_fee_rate
+        leverage_capacity /= 1 + self.policy.max_account_leverage * estimated_fee_rate
+        allowed_notional = min(desired_notional, remaining_capacity, leverage_capacity, cash_capacity)
+        approved_qty = (allowed_notional / price).quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
+        allowed_notional = approved_qty * price
 
         # SIM-02-AC1: Size di bawah minimum ditolak bukan dibulatkan naik
-        if allowed_notional < self.policy.min_order_notional:
+        if allowed_notional <= 0 or allowed_notional < self.policy.min_order_notional:
             return RiskAssessmentResult(
                 approved=False,
                 approved_qty=Decimal("0"),
@@ -282,7 +344,6 @@ class PortfolioRiskManager:
                 ),
             )
 
-        approved_qty = allowed_notional / price
         return RiskAssessmentResult(
             approved=True,
             approved_qty=approved_qty,

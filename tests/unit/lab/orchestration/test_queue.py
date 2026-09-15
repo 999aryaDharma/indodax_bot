@@ -1,8 +1,11 @@
 """Unit tests for JOB-01 Durable leased jobs and SQLite WAL local queue."""
 
 from datetime import UTC, datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from pathlib import Path
+import sqlite3
+import threading
 import pytest
 
 from indodax_lab.orchestration.jobs import (
@@ -15,7 +18,12 @@ from indodax_lab.orchestration.jobs import (
 from indodax_lab.orchestration.queue import SqliteJobQueue
 
 
-def _build_test_job(job_id: str = "job_001") -> JobDefinition:
+def _build_test_job(
+    job_id: str = "job_001",
+    *,
+    max_attempts: int = 3,
+    lease_duration_seconds: int = 30,
+) -> JobDefinition:
     return JobDefinition(
         job_id=job_id,
         job_type="train_model",
@@ -23,8 +31,8 @@ def _build_test_job(job_id: str = "job_001") -> JobDefinition:
         input_ids=["dataset_v1", "features_v1"],
         cadence_window="daily_2025_06_01",
         parameters={"learning_rate": 0.01},
-        max_attempts=3,
-        lease_duration_seconds=30,
+        max_attempts=max_attempts,
+        lease_duration_seconds=lease_duration_seconds,
         created_at=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
     )
 
@@ -184,3 +192,104 @@ def test_job_01_contract_3(tmp_path: Path) -> None:
         )
     rec = queue.get_job("job_partial")
     assert rec.status == JobStatus.RUNNING
+
+
+def test_expired_running_job_cannot_exceed_attempt_budget(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("one-shot", max_attempts=1))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+
+    assert queue.claim_job("first", as_of=started).attempts == 1
+    assert queue.claim_job("second", as_of=started + timedelta(seconds=31)) is None
+    exhausted = queue.get_job("one-shot")
+    assert exhausted.status == JobStatus.FAILED_FINAL
+    assert exhausted.attempts == 1
+
+
+@pytest.mark.parametrize("reset_status", [JobStatus.PENDING, JobStatus.STALE])
+def test_attempt_budget_cannot_be_reset_by_state_or_worker_change(
+    tmp_path: Path,
+    reset_status: JobStatus,
+) -> None:
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    queue.submit_job(_build_test_job("reset", max_attempts=1))
+    queue.claim_job("first", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "UPDATE jobs SET status = ?, owner_id = NULL WHERE job_id = ?",
+            (reset_status.value, "reset"),
+        )
+
+    assert queue.claim_job(
+        "different-worker",
+        as_of=datetime(2025, 6, 1, 12, 1, tzinfo=UTC),
+    ) is None
+    assert queue.get_job("reset").status == JobStatus.FAILED_FINAL
+
+
+def test_worker_is_fenced_immediately_at_lease_expiry(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("expires", max_attempts=2, lease_duration_seconds=30))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claim = queue.claim_job("old", as_of=started)
+    expired = started + timedelta(seconds=30)
+
+    with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
+        queue.heartbeat("expires", "old", claim.generation, as_of=expired)
+    with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
+        queue.complete_job("expires", "old", claim.generation, as_of=expired)
+
+    replacement = queue.claim_job("new", as_of=expired)
+    assert replacement is not None
+    assert replacement.owner_id == "new"
+    assert replacement.generation == claim.generation + 1
+
+
+def test_concurrent_claims_on_separate_connections_have_one_winner(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    first = SqliteJobQueue(db_path)
+    second = SqliteJobQueue(db_path)
+    first.submit_job(_build_test_job("contended"))
+    barrier = threading.Barrier(2)
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+
+    def claim(queue: SqliteJobQueue, worker: str):
+        barrier.wait(timeout=5)
+        return queue.claim_job(worker, as_of=as_of)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda args: claim(*args), [(first, "a"), (second, "b")]))
+
+    winners = [record for record in results if record is not None]
+    assert len(winners) == 1
+    assert winners[0].attempts == 1
+
+
+def test_failed_claim_transaction_rolls_back_attempt_increment(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    queue.submit_job(_build_test_job("rollback"))
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            """
+            CREATE TRIGGER reject_claim BEFORE UPDATE ON jobs
+            WHEN NEW.status = 'RUNNING'
+            BEGIN
+                SELECT RAISE(ABORT, 'injected claim failure');
+            END;
+            """
+        )
+
+    with pytest.raises(sqlite3.IntegrityError, match="injected claim failure"):
+        queue.claim_job("worker", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
+
+    record = queue.get_job("rollback")
+    assert record.status == JobStatus.PENDING
+    assert record.attempts == 0
+
+
+def test_every_queue_connection_enables_foreign_keys(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    with queue._connect() as conn:
+        assert conn.execute("PRAGMA foreign_keys;").fetchone() == (1,)

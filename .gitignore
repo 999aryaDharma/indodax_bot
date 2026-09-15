@@ -24,6 +24,8 @@ logs/*.log.*
 # === Strategy research lab ===
 lab-data/
 lab-artifacts/
+lab-data-*/
+.pytest-tmp/
 
 # === OS ===
 .DS_Store

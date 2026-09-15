@@ -21,6 +21,8 @@ class RestoreResult(BaseModel):
     status: str
     restored_files: list[str]
     target_root: Path
+    manifest_hash: str
+    active_reference: Path
 
 
 def restore_snapshot_bundle(
@@ -34,6 +36,9 @@ def restore_snapshot_bundle(
     Restoration preserves all IDs, timestamps, and cryptographic integrity
     without modifying data content or schema.
     """
+    if not verify_checksums:
+        raise ValueError("CHECKSUM_VERIFICATION_REQUIRED_FOR_RESTORE")
+
     b_dir = Path(bundle_dir)
     t_root = Path(target_root)
 
@@ -42,5 +47,7 @@ def restore_snapshot_bundle(
     return RestoreResult(
         status="SUCCESS",
         restored_files=sorted(list(staging_res.manifest.files.keys())),
-        target_root=t_root,
+        target_root=staging_res.published_root,
+        manifest_hash=staging_res.manifest_hash,
+        active_reference=staging_res.active_reference,
     )

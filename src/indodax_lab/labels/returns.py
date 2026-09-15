@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, Literal
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from indodax_lab.backtest.costs import (
     CostScheduleTable,
@@ -24,11 +24,18 @@ class NetReturnConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     label_set_id: str = "net_return"
-    version: str = "1.0.0"
+    version: str = "2.0.0"
     horizon: timedelta = timedelta(hours=4)
     edge_margin: Decimal = Decimal("0.001")
     cost_schedule_table: CostScheduleTable | None = None
-    execution_model_version: str = "conservative_v1"
+    execution_model_version: str = "open_price_proxy_v2"
+
+    @field_validator("execution_model_version")
+    @classmethod
+    def require_proxy_model(cls, value: str) -> str:
+        if value != "open_price_proxy_v2":
+            raise ValueError("UNSUPPORTED_EXECUTION_MODEL: rebuild labels with open_price_proxy_v2; simulator fill alignment is not implemented")
+        return value
 
 
 class NetReturnLabel(BaseModel):
@@ -52,7 +59,9 @@ class NetReturnLabel(BaseModel):
     net_return: Decimal | None = None
     binary_label: int | None = None
     cost_schedule_id: str | None = None
-    execution_model_version: str = "conservative_v1"
+    execution_model_version: Literal["open_price_proxy_v2"] = "open_price_proxy_v2"
+    execution_fidelity: Literal["RESEARCH_PRICE_PROXY_ONLY"] = "RESEARCH_PRICE_PROXY_ONLY"
+    promotion_eligible: Literal[False] = False
     label_available_at: datetime | None = None
     status: str = "VALID"
     exclusion_reason: str | None = None
@@ -62,6 +71,12 @@ def _get_val(bar: Any, key: str) -> Any:
     if isinstance(bar, Mapping):
         return bar[key]
     return getattr(bar, key)
+
+
+def _require_utc(value: datetime) -> datetime:
+    if pd.isna(value) or value.tzinfo is None or value.utcoffset() != timedelta(0):
+        raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED")
+    return value
 
 
 def build_net_return_label(
@@ -74,6 +89,13 @@ def build_net_return_label(
     """Build a single net return label enforcing execution causality and cost basis."""
     if not bars:
         raise ValueError("EMPTY_BARS")
+    _require_utc(decision_ts)
+
+    bars = [bar for bar in bars if _get_val(bar, "pair") == pair]
+    if not bars:
+        raise ValueError("NO_BARS_FOR_PAIR")
+    for bar in bars:
+        _require_utc(_get_val(bar, "open_time"))
 
     # Enforce strict causality: entry cannot occur before or at decision if decision is after all bars
     max_open = max(_get_val(b, "open_time") for b in bars)
@@ -109,6 +131,39 @@ def build_net_return_label(
 
     exit_bar = exit_candidates[0]
     exit_price = Decimal(str(_get_val(exit_bar, "open")))
+
+    outcome_bars = [
+        bar for bar in sorted_bars
+        if _get_val(bar, "open_time") <= target_exit_ts
+    ]
+    open_times = [_get_val(bar, "open_time") for bar in outcome_bars]
+    if len(set(open_times)) != len(open_times):
+        raise ValueError("DUPLICATE_OUTCOME_BAR")
+    for bar in outcome_bars:
+        _require_utc(_get_val(bar, "close_time"))
+        _require_utc(_get_val(bar, "available_at"))
+        if (
+            _get_val(bar, "is_closed")
+            and _get_val(bar, "available_at") < _get_val(bar, "close_time")
+        ):
+            raise ValueError("OUTCOME_AVAILABILITY_BEFORE_CLOSE")
+    if any(
+        _get_val(left, "close_time") != _get_val(right, "open_time")
+        for left, right in zip(outcome_bars, outcome_bars[1:])
+    ):
+        return NetReturnLabel(
+            sample_id=sample_id, label_set_id=config.label_set_id,
+            label_version=config.version, pair=pair, decision_ts=decision_ts,
+            entry_ts=entry_ts, exit_ts=target_exit_ts, status="EXCLUDED",
+            exclusion_reason="INCOMPLETE_HORIZON",
+        )
+    if any(not _get_val(bar, "is_closed") for bar in outcome_bars):
+        return NetReturnLabel(
+            sample_id=sample_id, label_set_id=config.label_set_id,
+            label_version=config.version, pair=pair, decision_ts=decision_ts,
+            entry_ts=entry_ts, exit_ts=target_exit_ts, status="EXCLUDED",
+            exclusion_reason="UNCLOSED_OUTCOME_SOURCE",
+        )
 
     # Check cost schedule availability
     if config.cost_schedule_table is None:
@@ -163,8 +218,9 @@ def build_net_return_label(
     gross_return = (exit_price / entry_price) - Decimal("1")
 
     binary_label = 1 if net_return > config.edge_margin else 0
-    exit_avail = _get_val(exit_bar, "available_at")
-    label_avail = max(exit_avail, target_exit_ts)
+    label_avail = max(target_exit_ts, *(
+        _get_val(bar, "available_at") for bar in outcome_bars
+    ))
 
     return NetReturnLabel(
         sample_id=sample_id,
@@ -208,7 +264,11 @@ def build_net_return_labels_frame(
             bars=bars,
             config=config,
         )
-        rows.append(lbl.model_dump())
+        row = lbl.model_dump()
+        # Net-return outcomes end at their configured exit event. Preserve the
+        # source event name and expose the canonical split/training boundary.
+        row["label_end_ts"] = lbl.exit_ts
+        rows.append(row)
     return pd.DataFrame(rows)
 
 

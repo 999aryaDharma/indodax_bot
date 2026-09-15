@@ -234,3 +234,21 @@ def test_sim_03_contract_3(
     # With max_position_fraction = 50%, max notional is 250,000, NOT 500,000
     max_position_notional_a = engine_a.risk_manager.policy.max_position_fraction * res_a.initial_cash
     assert max_position_notional_a == Decimal("250000")
+
+
+def test_replay_exact_cost_once_arithmetic(test_schedule_table, test_risk_policy):
+    engine = ReplayBacktestEngine(test_schedule_table, test_risk_policy,
+                                  initial_cash=Decimal("500000"))
+    result = engine.run(_sample_bars(), _simple_strategy)
+    # 0.0004 * 510m = 204000; fee 652.8 rounds to 653.
+    # 0.0004 * 530m = 212000; fee 678.4 rounds to 678.
+    assert result.ending_cash == Decimal("506669")
+    assert result.ending_equity == Decimal("506669")
+    assert result.total_gross_pnl == Decimal("8000")
+    assert result.total_fees_paid == Decimal("1331")
+    assert result.total_net_pnl == Decimal("6669")
+    assert [tx.timestamp for tx in engine.ledger.transactions] == [
+        BASE_TS, BASE_TS+timedelta(hours=1), BASE_TS+timedelta(hours=3)]
+    assert [tx.base_qty_delta for tx in engine.ledger.transactions] == [
+        Decimal("0"), Decimal("0.0004"), Decimal("-0.0004")]
+    assert not engine.rejections

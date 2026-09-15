@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import Any, Sequence
+import hashlib
+import json
+from typing import Any, Sequence, Literal
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
@@ -69,6 +71,11 @@ class SplitPolicy(BaseModel):
 
     @model_validator(mode="after")
     def validate_embargo(self) -> SplitPolicy:
+        if self.max_horizon_hours <= 0 or self.embargo_hours < 0:
+            raise ValueError("POSITIVE_HORIZON_NONNEGATIVE_EMBARGO_REQUIRED")
+        ordered = sorted(self.folds, key=lambda f: f.start_ts)
+        if any(left.end_ts > right.start_ts for left, right in zip(ordered, ordered[1:])):
+            raise ValueError("OVERLAPPING_FOLDS_FORBIDDEN")
         # SPLIT-01-AC2: Embargo must be at least max horizon
         if self.embargo_hours < self.max_horizon_hours:
             raise ValueError(
@@ -86,10 +93,13 @@ class SampleRecord(BaseModel):
     decision_ts: datetime
     label_end_ts: datetime
     pair: str
+    label_available_at: datetime | None = None
 
-    @field_validator("decision_ts", "label_end_ts", mode="after")
+    @field_validator("decision_ts", "label_end_ts", "label_available_at", mode="after")
     @classmethod
-    def validate_utc(cls, value: datetime) -> datetime:
+    def validate_utc(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
         return _ensure_utc(value, "sample_timestamp")
 
 
@@ -102,6 +112,13 @@ class FoldAssignment(BaseModel):
     role: SampleRole
     fold_role: SampleRole | None = None
     purge_reason: str | None = None
+    fold_start_ts: datetime | None = None
+    fold_end_ts: datetime | None = None
+
+    @field_validator("fold_start_ts", "fold_end_ts")
+    @classmethod
+    def validate_boundary(cls, value: datetime | None) -> datetime | None:
+        return _ensure_utc(value, "fold_boundary") if value is not None else None
 
 
 class SplitManifest(BaseModel):
@@ -119,6 +136,8 @@ class SplitManifest(BaseModel):
     purged_count: int
     embargoed_count: int
     assignments: dict[str, FoldAssignment]
+    identity_version: Literal["split-v2"] = "split-v2"
+    policy_content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 def assign_folds(
@@ -135,6 +154,14 @@ def assign_folds(
     - SPLIT-01-AC3: Any sealed test fold overlapping previous exposure is strictly rejected.
     """
     # 1. SPLIT-01-AC3: Check exposure log against sealed test folds
+    identities = [s.sample_id for s in samples]
+    if any(not identity.strip() for identity in identities):
+        raise ValueError("SAMPLE_ID_REQUIRED")
+    if len(set(identities)) != len(identities):
+        raise ValueError("DUPLICATE_SAMPLE_ID")
+    policy_payload = split_policy.model_dump(mode="json")
+    policy_payload["enforce_inter_fold_embargo"] = enforce_inter_fold_embargo
+    policy_digest = hashlib.sha256(json.dumps(policy_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     if exposure_log:
         for fold in split_policy.folds:
             if fold.role == SampleRole.SEALED_TEST:
@@ -142,7 +169,7 @@ def assign_folds(
                     exp_start = _ensure_utc(exp["exposed_start"], "exposed_start")
                     exp_end = _ensure_utc(exp["exposed_end"], "exposed_end")
                     # Check for temporal overlap
-                    if not (fold.end_ts < exp_start or fold.start_ts > exp_end):
+                    if fold.start_ts < exp_end and exp_start < fold.end_ts:
                         raise ExposedPeriodViolationError(
                             f"EXPOSED_PERIOD_CANNOT_BE_SEALED: fold [{fold.start_ts} .. {fold.end_ts}] "
                             f"overlaps prior exposure [{exp_start} .. {exp_end}] (run_id: {exp.get('run_id')})"
@@ -161,7 +188,7 @@ def assign_folds(
         # Find matching fold window
         matched_fold: FoldWindow | None = None
         for fold in split_policy.folds:
-            if fold.start_ts <= s.decision_ts <= fold.end_ts:
+            if fold.start_ts <= s.decision_ts < fold.end_ts:
                 matched_fold = fold
                 break
 
@@ -174,13 +201,20 @@ def assign_folds(
             assignments[s.sample_id] = assignment
             continue
 
+        if s.label_available_at is None:
+            assignments[s.sample_id] = FoldAssignment(
+                sample_id=s.sample_id, role=SampleRole.EXCLUDED,
+                fold_role=matched_fold.role, purge_reason="LABEL_AVAILABILITY_UNKNOWN",
+            )
+            continue
+
         # Check inter-fold embargo
         if enforce_inter_fold_embargo:
             is_embargoed = False
             for prior_fold in split_policy.folds:
-                if prior_fold.end_ts < matched_fold.start_ts:
+                if prior_fold.end_ts <= matched_fold.start_ts:
                     embargo_boundary = prior_fold.end_ts + embargo_delta
-                    if prior_fold.end_ts < s.decision_ts <= embargo_boundary:
+                    if prior_fold.end_ts <= s.decision_ts < embargo_boundary:
                         is_embargoed = True
                         break
             if is_embargoed:
@@ -195,7 +229,7 @@ def assign_folds(
                 continue
 
         # SPLIT-01-AC1: Boundary purge check
-        if s.label_end_ts > matched_fold.end_ts:
+        if max(s.label_end_ts, s.label_available_at) >= matched_fold.end_ts:
             assignment = FoldAssignment(
                 sample_id=s.sample_id,
                 role=SampleRole.PURGED,
@@ -212,6 +246,8 @@ def assign_folds(
             sample_id=s.sample_id,
             role=role,
             fold_role=role,
+            fold_start_ts=matched_fold.start_ts,
+            fold_end_ts=matched_fold.end_ts,
         )
         assignments[s.sample_id] = assignment
 
@@ -222,8 +258,16 @@ def assign_folds(
         elif role == SampleRole.SEALED_TEST:
             test_c += 1
 
+    identity_payload = {
+        "domain": "split-v2", "policy": policy_digest,
+        "samples": [s.model_dump(mode="json") for s in sorted(samples, key=lambda s: s.sample_id)],
+        "assignments": {k: v.model_dump(mode="json") for k, v in sorted(assignments.items())},
+        "exposure": sorted([json.dumps(e, sort_keys=True, default=lambda v: v.isoformat()) for e in (exposure_log or [])]),
+    }
+    split_digest = hashlib.sha256(json.dumps(identity_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return SplitManifest(
-        split_id=f"{split_policy.policy_id}_{int(datetime.now(UTC).timestamp())}",
+        split_id=f"split_v2_{split_digest}",
+        policy_content_sha256=policy_digest,
         policy_id=split_policy.policy_id,
         policy_version=split_policy.version,
         total_samples=len(samples),

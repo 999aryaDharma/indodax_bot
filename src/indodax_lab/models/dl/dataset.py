@@ -54,7 +54,11 @@ class CausalSequenceConfig(BaseModel):
         super().__init__(**data)
         if self.sequence_length <= 0:
             raise ValueError(f"POSITIVE_SEQUENCE_LENGTH_REQUIRED: Got {self.sequence_length}")
-        if self.target_column in self.feature_columns:
+        if self.max_gap_seconds <= 0 or not np.isfinite(self.padding_value):
+            raise ValueError("POSITIVE_GAP_FINITE_PADDING_REQUIRED")
+        if not self.feature_columns or len(set(self.feature_columns)) != len(self.feature_columns):
+            raise ValueError("UNIQUE_FEATURE_ALLOWLIST_REQUIRED")
+        if any(c == self.target_column or c.lower().startswith(("future_", "label_", "target_", "outcome_", "exit_", "entry_", "net_return", "binary_label")) for c in self.feature_columns):
             raise TargetLeakageForbiddenError(
                 f"TARGET_LEAKAGE_FORBIDDEN: Target '{self.target_column}' cannot be part of feature columns"
             )
@@ -78,9 +82,9 @@ class CausalSequenceBatch:
         window_timestamps: list[list[datetime]],
         feature_names: list[str],
     ) -> None:
-        self.inputs = inputs  # shape: [N, seq_len, num_features]
-        self.masks = masks    # shape: [N, seq_len], bool
-        self.targets = targets  # shape: [N]
+        self.inputs = np.frombuffer(inputs.tobytes(), dtype=inputs.dtype).reshape(inputs.shape)
+        self.masks = np.frombuffer(masks.tobytes(), dtype=masks.dtype).reshape(masks.shape)
+        self.targets = np.frombuffer(targets.tobytes(), dtype=targets.dtype).reshape(targets.shape)
         self.sample_ids = sample_ids
         self.timestamps = timestamps
         self.window_timestamps = window_timestamps
@@ -111,6 +115,28 @@ class CausalSequenceBuilder:
 
     def build(self, df: pd.DataFrame) -> CausalSequenceBatch:
         """Extract sequence windows respecting pair boundaries and temporal continuity."""
+        # Frozen models may still contain caller-mutated lists; validate at use.
+        CausalSequenceConfig(**self.config.model_dump())
+        required = [self.config.pair_column, self.config.timestamp_column, "role", "row_ready_at", self.config.target_column, *self.config.feature_columns]
+        if not df.columns.is_unique or not set(required).issubset(df.columns):
+            raise ValueError("SEQUENCE_ROLE_READINESS_FEATURES_REQUIRED")
+        df = df.copy()
+        if "sample_id" in df and (not df["sample_id"].map(lambda v: isinstance(v, str) and bool(v.strip())).all() or df["sample_id"].duplicated().any()):
+            raise ValueError("SEQUENCE_SAMPLE_ID_INVALID")
+        for column in (self.config.timestamp_column, "row_ready_at"):
+            for value in df[column]:
+                ts = pd.Timestamp(value)
+                if pd.isna(ts) or ts.tzinfo is None or ts.utcoffset().total_seconds() != 0:
+                    raise ValueError("SEQUENCE_UTC_REQUIRED")
+            df[column] = pd.to_datetime(df[column], utc=True)
+        if df[self.config.pair_column].isna().any() or not df["role"].isin(["TRAIN", "VALIDATION", "CALIBRATION", "SEALED_TEST", "PURGED", "EMBARGOED", "EXCLUDED"]).all():
+            raise ValueError("SEQUENCE_IDENTITY_ROLE_INVALID")
+        if (df["row_ready_at"] > df[self.config.timestamp_column]).any():
+            raise ValueError("SEQUENCE_FEATURE_NOT_READY")
+        if not np.isfinite(df[self.config.feature_columns].to_numpy(dtype=float)).all():
+            raise ValueError("SEQUENCE_NONFINITE_FEATURE")
+        if "eligible" in df and not df["eligible"].eq(True).all():
+            raise ValueError("SEQUENCE_INELIGIBLE_FEATURE")
         all_inputs: list[np.ndarray] = []
         all_masks: list[np.ndarray] = []
         all_targets: list[float] = []
@@ -136,9 +162,17 @@ class CausalSequenceBuilder:
             time_diffs = ts_series.diff().dt.total_seconds()
 
             # A new segment starts at row 0 or when gap > max_gap_seconds
-            segment_ids = (time_diffs > self.config.max_gap_seconds).cumsum()
+            if (time_diffs.dropna() <= 0).any():
+                raise ValueError("SEQUENCE_STRICT_CHRONOLOGY_REQUIRED")
+            breaks = time_diffs > self.config.max_gap_seconds
+            for column in ("role", "session_id", "fold_id", "fold_start_ts", "fold_end_ts"):
+                if column in pair_df:
+                    breaks |= pair_df[column].ne(pair_df[column].shift())
+            segment_ids = breaks.cumsum()
 
             for seg_id, seg_df in pair_df.groupby(segment_ids):
+                if seg_df.iloc[0]["role"] in {"PURGED", "EMBARGOED", "EXCLUDED"}:
+                    continue
                 seg_df = seg_df.reset_index(drop=True)
                 seg_len = len(seg_df)
 
@@ -149,12 +183,12 @@ class CausalSequenceBuilder:
                 for t in range(seg_len):
                     # If target at step t is missing/nan (e.g. unknown forward return at tail), skip
                     tgt_val = target_series[t]
-                    if np.isnan(tgt_val):
+                    if not np.isfinite(tgt_val):
                         continue
 
                     available_steps = t + 1
                     eval_ts = seg_ts[t]
-                    sample_id = f"{pair}_{eval_ts.isoformat()}"
+                    sample_id = seg_df.iloc[t]["sample_id"] if "sample_id" in seg_df else f"{pair}_{eval_ts.isoformat()}"
 
                     if available_steps >= seq_len:
                         # Full window without padding

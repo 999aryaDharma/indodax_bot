@@ -26,6 +26,140 @@ BASE_TIME = datetime(2024, 1, 1, 10, 0, tzinfo=UTC)
 PAIR = "btc_idr"
 
 
+def test_open_price_proxy_cannot_claim_verified_simulator_fills():
+    label = build_net_return_label("proxy", PAIR, BASE_TIME + timedelta(hours=1),
+        _make_market_bars(10), NetReturnConfig(cost_schedule_table=_make_schedule_table()))
+    assert label.execution_model_version == "open_price_proxy_v2"
+    assert label.execution_fidelity == "RESEARCH_PRICE_PROXY_ONLY"
+    assert not label.promotion_eligible
+    with pytest.raises(ValueError, match="UNSUPPORTED_EXECUTION_MODEL"):
+        NetReturnConfig(execution_model_version="conservative_v1")
+
+
+def test_delayed_entry_observation_delays_label_availability():
+    bars = _make_market_bars(10)
+    bars[1]["available_at"] = BASE_TIME + timedelta(days=2)
+    label = build_net_return_label(
+        "delayed", PAIR, BASE_TIME + timedelta(hours=1), bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.label_available_at == BASE_TIME + timedelta(days=2)
+
+
+def test_other_pair_cannot_supply_label_prices():
+    bars = _make_market_bars(10)
+    other = [dict(bar, pair="eth_idr", open=Decimal("1")) for bar in bars]
+    label = build_net_return_label(
+        "mixed", PAIR, BASE_TIME + timedelta(hours=1), other + bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.entry_price == Decimal("501000000")
+    assert label.exit_price == Decimal("505000000")
+
+
+@pytest.mark.parametrize("bar_index", [1, 3, 5])
+def test_unclosed_outcome_source_excludes_label(bar_index):
+    bars = _make_market_bars(10)
+    bars[bar_index]["is_closed"] = False
+    label = build_net_return_label(
+        "partial", PAIR, BASE_TIME + timedelta(hours=1), bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.status == "EXCLUDED"
+    assert label.net_return is None
+
+
+def test_gap_inside_outcome_horizon_excludes_label():
+    bars = _make_market_bars(10)
+    del bars[3]
+    label = build_net_return_label(
+        "gap", PAIR, BASE_TIME + timedelta(hours=1), bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.status == "EXCLUDED"
+
+
+def test_non_utc_outcome_availability_is_rejected():
+    from datetime import timezone
+
+    bars = _make_market_bars(10)
+    bars[1]["available_at"] = bars[1]["available_at"].astimezone(
+        timezone(timedelta(hours=8))
+    )
+    with pytest.raises(ValueError, match="UTC"):
+        build_net_return_label(
+            "tz", PAIR, BASE_TIME + timedelta(hours=1), bars,
+            NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+        )
+
+
+def test_duplicate_outcome_bar_cannot_choose_arbitrary_price():
+    bars = _make_market_bars(10)
+    bars.append(dict(bars[1], open=Decimal("1")))
+    with pytest.raises(ValueError, match="DUPLICATE"):
+        build_net_return_label(
+            "duplicate", PAIR, BASE_TIME + timedelta(hours=1), bars,
+            NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+        )
+
+
+def test_closed_outcome_cannot_be_available_before_close():
+    bars = _make_market_bars(10)
+    bars[5]["available_at"] = bars[5]["open_time"]
+    with pytest.raises(ValueError, match="AVAILABILITY"):
+        build_net_return_label(
+            "early", PAIR, BASE_TIME + timedelta(hours=1), bars,
+            NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+        )
+
+
+def test_partial_bar_with_early_availability_remains_auditable():
+    bars = _make_market_bars(10)
+    bars[5]["available_at"] = bars[5]["open_time"]
+    bars[5]["is_closed"] = False
+    label = build_net_return_label(
+        "partial-early", PAIR, BASE_TIME + timedelta(hours=1), bars,
+        NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert label.status == "EXCLUDED"
+    assert label.exclusion_reason == "UNCLOSED_OUTCOME_SOURCE"
+
+
+def test_generated_label_frame_flows_through_split_and_training():
+    import pandas as pd
+
+    from indodax_lab.labels.materializer import materialize_training_dataset
+    from indodax_lab.labels.splits import (
+        FoldWindow, SampleRecord, SampleRole, SplitPolicy, assign_folds,
+    )
+
+    decision = BASE_TIME + timedelta(hours=1)
+    labels = build_net_return_labels_frame(
+        [{"sample_id": "real-label", "pair": PAIR, "decision_ts": decision}],
+        _make_market_bars(10), NetReturnConfig(cost_schedule_table=_make_schedule_table()),
+    )
+    assert "label_end_ts" in labels.columns
+    records = [SampleRecord(**row) for row in labels[
+        ["sample_id", "pair", "decision_ts", "label_end_ts", "label_available_at"]
+    ].to_dict("records")]
+    splits = assign_folds(records, SplitPolicy(policy_id="real", version="1", folds=[
+        FoldWindow(role=SampleRole.TRAIN, start_ts=BASE_TIME,
+                   end_ts=BASE_TIME + timedelta(days=1)),
+    ]))
+    features = pd.DataFrame([{
+        "sample_id": "real-label", "pair": PAIR, "decision_ts": decision,
+        "row_ready_at": decision, "ret_1": 0.01,
+        "eligible": True,
+    }])
+    artifact = materialize_training_dataset(
+        features, labels, splits, "net_return", ["ret_1"], "snapshot", "1", "cs-v1",
+    )
+    train = artifact.get_role_data("TRAIN")
+    assert train["sample_id"].tolist() == ["real-label"]
+    assert train["label_end_ts"].tolist() == [BASE_TIME + timedelta(hours=5)]
+    assert train["label_available_at"].tolist() == [BASE_TIME + timedelta(hours=6)]
+
+
 def _make_schedule_table() -> CostScheduleTable:
     intervals = []
     for side in (OrderSide.BUY, OrderSide.SELL):
