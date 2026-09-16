@@ -1,0 +1,23 @@
+strategy_id: "C01_MTF"
+version: "1.0.0"
+family: "breakout_with_regime_context"
+universe_tier: "top_liquid"
+timeframes:
+  - "5m"
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  signal_interval: "5m"
+  context_interval: "1h"
+  context_asof_policy: "closed_available"
+  lookback_bars: 20
+  volume_multiplier: 1.0
+  atr_multiplier: 2.0
+  desired_qty: "0.1"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "5m breakout signals gated by strictly as-of closed 1h context; research only"
