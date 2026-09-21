@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: simulation | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: SIM-03, SHADOW-02
 
 ## Unlocks
 
-SIM-03, SHADOW-02
+SHADOW-02, SIM-03, RP-03
 
 ## Required Reading
 

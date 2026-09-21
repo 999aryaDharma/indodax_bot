@@ -1,5 +1,9 @@
 # Agent instructions — Indodax Research Lab
 
+## Current frozen target and audit
+
+Read `docs/production/FROZEN-SYSTEMS.md` and its Production Main/Research Workbench documents before interpreting older scope text. They supersede conflicting older target boundaries. Current operation remains paper/shadow only. `docs/implementation/README.md` indexes the current audit/program; `docs/sprints/sprint-manifest.json` remains the only status/DAG authority. Historical Task15 WIP notes below are provenance, not the current implementation inventory.
+
 ## Authority and scope
 
 Read `docs/README.md` then `docs/specs/00-master-product-technical-spec.md`. Current user instruction overrides repo guidance. Accepted ADR resolves material conflicts; exact dataset contract lives in `docs/research/dataset-feature-contracts.md` with overrides in ADR-002. Code/tests describe current behavior, not silent permission to weaken intended invariants. Old 35-task plan is crosswalk history, not active dependency ordering.

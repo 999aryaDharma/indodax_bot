@@ -1,0 +1,9 @@
+# ADR-006 — Immutable manifests and append-only lifecycle evidence
+
+Status: ACCEPTED planning decision, 2026-09-21. Implementation remains PLANNED. Implements frozen dataset/experiment/candidate identity requirements.
+
+Decision: manifests are deep-immutable typed values with canonical semantic SHA-256 and separate full-envelope storage checksum. Exclude local paths and ambient/audit timing from semantic identity. Bind all execution-affecting references, versions, ordered features, policies, seed and environment. Creation time is explicit audit metadata. Registry versions reject semantic overwrite; drafts have revision compare-and-swap; state transitions append events outside immutable artifacts.
+
+Reuse current snapshot/quality/publication, strategy registry, model verification and experiment/job primitives behind services. Do not introduce another financial ledger or delete legacy evidence to fit the new model. Experiments clone on configuration change; failed runs remain. Candidate retraining creates a new candidate and new agent. A compatible cohort explicitly records cash, policies and observation windows.
+
+Consequences: existing absolute-root inventory digest is evidence only, not portable dataset identity. New registry schema needs explicit migration/import with original hashes preserved. Do not infer missing lineage. Invalid or unverifiable artifacts remain archived/unqualified. Arbitrary callable import and external pickle are forbidden. Detailed fields are in `docs/implementation/CONTRACTS.md`.

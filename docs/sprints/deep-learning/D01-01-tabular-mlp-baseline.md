@@ -32,7 +32,7 @@ Direct consumers: D02-01, G01-01, F01-02, L01-01
 
 ## Unlocks
 
-D02-01, G01-01, F01-02, L01-01
+D02-01, F01-02, G01-01, L01-01
 
 ## Required Reading
 

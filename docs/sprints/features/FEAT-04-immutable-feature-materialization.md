@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: data | Domain: features | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: LABEL-01, TRAIN-01, STRAT-01, LOB-01
 
 ## Unlocks
 
-LABEL-01, TRAIN-01, STRAT-01, LOB-01
+LABEL-01, TRAIN-01, LOB-01, STRAT-01
 
 ## Required Reading
 

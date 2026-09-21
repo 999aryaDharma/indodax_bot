@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: feature | Domain: reporting | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: REPORT-02, AGENT-01
 
 ## Unlocks
 
-REPORT-02, AGENT-01
+AGENT-01, REPORT-02
 
 ## Required Reading
 

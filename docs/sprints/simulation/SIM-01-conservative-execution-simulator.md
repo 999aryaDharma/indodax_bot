@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: feature | Domain: simulation | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: SIM-02, LABEL-01, ML-02
 
 ## Unlocks
 
-SIM-02, LABEL-01, ML-02
+LABEL-01, ML-02, SIM-02
 
 ## Required Reading
 

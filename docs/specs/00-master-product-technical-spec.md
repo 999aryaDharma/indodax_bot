@@ -1,5 +1,19 @@
 # Master product and technical specification
 
+## Frozen v1.0 precedence update
+
+[Production Main and Research Workbench](../production/FROZEN-SYSTEMS.md) are the current target architecture. Conflicting older exclusions of dashboard/production-target design and older host allocations below are SUPERSEDED target guidance. Real-money execution remains unauthorized. See [CR and impact](../implementation/CHANGE-REQUEST.md), [current audit](../implementation/CURRENT-STATE.md) and ADR-005/006/007. Legacy FR-01..FR-18 remain traceability anchors, not permission to weaken frozen gates.
+
+Additional frozen requirements:
+
+| ID | Requirement |
+|---|---|
+| FR-19 | Immutable composable Research Workbench registries, experiments, candidates and isolated tournament services |
+| FR-20 | One shared candidate/portfolio/risk/OMS/fill/accounting runtime with environment adapters and automated parity |
+| FR-21 | Safe QuantOps research control plane; no production write capabilities |
+| FR-22 | Manifest-backed dashboard and promotion-request bridge; no direct activation |
+| FR-23 | Production authority, atomic financial recovery, durable governance and complete release evidence |
+
 Version: 2.0.0 | Planning baseline: `8a8e9f2` | Date: 2026-09-14
 Classification: **PARTIALLY IMPLEMENTED; RESEARCH / EXPERIMENTAL SYSTEM**.
 Status: documented scope; implementation proceeds only through verified sprint gates.

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: data | Domain: labels | Portfolio: CORE
 
@@ -32,7 +32,7 @@ Direct consumers: SPLIT-01, D03-01
 
 ## Unlocks
 
-SPLIT-01, D03-01
+D03-01, SPLIT-01
 
 ## Required Reading
 

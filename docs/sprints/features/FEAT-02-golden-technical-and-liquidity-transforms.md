@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: data | Domain: features | Portfolio: CORE
 
@@ -32,7 +32,7 @@ Direct consumers: FEAT-04
 
 ## Unlocks
 
-FEAT-04
+FEAT-04, RP-02
 
 ## Required Reading
 

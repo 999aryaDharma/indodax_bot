@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: integration | Domain: models | Portfolio: CORE
 
@@ -34,7 +34,7 @@ Direct consumers: JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01
 
 ## Unlocks
 
-JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01
+M03-01, M04-01, M05-01, M06-01, JOB-03, SHADOW-01, QA-01, RW2-02, RW4-01
 
 ## Required Reading
 

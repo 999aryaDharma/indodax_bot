@@ -43,7 +43,7 @@ def validate(m, root=ROOT):
         if s.get('unlocks')!=expected:errors.append(id+': Unlock projection mismatch')
         if not path.is_file():errors.append(id+': Missing sprint file');continue
         if path.parent.name!=s['domain']:errors.append(id+': Wrong domain folder')
-        text=path.read_text(); headings=re.findall(r'^## (.+)$',text,re.M)
+        text=path.read_text(encoding="utf-8"); headings=re.findall(r'^## (.+)$',text,re.M)
         for h in HEADINGS:
             if h not in headings:errors.append(id+': Missing heading '+h)
             elif not re.search(r'^## '+re.escape(h)+r'\n\n\S',text,re.M):errors.append(id+': Empty heading '+h)
@@ -55,7 +55,7 @@ def validate(m, root=ROOT):
             if not (root/p).is_file():errors.append(id+': Missing Required Reading '+p)
         if not s.get('requirements'):errors.append(id+': Missing FR mapping')
         for r in s.get('requirements',[]):
-            if r not in (root/'docs/specs/00-master-product-technical-spec.md').read_text():errors.append(id+': Unknown requirement '+r)
+            if r not in (root/'docs/specs/00-master-product-technical-spec.md').read_text(encoding="utf-8"):errors.append(id+': Unknown requirement '+r)
         if len(s.get('acceptance_test_mapping',[]))<3:errors.append(id+': Missing behavior-test mapping')
         for ac in s.get('acceptance_test_mapping',[]):
             if ac['criterion'] not in text or ac['behavior'] not in text:errors.append(id+': AC mapping missing from spec')
@@ -73,11 +73,11 @@ def validate(m, root=ROOT):
             if file.relative_to(root).as_posix() not in paths:errors.append('Unreferenced sprint '+str(file))
     # Validate local Markdown links in the newly governed documentation surface.
     docfiles=[root/'AGENTS.md',root/'docs/README.md']
-    for folder in ['.agents','docs/specs','docs/sprints','docs/agent','docs/templates','docs/decisions','docs/quality','docs/runbooks']:
+    for folder in ['.agents','docs/specs','docs/sprints','docs/agent','docs/templates','docs/decisions','docs/quality','docs/runbooks','docs/implementation','docs/production']:
         docfiles.extend((root/folder).rglob('*.md'))
     for file in docfiles:
         if not file.exists():errors.append('Missing documentation '+str(file));continue
-        text=file.read_text()
+        text=file.read_text(encoding="utf-8")
         for target in re.findall(r'\]\(([^)]+)\)',text):
             if '://' in target or target.startswith(('#','mailto:')):continue
             clean=target.split('#',1)[0]
@@ -91,21 +91,21 @@ def refresh(m):
             s['status']='READY' if all(by[d]['status']=='DONE' for d in s['dependencies']) else 'PLANNED'
         s['unlocks']=[t['id'] for t in rows if s['id'] in t['dependencies']]
         path=ROOT/s['path']
-        text=path.read_text()
+        text=path.read_text(encoding="utf-8")
         text=re.sub(r'^Status: \w+$','Status: '+s['status'],text,count=1,flags=re.M)
         text=re.sub(r'(?<=## Depends On\n\n).*?(?=\n\n## Unlocks)', '\n'.join('- '+d+' — '+by[d]['title'] for d in s['dependencies']) or 'None. This capability can establish its own offline acceptance fixture.',text,flags=re.S)
         text=re.sub(r'(?<=## Unlocks\n\n).*?(?=\n\n## Required Reading)', ', '.join(s['unlocks']) or 'No mandatory dependent sprint.',text,flags=re.S)
-        path.write_text(text)
-    (ROOT/MANIFEST).write_text(json.dumps(m,indent=2,ensure_ascii=False)+'\n')
+        path.write_text(text, encoding="utf-8")
+    (ROOT/MANIFEST).write_text(json.dumps(m,indent=2,ensure_ascii=False)+'\n', encoding="utf-8")
     _,depth=validate(m)
-    def put(p,text):(ROOT/p).write_text(text.strip()+'\n')
+    def put(p,text):(ROOT/p).write_text(text.strip()+'\n', encoding="utf-8")
     ready=[s['id'] for s in rows if s['status']=='READY']
     put('docs/sprints/STATUS-SUMMARY.md','# Current status summary\n\nDerived from manifest; historical baseline is retained separately.\n\n'+str(dict(Counter(s['status'] for s in rows)))+'\n\nREADY: '+', '.join(ready)+'.\n')
     index=['# Sprint index','Derived from manifest. Historical DONE does not imply fresh test execution.','| ID | Feature | Domain | Priority | Type | Dependencies | State | Path |','|---|---|---|---|---|---|---|---|']
     for s in rows:index.append(f"| {s['id']} | {s['title']} | {s['domain']} | {s['priority']} | {s['type']} | {', '.join(s['dependencies']) or '—'} | {s['status']} | [Spec]({os.path.relpath(s['path'],'docs/sprints')}) |")
     put('docs/sprints/00-sprint-index.md','\n'.join(index))
     wavefile=ROOT/'docs/sprints/02-execution-waves.md'
-    pre=wavefile.read_text().split('## Wave 0',1)[0]
+    pre=wavefile.read_text(encoding="utf-8").split('## Wave 0',1)[0]
     pre=re.sub(r'(?<=## Computed initial queue\n\n).*?(?=\n\n)',', '.join(ready)+'. Verify external gates and shared-file ownership before claim.',pre,count=1,flags=re.S)
     waves=[pre.strip()]
     for level in sorted(set(depth.values())):
@@ -116,13 +116,13 @@ def refresh(m):
         fmap+=['## '+domain,'\n'.join(f"- [{s['id']} — {s['title']}]({os.path.relpath(s['path'],'docs/sprints')}) — {s['tier']}; {s['goal']}" for s in rows if s['domain']==domain)]
     put('docs/sprints/FEATURE-MAP.md','\n\n'.join(fmap))
     graphpath=ROOT/'docs/sprints/01-dependency-graph.md'
-    tail=graphpath.read_text().split('## Selected critical boundaries',1)[1]
+    tail=graphpath.read_text(encoding="utf-8").split('## Selected critical boundaries',1)[1]
     tail=re.sub(r'Nodes: \d+\. Edges: \d+\.',f"Nodes: {len(rows)}. Edges: {sum(len(s['dependencies']) for s in rows)}.",tail)
     graph=['# Dependency graph','Full edge list; prerequisite → consumer. Manifest is authoritative.','| Consumer | Direct prerequisites |','|---|---|']
     graph+=['| '+s['id']+' | '+(', '.join(s['dependencies']) or 'None')+' |' for s in rows]
     put('docs/sprints/01-dependency-graph.md','\n'.join(graph)+'\n\n## Selected critical boundaries'+tail)
     tracepath=ROOT/'docs/quality/requirements-traceability.md'
-    tail=tracepath.read_text().split('| Non-functional requirement',1)[1]
+    tail=tracepath.read_text(encoding="utf-8").split('| Non-functional requirement',1)[1]
     trace=['# Requirements traceability','AC behavior-test mappings and evidence references are in manifest/sprint handoffs.','| Requirement | Domain | Sprints | Evidence owner |','|---|---|---|---|']
     for domain in dict.fromkeys(s['domain'] for s in rows):
         ss=[s for s in rows if s['domain']==domain]
@@ -133,11 +133,11 @@ def self_test(m):
     mutations=[]
     x=copy.deepcopy(m);x['sprints'].append(copy.deepcopy(x['sprints'][0]));mutations.append(('duplicate ID',x,'Duplicate sprint IDs'))
     x=copy.deepcopy(m);x['sprints'][0]['dependencies']=['DOES-NOT-EXIST'];mutations.append(('unknown dependency',x,'Unknown dependency'))
-    x=copy.deepcopy(m);x['sprints'][0]['dependencies']=['BASE-02'];mutations.append(('cycle',x,'Dependency cycle'))
+    x=copy.deepcopy(m);x['sprints'][0]['dependencies']=[x['sprints'][0]['id']];mutations.append(('cycle',x,'Dependency cycle'))
     x=copy.deepcopy(m);x['sprints'][0]['path']='docs/sprints/missing.md';mutations.append(('missing file',x,'Missing sprint file'))
     x=copy.deepcopy(m);x['sprints'][-1]['status']='READY';mutations.append(('premature READY',x,'Premature READY'))
     x=copy.deepcopy(m);x['sprints'][0]['required_reading'].append('nonexistent-spec.md');mutations.append(('missing reading',x,'Missing Required Reading'))
-    x=copy.deepcopy(m);x['sprints'][0]['evidence']=None;mutations.append(('false DONE',x,'DONE without evidence'))
+    x=copy.deepcopy(m);x['sprints'][0]['status']='DONE';x['sprints'][0]['evidence']=None;mutations.append(('false DONE',x,'DONE without evidence'))
     for name,x,expected in mutations:
         errors,_=validate(x)
         if not any(expected in e for e in errors):raise AssertionError('Mutation escaped: '+name)
@@ -147,7 +147,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--refresh',action='store_true')
     parser.add_argument('--self-test',action='store_true')
-    args=parser.parse_args();m=json.loads((ROOT/MANIFEST).read_text())
+    args=parser.parse_args();m=json.loads((ROOT/MANIFEST).read_text(encoding="utf-8"))
     if args.refresh:refresh(m)
     errors,depth=validate(m)
     if errors:

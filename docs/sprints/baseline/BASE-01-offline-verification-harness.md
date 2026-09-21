@@ -32,7 +32,7 @@ None. This capability can establish its own offline acceptance fixture.
 
 ## Unlocks
 
-BASE-02, BASE-03, BASE-04, DATA-01
+BASE-02, BASE-03, BASE-04, DATA-01, RP-01
 
 ## Required Reading
 

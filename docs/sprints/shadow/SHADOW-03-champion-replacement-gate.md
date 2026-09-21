@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: shadow | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: Release or owner-reviewed research comparison; no required dow
 
 ## Unlocks
 
-No mandatory dependent sprint.
+RW5-02
 
 ## Required Reading
 

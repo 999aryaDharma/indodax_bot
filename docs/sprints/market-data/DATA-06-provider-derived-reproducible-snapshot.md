@@ -34,7 +34,7 @@ Direct consumers: FEAT-01, SIM-03, LOB-01, OPS-02
 
 ## Unlocks
 
-FEAT-01, SIM-03, LOB-01, OPS-02
+FEAT-01, LOB-01, OPS-02, SIM-03, RW1-01
 
 ## Required Reading
 

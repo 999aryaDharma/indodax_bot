@@ -32,7 +32,7 @@ Direct consumers: DATA-02, COST-01
 
 ## Unlocks
 
-DATA-02, COST-01
+DATA-02, COST-01, RW0-01
 
 ## Required Reading
 

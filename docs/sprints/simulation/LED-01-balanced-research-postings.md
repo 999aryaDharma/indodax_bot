@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: simulation | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: SIM-02
 
 ## Unlocks
 
-SIM-02
+SIM-02, PM-02
 
 ## Required Reading
 

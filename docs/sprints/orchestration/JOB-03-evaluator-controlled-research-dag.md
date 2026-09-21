@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: feature | Domain: orchestration | Portfolio: CORE
 
@@ -34,7 +34,7 @@ Direct consumers: QA-01, AGENT-01
 
 ## Unlocks
 
-QA-01, AGENT-01
+AGENT-01, QA-01
 
 ## Required Reading
 

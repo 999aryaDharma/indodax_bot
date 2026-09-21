@@ -1,5 +1,9 @@
 # Research Workbench — UI/UX and Implementation Roadmap
 
+## Executable program — 2026-09-21
+
+Frozen UI/roadmap requirements below are implemented through the [RW task roadmap](../../implementation/research-workbench/ROADMAP.md) and [runtime parity program](../../implementation/runtime-parity/ROADMAP.md). Backend services/contracts precede MCP mutations and dashboard editing. [Current-state audit](../../implementation/CURRENT-STATE.md) distinguishes existing primitives from missing Workbench services. The sprint manifest owns status; this frozen roadmap does not assert implementation completion.
+
 ## 1. Dashboard information architecture
 
 ```text

@@ -9,3 +9,7 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [ADR-003 State and research budgets](ADR-003-state-and-budgets.md)
 - [ADR-004 Host isolation and evidence migration](ADR-004-hosts-and-status-migration.md)
 - [Template](../templates/ADR-template.md)
+
+- [ADR-005 Shared runtime kernel](ADR-005-shared-runtime-kernel.md)
+- [ADR-006 Immutable Workbench identity](ADR-006-immutable-workbench-identity.md)
+- [ADR-007 Execution transaction boundary](ADR-007-execution-transaction-boundary.md)

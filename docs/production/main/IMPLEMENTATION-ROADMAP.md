@@ -1,5 +1,9 @@
 # Production Main — Implementation Roadmap and Open Gap Register
 
+## Audit overlay — 2026-09-21
+
+The frozen requirements below remain unchanged. Current implementation assessment is in [the audit](../../implementation/CURRENT-STATE.md); executable scope is [PM roadmap](../../implementation/production-main/ROADMAP.md). At `fc0b4eb`, shared parser reuse, uncertain-cancel rejection, durable ledger storage, fill IDs, mode fallback and manual re-risk are present but incomplete. Do not treat every historical gap below as wholly missing or as fixed merely because a class exists. Missing reconciliation authority, fabricated re-risk capital, financial crash windows and unsafe control defaults still block activation. [Parity](../../implementation/RUNTIME-PARITY.md) separates common accounting implementation from isolated production storage authority.
+
 **Architecture:** frozen.  
 **Implementation:** incomplete by design; this document tracks remaining work.
 

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: shadow | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: SHADOW-03, QA-01, R01-01, OPS-01, REPORT-02
 
 ## Unlocks
 
-SHADOW-03, QA-01, R01-01, OPS-01, REPORT-02
+R01-01, OPS-01, REPORT-02, SHADOW-03, QA-01
 
 ## Required Reading
 

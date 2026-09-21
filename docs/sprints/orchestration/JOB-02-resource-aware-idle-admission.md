@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: orchestration | Portfolio: CORE
 
@@ -32,7 +32,7 @@ Direct consumers: JOB-03, DL-01, OPS-01
 
 ## Unlocks
 
-JOB-03, DL-01, OPS-01
+DL-01, OPS-01, JOB-03
 
 ## Required Reading
 

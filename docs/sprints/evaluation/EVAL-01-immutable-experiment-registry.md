@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: data | Domain: evaluation | Portfolio: CORE
 
@@ -32,7 +32,7 @@ Direct consumers: EVAL-02, ML-03, JOB-01, OPS-03
 
 ## Unlocks
 
-EVAL-02, ML-03, JOB-01, OPS-03
+EVAL-02, ML-03, OPS-03, JOB-01, RW3-01
 
 ## Required Reading
 

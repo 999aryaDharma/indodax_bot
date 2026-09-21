@@ -1,5 +1,11 @@
 # Trading Bot Research Lab — documentation entry point
 
+## Frozen architecture precedence — 2026-09-21
+
+The canonical target is [Frozen Systems](production/FROZEN-SYSTEMS.md): Production Main plus Research Workbench. Those frozen specifications supersede conflicting older scope/host/UI statements below. Current execution remains paper/shadow only; production target documentation is not activation authorization.
+
+Start current planning at [implementation program](implementation/README.md), [current state](implementation/CURRENT-STATE.md), [parity](implementation/RUNTIME-PARITY.md) and [LUNA-NEXT](implementation/handoff/LUNA-NEXT.md). The repaired sprint manifest remains the sole status/DAG authority. Historical Task15 WIP wording below describes the old planning baseline; current source exists and its review status must be checked, not assumed absent or complete.
+
 Dokumentasi planning v2, 14 September 2026. Proyek **PARTIALLY IMPLEMENTED / RESEARCH-EXPERIMENTAL**, paper/shadow only.
 
 Mulai dari [master specification](specs/00-master-product-technical-spec.md), lalu [audit keadaan aktual](quality/repository-audit.md), [feature map](sprints/FEATURE-MAP.md), dan [sprint index](sprints/00-sprint-index.md).

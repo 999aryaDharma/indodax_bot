@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: feature | Domain: strategies | Portfolio: CORE
 
@@ -32,7 +32,7 @@ Direct consumers: C10-01, QA-01, M05-01
 
 ## Unlocks
 
-C10-01, QA-01, M05-01
+M05-01, C10-01, QA-01
 
 ## Required Reading
 

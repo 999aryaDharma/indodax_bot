@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: evaluation | Portfolio: CORE
 
@@ -33,7 +33,7 @@ Direct consumers: ML-04, JOB-03, SHADOW-01, SHADOW-03, REPORT-01
 
 ## Unlocks
 
-ML-04, JOB-03, SHADOW-01, SHADOW-03, REPORT-01
+ML-04, JOB-03, REPORT-01, SHADOW-01, SHADOW-03
 
 ## Required Reading
 

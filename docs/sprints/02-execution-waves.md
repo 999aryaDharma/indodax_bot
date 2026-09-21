@@ -8,11 +8,12 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-FEAT-01, COST-01. Verify external gates and shared-file ownership before claim.
+. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
 - BASE-01 — Offline verification harness [DONE; CORE]
+- DOC-01 — Frozen architecture audit and delivery program [REVIEW; CORE]
 
 ## Wave 1
 
@@ -20,165 +21,200 @@ FEAT-01, COST-01. Verify external gates and shared-file ownership before claim.
 - BASE-03 — Trade v2 ownership parsing [DONE; CORE]
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
+- RP-01 — Shared SignalIntent ownership with compatibility [BLOCKED; CORE]
 
 ## Wave 2
 
 - BASE-05 — Unbiased signal observations [DONE; CORE]
 - DATA-02 — Durable immutable publication [DONE; CORE]
-- COST-01 — Time-valid exchange cost schedules [READY; CORE]
+- COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
+- RW0-01 — Immutable Workbench domain manifests [PLANNED; CORE]
 
 ## Wave 3
 
 - BASE-06 — Baseline trust checkpoint [DONE; CORE]
 - DATA-03 — Auditable candle backfill [DONE; CORE]
 - DATA-05 — Reliable forward market collection [DONE; CORE]
-- LED-01 — Balanced research postings [PLANNED; CORE]
+- LED-01 — Balanced research postings [REVIEW; CORE]
+- PM-01 — Authoritative fail-closed pre-write gate [PLANNED; CORE]
 
 ## Wave 4
 
 - DATA-04 — Snapshot quality decisions [DONE; CORE]
+- PM-02 — Atomic financial execution state and recovery [PLANNED; CORE]
 
 ## Wave 5
 
-- UNIV-01 — Point-in-time investable universe [DONE; CORE]
 - BAR-01 — Causal time and event bars [DONE; CORE]
+- UNIV-01 — Point-in-time investable universe [DONE; CORE]
+- PM-03 — Recovery mode and durable operator risk governance [PLANNED; CORE]
+- PM-04 — Venue parser cancellation and supported order semantics [PLANNED; CORE]
 
 ## Wave 6
 
 - DATA-06 — Provider-derived reproducible snapshot [DONE; CORE]
-- SIM-01 — Conservative execution simulator [PLANNED; CORE]
+- SIM-01 — Conservative execution simulator [REVIEW; CORE]
 
 ## Wave 7
 
-- FEAT-01 — Versioned feature registry [READY; CORE]
-- SIM-02 — Portfolio risk and circuit breakers [PLANNED; CORE]
+- FEAT-01 — Versioned feature registry [REVIEW; CORE]
+- SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
+- RW1-01 — Reusable immutable dataset registry [PLANNED; CORE]
 
 ## Wave 8
 
-- FEAT-02 — Golden technical and liquidity transforms [PLANNED; CORE]
-- FEAT-03 — As-of market context [PLANNED; CORE]
-- SIM-03 — Deterministic replay judge [PLANNED; CORE]
+- FEAT-02 — Golden technical and liquidity transforms [REVIEW; CORE]
+- FEAT-03 — As-of market context [REVIEW; CORE]
+- SIM-03 — Deterministic replay judge [REVIEW; CORE]
+- RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
 
 ## Wave 9
 
-- FEAT-04 — Immutable feature materialization [PLANNED; CORE]
-- SIM-04 — Net-cost risk and capacity metrics [PLANNED; CORE]
+- FEAT-04 — Immutable feature materialization [REVIEW; CORE]
+- SIM-04 — Net-cost risk and capacity metrics [REVIEW; CORE]
 
 ## Wave 10
 
-- LABEL-01 — Execution-aligned net return labels [PLANNED; CORE]
-- STRAT-01 — Declarative strategy protocol [PLANNED; CORE]
-- EVAL-01 — Immutable experiment registry [PLANNED; CORE]
-- LOB-01 — Forward book dataset eligibility [PLANNED; EXPERIMENTAL]
+- EVAL-01 — Immutable experiment registry [REVIEW; CORE]
+- LABEL-01 — Execution-aligned net return labels [REVIEW; CORE]
+- LOB-01 — Forward book dataset eligibility [REVIEW; EXPERIMENTAL]
+- STRAT-01 — Declarative strategy protocol [REVIEW; CORE]
 
 ## Wave 11
 
-- LABEL-02 — Triple barrier outcomes [PLANNED; CORE]
-- C01-01 — Donchian breakout [PLANNED; CORE]
-- C07-01 — Bollinger RSI reversion [PLANNED; CORE]
-- C02-01 — EMA pullback [PLANNED; CORE]
-- C03-01 — Time series momentum [PLANNED; CORE]
-- C04-01 — Cross sectional momentum [PLANNED; CORE]
-- S01-01 — Liquidity screened breakout [PLANNED; CORE]
-- S02-01 — Squeeze expansion [PLANNED; CORE]
+- EVAL-02 — Hard gates and selection diagnostics [REVIEW; CORE]
+- LABEL-02 — Triple barrier outcomes [REVIEW; CORE]
+- JOB-01 — Durable leased jobs [REVIEW; CORE]
+- C01-01 — Donchian breakout [REVIEW; CORE]
+- C02-01 — EMA pullback [REVIEW; CORE]
+- C03-01 — Time series momentum [REVIEW; CORE]
+- C04-01 — Cross sectional momentum [REVIEW; CORE]
 - C05-01 — Volatility breakout [PLANNED; EXTENSION]
 - C06-01 — Directional trend strength [PLANNED; EXTENSION]
+- C07-01 — Bollinger RSI reversion [REVIEW; CORE]
 - C08-01 — Multi timeframe confirmation [PLANNED; EXTENSION]
 - C09-01 — VWAP deviation reversion [PLANNED; EXTENSION]
 - C11-01 — Volatility allocation [PLANNED; EXTENSION]
+- S01-01 — Liquidity screened breakout [REVIEW; CORE]
+- S02-01 — Squeeze expansion [REVIEW; CORE]
 - S03-01 — Abnormal volume continuation [PLANNED; EXTENSION]
 - S04-01 — Order flow imbalance [PLANNED; EXPERIMENTAL]
 - S05-01 — Micro pullback [PLANNED; EXTENSION]
 - S06-01 — Post listing maturation [PLANNED; EXTENSION]
 - S08-01 — Passive mean reversion [PLANNED; EXPERIMENTAL]
 - S09-01 — Tail risk abstention [PLANNED; EXTENSION]
-- EVAL-02 — Hard gates and selection diagnostics [PLANNED; CORE]
-- JOB-01 — Durable leased jobs [PLANNED; CORE]
+- RW2-01 — Durable versioned strategy registry [PLANNED; CORE]
 
 ## Wave 12
 
-- SPLIT-01 — Sealed purged chronological folds [PLANNED; CORE]
-- C10-01 — Regime ensemble [PLANNED; CORE]
+- SPLIT-01 — Sealed purged chronological folds [REVIEW; CORE]
+- OPS-02 — Snapshot transfer and restore [REVIEW; CORE]
+- JOB-02 — Resource-aware idle admission [REVIEW; CORE]
+- C10-01 — Regime ensemble [REVIEW; CORE]
 - C12-01 — Relative strength rotation [PLANNED; EXTENSION]
 - S07-01 — Small cap rotation [PLANNED; EXTENSION]
-- JOB-02 — Resource-aware idle admission [PLANNED; CORE]
-- OPS-02 — Snapshot transfer and restore [PLANNED; CORE]
 
 ## Wave 13
 
-- TRAIN-01 — Verified training dataset assembly [PLANNED; CORE]
-- EVAL-03 — Sealed candidate lifecycle [PLANNED; CORE]
-- OPS-03 — Storage retention and integrity maintenance [PLANNED; CORE]
+- EVAL-03 — Sealed candidate lifecycle [REVIEW; CORE]
+- TRAIN-01 — Verified training dataset assembly [REVIEW; CORE]
+- OPS-03 — Storage retention and integrity maintenance [REVIEW; CORE]
 
 ## Wave 14
 
-- ML-01 — Train-only preprocessing [PLANNED; CORE]
-- REPORT-01 — Compact experiment reports [PLANNED; CORE]
+- ML-01 — Train-only preprocessing [REVIEW; CORE]
+- REPORT-01 — Compact experiment reports [REVIEW; CORE]
 
 ## Wave 15
 
-- ML-02 — Held-out calibration and cost mapper [PLANNED; CORE]
+- ML-02 — Held-out calibration and cost mapper [REVIEW; CORE]
 
 ## Wave 16
 
-- ML-03 — Bounded trial search [PLANNED; CORE]
+- ML-03 — Bounded trial search [REVIEW; CORE]
 
 ## Wave 17
 
-- M01-01 — Calibrated logistic baseline [PLANNED; CORE]
+- M01-01 — Calibrated logistic baseline [REVIEW; CORE]
 
 ## Wave 18
 
-- M02-01 — XGBoost challenger [PLANNED; CORE]
+- M02-01 — XGBoost challenger [REVIEW; CORE]
 
 ## Wave 19
 
-- ML-04 — Portable model bundles and replay [PLANNED; CORE]
+- ML-04 — Portable model bundles and replay [REVIEW; CORE]
 
 ## Wave 20
 
-- JOB-03 — Evaluator-controlled research DAG [PLANNED; CORE]
-- SHADOW-01 — Auditable forward paper decisions [PLANNED; CORE]
-- M03-01 — Random forest regime gate [PLANNED; EXTENSION]
-- M04-01 — Quantile risk regression [PLANNED; EXTENSION]
-- M05-01 — Meta-label signal filter [PLANNED; EXTENSION]
-- M06-01 — Market anomaly risk gate [PLANNED; EXTENSION]
+- M03-01 — Random forest regime gate [REVIEW; EXTENSION]
+- M04-01 — Quantile risk regression [REVIEW; EXTENSION]
+- M05-01 — Meta-label signal filter [REVIEW; EXTENSION]
+- M06-01 — Market anomaly risk gate [REVIEW; EXTENSION]
+- JOB-03 — Evaluator-controlled research DAG [REVIEW; CORE]
+- SHADOW-01 — Auditable forward paper decisions [REVIEW; CORE]
+- RW2-02 — Model registry and offline training services [PLANNED; CORE]
 
 ## Wave 21
 
-- SHADOW-02 — Shared capital reconciliation [PLANNED; CORE]
-- AGENT-01 — Governed research curator [PLANNED; CORE]
+- AGENT-01 — Governed research curator [REVIEW; CORE]
+- SHADOW-02 — Shared capital reconciliation [REVIEW; CORE]
+- RW2-03 — Typed declarative pipeline composer [PLANNED; CORE]
 
 ## Wave 22
 
-- SHADOW-03 — Champion replacement gate [PLANNED; CORE]
-- QA-01 — Wave 1 tournament checkpoint [PLANNED; CORE]
-- OPS-01 — Host profiles and service lifecycle [PLANNED; CORE]
-- REPORT-02 — Read-only Telegram research status [PLANNED; CORE]
+- OPS-01 — Host profiles and service lifecycle [REVIEW; CORE]
+- REPORT-02 — Read-only Telegram research status [REVIEW; CORE]
+- SHADOW-03 — Champion replacement gate [REVIEW; CORE]
+- QA-01 — Wave 1 tournament checkpoint [REVIEW; CORE]
+- RP-02 — Shared candidate feature and exit evaluation [PLANNED; CORE]
 
 ## Wave 23
 
-- DL-01 — Isolated resumable neural training [PLANNED; EXTENSION]
-- R01-01 — Constrained allocation feasibility [PLANNED; EXPERIMENTAL]
-- QA-02 — Boundary security verification [PLANNED; CORE]
-- QA-03 — Capacity and crash recovery qualification [PLANNED; CORE]
+- DL-01 — Isolated resumable neural training [REVIEW; EXTENSION]
+- R01-01 — Constrained allocation feasibility [REVIEW; EXPERIMENTAL]
+- QA-02 — Boundary security verification [REVIEW; CORE]
+- QA-03 — Capacity and crash recovery qualification [REVIEW; CORE]
+- RP-04 — Canonical feed and environment runtime adapters [PLANNED; CORE]
 
 ## Wave 24
 
-- D01-01 — Tabular MLP baseline [PLANNED; EXTENSION]
-- DL-02 — Causal sequence datasets [PLANNED; EXTENSION]
-- F01-01 — Foundation provenance gate [PLANNED; EXPERIMENTAL]
-- REL-01 — Paper research release candidate [PLANNED; CORE]
+- D01-01 — Tabular MLP baseline [REVIEW; EXTENSION]
+- DL-02 — Causal sequence datasets [REVIEW; EXTENSION]
+- F01-01 — Foundation provenance gate [REVIEW; EXPERIMENTAL]
+- REL-01 — Paper research release candidate [REVIEW; CORE]
+- RP-05 — Runtime parity qualification fixtures [PLANNED; CORE]
+- RW3-01 — Experiment lifecycle and backtest orchestration [PLANNED; CORE]
 
 ## Wave 25
 
-- D02-01 — Causal TCN baseline [PLANNED; EXPERIMENTAL]
-- G01-01 — Point-in-time graph challenger [PLANNED; EXPERIMENTAL]
-- F01-02 — Staged foundation adaptation [PLANNED; EXPERIMENTAL]
-- L01-01 — DeepLOB baseline [PLANNED; EXPERIMENTAL]
+- D02-01 — Causal TCN baseline [REVIEW; EXPERIMENTAL]
+- F01-02 — Staged foundation adaptation [REVIEW; EXPERIMENTAL]
+- G01-01 — Point-in-time graph challenger [REVIEW; EXPERIMENTAL]
+- L01-01 — DeepLOB baseline [REVIEW; EXPERIMENTAL]
+- RW4-01 — Immutable candidate packaging and lifecycle [PLANNED; CORE]
 
 ## Wave 26
 
-- D03-01 — ResNet LSTM challenger [PLANNED; EXPERIMENTAL]
-- D04-01 — Compact iTransformer challenger [PLANNED; EXPERIMENTAL]
-- L02-01 — TLOB style challenger [PLANNED; EXPERIMENTAL]
+- D03-01 — ResNet LSTM challenger [REVIEW; EXPERIMENTAL]
+- D04-01 — Compact iTransformer challenger [REVIEW; EXPERIMENTAL]
+- L02-01 — TLOB style challenger [REVIEW; EXPERIMENTAL]
+- RW5-01 — Isolated durable forward-shadow agents [PLANNED; CORE]
+- RW7-01 — Read-only QuantOps MCP boundary [PLANNED; CORE]
+- PM-05 — Candidate-bound release provenance [PLANNED; CORE]
+
+## Wave 27
+
+- RW5-02 — Tournament cohorts leaderboard and qualification [PLANNED; CORE]
+- RW6-01 — Separate shared-capital Portfolio Shadow [PLANNED; CORE]
+- PM-06 — CI security and operational release evidence [PLANNED; CORE]
+
+## Wave 28
+
+- RW8-01 — Research read models and dashboard navigation [PLANNED; CORE]
+- RW9-01 — Promotion request and production export bridge [PLANNED; CORE]
+
+## Wave 29
+
+- RW7-02 — Audited QuantOps research mutations [PLANNED; CORE]
+- RW8-02 — Workbench form and graph editors [PLANNED; CORE]

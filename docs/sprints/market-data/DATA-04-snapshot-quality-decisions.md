@@ -32,7 +32,7 @@ Direct consumers: UNIV-01, BAR-01
 
 ## Unlocks
 
-UNIV-01, BAR-01
+BAR-01, UNIV-01
 
 ## Required Reading
 
