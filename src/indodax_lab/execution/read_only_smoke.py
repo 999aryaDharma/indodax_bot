@@ -10,10 +10,11 @@ The command never prints keys, balances, order IDs, client order IDs, quantities
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime, timedelta
 import json
 import os
-from typing import Any, Sequence
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from indodax_lab.execution.indodax_readonly import (
     IndodaxReadOnlyClient,
