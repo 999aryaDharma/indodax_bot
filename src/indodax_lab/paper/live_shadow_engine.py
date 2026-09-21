@@ -34,6 +34,9 @@ from indodax_lab.backtest.costs import (
     load_cost_schedule_table,
     lookup_cost,
 )
+from indodax_lab.backtest.events import SignalIntent
+from indodax_lab.backtest.ledger import Position as RiskPosition
+from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy
 from indodax_lab.paper.shadow_store import ShadowStateStore
 
 logger = logging.getLogger("live_shadow_engine")
@@ -99,7 +102,7 @@ class LiveShadowEngine:
         state_file: Path = Path("logs/shadow_portfolio_state.sqlite3"),
         initial_cash: Decimal = Decimal("500000.00"),
         max_positions: int = 2,
-        fixed_risk_pct: float = 0.015,
+        fixed_risk_pct: float = 0.005,
         max_cash_per_trade_pct: float = 0.25,
         min_order_idr: Decimal = Decimal("10000.00"),
         cost_schedule_path: Path = Path("configs/costs/indodax_idr_v1.yaml"),
@@ -113,6 +116,23 @@ class LiveShadowEngine:
         self.fixed_risk_pct = fixed_risk_pct
         self.max_cash_per_trade_pct = max_cash_per_trade_pct
         self.min_order_idr = min_order_idr
+
+        self.risk_policy = RiskPolicy(
+            policy_id="shadow_prod_guard",
+            version="1.0.0",
+            max_position_fraction=Decimal(str(max_cash_per_trade_pct)),
+            max_open_positions=max_positions,
+            min_order_notional=min_order_idr,
+            max_daily_loss_fraction=Decimal("0.015"),
+            max_weekly_loss_fraction=Decimal("0.04"),
+            max_drawdown_halt_fraction=Decimal("0.08"),
+            max_account_leverage=Decimal("1.0"),
+        )
+        self.risk_manager = PortfolioRiskManager(
+            policy=self.risk_policy,
+            initial_equity=initial_cash,
+            start_time=datetime.now(UTC),
+        )
 
         self.available_cash = initial_cash
         self.open_positions: Dict[str, ShadowPosition] = {}
@@ -154,6 +174,12 @@ class LiveShadowEngine:
             ClosedTrade(**t_dict) for t_dict in data.get("closed_trades", [])
         ]
         self.audit_log = data.get("audit_log", [])[-200:]
+        risk_state = data.get("risk_state")
+        if isinstance(risk_state, dict):
+            restored = PortfolioRiskManager.from_dict(risk_state)
+            if restored.policy.policy_id != self.risk_policy.policy_id:
+                raise RuntimeError("SHADOW_RISK_POLICY_MISMATCH")
+            self.risk_manager = restored
 
     def save_state(
         self,
@@ -170,6 +196,7 @@ class LiveShadowEngine:
             "open_positions": {k: asdict(v) for k, v in self.open_positions.items()},
             "closed_trades": [asdict(t) for t in self.closed_trades],
             "audit_log": self.audit_log[-200:],
+            "risk_state": self.risk_manager.to_dict(),
             "last_updated_utc": now.isoformat(),
         }
         event_id = f"{event_type}:{now.isoformat()}:{len(self.closed_trades)}:{len(self.open_positions)}"
@@ -186,7 +213,12 @@ class LiveShadowEngine:
         self.open_positions = {}
         self.closed_trades = []
         self.audit_log = []
-        self.save_state()
+        self.risk_manager = PortfolioRiskManager(
+            policy=self.risk_policy,
+            initial_equity=self.initial_cash,
+            start_time=datetime.now(UTC),
+        )
+        self.save_state(event_type="RESET")
 
     # =========================================================================
     # MARKET DATA FETCHING
@@ -443,6 +475,7 @@ class LiveShadowEngine:
             px = live_prices.get(pos.pair, pos.entry_price)
             mark_value += Decimal(str(pos.qty)) * Decimal(str(px))
         total_equity = self.available_cash + mark_value
+        self.risk_manager.observe_equity(total_equity, now_utc)
 
         for pair, df in candle_dfs.items():
             if len(df) < 200:
@@ -552,8 +585,9 @@ class LiveShadowEngine:
                 eval_results.append(diag)
                 continue
 
-            # Position Sizing: 1.5% Risk of Total Equity
-            target_risk_idr = total_equity * Decimal(str(self.fixed_risk_pct))
+            # Strategy sizing proposes risk; PortfolioRiskManager is the final authority.
+            pair_risk_pct = Decimal("0.0025") if pair == "sol_idr" else Decimal(str(self.fixed_risk_pct))
+            target_risk_idr = total_equity * pair_risk_pct
             sl_distance_idr = Decimal(str(sl_mult * atr_val))
             if sl_distance_idr <= 0:
                 diag["action"] = "REJECT_INVALID_ATR"
@@ -565,9 +599,60 @@ class LiveShadowEngine:
             sl_dist_ratio = sl_distance_idr / Decimal(str(live_px))
             desired_notional = target_risk_idr / sl_dist_ratio
 
-            # Plafon: Max 25% cash
+            # Initial proposal is capped before it enters the independent risk authority.
             max_cash_cap = self.available_cash * Decimal(str(self.max_cash_per_trade_pct))
             allocated_budget = min(desired_notional, max_cash_cap)
+
+            risk_positions: Dict[str, RiskPosition] = {}
+            mark_prices: Dict[str, Decimal] = {}
+            for existing in self.open_positions.values():
+                risk_positions[existing.pair] = RiskPosition(
+                    pair=existing.pair,
+                    base_qty=Decimal(str(existing.qty)),
+                    cost_basis=Decimal(str(existing.cash_debited - existing.buy_fee_paid)),
+                )
+                mark_prices[existing.pair] = Decimal(str(live_prices.get(existing.pair, existing.entry_price)))
+            mark_prices[pair] = Decimal(str(live_px))
+            proposed_qty = allocated_budget / Decimal(str(live_px))
+            risk_intent = SignalIntent(
+                intent_id=f"shadow-risk-{pair}-{int(now_utc.timestamp())}",
+                decision_ts=now_utc,
+                pair=pair,
+                side=OrderSide.BUY,
+                desired_qty=proposed_qty,
+                role_preference=OrderRole.TAKER,
+                strategy_id=strat_id,
+            )
+            active_entry_cost = lookup_cost(
+                self.cost_table,
+                market="spot_idr",
+                side=OrderSide.BUY,
+                role=OrderRole.TAKER,
+                event_ts=now_utc,
+            )
+            risk_result = self.risk_manager.assess_order(
+                risk_intent,
+                current_equity=total_equity,
+                current_positions=risk_positions,
+                mark_prices=mark_prices,
+                evaluation_time=now_utc,
+                available_cash=self.available_cash,
+                estimated_fee_rate=active_entry_cost.total_rate,
+                fee_precision=active_entry_cost.precision,
+                quantity_precision=8,
+            )
+            if not risk_result.approved:
+                diag["action"] = "REJECT_RISK_POLICY"
+                diag["reason"] = risk_result.reason_code
+                eval_results.append(diag)
+                self.save_state(event_type="RISK_REJECTION", event_payload={
+                    "pair": pair, "reason": risk_result.reason_code,
+                })
+                continue
+            allocated_budget = min(
+                allocated_budget,
+                risk_result.approved_notional * (Decimal("1") + active_entry_cost.total_rate),
+            )
 
             if allocated_budget < self.min_order_idr:
                 diag["action"] = "REJECT_BELOW_MIN_NOTIONAL"
@@ -584,13 +669,7 @@ class LiveShadowEngine:
             # PAPER EXECUTION PROXY
             # A live ticker is not evidence of maker queue execution. Treat the immediate
             # proxy as taker and charge the point-in-time taker schedule.
-            entry_cost = lookup_cost(
-                self.cost_table,
-                market="spot_idr",
-                side=OrderSide.BUY,
-                role=OrderRole.TAKER,
-                event_ts=now_utc,
-            )
+            entry_cost = active_entry_cost
             gross_notional = allocated_budget / (Decimal("1") + entry_cost.total_rate)
             if gross_notional < max(self.min_order_idr, entry_cost.min_notional):
                 diag["action"] = "REJECT_BELOW_MIN_NOTIONAL"
