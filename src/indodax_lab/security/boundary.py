@@ -9,13 +9,13 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
 import os
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path, PureWindowsPath
-from typing import Any, Mapping
-from pydantic import BaseModel, ConfigDict, Field
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -93,10 +93,12 @@ def safe_resolve_artifact_path(base_dir: Path, target_subpath: str | Path) -> Pa
 
     try:
         candidate.relative_to(base_resolved)
-    except ValueError:
-        raise PathTraversalError(
-            f"PATH_TRAVERSAL_DETECTED: Target path '{target_str}' resolves outside base root '{base_resolved}'."
+    except ValueError as exc:
+        msg = (
+            f"PATH_TRAVERSAL_DETECTED: Target path '{target_str}' "
+            f"resolves outside base root '{base_resolved}'."
         )
+        raise PathTraversalError(msg) from exc
 
     return candidate
 
@@ -112,10 +114,11 @@ def verify_artifact_bytes_safe(data: bytes) -> bool:
     # 1. Check pickle signatures
     for sig in _PICKLE_SIGNATURES:
         if sig in data[:64] or (len(sig) > 4 and sig in data):
-            raise SecurityViolationError(
-                "PICKLE_FORBIDDEN: Deserialization of arbitrary Python pickle payloads is strictly forbidden. "
-                "All research lab artifacts must be plain JSON or Parquet."
+            msg = (
+                "PICKLE_FORBIDDEN: Deserialization of arbitrary Python pickle payloads is "
+                "strictly forbidden. All research lab artifacts must be plain JSON or Parquet."
             )
+            raise SecurityViolationError(msg)
 
     # 2. Check JSON validity if text-like
     try:
@@ -142,10 +145,12 @@ def audit_no_trade_withdraw_keys(env_dict: Mapping[str, str] | None = None) -> l
     for env_key in env_to_check:
         for forbidden in _FORBIDDEN_CREDENTIAL_PATTERNS:
             if forbidden in env_key.upper():
-                raise SecurityViolationError(
+                msg = (
                     f"FORBIDDEN_CREDENTIALS: Live trading or withdrawal credential key '{env_key}' "
-                    "discovered in environment. The research lab operates strictly in paper/shadow mode."
+                    "discovered in environment. The research lab operates strictly in "
+                    "paper/shadow mode."
                 )
+                raise SecurityViolationError(msg)
 
     return []
 
@@ -189,7 +194,8 @@ class SecurityAuditRunner:
         verified.append("ARTIFACT_LOADER_VERIFIED")
 
         # 3. Telegram allowlist audit (QA-02-AC3)
-        from indodax_lab.reporting.telegram import ReadOnlyTelegramReporter, UnauthorizedChatError
+        from indodax_lab.reporting.telegram import ReadOnlyTelegramReporter
+
         reporter = ReadOnlyTelegramReporter(bot_token="test_token", allowed_chat_ids=["10001"])
         assert reporter.is_authorized("10001")
         assert not reporter.is_authorized("99999")
