@@ -45,3 +45,11 @@ def test_2026_cfx_reduction_boundary() -> None:
     after = _cost(datetime(2026, 2, 28, 17, 0, 0, tzinfo=UTC))
     assert before.exchange_fee_rate == Decimal("0.000222")
     assert after.exchange_fee_rate == Decimal("0.000111")
+
+
+
+def test_observed_current_pro_minimum_boundary() -> None:
+    before = _cost(datetime(2026, 9, 20, 23, 59, 59, tzinfo=UTC))
+    current = _cost(datetime(2026, 9, 21, 0, 0, 0, tzinfo=UTC))
+    assert before.min_notional == Decimal("10000")
+    assert current.min_notional == Decimal("25000")
