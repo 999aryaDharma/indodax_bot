@@ -98,7 +98,16 @@ class ReconciliationEngine:
             raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED:evaluation_time")
 
         issues: list[ReconciliationIssue] = []
-        age = evaluation_time - account.server_time
+        if account.server_time.tzinfo is None or account.server_time.utcoffset() != timedelta(0):
+            issues.append(
+                ReconciliationIssue(
+                    code="VENUE_TIMESTAMP_INVALID",
+                    detail="venue account snapshot timestamp is not timezone-aware UTC",
+                )
+            )
+            age = timedelta.max
+        else:
+            age = evaluation_time - account.server_time
         if age < -timedelta(seconds=1):
             issues.append(
                 ReconciliationIssue(
