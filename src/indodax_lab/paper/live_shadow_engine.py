@@ -104,7 +104,7 @@ class LiveShadowEngine:
         max_positions: int = 2,
         fixed_risk_pct: float = 0.005,
         max_cash_per_trade_pct: float = 0.25,
-        min_order_idr: Decimal = Decimal("10000.00"),
+        min_order_idr: Decimal = Decimal("25000.00"),
         cost_schedule_path: Path = Path("configs/costs/indodax_idr_v1.yaml"),
     ) -> None:
         self.state_file = state_file
@@ -846,7 +846,7 @@ class LiveShadowEngine:
                 )
 
         # 5. Portfolio & Risk Governor Ledger
-        lines.append("\n[4] PORTFOLIO LEDGER & RISK CAPACITY:")
+        lines.append("\n[4] PORTFOLIO STATE & RISK CAPACITY:")
         lines.append(f"  * Modal Awal      : Rp {summary['initial_cash']:>12,.0f}")
         lines.append(f"  * Saldo Kas IDR   : Rp {summary['available_cash']:>12,.0f}")
         lines.append(f"  * Nilai Terbuka   : Rp {summary['invested_mark_value']:>12,.0f} (Unrealized PnL: Rp {summary['unrealized_pnl']:>+8,.0f})")
