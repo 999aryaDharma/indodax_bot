@@ -1,20 +1,19 @@
 """Paper research release candidate packaging, rollback, and qualification gates (REL-01).
 
 Guarantees:
-1. REL-01-AC0: Paper research release is packaged with lock, runbook, and verified rollback plan.
+1. REL-01-AC0: Paper research release packaged with lock, runbook, and verified rollback plan.
 2. REL-01-AC1: Restoration of previous compatible artifact is verified and deterministic.
-3. REL-01-AC2: Experimental and extension work cannot be promoted without explicit owner authorization.
-4. REL-01-AC3: Unmet forward duration or trade counts are clearly displayed as pending champion qualification.
+3. REL-01-AC2: Experimental/extension work cannot be promoted without explicit owner authorization.
+4. REL-01-AC3: Unmet forward duration or trades clearly displayed as pending champion status.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import hashlib
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -69,7 +68,7 @@ class ReleaseCandidateManager:
         artifacts_manifest: dict[str, str],
         rollback_target_tag: str | None = None,
     ) -> ReleaseCandidatePackage:
-        """Package a verified release candidate, clearly isolating software status from forward longevity."""
+        """Package release candidate, isolating software status from forward longevity."""
         status_info = self.evaluate_release_status(
             software_ready=True,
             forward_days=forward_days,
@@ -93,12 +92,13 @@ class ReleaseCandidateManager:
         tier: str,
         is_owner_approved: bool = False,
     ) -> str:
-        """Promote a candidate into release runtime, rejecting unauthorized experimental/extension models (REL-01-AC2)."""
+        """Promote a candidate into release runtime, rejecting unauthorized models (REL-01-AC2)."""
         clean_tier = tier.upper()
         if clean_tier in ("EXPERIMENTAL", "EXTENSION") and not is_owner_approved:
             raise ExperimentalPromotionForbiddenError(
-                f"EXPERIMENTAL_PROMOTION_FORBIDDEN: Candidate '{candidate_id}' belongs to {clean_tier} tier "
-                "and cannot be silently promoted into core release runtime without explicit owner approval (REL-01-AC2)."
+                f"EXPERIMENTAL_PROMOTION_FORBIDDEN: Candidate '{candidate_id}' belongs to "
+                f"{clean_tier} tier and cannot be silently promoted into core release runtime "
+                "without explicit owner approval (REL-01-AC2)."
             )
         return "PROMOTED"
 
@@ -109,7 +109,7 @@ class ReleaseCandidateManager:
         target_manifest: dict[str, str],
         artifacts_dir: Path,
     ) -> bool:
-        """Verify checksum integrity of target version artifacts and execute safe rollback (REL-01-AC1).
+        """Verify checksum integrity of target version artifacts and execute rollback (REL-01-AC1).
 
         Raises:
             RollbackIntegrityError: If target artifact is missing or fails checksum comparison.
@@ -118,16 +118,17 @@ class ReleaseCandidateManager:
             artifact_file = artifacts_dir / filename
             if not artifact_file.exists():
                 raise RollbackIntegrityError(
-                    f"ROLLBACK_ARTIFACT_MISSING: Artifact '{filename}' required for rollback to '{target_version}' "
-                    f"was not found in '{artifacts_dir}' (REL-01-AC1)."
+                    f"ROLLBACK_ARTIFACT_MISSING: Artifact '{filename}' required for rollback to "
+                    f"'{target_version}' was not found in '{artifacts_dir}' (REL-01-AC1)."
                 )
 
             data = artifact_file.read_bytes()
             computed_checksum = hashlib.sha256(data).hexdigest()
             if computed_checksum != expected_checksum:
                 raise RollbackIntegrityError(
-                    f"ROLLBACK_CHECKSUM_MISMATCH: Artifact '{filename}' has invalid checksum '{computed_checksum}' "
-                    f"(expected '{expected_checksum}'). Rollback aborted fail-closed (REL-01-AC1)."
+                    f"ROLLBACK_CHECKSUM_MISMATCH: Artifact '{filename}' has invalid checksum "
+                    f"'{computed_checksum}' (expected '{expected_checksum}'). "
+                    "Rollback aborted fail-closed (REL-01-AC1)."
                 )
 
         return True

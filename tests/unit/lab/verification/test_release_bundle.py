@@ -88,3 +88,53 @@ def test_release_bundle_verification_fails_on_git_sha_mismatch() -> None:
             config_payload=config_data,
             schema_payload=schema_data,
         )
+
+
+def test_release_bundle_with_all_provenance_hashes() -> None:
+    git_sha = "f0e1d2c3b4a59876"
+    config_data = '{"max_drawdown": 0.10}'
+    schema_data = "CREATE TABLE ledger (id INT);"
+    model_payload = "MODEL_WEIGHTS_V1_BINARY_BLOB"
+    feature_schema_payload = "FEATURES_JSON_SCHEMA_V1"
+    risk_policy_payload = "POLICY_SPEC_V1_STRICT"
+
+    bundle = create_release_bundle(
+        bundle_id="bundle_institutional_v1",
+        git_commit_sha=git_sha,
+        config_payload=config_data,
+        schema_payload=schema_data,
+        author="quant_engineer",
+        candidate_id="cand_ml_strat_alpha",
+        model_artifact_payload=model_payload,
+        feature_schema_payload=feature_schema_payload,
+        risk_policy_payload=risk_policy_payload,
+        packaged_at=NOW,
+    )
+
+    assert bundle.candidate_id == "cand_ml_strat_alpha"
+    assert bundle.model_artifact_hash is not None
+    assert bundle.feature_schema_hash is not None
+    assert bundle.risk_policy_hash is not None
+
+    # Valid verification
+    valid = verify_release_bundle(
+        bundle,
+        expected_git_sha=git_sha,
+        config_payload=config_data,
+        schema_payload=schema_data,
+        expected_candidate_id="cand_ml_strat_alpha",
+        model_artifact_payload=model_payload,
+        feature_schema_payload=feature_schema_payload,
+        risk_policy_payload=risk_policy_payload,
+    )
+    assert valid is True
+
+    # Tampered model weights fails
+    with pytest.raises(ReleaseBundleIntegrityError, match="MODEL_ARTIFACT_HASH_MISMATCH"):
+        verify_release_bundle(
+            bundle,
+            expected_git_sha=git_sha,
+            config_payload=config_data,
+            schema_payload=schema_data,
+            model_artifact_payload="TAMPERED_WEIGHTS",
+        )

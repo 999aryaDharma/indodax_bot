@@ -44,3 +44,11 @@ jobs:
           ruff check tests/unit/lab/backtest/test_indodax_cost_boundaries.py
           ruff check src/indodax_lab/execution
           ruff check tests/unit/lab/execution
+          ruff check src/indodax_lab/control
+          ruff check tests/unit/lab/control
+          ruff check src/indodax_lab/risk
+          ruff check tests/unit/lab/risk
+          ruff check src/indodax_lab/cli/kill_switch.py src/indodax_lab/cli/reconcile.py src/indodax_lab/cli/approval.py
+          ruff check tests/unit/lab/cli
+          ruff check src/indodax_lab/verification
+          ruff check tests/unit/lab/verification

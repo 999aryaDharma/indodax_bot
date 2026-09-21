@@ -33,7 +33,7 @@ class RiskEngine:
 
     def __init__(
         self,
-        risk_manager: PortfolioRiskManager,
+        risk_manager: PortfolioRiskManager | None = None,
         *,
         max_orders_per_minute: int = 15,
         kill_switch_path: Path | None = None,
@@ -80,9 +80,12 @@ class RiskEngine:
             temp.write_text(json.dumps(data), encoding="utf-8")
             temp.replace(self.throttle_history_path)
         except Exception as exc:
-            logger.warning(
-                "Failed to save throttle history to %s: %s", self.throttle_history_path, exc
+            logger.critical(
+                "RiskEngine: Failed to save throttle history to %s: %s",
+                self.throttle_history_path,
+                exc,
             )
+            raise RuntimeError(f"THROTTLE_HISTORY_PERSISTENCE_FAILED:{exc}") from exc
 
     @property
     def is_kill_switch_active(self) -> bool:
@@ -107,16 +110,19 @@ class RiskEngine:
     def reset_kill_switch(
         self,
         *,
-        operator_id: str = "OPERATOR_ADMIN",
+        operator_id: str,
+        reason: str,
+        reconciliation_healthy: bool,
+        unknown_orders_count: int,
         confirmation_token: str | None = None,
-        reconciliation_healthy: bool = True,
-        unknown_orders_count: int = 0,
     ) -> None:
-        """Explicitly disarm the kill switch after verifying operator authority
-        and system health.
+        """Explicitly disarm the kill switch after verifying operator authority,
+        audit rationale, and system health.
         """
         if not operator_id or not operator_id.strip():
             raise ValueError("OPERATOR_ID_REQUIRED")
+        if not reason or not reason.strip():
+            raise ValueError("RESET_REASON_REQUIRED")
         if not reconciliation_healthy:
             raise RuntimeError("CANNOT_RESET_KILL_SWITCH_UNHEALTHY_RECONCILIATION")
         if unknown_orders_count > 0:
@@ -138,7 +144,7 @@ class RiskEngine:
         self._manual_kill_switch = False
         if self.kill_switch_path is not None and self.kill_switch_path.exists():
             self.kill_switch_path.unlink()
-        logger.info("RiskEngine: Kill switch disarmed by %s", operator_id)
+        logger.info("RiskEngine: Kill switch disarmed by %s (reason: %s)", operator_id, reason)
 
     def assess_intent(
         self,

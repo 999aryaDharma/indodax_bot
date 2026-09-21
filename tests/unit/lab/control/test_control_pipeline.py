@@ -280,3 +280,219 @@ def test_pipeline_autonomous_limited_uncertain_submit_trips_kill_switch(
     assert risk_engine.is_kill_switch_active
     assert len(report.submitted_orders) == 1
     assert report.submitted_orders[0].state == OmsOrderState.UNKNOWN
+
+
+def test_pipeline_autonomous_daily_loss_limit_trips_kill_switch(
+    pipeline_fixture,
+) -> None:
+    pipeline, _, _, _, risk_engine, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
+    pipeline.set_mode(ExecutionMode.AUTONOMOUS_LIMITED)
+
+    intent = SignalIntent(
+        intent_id="sig_loss",
+        decision_ts=NOW,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"),
+        limit_price=Decimal("1000000000"),
+    )
+
+    # Exceed autonomous max_daily_loss_notional (default 1,000,000)
+    report = pipeline.step(
+        [intent],
+        current_positions={},
+        available_cash=Decimal("100000000"),
+        current_equity=Decimal("95000000"),
+        now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+        cumulative_daily_loss=Decimal("1500000"),
+    )
+
+    assert report.kill_switch_triggered
+    assert risk_engine.is_kill_switch_active
+    assert "DAILY_LOSS_LIMIT_EXCEEDED" in report.rejected_reasons
+
+
+def test_pipeline_reconciliation_pre_write_gate(pipeline_fixture) -> None:
+    from indodax_lab.execution.reconciliation import (
+        ReconciliationIssue,
+        ReconciliationReport,
+        ReconciliationStatus,
+    )
+
+    pipeline, _, _, _, _, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
+
+    intent = SignalIntent(
+        intent_id="sig_rec_gate",
+        decision_ts=NOW,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"),
+        limit_price=Decimal("1000000000"),
+    )
+
+    # 1. Stale reconciliation report (> 120s) blocks venue writes
+    stale_report = ReconciliationReport(
+        status=ReconciliationStatus.HEALTHY,
+        evaluated_at=NOW - timedelta(seconds=130),
+        issues=(),
+    )
+    report = pipeline.step(
+        [intent],
+        current_positions={},
+        available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"),
+        now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+        reconciliation_report=stale_report,
+    )
+    assert "RECONCILIATION_STALE" in report.rejected_reasons
+
+    # 2. Unhealthy reconciliation report blocks venue writes
+    unhealthy_report = ReconciliationReport(
+        status=ReconciliationStatus.HALT_NEW_ORDERS,
+        evaluated_at=NOW,
+        issues=(ReconciliationIssue(code="CASH_MISMATCH", detail="diff"),),
+    )
+    report2 = pipeline.step(
+        [intent],
+        current_positions={},
+        available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"),
+        now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+        reconciliation_report=unhealthy_report,
+    )
+    assert "RECONCILIATION_UNHEALTHY" in report2.rejected_reasons
+
+
+def test_pipeline_recover_and_promote(pipeline_fixture) -> None:
+    from indodax_lab.execution.reconciliation import (
+        ReconciliationReport,
+        ReconciliationStatus,
+    )
+
+    pipeline, _, _, _, risk_engine, _ = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.HALTED)
+    assert pipeline.mode == ExecutionMode.HALTED
+
+    # 1. Kill switch active blocks promotion
+    risk_engine.trigger_kill_switch("TEST_HALT")
+    with pytest.raises(RuntimeError, match="CANNOT_PROMOTE_WHILE_KILL_SWITCH_ACTIVE"):
+        pipeline.recover_and_promote(ExecutionMode.READ_ONLY)
+
+    risk_engine.reset_kill_switch(
+        operator_id="operator_test",
+        reason="RECOVERED",
+        reconciliation_healthy=True,
+        unknown_orders_count=0,
+    )
+
+    # 2. Unhealthy reconciliation blocks promotion
+    bad_report = ReconciliationReport(
+        status=ReconciliationStatus.HALT_NEW_ORDERS,
+        evaluated_at=NOW,
+        issues=(),
+    )
+    with pytest.raises(RuntimeError, match="CANNOT_PROMOTE_WITH_UNHEALTHY_RECONCILIATION"):
+        pipeline.recover_and_promote(ExecutionMode.READ_ONLY, reconciliation_report=bad_report)
+
+    # 3. Successful promotion from HALTED -> RECOVERY -> READ_ONLY -> SHADOW
+    clean_report = ReconciliationReport(
+        status=ReconciliationStatus.HEALTHY,
+        evaluated_at=NOW,
+        issues=(),
+    )
+    promoted_mode = pipeline.recover_and_promote(
+        ExecutionMode.SHADOW,
+        now=NOW,
+        reconciliation_report=clean_report,
+    )
+    assert promoted_mode == ExecutionMode.SHADOW
+    assert pipeline.mode == ExecutionMode.SHADOW
+
+
+def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
+    pipeline_fixture,
+) -> None:
+    from indodax_lab.control.approval import generate_approval_token
+    from indodax_lab.execution.oms import OmsOrder
+
+    pipeline, fake_venue, oms_store, _, risk_engine, ticker = pipeline_fixture
+    secret = b"topsecret_approval_key"
+    approval_store = ManualApprovalStore(signing_secret=secret)
+    pipeline.approval_store = approval_store
+
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
+
+    order = OmsOrder(
+        internal_order_id="ord_hmac_1",
+        client_order_id="cl_hmac_1",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"),
+        limit_price=Decimal("1000000000"),
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    proposal = approval_store.propose(order, at=NOW, ttl_seconds=300)
+
+    # Operator signs approval with valid HMAC token
+    token = generate_approval_token(proposal.proposal_id, "op_alice", proposal.expires_at, secret)
+    approval_store.approve(
+        proposal.proposal_id,
+        operator_id="op_alice",
+        at=NOW + timedelta(seconds=1),
+        token=token,
+    )
+
+    clean_snapshot = pipeline.gateway.get_market_snapshot(
+        pair="btc_idr", as_of_utc=NOW + timedelta(seconds=2), ticker_override=ticker
+    )
+
+    # 1. Proposal executes successfully with live risk check
+    submitted = pipeline.execute_approved_proposal(
+        proposal.proposal_id,
+        now=NOW + timedelta(seconds=2),
+        market_snapshot=clean_snapshot,
+        available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"),
+    )
+    assert submitted.internal_order_id == "ord_hmac_1"
+
+    # 2. Risk check failure rejects execution fail-closed
+    order_huge = OmsOrder(
+        internal_order_id="ord_hmac_huge",
+        client_order_id="cl_hmac_huge",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("100.0"),  # 100 BTC >> 100M IDR cash
+        limit_price=Decimal("1000000000"),
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    prop_huge = approval_store.propose(order_huge, at=NOW, ttl_seconds=300)
+    token_huge = generate_approval_token(
+        prop_huge.proposal_id, "op_alice", prop_huge.expires_at, secret
+    )
+    approval_store.approve(
+        prop_huge.proposal_id,
+        operator_id="op_alice",
+        at=NOW + timedelta(seconds=1),
+        token=token_huge,
+    )
+
+    expected_err = "POST_APPROVAL_RISK_REJECTED:INSUFFICIENT_CASH_OR_CAPACITY"
+    with pytest.raises(RuntimeError, match=expected_err):
+        pipeline.execute_approved_proposal(
+            prop_huge.proposal_id,
+            now=NOW + timedelta(seconds=2),
+            market_snapshot=clean_snapshot,
+            available_cash=Decimal("500000"),
+            current_equity=Decimal("100000000"),
+        )

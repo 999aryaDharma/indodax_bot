@@ -581,7 +581,11 @@ class IndodaxReadOnlyClient:
             executed_qty=original - remaining,
             remaining_qty=remaining,
             submitted_at=_utc_from_epoch(row.get("submit_time"), "submit_time"),
-            finished_at=(_utc_from_epoch(finish_raw, "finish_time") if finish_raw else None),
+            finished_at=(
+                _utc_from_epoch(finish_raw, "finish_time")
+                if finish_raw and str(finish_raw).strip() not in ("", "0")
+                else None
+            ),
         )
 
     @staticmethod

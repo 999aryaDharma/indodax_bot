@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 import requests
 
 from indodax_lab.backtest.costs import OrderSide
-from indodax_lab.execution.indodax_readonly import VenueOrder
+from indodax_lab.execution.indodax_readonly import IndodaxReadOnlyClient, VenueOrder
 from indodax_lab.execution.oms import OmsOrder
 from indodax_lab.execution.venue import (
     TradingVenue,
@@ -73,6 +73,11 @@ class IndodaxTradingVenue(TradingVenue):
         """Submit a limit order to Indodax with strict transport uncertainty handling."""
         if order.limit_price is None or order.limit_price <= Decimal("0"):
             raise ValueError(f"ORDER_LIMIT_PRICE_REQUIRED:{order.client_order_id}")
+        if order.order_type.lower() != "limit" or str(order.time_in_force).upper() != "GTC":
+            raise ValueError(
+                f"UNSUPPORTED_ORDER_SEMANTICS:{order.order_type}:{order.time_in_force} - "
+                "Production Indodax venue requires order_type=limit and time_in_force=GTC"
+            )
 
         pair_parts = order.pair.split("_")
         base_asset = pair_parts[0]
@@ -87,6 +92,8 @@ class IndodaxTradingVenue(TradingVenue):
             "type": side_str,
             "price": price_str,
             base_asset: str(order.desired_qty),
+            "order_type": "limit",
+            "time_in_force": "GTC",
             "client_order_id": order.client_order_id,
         }
 
@@ -245,22 +252,11 @@ class IndodaxTradingVenue(TradingVenue):
         if final_order is not None:
             return final_order
 
-        now_utc = datetime.now(UTC)
-        ret = data.get("return", {})
-        res_order_id = str(ret.get("order_id", venue_order_id or "unknown"))
-        return VenueOrder(
-            order_id=res_order_id,
-            client_order_id=client_order_id or "",
-            pair=pair,
-            side=OrderSide.BUY if side_str == "buy" else OrderSide.SELL,
-            order_type="limit",
-            price=Decimal("0"),
-            original_qty=Decimal("0"),
-            remaining_qty=Decimal("0"),
-            executed_qty=Decimal("0"),
-            status="cancelled",
-            submitted_at=now_utc,
-            finished_at=now_utc,
+        # Fail-closed: If cancel succeeded on exchange but post-cancel lookup is inconclusive,
+        # DO NOT synthesize a fake 0-fill CANCELLED order. Raise UncertainVenueSubmissionError
+        # so OMS transitions to UNKNOWN until exchange truth is reconciled.
+        raise UncertainVenueSubmissionError(
+            f"CANCEL_ACKNOWLEDGED_BUT_STATE_INCONCLUSIVE:{target_id}"
         )
 
     def get_order(self, pair: str, venue_order_id: str) -> VenueOrder | None:
@@ -298,23 +294,11 @@ class IndodaxTradingVenue(TradingVenue):
         if not ret:
             return None
 
-        status_str = ret.get("status", "open")
-        side = OrderSide.BUY if ret.get("type") == "buy" else OrderSide.SELL
-        remain = Decimal(str(ret.get("remain", "0")))
-        price = Decimal(str(ret.get("price", "0")))
-        return VenueOrder(
-            order_id=venue_order_id,
-            client_order_id=str(ret.get("client_order_id", "")),
-            pair=pair,
-            side=side,
-            order_type="limit",
-            price=price,
-            original_qty=remain,
-            remaining_qty=remain,
-            executed_qty=Decimal("0"),
-            status=status_str,
-            submitted_at=datetime.now(UTC),
-        )
+        try:
+            return IndodaxReadOnlyClient._parse_legacy_order(pair, ret)
+        except Exception as exc:
+            logger.warning("getOrder parsing error: %s", exc)
+            return None
 
     def get_order_by_client_order_id(self, pair: str, client_order_id: str) -> VenueOrder | None:
         """Lookup order state on Indodax by client_order_id."""
@@ -353,24 +337,11 @@ class IndodaxTradingVenue(TradingVenue):
         if not ret:
             return None
 
-        status_str = ret.get("status", "open")
-        side = OrderSide.BUY if ret.get("type") == "buy" else OrderSide.SELL
-        remain = Decimal(str(ret.get("remain", "0")))
-        price = Decimal(str(ret.get("price", "0")))
-        venue_oid = str(ret.get("order_id", ""))
-        return VenueOrder(
-            order_id=venue_oid,
-            client_order_id=client_order_id,
-            pair=pair,
-            side=side,
-            order_type="limit",
-            price=price,
-            original_qty=remain,
-            remaining_qty=remain,
-            executed_qty=Decimal("0"),
-            status=status_str,
-            submitted_at=datetime.now(UTC),
-        )
+        try:
+            return IndodaxReadOnlyClient._parse_legacy_order(pair, ret)
+        except Exception as exc:
+            logger.warning("getOrderByClientOrderId parsing error: %s", exc)
+            return None
 
 
 IndodaxTradingClient = IndodaxTradingVenue

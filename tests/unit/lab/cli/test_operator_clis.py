@@ -56,6 +56,74 @@ def test_kill_switch_cli_lifecycle(tmp_path: Path) -> None:
     assert not sentinel.exists()
 
 
+def test_kill_switch_cli_clear_governance(tmp_path: Path) -> None:
+    from indodax_lab.execution.oms import OmsOrderState, OmsStateMachine
+    from indodax_lab.execution.oms_store import OmsStore
+
+    sentinel = tmp_path / "emergency_kill_switch"
+    sentinel.write_text("HALTED:DRILL\n", encoding="utf-8")
+
+    # Create OMS store with an UNKNOWN order
+    oms_path = tmp_path / "oms.sqlite3"
+    oms = OmsStore(oms_path)
+    now = datetime.now(UTC)
+    ord_unknown = OmsStateMachine.create(
+        internal_order_id="ord_unk_01",
+        client_order_id="cl_unk_01",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.01"),
+        limit_price=Decimal("1000000000"),
+        created_at=now,
+    )
+    oms.create_order(ord_unknown, event_id="evt_1")
+    ord_sub = OmsStateMachine.transition(ord_unknown, OmsOrderState.SUBMITTING, at=now)
+    oms.apply_transition(ord_unknown, ord_sub, event_id="evt_2")
+    ord_u = OmsStateMachine.transition(ord_sub, OmsOrderState.UNKNOWN, at=now)
+    oms.apply_transition(ord_sub, ord_u, event_id="evt_3")
+
+    # Attempt clear with unknown order present -> must fail
+    out = io.StringIO()
+    code = kill_switch_main(
+        [
+            "--sentinel-path",
+            str(sentinel),
+            "clear",
+            "--oms-db-path",
+            str(oms_path),
+        ],
+        stdout=out,
+    )
+    assert code == 1
+    res = json.loads(out.getvalue())
+    assert res["ok"] is False
+    assert "UNKNOWN_ORDERS_EXIST" in res["error"]
+    assert sentinel.exists()
+
+    # Attempt clear with unhealthy reconciliation report -> must fail
+    rep_path = tmp_path / "reconcile_report.json"
+    rep_path.write_text(
+        json.dumps({"ok": False, "status": "HALT_NEW_ORDERS", "issues": [{"code": "MISMATCH"}]}),
+        encoding="utf-8",
+    )
+    out2 = io.StringIO()
+    code2 = kill_switch_main(
+        [
+            "--sentinel-path",
+            str(sentinel),
+            "clear",
+            "--reconcile-report-path",
+            str(rep_path),
+        ],
+        stdout=out2,
+    )
+    assert code2 == 1
+    res2 = json.loads(out2.getvalue())
+    assert res2["ok"] is False
+    assert "UNHEALTHY_RECONCILIATION" in res2["error"]
+    assert sentinel.exists()
+
+
 def test_approval_cli_lifecycle(tmp_path: Path) -> None:
     store_file = tmp_path / "approvals.json"
     store = ManualApprovalStore(persistence_path=store_file)
@@ -225,3 +293,50 @@ def test_reconcile_cli_fake_drill(tmp_path: Path) -> None:
     assert res["status"] == "HEALTHY"
     assert res["cursor_advanced"] is True
     assert res["cursor_after_revision"] == 2
+
+
+def test_reconcile_cli_with_authoritative_stores_and_output(tmp_path: Path) -> None:
+    from indodax_lab.execution.ledger_store import ProductionLedgerStore
+    from indodax_lab.execution.oms_store import OmsStore
+
+    cursor_db = tmp_path / "cursor.db"
+    ledger_db = tmp_path / "ledger.sqlite3"
+    oms_db = tmp_path / "oms.sqlite3"
+    report_out = tmp_path / "reports" / "rec_report.json"
+
+    ledger_store = ProductionLedgerStore(ledger_db)
+    ledger_store.initialize_if_empty(
+        initial_cash=Decimal("100000000"),
+        valuation_currency="IDR",
+        init_timestamp=datetime.now(UTC),
+    )
+    _ = OmsStore(oms_db)
+
+    out = io.StringIO()
+    code = reconcile_main(
+        [
+            "--cursor-db",
+            str(cursor_db),
+            "--scope-id",
+            "test_auth_scope",
+            "--ledger-db",
+            str(ledger_db),
+            "--oms-db",
+            str(oms_db),
+            "--report-output",
+            str(report_out),
+            "--fake",
+            "--pairs",
+            "btc_idr",
+        ],
+        stdout=out,
+    )
+    assert code == 0
+    res = json.loads(out.getvalue())
+    assert res["ok"] is True
+    assert res["status"] == "HEALTHY"
+    assert report_out.exists()
+
+    saved_report = json.loads(report_out.read_text(encoding="utf-8"))
+    assert saved_report["ok"] is True
+    assert saved_report["status"] == "HEALTHY"

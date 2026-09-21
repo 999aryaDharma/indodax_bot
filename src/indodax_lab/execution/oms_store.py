@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,15 @@ class OmsStore:
 
                     CREATE INDEX IF NOT EXISTS idx_oms_events_order
                         ON oms_events(internal_order_id, seq);
+
+                    CREATE TABLE IF NOT EXISTS oms_applied_fills (
+                        fill_id TEXT NOT NULL,
+                        internal_order_id TEXT NOT NULL,
+                        applied_at_utc TEXT NOT NULL,
+                        PRIMARY KEY(fill_id, internal_order_id),
+                        FOREIGN KEY(internal_order_id)
+                            REFERENCES oms_orders(internal_order_id)
+                    );
                     """
                 )
         finally:
@@ -276,3 +286,74 @@ class OmsStore:
             if order.state.value not in {"FILLED", "CANCELLED", "REJECTED"}:
                 active.append(order)
         return tuple(active)
+
+    def load_all_orders(self) -> tuple[OmsOrder, ...]:
+        """Restore all orders persisted in the OMS store."""
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """
+                SELECT payload, sha256
+                FROM oms_orders
+                ORDER BY internal_order_id
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+
+        return tuple(self._decode_order(p, d) for p, d in rows)
+
+    def find_order_by_venue_id(self, venue_order_id: str) -> OmsOrder | None:
+        """Find an order by exchange venue order ID, including terminal orders."""
+        if not venue_order_id:
+            return None
+        for order in self.load_all_orders():
+            if order.venue_order_id == venue_order_id:
+                return order
+        return None
+
+    def find_order_by_client_order_id(self, client_order_id: str) -> OmsOrder | None:
+        """Find an order by client_order_id, including terminal orders."""
+        if not client_order_id:
+            return None
+        for order in self.load_all_orders():
+            if order.client_order_id == client_order_id:
+                return order
+        return None
+
+    def is_fill_applied(self, fill_id: str, internal_order_id: str) -> bool:
+        """Check if a venue fill was already applied to an OMS order."""
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT 1 FROM oms_applied_fills
+                WHERE fill_id = ? AND internal_order_id = ?
+                """,
+                (fill_id, internal_order_id),
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+
+    def record_applied_fill(
+        self,
+        fill_id: str,
+        internal_order_id: str,
+        applied_at: datetime | None = None,
+    ) -> None:
+        """Record a fill as applied to an OMS order."""
+        at_utc = (applied_at or datetime.now(UTC)).isoformat()
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO oms_applied_fills (
+                        fill_id, internal_order_id, applied_at_utc
+                    ) VALUES (?, ?, ?)
+                    """,
+                    (fill_id, internal_order_id, at_utc),
+                )
+        finally:
+            conn.close()

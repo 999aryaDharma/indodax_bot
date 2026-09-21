@@ -102,7 +102,12 @@ def test_risk_engine_programmatic_kill_switch(sample_risk_engine: RiskEngine) ->
     assert assessment.reason_code == "KILL_SWITCH_ACTIVE"
 
     # Reset kill switch
-    engine.reset_kill_switch()
+    engine.reset_kill_switch(
+        operator_id="operator_test",
+        reason="DRILL_COMPLETED",
+        reconciliation_healthy=True,
+        unknown_orders_count=0,
+    )
     assert not engine.is_kill_switch_active
 
 

@@ -12,7 +12,12 @@ from typing import Any
 
 from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.backtest.ledger import Position
-from indodax_lab.control.approval import ManualApprovalStore, PendingProposal, ProposalStatus
+from indodax_lab.control.approval import (
+    ManualApprovalStore,
+    PendingProposal,
+    ProposalStatus,
+    verify_approval_token,
+)
 from indodax_lab.control.mode import (
     AutonomousLimits,
     DurableModeStore,
@@ -24,6 +29,7 @@ from indodax_lab.execution.indodax_trading import IndodaxTradingClient
 from indodax_lab.execution.oms import OmsOrder, OmsOrderState
 from indodax_lab.execution.oms_store import OmsStore
 from indodax_lab.execution.order_router import OrderRouter
+from indodax_lab.execution.reconciliation import ReconciliationReport
 from indodax_lab.market.gateway import MarketGateway
 from indodax_lab.market.health import UNSAFE_TRADING_STATES, MarketHealthState
 from indodax_lab.market.quality import TickerSnapshot
@@ -62,6 +68,8 @@ class TradingPipeline:
         approval_store: ManualApprovalStore | None = None,
         autonomous_limits: AutonomousLimits | None = None,
         mode_store: DurableModeStore | None = None,
+        reconciliation_coordinator: Any | None = None,
+        max_reconciliation_age_seconds: float = 120.0,
     ) -> None:
         self.mode_store = mode_store
         self.mode = mode_store.get_mode() if mode_store is not None else mode
@@ -72,6 +80,8 @@ class TradingPipeline:
         self.order_router = order_router
         self.approval_store = approval_store or ManualApprovalStore()
         self.autonomous_limits = autonomous_limits or AutonomousLimits()
+        self.reconciliation_coordinator = reconciliation_coordinator
+        self.max_reconciliation_age_seconds = max_reconciliation_age_seconds
 
         # Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter
         if self.mode == ExecutionMode.SHADOW and isinstance(
@@ -108,6 +118,8 @@ class TradingPipeline:
         now: datetime,
         mark_prices_override: Mapping[str, Decimal] | None = None,
         ticker_overrides: Mapping[str, TickerSnapshot] | None = None,
+        reconciliation_report: ReconciliationReport | None = None,
+        cumulative_daily_loss: Decimal = Decimal("0"),
     ) -> PipelineStepReport:
         """Execute one complete trading cycle with strict mode isolation."""
         # 1. Check DISABLED or HALTED mode
@@ -158,6 +170,56 @@ class TradingPipeline:
                 rejected_reasons=("UNRESOLVED_UNKNOWN_ORDERS_IN_OMS",),
                 kill_switch_triggered=True,
             )
+
+        # 3a. Autonomous mode daily loss hard limit
+        if self.mode == ExecutionMode.AUTONOMOUS_LIMITED:
+            if cumulative_daily_loss > self.autonomous_limits.max_daily_loss_notional:
+                logger.critical(
+                    "TradingPipeline: Daily loss %s exceeds cap %s. Tripping kill switch.",
+                    cumulative_daily_loss,
+                    self.autonomous_limits.max_daily_loss_notional,
+                )
+                self.risk_engine.trigger_kill_switch("DAILY_LOSS_LIMIT_EXCEEDED")
+                return PipelineStepReport(
+                    mode=self.mode,
+                    evaluated_at=now,
+                    intents_evaluated=len(intents),
+                    approved_count=0,
+                    rejected_reasons=("DAILY_LOSS_LIMIT_EXCEEDED",),
+                    kill_switch_triggered=True,
+                )
+
+        # 3b. Mandatory fresh healthy reconciliation before venue writes
+        if self.mode.can_write_venue:
+            rec_report = reconciliation_report
+            if rec_report is None and self.reconciliation_coordinator is not None:
+                rec_report = getattr(self.reconciliation_coordinator, "latest_report", None)
+            if rec_report is not None:
+                rec_age = (now - rec_report.evaluated_at).total_seconds()
+                if not rec_report.healthy:
+                    logger.critical(
+                        "TradingPipeline: Latest reconciliation UNHEALTHY. Blocking venue writes."
+                    )
+                    return PipelineStepReport(
+                        mode=self.mode,
+                        evaluated_at=now,
+                        intents_evaluated=len(intents),
+                        approved_count=0,
+                        rejected_reasons=("RECONCILIATION_UNHEALTHY",),
+                    )
+                if rec_age > self.max_reconciliation_age_seconds:
+                    logger.critical(
+                        "TradingPipeline: Reconciliation stale (%ss > %ss). Blocking venue writes.",
+                        rec_age,
+                        self.max_reconciliation_age_seconds,
+                    )
+                    return PipelineStepReport(
+                        mode=self.mode,
+                        evaluated_at=now,
+                        intents_evaluated=len(intents),
+                        approved_count=0,
+                        rejected_reasons=("RECONCILIATION_STALE",),
+                    )
 
         # 4. Collect mark prices and market health from gateway
         mark_prices: dict[str, Decimal] = dict(mark_prices_override or {})
@@ -323,6 +385,10 @@ class TradingPipeline:
         at: datetime | None = None,
         market_snapshot: Any | None = None,
         max_slippage_bps: int = 100,
+        current_positions: Mapping[str, Position] | None = None,
+        available_cash: Decimal | None = None,
+        current_equity: Decimal | None = None,
+        reconciliation_report: ReconciliationReport | None = None,
     ) -> OmsOrder:
         """Safely execute a human-approved proposal with pre-flight re-validation."""
         exec_now = now or at or datetime.now(UTC)
@@ -338,6 +404,19 @@ class TradingPipeline:
         if exec_now > proposal.expires_at:
             raise TimeoutError(f"PROPOSAL_EXPIRED:{proposal_id}")
 
+        # 1a. Verify HMAC approval token if signing secret is active
+        if self.approval_store.signing_secret is not None:
+            if not proposal.approval_token:
+                raise PermissionError(f"MISSING_APPROVAL_TOKEN:{proposal_id}")
+            if not verify_approval_token(
+                proposal.approval_token,
+                proposal.proposal_id,
+                proposal.decided_by or "",
+                proposal.expires_at,
+                self.approval_store.signing_secret,
+            ):
+                raise PermissionError(f"INVALID_APPROVAL_TOKEN:{proposal_id}")
+
         order = proposal.order
 
         # 2. Check pre-flight gates
@@ -349,6 +428,17 @@ class TradingPipeline:
         if unknown_orders:
             self.risk_engine.trigger_kill_switch("UNRESOLVED_UNKNOWN_ORDERS_IN_OMS")
             raise RuntimeError("UNRESOLVED_UNKNOWN_ORDERS_IN_OMS")
+
+        # 2a. Reconciliation health check
+        rec_report = reconciliation_report
+        if rec_report is None and self.reconciliation_coordinator is not None:
+            rec_report = getattr(self.reconciliation_coordinator, "latest_report", None)
+        if rec_report is not None:
+            rec_age = (exec_now - rec_report.evaluated_at).total_seconds()
+            if not rec_report.healthy:
+                raise RuntimeError("RECONCILIATION_UNHEALTHY")
+            if rec_age > self.max_reconciliation_age_seconds:
+                raise RuntimeError(f"RECONCILIATION_STALE:{rec_age:.1f}s")
 
         # 3. Re-validate market health & price slippage
         snapshot = market_snapshot or self.gateway.get_market_snapshot(
@@ -365,6 +455,38 @@ class TradingPipeline:
                     f"PROPOSAL_PRICE_SLIPPAGE_EXCEEDED:{slippage_bps}bps>{max_slippage_bps}bps"
                 )
 
+        # 3a. Re-assess risk at execution time
+        intent = SignalIntent(
+            intent_id=f"exec_{proposal.proposal_id}",
+            decision_ts=exec_now,
+            pair=order.pair,
+            side=order.side,
+            desired_qty=order.desired_qty,
+            limit_price=order.limit_price,
+        )
+        eq = current_equity if current_equity is not None else Decimal("100000000")
+        cash = available_cash if available_cash is not None else Decimal("100000000")
+        pos = current_positions or {}
+        assessment = self.risk_engine.assess_intent(
+            intent,
+            current_equity=eq,
+            current_positions=pos,
+            mark_prices={order.pair: snapshot.last_price},
+            evaluation_time=exec_now,
+            available_cash=cash,
+            market_health=snapshot.health.state,
+        )
+        if not assessment.approved:
+            raise RuntimeError(f"POST_APPROVAL_RISK_REJECTED:{assessment.reason_code}")
+        if (
+            isinstance(assessment.approved_qty, Decimal)
+            and assessment.approved_qty < order.desired_qty
+        ):
+            raise RuntimeError(
+                f"POST_APPROVAL_RISK_REJECTED:INSUFFICIENT_CASH_OR_CAPACITY:"
+                f"{assessment.approved_qty}<{order.desired_qty}"
+            )
+
         # Ensure order exists in OMS store before submit if not already saved
         if self.oms_store.load_order(order.internal_order_id) is None:
             self.oms_store.create_order(order, event_id=f"evt_init_{order.internal_order_id}")
@@ -374,3 +496,65 @@ class TradingPipeline:
         if submitted.state == OmsOrderState.UNKNOWN:
             self.risk_engine.trigger_kill_switch("ORDER_SUBMIT_UNKNOWN")
         return submitted
+
+    def recover_and_promote(
+        self,
+        target_mode: ExecutionMode,
+        *,
+        now: datetime | None = None,
+        operator_id: str = "operator_recovery",
+        reconciliation_report: ReconciliationReport | None = None,
+    ) -> ExecutionMode:
+        """Promote pipeline safely through canonical mode progression graph."""
+        check_now = now or datetime.now(UTC)
+        if self.risk_engine.is_kill_switch_active:
+            raise RuntimeError("CANNOT_PROMOTE_WHILE_KILL_SWITCH_ACTIVE")
+
+        unknown_orders = [
+            o for o in self.oms_store.load_nonterminal_orders() if o.state == OmsOrderState.UNKNOWN
+        ]
+        if unknown_orders:
+            raise RuntimeError(
+                f"CANNOT_PROMOTE_WITH_UNKNOWN_ORDERS:{len(unknown_orders)}_orders_unresolved"
+            )
+
+        if reconciliation_report is not None:
+            rec_age = (check_now - reconciliation_report.evaluated_at).total_seconds()
+            if not reconciliation_report.healthy:
+                raise RuntimeError("CANNOT_PROMOTE_WITH_UNHEALTHY_RECONCILIATION")
+            if rec_age > self.max_reconciliation_age_seconds:
+                raise RuntimeError("CANNOT_PROMOTE_WITH_STALE_RECONCILIATION")
+
+        # Step through transition graph to target_mode
+        path_map = {
+            ExecutionMode.HALTED: [ExecutionMode.RECOVERY, ExecutionMode.READ_ONLY],
+            ExecutionMode.RECOVERY: [ExecutionMode.READ_ONLY],
+            ExecutionMode.READ_ONLY: [],
+        }
+        steps = list(path_map.get(self.mode, []))
+        if target_mode not in steps and target_mode != self.mode:
+            if target_mode == ExecutionMode.SHADOW:
+                steps.append(ExecutionMode.SHADOW)
+            elif target_mode == ExecutionMode.MANUAL_APPROVAL:
+                if ExecutionMode.SHADOW not in steps and self.mode != ExecutionMode.SHADOW:
+                    steps.append(ExecutionMode.SHADOW)
+                steps.append(ExecutionMode.MANUAL_APPROVAL)
+            elif target_mode == ExecutionMode.AUTONOMOUS_LIMITED:
+                if ExecutionMode.SHADOW not in steps and self.mode not in {
+                    ExecutionMode.SHADOW,
+                    ExecutionMode.MANUAL_APPROVAL,
+                }:
+                    steps.append(ExecutionMode.SHADOW)
+                if (
+                    ExecutionMode.MANUAL_APPROVAL not in steps
+                    and self.mode != ExecutionMode.MANUAL_APPROVAL
+                ):
+                    steps.append(ExecutionMode.MANUAL_APPROVAL)
+                steps.append(ExecutionMode.AUTONOMOUS_LIMITED)
+
+        for step_mode in steps:
+            self.set_mode(step_mode)
+            if self.mode == target_mode:
+                break
+
+        return self.mode

@@ -15,6 +15,7 @@ from indodax_lab.execution.fill_normalizer import (
     normalize_venue_fill,
 )
 from indodax_lab.execution.indodax_readonly import VenueFill
+from indodax_lab.execution.ledger_store import ProductionLedgerStore
 from indodax_lab.execution.oms import OmsOrder, OmsOrderState, OmsStateMachine
 from indodax_lab.execution.oms_store import OmsStore
 
@@ -54,12 +55,14 @@ class VenueFillIngester:
         self,
         *,
         ledger: ResearchLedger,
+        ledger_store: ProductionLedgerStore | None = None,
         oms_store: OmsStore | None = None,
         valuation_currency: str = "IDR",
         quote_notional_tolerance: Decimal = Decimal("1.0"),
         fail_closed: bool = True,
     ) -> None:
         self.ledger = ledger
+        self.ledger_store = ledger_store
         self.oms_store = oms_store
         self.valuation_currency = valuation_currency
         self.quote_notional_tolerance = quote_notional_tolerance
@@ -91,9 +94,6 @@ class VenueFillIngester:
         # 2. Check if already processed in ledger (idempotent duplicate prevention)
         processed_ids = self.ledger.to_dict()["processed_fill_ids"]
         if norm_fill.fill_id in processed_ids:
-            # Crash consistency self-healing:
-            # If a crash occurred after ledger posting but before OMS sync,
-            # repair the stale OMS order state rather than leaving it out of sync.
             repaired_oms = self._repair_oms_order_if_stale(norm_fill, venue_fill)
             return FillIngestionResult(
                 fill_id=norm_fill.fill_id,
@@ -102,9 +102,30 @@ class VenueFillIngester:
                 oms_order=repaired_oms,
             )
 
-        # 3. Post to double-entry ledger
+        # 3. Pre-posting financial check: verify overfill before touching ledger
+        target_order = self._find_matching_order(venue_fill)
+        if target_order is not None:
+            if self.oms_store is not None and self.oms_store.is_fill_applied(
+                norm_fill.fill_id, target_order.internal_order_id
+            ):
+                return FillIngestionResult(
+                    fill_id=norm_fill.fill_id,
+                    status=FillIngestionStatus.DUPLICATE_SKIPPED,
+                    fill=norm_fill,
+                    oms_order=target_order,
+                )
+            if target_order.filled_qty + norm_fill.qty > target_order.desired_qty:
+                raise OverfillInvariantError(
+                    f"OVERFILL_INVARIANT_BREACH: observed total fills "
+                    f"{target_order.filled_qty + norm_fill.qty} exceeds desired "
+                    f"{target_order.desired_qty} for order {target_order.internal_order_id}"
+                )
+
+        # 4. Post to double-entry ledger (only after overfill check passed)
         try:
-            self.ledger.process_fill(norm_fill)
+            tx = self.ledger.process_fill(norm_fill)
+            if self.ledger_store is not None:
+                self.ledger_store.persist_transaction(tx, self.ledger)
         except DuplicateFillError:
             repaired_oms = self._repair_oms_order_if_stale(norm_fill, venue_fill)
             return FillIngestionResult(
@@ -114,7 +135,7 @@ class VenueFillIngester:
                 oms_order=repaired_oms,
             )
 
-        # 4. If OMS store configured, synchronize matching order
+        # 5. If OMS store configured, synchronize matching order
         updated_oms_order: OmsOrder | None = None
         if self.oms_store is not None:
             updated_oms_order = self._sync_oms_order(norm_fill, venue_fill)
@@ -133,15 +154,16 @@ class VenueFillIngester:
         target_order = self._find_matching_order(venue_fill)
         if target_order is None:
             return None
-        # If target order is still in ACKNOWLEDGED or has not accounted for this fill
-        if target_order.filled_qty < target_order.desired_qty:
-            logger.warning(
-                "VenueFillIngester: Detected stale OMS order %s "
-                "during duplicate fill replay. Repairing.",
-                target_order.internal_order_id,
-            )
-            return self._sync_oms_order(norm_fill, venue_fill)
-        return None
+        if self.oms_store.is_fill_applied(norm_fill.fill_id, target_order.internal_order_id):
+            return target_order
+
+        logger.warning(
+            "VenueFillIngester: Detected stale OMS order %s "
+            "missing fill %s during duplicate fill replay. Repairing.",
+            target_order.internal_order_id,
+            norm_fill.fill_id,
+        )
+        return self._sync_oms_order(norm_fill, venue_fill)
 
     def _find_matching_order(self, venue_fill: VenueFill) -> OmsOrder | None:
         if self.oms_store is None:
@@ -151,6 +173,15 @@ class VenueFillIngester:
                 venue_fill.client_order_id and order.client_order_id == venue_fill.client_order_id
             ):
                 return order
+        # Check all orders (including CANCELLED/terminal orders receiving late fills)
+        if venue_fill.order_id:
+            found = self.oms_store.find_order_by_venue_id(venue_fill.order_id)
+            if found is not None:
+                return found
+        if venue_fill.client_order_id:
+            found = self.oms_store.find_order_by_client_order_id(venue_fill.client_order_id)
+            if found is not None:
+                return found
         return None
 
     def _sync_oms_order(self, norm_fill: Fill, venue_fill: VenueFill) -> OmsOrder | None:
@@ -161,6 +192,9 @@ class VenueFillIngester:
         target_order = self._find_matching_order(venue_fill)
         if target_order is None:
             return None
+
+        if self.oms_store.is_fill_applied(norm_fill.fill_id, target_order.internal_order_id):
+            return target_order
 
         # Compute new fill quantity and volume-weighted average price (VWAP)
         prev_qty = target_order.filled_qty
@@ -183,6 +217,19 @@ class VenueFillIngester:
 
         step_time = max(target_order.updated_at, norm_fill.timestamp)
 
+        if target_order.state in (
+            OmsOrderState.FILLED,
+            OmsOrderState.CANCELLED,
+            OmsOrderState.REJECTED,
+        ):
+            # Terminal orders cannot transition further; record applied fill and return
+            self.oms_store.record_applied_fill(
+                norm_fill.fill_id,
+                target_order.internal_order_id,
+                applied_at=step_time,
+            )
+            return target_order
+
         if total_filled_qty >= target_order.desired_qty:
             target_state = OmsOrderState.FILLED
             final_qty = target_order.desired_qty
@@ -202,6 +249,11 @@ class VenueFillIngester:
             target_order,
             updated_order,
             event_id=f"evt_fill_{norm_fill.fill_id}_{uuid.uuid4().hex[:8]}",
+        )
+        self.oms_store.record_applied_fill(
+            norm_fill.fill_id,
+            target_order.internal_order_id,
+            applied_at=step_time,
         )
         return updated_order
 

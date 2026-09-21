@@ -94,7 +94,14 @@ class ManualApprovalStore:
         self.persistence_path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = self.persistence_path.with_suffix(".tmp")
         data = {pid: prop.model_dump(mode="json") for pid, prop in self._proposals.items()}
-        temp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        data_json = json.dumps(data, sort_keys=True)
+        digest = hashlib.sha256(data_json.encode("utf-8")).hexdigest()
+        wrapper = {
+            "version": 1,
+            "proposals": data,
+            "integrity_sha256": digest,
+        }
+        temp_path.write_text(json.dumps(wrapper, indent=2), encoding="utf-8")
         temp_path.replace(self.persistence_path)
 
     def _load(self) -> None:
@@ -104,7 +111,19 @@ class ManualApprovalStore:
         if not text.strip():
             return
         raw = json.loads(text)
-        self._proposals = {pid: PendingProposal.model_validate(pdata) for pid, pdata in raw.items()}
+        if isinstance(raw, dict) and "integrity_sha256" in raw and "proposals" in raw:
+            proposals_data = raw["proposals"]
+            calc_digest = hashlib.sha256(
+                json.dumps(proposals_data, sort_keys=True).encode("utf-8")
+            ).hexdigest()
+            if calc_digest != raw["integrity_sha256"]:
+                raise ValueError("APPROVAL_PERSISTENCE_INTEGRITY_COMPROMISED")
+            raw_props = proposals_data
+        else:
+            raw_props = raw
+        self._proposals = {
+            pid: PendingProposal.model_validate(pdata) for pid, pdata in raw_props.items()
+        }
 
     def get(self, proposal_id: str) -> PendingProposal | None:
         """Fetch a single proposal by ID."""

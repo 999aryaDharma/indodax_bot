@@ -49,6 +49,7 @@ def test_risk_engine_reset_requires_healthy_reconciliation_and_zero_unknown(
     with pytest.raises(RuntimeError, match="CANNOT_RESET_KILL_SWITCH_UNHEALTHY_RECONCILIATION"):
         engine.reset_kill_switch(
             operator_id="operator_arya",
+            reason="SYSTEM_RECOVERED",
             reconciliation_healthy=False,
             unknown_orders_count=0,
         )
@@ -58,6 +59,7 @@ def test_risk_engine_reset_requires_healthy_reconciliation_and_zero_unknown(
     with pytest.raises(RuntimeError, match="CANNOT_RESET_KILL_SWITCH_UNKNOWN_ORDERS_EXIST:2"):
         engine.reset_kill_switch(
             operator_id="operator_arya",
+            reason="SYSTEM_RECOVERED",
             reconciliation_healthy=True,
             unknown_orders_count=2,
         )
@@ -67,6 +69,16 @@ def test_risk_engine_reset_requires_healthy_reconciliation_and_zero_unknown(
     with pytest.raises(ValueError, match="OPERATOR_ID_REQUIRED"):
         engine.reset_kill_switch(
             operator_id="",
+            reason="SYSTEM_RECOVERED",
+            reconciliation_healthy=True,
+            unknown_orders_count=0,
+        )
+
+    # 3b. Reset fails if reason is blank
+    with pytest.raises(ValueError, match="RESET_REASON_REQUIRED"):
+        engine.reset_kill_switch(
+            operator_id="operator_arya",
+            reason="",
             reconciliation_healthy=True,
             unknown_orders_count=0,
         )
@@ -74,6 +86,7 @@ def test_risk_engine_reset_requires_healthy_reconciliation_and_zero_unknown(
     # 4. Successful reset when conditions are healthy
     engine.reset_kill_switch(
         operator_id="operator_arya",
+        reason="SYSTEM_RECOVERED",
         reconciliation_healthy=True,
         unknown_orders_count=0,
     )
@@ -99,11 +112,22 @@ def test_risk_engine_reset_confirmation_token_verification(
 
     # Missing token fails closed
     with pytest.raises(PermissionError, match="CONFIRMATION_TOKEN_REQUIRED"):
-        engine.reset_kill_switch(operator_id="operator_arya")
+        engine.reset_kill_switch(
+            operator_id="operator_arya",
+            reason="SYSTEM_RECOVERED",
+            reconciliation_healthy=True,
+            unknown_orders_count=0,
+        )
 
     # Invalid token fails closed
     with pytest.raises(PermissionError, match="INVALID_CONFIRMATION_TOKEN"):
-        engine.reset_kill_switch(operator_id="operator_arya", confirmation_token="bad_token")
+        engine.reset_kill_switch(
+            operator_id="operator_arya",
+            reason="SYSTEM_RECOVERED",
+            reconciliation_healthy=True,
+            unknown_orders_count=0,
+            confirmation_token="bad_token",
+        )
 
     # Valid token succeeds
     expected_token = hmac.new(
@@ -112,7 +136,13 @@ def test_risk_engine_reset_confirmation_token_verification(
         hashlib.sha256,
     ).hexdigest()
 
-    engine.reset_kill_switch(operator_id="operator_arya", confirmation_token=expected_token)
+    engine.reset_kill_switch(
+        operator_id="operator_arya",
+        reason="SYSTEM_RECOVERED",
+        reconciliation_healthy=True,
+        unknown_orders_count=0,
+        confirmation_token=expected_token,
+    )
     assert not engine.is_kill_switch_active
 
 

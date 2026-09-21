@@ -34,7 +34,34 @@ def _argument_parser() -> argparse.ArgumentParser:
     )
 
     # Subcommand: clear
-    subparsers.add_parser("clear", help="Clear/disarm emergency kill switch")
+    clear_parser = subparsers.add_parser("clear", help="Clear/disarm emergency kill switch")
+    clear_parser.add_argument(
+        "--operator-id",
+        default="OPERATOR_CLI",
+        help="Operator ID performing the disarm (must be non-empty)",
+    )
+    clear_parser.add_argument(
+        "--reason",
+        default="OPERATOR_CLI_CLEARED",
+        help="Audit reason for disarming kill switch (must be non-empty)",
+    )
+    clear_parser.add_argument(
+        "--token",
+        default=None,
+        help="HMAC confirmation token if secret is configured",
+    )
+    clear_parser.add_argument(
+        "--oms-db-path",
+        type=Path,
+        default=None,
+        help="Optional path to OMS store to verify 0 UNKNOWN orders",
+    )
+    clear_parser.add_argument(
+        "--reconcile-report-path",
+        type=Path,
+        default=None,
+        help="Optional path to reconciliation report to verify health",
+    )
 
     return parser
 
@@ -83,16 +110,54 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
         return 0
 
     if args.subcommand == "clear":
-        if sentinel_path.exists():
-            sentinel_path.unlink()
-            cleared = True
-        else:
-            cleared = False
+        from indodax_lab.risk.engine import RiskEngine
+
+        unknown_count = 0
+        if args.oms_db_path is not None and args.oms_db_path.exists():
+            from indodax_lab.execution.oms import OmsOrderState
+            from indodax_lab.execution.oms_store import OmsStore
+
+            oms = OmsStore(args.oms_db_path)
+            unknown_count = len(
+                [o for o in oms.load_nonterminal_orders() if o.state == OmsOrderState.UNKNOWN]
+            )
+
+        reconciliation_healthy = True
+        if args.reconcile_report_path is not None and args.reconcile_report_path.exists():
+            try:
+                report_data = json.loads(args.reconcile_report_path.read_text(encoding="utf-8"))
+                if report_data.get("status") != "HEALTHY":
+                    reconciliation_healthy = False
+            except Exception:
+                reconciliation_healthy = False
+
+        was_active = sentinel_path.exists()
+        engine = RiskEngine(kill_switch_path=sentinel_path)
+
+        try:
+            engine.reset_kill_switch(
+                operator_id=args.operator_id,
+                reason=args.reason,
+                reconciliation_healthy=reconciliation_healthy,
+                unknown_orders_count=unknown_count,
+                confirmation_token=args.token,
+            )
+        except Exception as exc:
+            output = {
+                "ok": False,
+                "action": "CLEAR_REJECTED",
+                "error": str(exc),
+                "sentinel_path": str(sentinel_path),
+            }
+            stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
+            return 1
 
         output = {
             "ok": True,
             "action": "CLEARED",
-            "was_active": cleared,
+            "was_active": was_active,
+            "operator_id": args.operator_id,
+            "reason": args.reason,
             "sentinel_path": str(sentinel_path),
         }
         stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")

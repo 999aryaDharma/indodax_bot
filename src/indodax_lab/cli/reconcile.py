@@ -75,6 +75,24 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="Automatically ingest venue fills into ledger before reconciliation",
     )
     parser.add_argument(
+        "--ledger-db",
+        type=Path,
+        default=None,
+        help="Optional path to authoritative ProductionLedgerStore database",
+    )
+    parser.add_argument(
+        "--oms-db",
+        type=Path,
+        default=None,
+        help="Optional path to authoritative OmsStore database to track open orders",
+    )
+    parser.add_argument(
+        "--report-output",
+        type=Path,
+        default=None,
+        help="Optional path to save reconciliation report JSON",
+    )
+    parser.add_argument(
         "--fake",
         action="store_true",
         help="Run in offline drill mode using deterministic FakeVenueAdapter",
@@ -203,8 +221,33 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
         client = IndodaxReadOnlyClient(api_key=api_key, secret_key=secret_key)
 
     service = PrivateReadOnlyReconciliationService(client=client)
-    ledger = ResearchLedger(initial_cash=Decimal("100000000") if args.fake else Decimal("0"))
-    fill_ingester = VenueFillIngester(ledger=ledger) if args.auto_ingest else None
+
+    ledger_store = None
+    if args.ledger_db is not None and args.ledger_db.exists():
+        from indodax_lab.execution.ledger_store import ProductionLedgerStore
+
+        ledger_store = ProductionLedgerStore(args.ledger_db)
+        ledger = ledger_store.load_ledger()
+    else:
+        ledger = ResearchLedger(initial_cash=Decimal("100000000") if args.fake else Decimal("0"))
+
+    expected_open_ids = set()
+    oms_store = None
+    if args.oms_db is not None and args.oms_db.exists():
+        from indodax_lab.execution.oms_store import OmsStore
+
+        oms_store = OmsStore(args.oms_db)
+        expected_open_ids = {
+            o.venue_order_id
+            for o in oms_store.load_nonterminal_orders()
+            if o.venue_order_id is not None
+        }
+
+    fill_ingester = (
+        VenueFillIngester(ledger=ledger, ledger_store=ledger_store, oms_store=oms_store)
+        if args.auto_ingest
+        else None
+    )
 
     coordinator = DurableReconciliationCoordinator(
         service=service,
@@ -217,7 +260,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
         cycle_result = coordinator.run(
             ledger=ledger,
             tracked_pairs=pairs,
-            expected_open_order_ids=set(),
+            expected_open_order_ids=expected_open_ids,
             evaluation_time=eval_time,
             history_limit=args.history_limit,
             auto_ingest_fills=args.auto_ingest,
@@ -251,6 +294,12 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
             for issue in report.issues
         ],
     }
+
+    if args.report_output is not None:
+        args.report_output.parent.mkdir(parents=True, exist_ok=True)
+        report_json = json.dumps(output, indent=2, sort_keys=True)
+        args.report_output.write_text(report_json, encoding="utf-8")
+
     stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
     return 0 if report.healthy else 1
 
