@@ -36,6 +36,8 @@ from indodax_lab.backtest.costs import (
 )
 from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.backtest.ledger import Position as RiskPosition
+from indodax_lab.backtest.ledger import ResearchLedger
+from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy
 from indodax_lab.paper.shadow_store import ShadowStateStore
 
@@ -134,7 +136,10 @@ class LiveShadowEngine:
             start_time=datetime.now(UTC),
         )
 
-        self.available_cash = initial_cash
+        self.ledger = ResearchLedger(
+            initial_cash=initial_cash,
+            init_timestamp=datetime.now(UTC),
+        )
         self.open_positions: Dict[str, ShadowPosition] = {}
         self.closed_trades: List[ClosedTrade] = []
         self.audit_log: List[Dict[str, Any]] = []
@@ -159,13 +164,44 @@ class LiveShadowEngine:
                 self.models[pair_key] = booster
                 self.metadata[pair_key] = json.loads(json_path.read_text())
 
+    @property
+    def available_cash(self) -> Decimal:
+        """Available quote cash is owned by the double-entry ledger."""
+        return self.ledger.available_cash
+
+    def _assert_accounting_consistency(self, checkpoint_cash: Any | None = None) -> None:
+        """Fail closed if shadow execution metadata diverges from ledger inventory."""
+        if checkpoint_cash is not None and Decimal(str(checkpoint_cash)) != self.ledger.cash:
+            raise RuntimeError("SHADOW_CHECKPOINT_CASH_LEDGER_MISMATCH")
+
+        shadow_by_pair = {
+            position.pair: Decimal(str(position.qty))
+            for position in self.open_positions.values()
+        }
+        ledger_by_pair = {
+            pair: position.base_qty
+            for pair, position in self.ledger.positions.items()
+            if position.base_qty > 0
+        }
+        if set(shadow_by_pair) != set(ledger_by_pair):
+            raise RuntimeError("SHADOW_LEDGER_POSITION_SET_MISMATCH")
+        for pair, quantity in shadow_by_pair.items():
+            if ledger_by_pair[pair] != quantity:
+                raise RuntimeError(f"SHADOW_LEDGER_QUANTITY_MISMATCH:{pair}")
+
     def load_state(self) -> None:
         """Restore a verified transactional checkpoint; corruption stops startup."""
         data = self.state_store.load_checkpoint()
         if data is None:
             self.save_state(event_type="INITIALIZE")
             return
-        self.available_cash = Decimal(str(data.get("available_cash", self.initial_cash)))
+        ledger_state = data.get("ledger_state")
+        if not isinstance(ledger_state, dict):
+            raise RuntimeError("SHADOW_LEDGER_STATE_MISSING")
+        restored_ledger = ResearchLedger.from_dict(ledger_state)
+        if restored_ledger.initial_cash != self.initial_cash:
+            raise RuntimeError("SHADOW_LEDGER_INITIAL_CASH_MISMATCH")
+        self.ledger = restored_ledger
         self.open_positions = {
             pos_id: ShadowPosition(**p_dict)
             for pos_id, p_dict in data.get("open_positions", {}).items()
@@ -175,11 +211,15 @@ class LiveShadowEngine:
         ]
         self.audit_log = data.get("audit_log", [])[-200:]
         risk_state = data.get("risk_state")
-        if isinstance(risk_state, dict):
-            restored = PortfolioRiskManager.from_dict(risk_state)
-            if restored.policy.policy_id != self.risk_policy.policy_id:
-                raise RuntimeError("SHADOW_RISK_POLICY_MISMATCH")
-            self.risk_manager = restored
+        if not isinstance(risk_state, dict):
+            raise RuntimeError("SHADOW_RISK_STATE_MISSING")
+        restored = PortfolioRiskManager.from_dict(risk_state)
+        if restored.policy.policy_id != self.risk_policy.policy_id:
+            raise RuntimeError("SHADOW_RISK_POLICY_MISMATCH")
+        self.risk_manager = restored
+        self._assert_accounting_consistency(
+            checkpoint_cash=data.get("available_cash")
+        )
 
     def save_state(
         self,
@@ -190,9 +230,10 @@ class LiveShadowEngine:
         """Persist state and the causal event in one SQLite transaction."""
         now = datetime.now(UTC)
         data = {
-            "schema_version": 2,
+            "schema_version": 3,
             "initial_cash": str(self.initial_cash),
             "available_cash": str(self.available_cash),
+            "ledger_state": self.ledger.to_dict(),
             "open_positions": {k: asdict(v) for k, v in self.open_positions.items()},
             "closed_trades": [asdict(t) for t in self.closed_trades],
             "audit_log": self.audit_log[-200:],
@@ -209,7 +250,10 @@ class LiveShadowEngine:
 
     def reset_portfolio(self) -> None:
         """Reset paper trading portfolio to clean initial state."""
-        self.available_cash = self.initial_cash
+        self.ledger = ResearchLedger(
+            initial_cash=self.initial_cash,
+            init_timestamp=datetime.now(UTC),
+        )
         self.open_positions = {}
         self.closed_trades = []
         self.audit_log = []
@@ -367,7 +411,8 @@ class LiveShadowEngine:
         closed_this_cycle = []
         positions_to_delete = []
 
-        now_str = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+        now_utc = datetime.now(UTC)
+        now_str = now_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
 
         for pos_id, pos in self.open_positions.items():
             curr_px = live_prices.get(pos.pair)
@@ -413,7 +458,7 @@ class LiveShadowEngine:
                     market="spot_idr",
                     side=OrderSide.SELL,
                     role=OrderRole.TAKER,
-                    event_ts=datetime.now(UTC),
+                    event_ts=now_utc,
                 )
                 sell_fee = gross_proceeds * exit_cost.total_rate
                 net_credit = gross_proceeds - sell_fee
@@ -423,8 +468,20 @@ class LiveShadowEngine:
                 net_pnl = float(net_credit - cash_debited_dec)
                 pnl_pct = (conservative_exit_px - pos.entry_price) / pos.entry_price
 
-                # Credit cash back to ledger
-                self.available_cash += net_credit
+                exit_fill = Fill(
+                    fill_id=f"paper-exit-{pos.position_id}-{int(now_utc.timestamp())}",
+                    order_id=f"paper-order-exit-{pos.position_id}",
+                    event_id=f"paper-exit-event-{pos.position_id}-{int(now_utc.timestamp())}",
+                    pair=pos.pair,
+                    side=OrderSide.SELL,
+                    role=OrderRole.TAKER,
+                    qty=qty_dec,
+                    price=exit_px_dec,
+                    fees=sell_fee,
+                    timestamp=now_utc,
+                    fee_components={"total": sell_fee},
+                )
+                self.ledger.process_fill(exit_fill)
 
                 ct = ClosedTrade(
                     trade_id=f"trade_{int(time.time())}_{pos.pair}",
@@ -614,15 +671,16 @@ class LiveShadowEngine:
             max_cash_cap = self.available_cash * Decimal(str(self.max_cash_per_trade_pct))
             allocated_budget = min(desired_notional, max_cash_cap)
 
-            risk_positions: Dict[str, RiskPosition] = {}
+            risk_positions: Dict[str, RiskPosition] = {
+                pair_name: position.model_copy(deep=True)
+                for pair_name, position in self.ledger.positions.items()
+                if position.base_qty > 0
+            }
             mark_prices: Dict[str, Decimal] = {}
             for existing in self.open_positions.values():
-                risk_positions[existing.pair] = RiskPosition(
-                    pair=existing.pair,
-                    base_qty=Decimal(str(existing.qty)),
-                    cost_basis=Decimal(str(existing.cash_debited - existing.buy_fee_paid)),
+                mark_prices[existing.pair] = Decimal(
+                    str(live_prices.get(existing.pair, existing.entry_price))
                 )
-                mark_prices[existing.pair] = Decimal(str(live_prices.get(existing.pair, existing.entry_price)))
             mark_prices[pair] = Decimal(str(live_px))
             proposed_qty = allocated_budget / Decimal(str(live_px))
             risk_intent = SignalIntent(
@@ -688,7 +746,8 @@ class LiveShadowEngine:
                 eval_results.append(diag)
                 continue
             buy_fee = gross_notional * entry_cost.total_rate
-            qty = float(gross_notional / Decimal(str(live_px)))
+            qty_dec = gross_notional / Decimal(str(live_px))
+            qty = float(qty_dec)
 
             sl_price = live_px - (sl_mult * atr_val)
             tp_price = live_px + (tp_mult * atr_val)
@@ -711,8 +770,22 @@ class LiveShadowEngine:
                 last_bar_timestamp=int(curr["timestamp"]),
             )
 
-            self.available_cash -= allocated_budget
+            entry_fill = Fill(
+                fill_id=f"paper-entry-{pos_id}",
+                order_id=f"paper-order-entry-{pos_id}",
+                event_id=f"paper-entry-event-{pos_id}",
+                pair=pair,
+                side=OrderSide.BUY,
+                role=OrderRole.TAKER,
+                qty=qty_dec,
+                price=Decimal(str(live_px)),
+                fees=buy_fee,
+                timestamp=now_utc,
+                fee_components={"total": buy_fee},
+            )
+            self.ledger.process_fill(entry_fill)
             self.open_positions[pos_id] = new_pos
+            self._assert_accounting_consistency()
 
             diag["action"] = "ENTER_POSITION"
             diag["reason"] = (
@@ -723,6 +796,7 @@ class LiveShadowEngine:
             eval_results.append(diag)
 
             self.audit_log.append(diag)
+            self._assert_accounting_consistency()
             self.save_state(
                 event_type="PAPER_ENTRY",
                 event_payload={
