@@ -5,10 +5,10 @@ from decimal import Decimal
 from pathlib import Path
 
 from indodax_lab.backtest.costs import (
-    OrderRole,
-    OrderSide,
     load_cost_schedule_table,
     lookup_cost,
+    OrderRole,
+    OrderSide,
 )
 
 
@@ -45,7 +45,6 @@ def test_2026_cfx_reduction_boundary() -> None:
     after = _cost(datetime(2026, 2, 28, 17, 0, 0, tzinfo=UTC))
     assert before.exchange_fee_rate == Decimal("0.000222")
     assert after.exchange_fee_rate == Decimal("0.000111")
-
 
 
 def test_observed_current_pro_minimum_boundary() -> None:
