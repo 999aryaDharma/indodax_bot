@@ -6,11 +6,11 @@ it never edits ledger state, guesses missing fills, or auto-flattens positions.
 
 from __future__ import annotations
 
+from collections.abc import Sequence, Set
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
-from typing import AbstractSet, Sequence
 
 from indodax_lab.backtest.ledger import ResearchLedger
 from indodax_lab.execution.indodax_readonly import (
@@ -90,8 +90,8 @@ class ReconciliationEngine:
         account: VenueAccountSnapshot,
         venue_open_orders: Sequence[VenueOrder] = (),
         venue_fills: Sequence[VenueFill] = (),
-        expected_open_order_ids: AbstractSet[str] = frozenset(),
-        expected_recent_fill_ids: AbstractSet[str] = frozenset(),
+        expected_open_order_ids: Set[str] = frozenset(),
+        expected_recent_fill_ids: Set[str] = frozenset(),
         tracked_pairs: Sequence[str] | None = None,
         evaluation_time: datetime,
     ) -> ReconciliationReport:
@@ -113,7 +113,10 @@ class ReconciliationEngine:
             issues.append(
                 ReconciliationIssue(
                     code="VENUE_CLOCK_AHEAD",
-                    detail=f"venue snapshot is {-age.total_seconds():.3f}s ahead of evaluation clock",
+                    detail=(
+                        f"venue snapshot is {-age.total_seconds():.3f}s "
+                        "ahead of evaluation clock"
+                    ),
                 )
             )
         elif age > self.policy.max_snapshot_age:
