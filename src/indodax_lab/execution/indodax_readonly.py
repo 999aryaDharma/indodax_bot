@@ -7,14 +7,15 @@ Private REST and Trade API v2 contracts.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import time
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-import hashlib
-import hmac
 from threading import Lock
-import time
-from typing import Any, Mapping, Sequence
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
