@@ -324,4 +324,3 @@ Scoped committed implementation and `PM-05-HANDOFF.md`, submitted at REVIEW, not
 ### STOP CONDITIONS
 
 Dependency not DONE; missing review owner; identity/schema conflict; real credential requirement; required environment unavailable; failed migration or need to widen scope. Preserve evidence and mark blocker, never redesign silently.
-

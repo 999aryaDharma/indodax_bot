@@ -95,7 +95,7 @@ def refresh(m):
         text=re.sub(r'^Status: \w+$','Status: '+s['status'],text,count=1,flags=re.M)
         text=re.sub(r'(?<=## Depends On\n\n).*?(?=\n\n## Unlocks)', '\n'.join('- '+d+' — '+by[d]['title'] for d in s['dependencies']) or 'None. This capability can establish its own offline acceptance fixture.',text,flags=re.S)
         text=re.sub(r'(?<=## Unlocks\n\n).*?(?=\n\n## Required Reading)', ', '.join(s['unlocks']) or 'No mandatory dependent sprint.',text,flags=re.S)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text.rstrip()+'\n', encoding="utf-8")
     (ROOT/MANIFEST).write_text(json.dumps(m,indent=2,ensure_ascii=False)+'\n', encoding="utf-8")
     _,depth=validate(m)
     def put(p,text):(ROOT/p).write_text(text.strip()+'\n', encoding="utf-8")

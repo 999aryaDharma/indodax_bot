@@ -322,4 +322,3 @@ Scoped committed implementation and `RW6-01-HANDOFF.md`, submitted at REVIEW, no
 ### STOP CONDITIONS
 
 Dependency not DONE; missing review owner; identity/schema conflict; real credential requirement; required environment unavailable; failed migration or need to widen scope. Preserve evidence and mark blocker, never redesign silently.
-
