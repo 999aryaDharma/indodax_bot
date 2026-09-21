@@ -4,7 +4,7 @@
 
 RP-01 — Shared SignalIntent ownership with compatibility.
 
-Current scheduling status: READY after DOC-01 independent PASS on `6868d24de1056e86638a8c48bcd56a65187ca2fc`. Read the manifest at execution time; claim one owner and name an independent reviewer before implementation. READY does not waive external gates.
+Current scheduling status: REVIEW after implementation at code SHA `5d9629e` and independent code-review PASS. The next executable action is to rerun the full suite in the declared research environment; missing `pandas`, `pyarrow`, and `scipy` currently blocks DONE and RW0-01. Do not start another task until this gate is resolved.
 
 ## OBJECTIVE
 

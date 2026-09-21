@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-RP-01. Verify external gates and shared-file ownership before claim.
+No task is READY; RP-01 review is blocked by the unavailable full-suite research environment.
 
 ## Wave 0
 
@@ -21,7 +21,7 @@ RP-01. Verify external gates and shared-file ownership before claim.
 - BASE-03 — Trade v2 ownership parsing [DONE; CORE]
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
-- RP-01 — Shared SignalIntent ownership with compatibility [READY; CORE]
+- RP-01 — Shared SignalIntent ownership with compatibility [REVIEW; CORE]
 
 ## Wave 2
 

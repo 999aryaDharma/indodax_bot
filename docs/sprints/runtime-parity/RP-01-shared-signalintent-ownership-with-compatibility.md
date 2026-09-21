@@ -30,7 +30,7 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: READY
+Status: REVIEW
 
 Priority: P0 | Type: integration | Domain: runtime-parity | Portfolio: CORE
 
@@ -42,7 +42,7 @@ Requirements: FR-20 | Legacy tasks: none
 
 Risk level: medium | Complexity: S
 
-Classification: PLANNED implementation; current-state statements are audit facts. External gates are separate from READY.
+Classification: IMPLEMENTED / REVIEW; current-state statements are audit facts. Full-suite environment gate remains unresolved.
 
 ## Goal
 

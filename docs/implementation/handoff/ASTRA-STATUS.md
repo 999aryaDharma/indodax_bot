@@ -3,12 +3,12 @@
 - Last audit SHA: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`.
 - Planning version: 1.0.0; date 2026-09-21.
 - Branch: `docs/architecture-runtime-plan`; base `dev`; active workspace `D:/bot-trading` per user request. Former temporary worktree is detached and inactive.
-- Scope: documentation, manifest recovery and planning-tool validation only. Product implementation belongs to LUNA.
+- Scope: architecture planning plus coordinator support for the scoped RP-01 LUNA implementation. No production execution authority.
 - Completed planning areas: current-state inventory; runtime divergences; frozen-boundary interpretation; conservative manifest reconstruction; RW/RP/PM task program; domain contract design; next LUNA unit.
 - Open architecture questions: none needed for RP-01. Future changes to frozen boundaries require explicit conflict/CR/ADR, not implementer discretion.
 - Known blockers: historical later handoffs lack independently established PASS; production A01–A15; unverified data/licenses/costs/hardware/private venue evidence; no production activation authorization.
-- Current implementation phase: DOC-01 independently accepted; planning delivery complete. No product task implemented by ASTRA.
-- Next expected LUNA task: RP-01 only, structurally READY. LUNA must claim ownership and name an independent reviewer before implementation.
+- Current implementation phase: RP-01 code review PASS at `5d9629e`; mandatory full-suite research environment gate remains blocked.
+- Next expected LUNA task: RP-01 gate resolution only — run the full suite in the declared environment, then coordinator may evaluate DONE. RW0-01 remains locked.
 - Review evidence: [review record](REVIEW.md), [DOC-01 handoff](../../sprints/handoffs/DOC-01-HANDOFF.md).
 
 ## Execution ledger

@@ -2,6 +2,6 @@
 
 Derived from manifest; historical baseline is retained separately.
 
-{'REVIEW': 65, 'DONE': 15, 'PLANNED': 38, 'READY': 1}
+{'REVIEW': 66, 'DONE': 15, 'PLANNED': 38}
 
-READY: RP-01.
+READY: none; RP-01 is in REVIEW pending the full-suite environment gate.

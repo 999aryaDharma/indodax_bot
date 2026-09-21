@@ -8596,9 +8596,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/runtime-parity/RP-01-shared-signalintent-ownership-with-compatibility.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "REVIEW",
+      "implementation_owner": "Codex /root (LUNA execution)",
+      "independent_reviewer": "/root/architecture_doc_review",
       "recommended_branch": "feat/rp-01-shared-signalintent-ownership-with-compatibility",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -8625,25 +8625,25 @@
           "criterion": "RP-01-AC0",
           "test_case": "test_rp_01_0",
           "behavior": "Only contracts/decision.py defines SignalIntent",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "RP-01-AC1",
           "test_case": "test_rp_01_1",
           "behavior": "Old and new import paths refer to the same class object",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "RP-01-AC2",
           "test_case": "test_rp_01_2",
           "behavior": "Golden BUY/SELL serialization including IOC/TAKER defaults is identical",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "RP-01-AC3",
           "test_case": "test_rp_01_3",
           "behavior": "Nonfinite or zero quantity and naive decision timestamp reject identically",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         }
       ],
       "risk_level": "medium",

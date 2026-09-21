@@ -1,6 +1,6 @@
 # RP-01 Handoff — Shared SignalIntent ownership with compatibility
 
-Status: REVIEW
+Status: REVIEW — code review PASS; full-suite environment gate BLOCKED
 
 ## Identity
 
@@ -52,4 +52,4 @@ No schema, field, default, validator, persistence, venue, accounting, or executi
 
 ## Reviewer decision
 
-Pending independent re-review on code SHA `5d9629e`. Coordinator must not mark the manifest DONE until the reviewer records PASS on this exact code SHA and the external full-suite gate is resolved or explicitly preserved as a blocker.
+Independent reviewer `/root/architecture_doc_review` returned PASS on exact code SHA `5d9629e` with no Critical, Important, or Minor findings. The mandatory full-suite gate remains blocked by unavailable `pandas`, `pyarrow`, and `scipy`; coordinator must not mark the manifest DONE or unlock RW0-01 until that environment gate is resolved and the full suite is rerun.
