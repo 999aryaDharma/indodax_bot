@@ -9,7 +9,7 @@ Tests:
 5. Trailing stop and take profit trigger logic
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 import tempfile
@@ -21,6 +21,7 @@ from indodax_lab.backtest.costs import OrderRole, OrderSide
 from indodax_lab.backtest.orders import Fill
 
 from indodax_lab.paper.live_shadow_engine import (
+    FEATURE_COLS,
     LiveShadowEngine,
     ShadowPosition,
 )
@@ -244,3 +245,72 @@ def test_bars_held_advances_only_on_new_closed_bar(temp_engine):
     next_bar = {"eth_idr": pd.DataFrame([{"timestamp": 200}])}
     temp_engine.check_open_positions(prices, next_bar)
     assert temp_engine.open_positions[pos.position_id].bars_held == 1
+
+
+
+def _market_frame(latest_start: datetime) -> pd.DataFrame:
+    timestamps = [
+        int((latest_start - timedelta(hours=199 - index)).timestamp())
+        for index in range(200)
+    ]
+    prices = [100_000_000.0 + index * 10_000.0 for index in range(200)]
+    return pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "open": prices,
+            "high": [price * 1.001 for price in prices],
+            "low": [price * 0.999 for price in prices],
+            "close": prices,
+            "base_volume": [1.0 + (index % 7) for index in range(200)],
+        }
+    )
+
+
+def test_model_metadata_schema_mismatch_fails_closed(temp_engine):
+    pair = "btc_idr"
+    temp_engine.models[pair] = object()
+    temp_engine.metadata[pair] = {
+        "feature_means": {FEATURE_COLS[0]: 0.0},
+        "feature_stds": {FEATURE_COLS[0]: 1.0},
+        "calibration": {"a": 1.0, "b": 0.0},
+    }
+    features = pd.Series({name: 0.0 for name in FEATURE_COLS})
+
+    assert temp_engine.predict_probability(pair, features) is None
+
+
+def test_missing_live_ticker_rejects_entry_before_model(temp_engine):
+    latest_start = datetime.now(UTC) - timedelta(minutes=70)
+    frame = _market_frame(latest_start)
+
+    results = temp_engine.evaluate_market_scan({}, {"btc_idr": frame})
+
+    assert len(results) == 1
+    assert results[0]["action"] == "REJECT_MARKET_DATA_UNAVAILABLE"
+
+
+def test_stale_closed_bar_rejects_entry_before_model(temp_engine):
+    latest_start = datetime.now(UTC) - timedelta(hours=4)
+    frame = _market_frame(latest_start)
+
+    results = temp_engine.evaluate_market_scan(
+        {"btc_idr": 102_000_000.0},
+        {"btc_idr": frame},
+    )
+
+    assert len(results) == 1
+    assert results[0]["action"] == "REJECT_STALE_MARKET_DATA"
+
+
+def test_legacy_json_checkpoint_requires_explicit_migration(tmp_path):
+    state_file = tmp_path / "shadow_state.sqlite3"
+    state_file.with_suffix(".json").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(
+        RuntimeError,
+        match="LEGACY_SHADOW_JSON_STATE_REQUIRES_EXPLICIT_MIGRATION",
+    ):
+        LiveShadowEngine(
+            state_file=state_file,
+            initial_cash=Decimal("500000.00"),
+        )
