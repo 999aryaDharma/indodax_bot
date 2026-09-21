@@ -1,0 +1,113 @@
+{
+  "leaderboard_v2": [
+    {
+      "model": "D04_Tuned (iTransformer)",
+      "auc": 0.5641,
+      "prec": 0.3868,
+      "rec": 0.2738
+    },
+    {
+      "model": "D03_Tuned (ResNet-LSTM)",
+      "auc": 0.5524,
+      "prec": 0.4127,
+      "rec": 0.3041
+    },
+    {
+      "model": "D02_Tuned (Causal TCN)",
+      "auc": 0.5358,
+      "prec": 0.3875,
+      "rec": 0.2875
+    },
+    {
+      "model": "M01_Tuned (Logistic)",
+      "auc": 0.5584,
+      "prec": 0.4109,
+      "rec": 0.2925
+    },
+    {
+      "model": "M02_Tuned (XGBoost)",
+      "auc": 0.5624,
+      "prec": 0.3824,
+      "rec": 0.2956
+    },
+    {
+      "model": "D01_Tuned (ResMLP)",
+      "auc": 0.5615,
+      "prec": 0.4062,
+      "rec": 0.3206
+    }
+  ],
+  "tournament_backtests_v2": [
+    {
+      "model": "Raw (No AI Filter)",
+      "fills": 80,
+      "trades": 40,
+      "fee_paid": 21582.0,
+      "gross_pnl": -5594.4972061611,
+      "net_pnl": -27176.4972061611,
+      "final_equity": 472823.5027938389,
+      "win_rate": 0.3
+    },
+    {
+      "model": "M01_Tuned (Logistic L2)",
+      "fills": 60,
+      "trades": 30,
+      "fee_paid": 15763.0,
+      "gross_pnl": -2549.221526993,
+      "net_pnl": -18312.221526993,
+      "final_equity": 481687.778473007,
+      "win_rate": 0.26666666666666666
+    },
+    {
+      "model": "M02_Tuned (XGBoost CUDA)",
+      "fills": 38,
+      "trades": 19,
+      "fee_paid": 10332.0,
+      "gross_pnl": 1194.2876137129,
+      "net_pnl": -9137.7123862871,
+      "final_equity": 490862.2876137129,
+      "win_rate": 0.3157894736842105
+    },
+    {
+      "model": "D01_Tuned (ResMLP CUDA)",
+      "fills": 64,
+      "trades": 32,
+      "fee_paid": 17238.0,
+      "gross_pnl": -4259.8266729379,
+      "net_pnl": -21497.8266729379,
+      "final_equity": 478502.1733270621,
+      "win_rate": 0.3125
+    },
+    {
+      "model": "D02_Tuned (Causal TCN CUDA)",
+      "fills": 54,
+      "trades": 27,
+      "fee_paid": 14396.0,
+      "gross_pnl": -4980.2665504169,
+      "net_pnl": -19376.2665504169,
+      "final_equity": 480623.7334495831,
+      "win_rate": 0.25925925925925924
+    },
+    {
+      "model": "D03_Tuned (ResNet-LSTM CUDA)",
+      "fills": 44,
+      "trades": 22,
+      "fee_paid": 11928.0,
+      "gross_pnl": -619.6916277437,
+      "net_pnl": -12547.6916277437,
+      "final_equity": 487452.3083722563,
+      "win_rate": 0.3181818181818182
+    },
+    {
+      "model": "D04_Tuned (iTransformer CUDA)",
+      "fills": 36,
+      "trades": 18,
+      "fee_paid": 9558.0,
+      "gross_pnl": -913.8501956011,
+      "net_pnl": -10471.8501956011,
+      "final_equity": 489528.1498043989,
+      "win_rate": 0.2777777777777778
+    }
+  ],
+  "evaluated_at_utc": "2026-09-16T13:51:01.420490+00:00"
+}

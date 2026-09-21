@@ -1,0 +1,20 @@
+{
+  "asset": "SOL",
+  "pair": "sol_idr",
+  "strategy_id": "C03",
+  "strategy_family": "TS Momentum",
+  "period": "4+ Years (Nov 2021-2025)",
+  "bars_tested": 36283,
+  "final_equity": 426444.5308155095,
+  "total_gross_pnl": -42242.4691844905,
+  "total_net_pnl": -73555.4691844905,
+  "total_fees_paid": 31313.0,
+  "fills": 94,
+  "trade_count": 47,
+  "win_count": 12,
+  "loss_count": 35,
+  "win_rate_pct": 25.5,
+  "return_pct": -14.71,
+  "postings_hash": "c55f806acf690864e9d04d2e6b10910e6b04a28bc9fe708904f1e53d1507f519",
+  "artifact_sha256": "73b9ef46f492f01b6dcca53beda53216215f15c7073807e6e0f52007e3d04979"
+}

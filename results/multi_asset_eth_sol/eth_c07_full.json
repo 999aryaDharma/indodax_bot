@@ -1,0 +1,20 @@
+{
+  "asset": "ETH",
+  "pair": "eth_idr",
+  "strategy_id": "C07",
+  "strategy_family": "RSI Mean Reversion",
+  "period": "5 Years (2021-2025)",
+  "bars_tested": 43824,
+  "final_equity": 488795.144294523,
+  "total_gross_pnl": -2648.855705477,
+  "total_net_pnl": -11204.855705477,
+  "total_fees_paid": 8556.0,
+  "fills": 28,
+  "trade_count": 14,
+  "win_count": 7,
+  "loss_count": 7,
+  "win_rate_pct": 50.0,
+  "return_pct": -2.24,
+  "postings_hash": "c8560a56f54ac4c6cb2004319785bea458b69515461dc0c680a0f9bbdecd0674",
+  "artifact_sha256": "6216b9b23e20fe5a9e7ed98c83224f94c053349418fc8fedcedc9369a6c5db04"
+}

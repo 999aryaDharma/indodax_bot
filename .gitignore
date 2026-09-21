@@ -17,9 +17,16 @@ build/
 venv/
 env/
 
-# === Logs ===
+# === Logs & Runtime State ===
 logs/*.log
 logs/*.log.*
+logs/*.db
+logs/*.sqlite*
+logs/*.json
+!logs/.gitkeep
+
+# === Local Developer / Agent Tooling ===
+.agents/mcp_config.json
 
 # === Strategy research lab ===
 lab-data/

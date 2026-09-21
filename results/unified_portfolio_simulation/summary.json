@@ -1,0 +1,50 @@
+{
+  "strict_base": {
+    "mode": "BASELINE_STATIC",
+    "entry_mode": "STRICT",
+    "initial_cash": 500000.0,
+    "final_equity": 463609.0,
+    "net_pnl": -36391.0,
+    "gross_pnl": 2954.0,
+    "fees_paid": 39345.0,
+    "total_trades": 47,
+    "win_rate": 0.3191,
+    "max_drawdown_pct": 10.26
+  },
+  "strict_ai": {
+    "mode": "AI_DYNAMIC",
+    "entry_mode": "STRICT",
+    "initial_cash": 500000.0,
+    "final_equity": 472622.0,
+    "net_pnl": -27378.0,
+    "gross_pnl": 9734.0,
+    "fees_paid": 37112.0,
+    "total_trades": 39,
+    "win_rate": 0.3846,
+    "max_drawdown_pct": 9.87
+  },
+  "active_base": {
+    "mode": "BASELINE_STATIC",
+    "entry_mode": "ACTIVE",
+    "initial_cash": 500000.0,
+    "final_equity": 286802.0,
+    "net_pnl": -213198.0,
+    "gross_pnl": -52543.0,
+    "fees_paid": 160655.0,
+    "total_trades": 250,
+    "win_rate": 0.276,
+    "max_drawdown_pct": 42.87
+  },
+  "active_ai": {
+    "mode": "AI_DYNAMIC",
+    "entry_mode": "ACTIVE",
+    "initial_cash": 500000.0,
+    "final_equity": 338059.0,
+    "net_pnl": -161941.0,
+    "gross_pnl": -13911.0,
+    "fees_paid": 148030.0,
+    "total_trades": 186,
+    "win_rate": 0.3118,
+    "max_drawdown_pct": 32.73
+  }
+}

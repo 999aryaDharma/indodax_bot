@@ -1,0 +1,25 @@
+{
+  "model_id": "D03",
+  "model_name": "D03_ResNet_LSTM_Sequence_Challenger",
+  "version": "1.0.0",
+  "hardware_target": "NVIDIA_CUDA",
+  "sequence_length": 24,
+  "checkpoint_file": "d03_resnet_lstm_btc_1h_v1.pt",
+  "checkpoint_sha256": "a7fee1d481210c3eaa17e254aef2973b0ebf12b6ee22efc35a827ac725b759d6",
+  "calibration": {
+    "method": "sigmoid",
+    "a": 0.7092308745704974,
+    "b": -0.043300084147844156
+  },
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5582,
+    "precision_40": 0.3982,
+    "recall_40": 0.3164,
+    "precision_45": 0.4676,
+    "recall_45": 0.0458,
+    "precision_50": 0.4286,
+    "recall_50": 0.0011,
+    "accuracy": 0.6759
+  },
+  "exported_at_utc": "2026-09-16T13:06:37.801075+00:00"
+}

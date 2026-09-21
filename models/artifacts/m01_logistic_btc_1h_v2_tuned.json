@@ -1,0 +1,14 @@
+{
+  "model_id": "M01_Tuned",
+  "model_name": "M01_Logistic_Regression_L2_Tuned",
+  "best_c": 0.5,
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5584,
+    "precision_40": 0.4109,
+    "recall_40": 0.2925
+  },
+  "calibration": {
+    "a": 1.131012645892421,
+    "b": 0.22677332348543755
+  }
+}

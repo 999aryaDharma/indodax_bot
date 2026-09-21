@@ -1,0 +1,25 @@
+{
+  "report_schema_version": "1.0.0",
+  "strategy_id": "C10_Tuned",
+  "family": "regime_ensemble",
+  "tuning_enhancements": [
+    "EMA_200_macro_bull_regime_filter",
+    "asymmetric_risk_reward_take_profit",
+    "volatility_adjusted_atr_stops",
+    "official_indodax_fee_schedule"
+  ],
+  "initial_cash_idr": "500000",
+  "final_cash_idr": "449988.62497039660000000000",
+  "final_equity_idr": "449988.62497039660000000000",
+  "total_realized_gross_pnl_idr": "355.62497039660000000000",
+  "total_realized_net_pnl_idr": "-50011.37502960340000000000",
+  "total_fees_paid_idr": "50367",
+  "total_fills": 144,
+  "trade_count": 71,
+  "win_count": 32,
+  "loss_count": 39,
+  "win_rate": "0.4507042253521126760563380282",
+  "return_pct": -10.0,
+  "ledger_reconciliation_status": "PASS",
+  "artifact_sha256": "01380c13597ebd0db960de22192fc000ab15922426a184505abb7465cbc65fc3"
+}

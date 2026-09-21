@@ -1,0 +1,13 @@
+{
+  "model_id": "M02_Tuned",
+  "model_name": "M02_XGBoost_CUDA_Tuned",
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5624,
+    "precision_40": 0.3824,
+    "recall_40": 0.2956
+  },
+  "calibration": {
+    "a": 0.911495271174581,
+    "b": 0.07570248941997795
+  }
+}

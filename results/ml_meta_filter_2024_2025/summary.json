@@ -1,0 +1,82 @@
+[
+  {
+    "strategy": "C01_Raw_Maker",
+    "fills": 212,
+    "total_fee_paid": 54875.0,
+    "gross_pnl": -17733.4432494517,
+    "net_pnl": -72608.4432494517,
+    "final_equity": 427391.5567505483,
+    "trade_count": 106,
+    "win_rate": 0.3113207547169811
+  },
+  {
+    "strategy": "C01 + M02_Filter (p>=0.36)",
+    "fills": 178,
+    "total_fee_paid": 46332.0,
+    "gross_pnl": -26277.4873270026,
+    "net_pnl": -72609.4873270026,
+    "final_equity": 427390.5126729974,
+    "trade_count": 89,
+    "win_rate": 0.2808988764044944
+  },
+  {
+    "strategy": "C01 + M02_Filter (p>=0.38)",
+    "fills": 158,
+    "total_fee_paid": 41551.0,
+    "gross_pnl": -31188.4060653585,
+    "net_pnl": -72739.4060653585,
+    "final_equity": 427260.5939346415,
+    "trade_count": 79,
+    "win_rate": 0.25316455696202533
+  },
+  {
+    "strategy": "C01 + M02_Filter (p>=0.40)",
+    "fills": 132,
+    "total_fee_paid": 35170.0,
+    "gross_pnl": -16090.175223967,
+    "net_pnl": -51260.175223967,
+    "final_equity": 448739.824776033,
+    "trade_count": 66,
+    "win_rate": 0.3484848484848485
+  },
+  {
+    "strategy": "C03_Raw_Maker",
+    "fills": 202,
+    "total_fee_paid": 53491.0,
+    "gross_pnl": -19922.8718890603,
+    "net_pnl": -73413.8718890603,
+    "final_equity": 426586.1281109397,
+    "trade_count": 101,
+    "win_rate": 0.3564356435643564
+  },
+  {
+    "strategy": "C03 + M02_Filter (p>=0.36)",
+    "fills": 194,
+    "total_fee_paid": 50958.0,
+    "gross_pnl": -15272.1250375457,
+    "net_pnl": -66230.1250375457,
+    "final_equity": 433769.8749624543,
+    "trade_count": 97,
+    "win_rate": 0.36082474226804123
+  },
+  {
+    "strategy": "C03 + M02_Filter (p>=0.38)",
+    "fills": 162,
+    "total_fee_paid": 42527.0,
+    "gross_pnl": -24717.9936913419,
+    "net_pnl": -67244.9936913419,
+    "final_equity": 432755.0063086581,
+    "trade_count": 81,
+    "win_rate": 0.345679012345679
+  },
+  {
+    "strategy": "C03 + M02_Filter (p>=0.40)",
+    "fills": 150,
+    "total_fee_paid": 39823.0,
+    "gross_pnl": -15968.2850456308,
+    "net_pnl": -55791.2850456308,
+    "final_equity": 444208.7149543692,
+    "trade_count": 75,
+    "win_rate": 0.3333333333333333
+  }
+]

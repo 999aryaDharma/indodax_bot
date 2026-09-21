@@ -1,0 +1,8 @@
+{
+  "model_id": "M02_Omni_Cross_Asset",
+  "training_samples": 71296,
+  "calibration": {
+    "a": 0.9371813275689211,
+    "b": 0.05972178321288332
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "asset": "SOL",
+  "pair": "sol_idr",
+  "strategy_id": "S02",
+  "strategy_family": "Squeeze Expansion",
+  "period": "4+ Years (Nov 2021-2025)",
+  "bars_tested": 36283,
+  "final_equity": 432130.7562664338,
+  "total_gross_pnl": -21556.2437335662,
+  "total_net_pnl": -67869.2437335662,
+  "total_fees_paid": 46313.0,
+  "fills": 174,
+  "trade_count": 87,
+  "win_count": 26,
+  "loss_count": 61,
+  "win_rate_pct": 29.9,
+  "return_pct": -13.57,
+  "postings_hash": "dbc7dd8ccef7e393c55f73c3c350a4022d25c9bb9bd46cd30405973064b45a57",
+  "artifact_sha256": "85e2adfd0b279e32e8057b76d8bbe4a73352de003b24393b3f537b77fb7b5243"
+}

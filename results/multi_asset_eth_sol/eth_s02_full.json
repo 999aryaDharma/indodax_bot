@@ -1,0 +1,20 @@
+{
+  "asset": "ETH",
+  "pair": "eth_idr",
+  "strategy_id": "S02",
+  "strategy_family": "Squeeze Expansion",
+  "period": "5 Years (2021-2025)",
+  "bars_tested": 43824,
+  "final_equity": 450751.0107962431,
+  "total_gross_pnl": 9126.0107962431,
+  "total_net_pnl": -49248.9892037569,
+  "total_fees_paid": 58375.0,
+  "fills": 190,
+  "trade_count": 94,
+  "win_count": 35,
+  "loss_count": 59,
+  "win_rate_pct": 37.2,
+  "return_pct": -9.85,
+  "postings_hash": "a7b71894eb6a2dd6fd384f7f99bcbe875eee7d5edcc427549a9ff2bdfd1dce99",
+  "artifact_sha256": "5b5145e6f14ac1b6d532cc3349696d9525d2869e20d89dea50a2ace7a4f4f9c7"
+}

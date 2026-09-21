@@ -1,0 +1,264 @@
+{
+  "report_schema_version": "1.0.0",
+  "research_only_disclaimer": "RESEARCH ONLY: This report is for offline research, historical backtest, and paper/shadow trading evaluation only. No real orders were placed. No real funds were used. Strategy only produces SignalIntent. Judge/engine has sole authority over fills, fees, slippage, ledger, equity.",
+  "run_id": "c01_mtf_btc_20210104_7d",
+  "generated_at_utc": "2026-09-16T02:13:05.378233+00:00",
+  "strategy_id": "C01_MTF",
+  "strategy_version": "1.0.0",
+  "strategy_logic_hash": "bda8aa25b05a5c4d67a52924b4b781555bef69777eed8d216f7d2b74a4da536a",
+  "strategy_parameters_hash": "768db1049baf9724b5d105e6ab5005b3f4504f2e68af6fc76eca2e74d956f6bd",
+  "dataset_registry_id": "lab-data-5m:btc_idr:bronze",
+  "feature_set_id": "tabular_bar_5m_v1",
+  "feature_set_version": "1.0.0",
+  "cost_schedule_id": "indodax_idr",
+  "cost_schedule_version": "1.0.0",
+  "cost_config_path": "configs/costs/indodax_idr_v1.yaml",
+  "pair": "btc_idr",
+  "signal_interval": "5m",
+  "context_interval": "1h",
+  "start_utc": "2021-01-04T00:00:00+00:00",
+  "end_utc": "2021-01-11T00:00:00+00:00",
+  "bars_5m_loaded": 2016,
+  "initial_cash_idr": "10000000",
+  "final_cash_idr": "7257551.13862000000000000000",
+  "final_equity_idr": "10084196.03686000000000000000",
+  "total_realized_gross_pnl_idr": "-73511.30650000000000000000",
+  "total_realized_net_pnl_idr": "-330531.30650000000000000000",
+  "unrealized_pnl_idr": "2826644.89824000000000000000",
+  "total_fees_paid_idr": "257020",
+  "total_slippage_idr": "0",
+  "total_signal_intents": 126,
+  "total_intents_accepted": 35,
+  "total_intents_rejected": 108,
+  "total_fills": 35,
+  "total_partial_fills": 0,
+  "open_positions_at_end": {
+    "btc_idr": {
+      "base_qty": "0.00518176",
+      "cost_basis": "2411917.55488000000000000000",
+      "avg_entry": "465463000.000000000000"
+    }
+  },
+  "max_drawdown_amount_idr": "0",
+  "max_drawdown_pct": "0",
+  "win_rate": "0",
+  "profit_factor": "0E+20",
+  "trade_count": 13,
+  "ledger_reconciliation_status": "PASS",
+  "temporal_validation_status": "PASS",
+  "postings_hash_sha256": "2a4e2f712e0627198595372425832eadaf76b3196b18173bffb2f4e13aca4081",
+  "engine_execution_version": "causal-bar-proxy-v2",
+  "execution_assumptions": [
+    "prior_closed_volume_is_not_observed_depth",
+    "maker_trade_through_proxy_no_queue_priority",
+    "SL_FIRST_exit_at_observation_availability",
+    "liquidity_max_age_one_bar_interval",
+    "quantity_precision=8",
+    "max_participation_rate=0.10",
+    "require_trade_through_for_maker=True"
+  ],
+  "rejection_reasons": [
+    {
+      "intent_id": "c01_btc_idr_1609789200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609789500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609804200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609805100",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609805400",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609805700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609807200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609807500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609812300",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609835100",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609848300",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609858500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609858800",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609872600",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609872900",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609873500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609874700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609875300",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609885200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609885500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609886700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609898700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609906500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609906800",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609907100",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609907400",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609931400",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609932000",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609949100",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609949400",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609956600",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609956900",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609959900",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609960200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609960500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609960800",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609961700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609966200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609966500",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609966800",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609967700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609974600",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609977300",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609979700",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609989600",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609989900",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609990200",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1609998000",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1610013300",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    },
+    {
+      "intent_id": "c01_btc_idr_1610013600",
+      "reason": "BELOW_MIN_SIZE_REJECTED"
+    }
+  ],
+  "sample_adequacy": "SUFFICIENT",
+  "artifact_sha256": "9484167d4680de4f66b20bd8fcc32d20ea02243cb6a1d31d423729b2343ab3b0"
+}

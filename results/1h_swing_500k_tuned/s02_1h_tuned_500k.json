@@ -1,0 +1,25 @@
+{
+  "report_schema_version": "1.0.0",
+  "strategy_id": "S02_Tuned",
+  "family": "squeeze_expansion",
+  "tuning_enhancements": [
+    "EMA_200_macro_bull_regime_filter",
+    "asymmetric_risk_reward_take_profit",
+    "volatility_adjusted_atr_stops",
+    "official_indodax_fee_schedule"
+  ],
+  "initial_cash_idr": "500000",
+  "final_cash_idr": "465285.21961512310000000000",
+  "final_equity_idr": "465285.21961512310000000000",
+  "total_realized_gross_pnl_idr": "-21073.78038487690000000000",
+  "total_realized_net_pnl_idr": "-34714.78038487690000000000",
+  "total_fees_paid_idr": "13641",
+  "total_fills": 39,
+  "trade_count": 19,
+  "win_count": 6,
+  "loss_count": 13,
+  "win_rate": "0.3157894736842105263157894737",
+  "return_pct": -6.94,
+  "ledger_reconciliation_status": "PASS",
+  "artifact_sha256": "5f28c72048c8886288018bffd93a34893aac156cf85b1bb76e1f10b7910f27e6"
+}

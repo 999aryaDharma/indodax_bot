@@ -1,0 +1,12 @@
+{
+  "model_id": "D02",
+  "model_name": "D02_Causal_TCN",
+  "version": "1.0.0",
+  "hardware_target": "NVIDIA_CUDA",
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5574,
+    "precision_40": 0.4009,
+    "recall_40": 0.3305
+  },
+  "exported_at_utc": "2026-09-16T13:15:01.148887+00:00"
+}

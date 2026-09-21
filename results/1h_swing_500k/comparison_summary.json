@@ -1,0 +1,86 @@
+[
+  {
+    "strategy_id": "C01",
+    "family": "breakout",
+    "final_equity": 464474.5224642857,
+    "net_pnl": -35525.47753571427,
+    "fees": 6428.0,
+    "fills": 18,
+    "trades": 9,
+    "return_pct": -7.11,
+    "artifact_file": "c01_1h_500k.json",
+    "artifact_sha256": "4d65c82310796fbc325a34371b3a87f11953f257d7059f9fc00659986bf645e4"
+  },
+  {
+    "strategy_id": "C02",
+    "family": "trend_pullback",
+    "final_equity": 452185.5056935714,
+    "net_pnl": -47814.49430642857,
+    "fees": 12880.0,
+    "fills": 36,
+    "trades": 13,
+    "return_pct": -9.56,
+    "artifact_file": "c02_1h_500k.json",
+    "artifact_sha256": "4453f8f5ccfe1f8fd251f80995fa6a712477e521286b62022edccbd571c96614"
+  },
+  {
+    "strategy_id": "C03",
+    "family": "time_series_momentum",
+    "final_equity": 476845.68618285714,
+    "net_pnl": -23154.313817142858,
+    "fees": 3610.0,
+    "fills": 10,
+    "trades": 5,
+    "return_pct": -4.63,
+    "artifact_file": "c03_1h_500k.json",
+    "artifact_sha256": "f7d9e83c9a80b181e6e1660e36b6c0e0587688588f497f977795e05e8bc2b72e"
+  },
+  {
+    "strategy_id": "C07",
+    "family": "mean_reversion",
+    "final_equity": 485997.70353785716,
+    "net_pnl": -14002.296462142856,
+    "fees": 13348.0,
+    "fills": 36,
+    "trades": 18,
+    "return_pct": -2.8,
+    "artifact_file": "c07_1h_500k.json",
+    "artifact_sha256": "ceba011541db0a620632c38528545ac75b7a53c8d492eb3646da3958f67a4e7c"
+  },
+  {
+    "strategy_id": "C10",
+    "family": "regime_ensemble",
+    "final_equity": 465677.2149171428,
+    "net_pnl": -34322.78508285715,
+    "fees": 6445.0,
+    "fills": 18,
+    "trades": 9,
+    "return_pct": -6.86,
+    "artifact_file": "c10_1h_500k.json",
+    "artifact_sha256": "c1283d49b783a3c2abbc2695adf5f9d84fd6ab4d659563cbab8caec91bbb6e1e"
+  },
+  {
+    "strategy_id": "S01",
+    "family": "liquidity_screened_breakout",
+    "final_equity": 464474.5224642857,
+    "net_pnl": -35525.47753571427,
+    "fees": 6428.0,
+    "fills": 18,
+    "trades": 9,
+    "return_pct": -7.11,
+    "artifact_file": "s01_1h_500k.json",
+    "artifact_sha256": "017895371b60317fba423352870647ac15c5ca23039174ebbb8a161e0ccf9222"
+  },
+  {
+    "strategy_id": "S02",
+    "family": "squeeze_expansion",
+    "final_equity": 468154.99748285714,
+    "net_pnl": -31845.002517142882,
+    "fees": 7176.0,
+    "fills": 20,
+    "trades": 10,
+    "return_pct": -6.37,
+    "artifact_file": "s02_1h_500k.json",
+    "artifact_sha256": "7ad448509486ee9631ca4b648dab0b96c17bcb6b31a5c55fcd0ab04d6e9697c9"
+  }
+]

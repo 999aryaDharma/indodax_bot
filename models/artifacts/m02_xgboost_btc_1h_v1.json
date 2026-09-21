@@ -1,0 +1,69 @@
+{
+  "schema_version": "2.0.0",
+  "model_id": "M02",
+  "model_name": "M02_XGBoost_CUDA_Challenger",
+  "version": "1.0.0",
+  "hardware_target": "NVIDIA_CUDA",
+  "asset": "BTC",
+  "pair": "btc_idr",
+  "timeframe": "1h",
+  "feature_names": [
+    "log_ret_1",
+    "log_ret_6",
+    "log_ret_24",
+    "atr_pct_14",
+    "ema_ratio_20_50",
+    "dist_ema_200",
+    "bb_z",
+    "bb_width",
+    "rsi_14",
+    "adx_14",
+    "vol_z_20"
+  ],
+  "feature_means": {
+    "log_ret_1": 1.8115690447220826e-05,
+    "log_ret_6": 0.00011018203876405196,
+    "log_ret_24": 0.00043620329611030714,
+    "atr_pct_14": 0.006550400675592191,
+    "ema_ratio_20_50": 0.00018525761444053004,
+    "dist_ema_200": 0.0018327976760743438,
+    "bb_z": 0.01775767184115167,
+    "bb_width": 0.03555876728669029,
+    "rsi_14": 0.5042385675281055,
+    "adx_14": 0.38539892443524737,
+    "vol_z_20": 0.007185832876270733
+  },
+  "feature_stds": {
+    "log_ret_1": 0.006350785116009076,
+    "log_ret_6": 0.015348724835815553,
+    "log_ret_24": 0.031073543858088217,
+    "atr_pct_14": 0.005164833464964617,
+    "ema_ratio_20_50": 0.011515856701017572,
+    "dist_ema_200": 0.046967730511491744,
+    "bb_z": 1.31133637684575,
+    "bb_width": 0.030338234346299578,
+    "rsi_14": 0.17795680714064804,
+    "adx_14": 0.1720103477643561,
+    "vol_z_20": 1.0268613412419267
+  },
+  "train_period": "2021-01-01 to 2023-12-31",
+  "val_period": "2024-01-01 to 2024-12-31",
+  "test_period": "2025-01-01 to 2025-12-31 (Out-of-Sample)",
+  "best_iteration": 31,
+  "calibration": {
+    "method": "sigmoid",
+    "a": 1.1482397063133907,
+    "b": 0.2060826107490232,
+    "n_samples": 8784
+  },
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5558,
+    "precision": 0.3529,
+    "recall": 0.0042,
+    "accuracy": 0.6749
+  },
+  "booster_file": "m02_xgboost_btc_1h_v1.ubj",
+  "booster_sha256": "6968b01f9da18d6c562d9fc71e5210e7c61a721563c2027ff6c874003d74f523",
+  "fitted_at_utc": "2026-09-16T06:15:38.879058+00:00",
+  "artifact_sha256": "705ccb9ed60b6fc6a646cb0761dbf51a60ae5145f16e460b82b4bf0077508a3d"
+}

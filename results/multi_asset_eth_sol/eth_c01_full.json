@@ -1,0 +1,20 @@
+{
+  "asset": "ETH",
+  "pair": "eth_idr",
+  "strategy_id": "C01",
+  "strategy_family": "Donchian Breakout",
+  "period": "5 Years (2021-2025)",
+  "bars_tested": 43824,
+  "final_equity": 436737.9809882575,
+  "total_gross_pnl": 3100.9809882575,
+  "total_net_pnl": -63262.0190117425,
+  "total_fees_paid": 66363.0,
+  "fills": 224,
+  "trade_count": 108,
+  "win_count": 44,
+  "loss_count": 64,
+  "win_rate_pct": 40.7,
+  "return_pct": -12.65,
+  "postings_hash": "dd7f24dd2ed5299adad545e22d9de7e4a64c6c4f3b806e3dd1a7429937e62521",
+  "artifact_sha256": "6c7f1b8a66338ad095879d4cee13298cf04038753228e2c04648d9a2dbc865c2"
+}

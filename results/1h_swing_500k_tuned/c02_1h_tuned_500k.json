@@ -1,0 +1,25 @@
+{
+  "report_schema_version": "1.0.0",
+  "strategy_id": "C02_Tuned",
+  "family": "trend_pullback",
+  "tuning_enhancements": [
+    "EMA_200_macro_bull_regime_filter",
+    "asymmetric_risk_reward_take_profit",
+    "volatility_adjusted_atr_stops",
+    "official_indodax_fee_schedule"
+  ],
+  "initial_cash_idr": "500000",
+  "final_cash_idr": "439987.14778589560000000000",
+  "final_equity_idr": "439987.14778589560000000000",
+  "total_realized_gross_pnl_idr": "-14806.85221410440000000000",
+  "total_realized_net_pnl_idr": "-60012.85221410440000000000",
+  "total_fees_paid_idr": "45206",
+  "total_fills": 130,
+  "trade_count": 64,
+  "win_count": 26,
+  "loss_count": 38,
+  "win_rate": "0.40625",
+  "return_pct": -12.0,
+  "ledger_reconciliation_status": "PASS",
+  "artifact_sha256": "fb25f8e68201c20bf41418de6b6b13bea5fba2817ab4296e88186270abcf60fb"
+}

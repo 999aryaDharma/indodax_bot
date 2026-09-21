@@ -1,0 +1,20 @@
+{
+  "asset": "SOL",
+  "pair": "sol_idr",
+  "strategy_id": "C02",
+  "strategy_family": "EMA Pullback",
+  "period": "4+ Years (Nov 2021-2025)",
+  "bars_tested": 36283,
+  "final_equity": 425803.6941981781,
+  "total_gross_pnl": -35832.3058018219,
+  "total_net_pnl": -74196.3058018219,
+  "total_fees_paid": 38364.0,
+  "fills": 158,
+  "trade_count": 75,
+  "win_count": 28,
+  "loss_count": 47,
+  "win_rate_pct": 37.3,
+  "return_pct": -14.84,
+  "postings_hash": "4d307097242785a1d6e5dd34626eb82ba218ccd2d0a9757d50e9a02efe92c6eb",
+  "artifact_sha256": "05107b214964c7e81af721484927797ac3239c9055231b5912d2e417fb1e2f4f"
+}

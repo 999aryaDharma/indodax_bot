@@ -1,0 +1,145 @@
+{
+  "simulation_timestamp": "2026-09-17T01:47:37.692243+00:00",
+  "results": [
+    {
+      "pair": "eth_idr",
+      "strategy": "C02",
+      "static": {
+        "fills": 176,
+        "fees": 44058.0,
+        "gross_pnl": -17329.18918,
+        "net_pnl": -61387.18918,
+        "final_equity": 438612.81082,
+        "win_rate": 0.29545454545454547
+      },
+      "adaptive": {
+        "fills": 58,
+        "fees": 14258.0,
+        "gross_pnl": 29194.0,
+        "net_pnl": 14936.0,
+        "final_equity": 514936.0,
+        "win_rate": 0.4827586206896552
+      },
+      "quarterly_evolution": [
+        {
+          "quarter": "2024-Q1",
+          "trades": 12,
+          "wins": 8,
+          "win_rate": 0.6666666666666666
+        },
+        {
+          "quarter": "2024-Q2",
+          "trades": 3,
+          "wins": 1,
+          "win_rate": 0.3333333333333333
+        },
+        {
+          "quarter": "2024-Q3",
+          "trades": 1,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2024-Q4",
+          "trades": 0,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2025-Q1",
+          "trades": 1,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2025-Q2",
+          "trades": 8,
+          "wins": 4,
+          "win_rate": 0.5
+        },
+        {
+          "quarter": "2025-Q3",
+          "trades": 3,
+          "wins": 1,
+          "win_rate": 0.3333333333333333
+        },
+        {
+          "quarter": "2025-Q4",
+          "trades": 2,
+          "wins": 1,
+          "win_rate": 0.5
+        }
+      ]
+    },
+    {
+      "pair": "btc_idr",
+      "strategy": "C07",
+      "static": {
+        "fills": 32,
+        "fees": 9370.0,
+        "gross_pnl": 8750.744203986,
+        "net_pnl": -619.255796014,
+        "final_equity": 499380.744203986,
+        "win_rate": 0.375
+      },
+      "adaptive": {
+        "fills": 34,
+        "fees": 9837.0,
+        "gross_pnl": 5354.8055755642,
+        "net_pnl": -4482.1944244358,
+        "final_equity": 495517.8055755642,
+        "win_rate": 0.29411764705882354
+      },
+      "quarterly_evolution": [
+        {
+          "quarter": "2024-Q1",
+          "trades": 6,
+          "wins": 4,
+          "win_rate": 0.6666666666666666
+        },
+        {
+          "quarter": "2024-Q2",
+          "trades": 4,
+          "wins": 1,
+          "win_rate": 0.25
+        },
+        {
+          "quarter": "2024-Q3",
+          "trades": 1,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2024-Q4",
+          "trades": 2,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2025-Q1",
+          "trades": 1,
+          "wins": 1,
+          "win_rate": 1.0
+        },
+        {
+          "quarter": "2025-Q2",
+          "trades": 3,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2025-Q3",
+          "trades": 0,
+          "wins": 0,
+          "win_rate": 0.0
+        },
+        {
+          "quarter": "2025-Q4",
+          "trades": 0,
+          "wins": 0,
+          "win_rate": 0.0
+        }
+      ]
+    }
+  ]
+}

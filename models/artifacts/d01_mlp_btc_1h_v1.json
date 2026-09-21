@@ -1,0 +1,14 @@
+{
+  "model_id": "D01",
+  "version": "1.0.0",
+  "hardware_target": "NVIDIA_CUDA",
+  "checkpoint_file": "d01_mlp_btc_1h_v1.pt",
+  "checkpoint_sha256": "69ab1b1872d0545f3d8ec2dabc820c41c9854384e897e86b607d99d1b1f33ad6",
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5557,
+    "precision": 0.496,
+    "recall": 0.0218,
+    "accuracy": 0.6759
+  },
+  "exported_at_utc": "2026-09-16T06:15:55.340015+00:00"
+}

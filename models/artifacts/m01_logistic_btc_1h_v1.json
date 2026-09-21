@@ -1,0 +1,15 @@
+{
+  "model_id": "M01",
+  "model_name": "M01_Logistic_Baseline",
+  "version": "1.0.0",
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5584,
+    "precision_40": 0.4094,
+    "recall_40": 0.2921
+  },
+  "calibration": {
+    "a": 1.1320219399261686,
+    "b": 0.2273752863744451
+  },
+  "exported_at_utc": "2026-09-16T13:14:39.191710+00:00"
+}

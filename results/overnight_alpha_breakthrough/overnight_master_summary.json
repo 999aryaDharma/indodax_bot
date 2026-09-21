@@ -1,0 +1,304 @@
+{
+  "run_timestamp_utc": "2026-09-16T14:53:04.264210+00:00",
+  "hardware": "cuda (NVIDIA GeForce RTX 3050 Laptop GPU)",
+  "dataset_overview": {
+    "btc_idr": {
+      "bars": 43824,
+      "period": "2021-2025"
+    },
+    "eth_idr": {
+      "bars": 43824,
+      "period": "2021-2025"
+    },
+    "sol_idr": {
+      "bars": 36283,
+      "period": "2021-2025"
+    },
+    "total_multi_bars": 123931
+  },
+  "model_leaderboard_by_pair": {
+    "btc_idr": {
+      "M02_XGBoost": {
+        "auc": 0.5624,
+        "prec": 0.3824,
+        "rec": 0.2956
+      },
+      "D03_ResNet_LSTM": {
+        "auc": 0.5472,
+        "prec": 0.3611,
+        "rec": 0.3161
+      },
+      "D04_iTransformer": {
+        "auc": 0.5641,
+        "prec": 0.3868,
+        "rec": 0.2738
+      }
+    },
+    "eth_idr": {
+      "M02_XGBoost": {
+        "auc": 0.5049,
+        "prec": 0.3913,
+        "rec": 0.6617
+      },
+      "D03_ResNet_LSTM": {
+        "auc": 0.4918,
+        "prec": 0.3844,
+        "rec": 0.7387
+      },
+      "D04_iTransformer": {
+        "auc": 0.5029,
+        "prec": 0.39,
+        "rec": 0.7294
+      }
+    },
+    "sol_idr": {
+      "M02_XGBoost": {
+        "auc": 0.5109,
+        "prec": 0.4091,
+        "rec": 0.7347
+      },
+      "D03_ResNet_LSTM": {
+        "auc": 0.4948,
+        "prec": 0.4053,
+        "rec": 0.6581
+      },
+      "D04_iTransformer": {
+        "auc": 0.5215,
+        "prec": 0.4119,
+        "rec": 0.8498
+      }
+    }
+  },
+  "pair_backtest_benchmarks": [
+    {
+      "pair": "btc_idr",
+      "variant": "Raw (No AI Filter)",
+      "fills": 80,
+      "fees": 23653.0,
+      "gross_pnl": -6841.3516897922,
+      "net_pnl": -30494.3516897922,
+      "final_equity": 469505.6483102078,
+      "win_rate": 0.3
+    },
+    {
+      "pair": "btc_idr",
+      "variant": "M02_Tuned (BTC)",
+      "fills": 38,
+      "fees": 11192.0,
+      "gross_pnl": 349.9474835715,
+      "net_pnl": -10842.0525164285,
+      "final_equity": 489157.9474835715,
+      "win_rate": 0.3157894736842105
+    },
+    {
+      "pair": "btc_idr",
+      "variant": "D04_Tuned (BTC)",
+      "fills": 36,
+      "fees": 10289.0,
+      "gross_pnl": -1524.8379278064,
+      "net_pnl": -11813.8379278064,
+      "final_equity": 488186.1620721936,
+      "win_rate": 0.2777777777777778
+    },
+    {
+      "pair": "btc_idr",
+      "variant": "Omni_Model (BTC)",
+      "fills": 62,
+      "fees": 17985.0,
+      "gross_pnl": -8689.2764111786,
+      "net_pnl": -26674.2764111786,
+      "final_equity": 473325.7235888214,
+      "win_rate": 0.25806451612903225
+    },
+    {
+      "pair": "btc_idr",
+      "variant": "Ensemble (BTC)",
+      "fills": 38,
+      "fees": 10982.0,
+      "gross_pnl": 305.7332142432,
+      "net_pnl": -10676.2667857568,
+      "final_equity": 489323.7332142432,
+      "win_rate": 0.3157894736842105
+    },
+    {
+      "pair": "btc_idr",
+      "variant": "Ensemble + Kelly + TimeDecay (BTC)",
+      "fills": 38,
+      "fees": 10747.0,
+      "gross_pnl": -997.3016293269,
+      "net_pnl": -11744.3016293269,
+      "final_equity": 488255.6983706731,
+      "win_rate": 0.2631578947368421
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "Raw (No AI Filter)",
+      "fills": 74,
+      "fees": 20175.0,
+      "gross_pnl": -19380.02878,
+      "net_pnl": -39555.02878,
+      "final_equity": 460444.97122,
+      "win_rate": 0.35135135135135137
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "M02_Tuned (ETH)",
+      "fills": 64,
+      "fees": 17505.0,
+      "gross_pnl": -20157.9281,
+      "net_pnl": -37662.9281,
+      "final_equity": 462337.0719,
+      "win_rate": 0.3125
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "D04_Tuned (ETH)",
+      "fills": 74,
+      "fees": 20175.0,
+      "gross_pnl": -19380.02878,
+      "net_pnl": -39555.02878,
+      "final_equity": 460444.97122,
+      "win_rate": 0.35135135135135137
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "Omni_Model (ETH)",
+      "fills": 64,
+      "fees": 17733.0,
+      "gross_pnl": -20953.92782,
+      "net_pnl": -38686.92782,
+      "final_equity": 461313.07218,
+      "win_rate": 0.3125
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "Ensemble (ETH)",
+      "fills": 66,
+      "fees": 18252.0,
+      "gross_pnl": -21533.1941,
+      "net_pnl": -39785.1941,
+      "final_equity": 460214.8059,
+      "win_rate": 0.30303030303030304
+    },
+    {
+      "pair": "eth_idr",
+      "variant": "Ensemble + Kelly + TimeDecay (ETH)",
+      "fills": 66,
+      "fees": 20897.0,
+      "gross_pnl": -23116.6410799562,
+      "net_pnl": -44013.6410799562,
+      "final_equity": 455986.3589200438,
+      "win_rate": 0.30303030303030304
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "Raw (No AI Filter)",
+      "fills": 64,
+      "fees": 20960.0,
+      "gross_pnl": -54567.9289210156,
+      "net_pnl": -75527.9289210156,
+      "final_equity": 424472.0710789844,
+      "win_rate": 0.25
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "M02_Tuned (SOL)",
+      "fills": 64,
+      "fees": 20960.0,
+      "gross_pnl": -54567.9289210156,
+      "net_pnl": -75527.9289210156,
+      "final_equity": 424472.0710789844,
+      "win_rate": 0.25
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "D04_Tuned (SOL)",
+      "fills": 64,
+      "fees": 20960.0,
+      "gross_pnl": -54567.9289210156,
+      "net_pnl": -75527.9289210156,
+      "final_equity": 424472.0710789844,
+      "win_rate": 0.25
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "Omni_Model (SOL)",
+      "fills": 64,
+      "fees": 20996.0,
+      "gross_pnl": -56037.218101765,
+      "net_pnl": -77033.218101765,
+      "final_equity": 422966.781898235,
+      "win_rate": 0.25
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "Ensemble (SOL)",
+      "fills": 64,
+      "fees": 20960.0,
+      "gross_pnl": -54567.9289210156,
+      "net_pnl": -75527.9289210156,
+      "final_equity": 424472.0710789844,
+      "win_rate": 0.25
+    },
+    {
+      "pair": "sol_idr",
+      "variant": "Ensemble + Kelly + TimeDecay (SOL)",
+      "fills": 62,
+      "fees": 21639.0,
+      "gross_pnl": -55957.133030873,
+      "net_pnl": -77596.133030873,
+      "final_equity": 422403.866969127,
+      "win_rate": 0.25806451612903225
+    }
+  ],
+  "unified_portfolio_results": [
+    {
+      "period": "2024-2025 Evaluation (35,000+ Multi-Bars)",
+      "portfolio": "Raw Portfolio (No AI)",
+      "fills": 214,
+      "trades": 107,
+      "fees": 67385.0,
+      "gross_pnl": -85267.811292,
+      "net_pnl": -152652.811292,
+      "final_equity": 847347.188708,
+      "capital_preserved": 0.847347188708,
+      "win_rate": 0.2897196261682243
+    },
+    {
+      "period": "2024-2025 Evaluation (35,000+ Multi-Bars)",
+      "portfolio": "Omni-Ensemble AI + Dynamic Risk",
+      "fills": 176,
+      "trades": 88,
+      "fees": 54201.0,
+      "gross_pnl": -87415.925573,
+      "net_pnl": -141616.925573,
+      "final_equity": 858383.074427,
+      "capital_preserved": 0.858383074427,
+      "win_rate": 0.26136363636363635
+    },
+    {
+      "period": "2021-2025 Full 4+ Years (120,000+ Multi-Bars)",
+      "portfolio": "Raw Portfolio (No AI)",
+      "fills": 450,
+      "trades": 225,
+      "fees": 67783.0,
+      "gross_pnl": -85573.1004519,
+      "net_pnl": -153356.1004519,
+      "final_equity": 846643.8995481,
+      "capital_preserved": 0.8466438995480999,
+      "win_rate": 0.3288888888888889
+    },
+    {
+      "period": "2021-2025 Full 4+ Years (120,000+ Multi-Bars)",
+      "portfolio": "Omni-Ensemble AI + Dynamic Risk",
+      "fills": 392,
+      "trades": 196,
+      "fees": 65160.0,
+      "gross_pnl": -85901.0253809,
+      "net_pnl": -151061.0253809,
+      "final_equity": 848938.9746191,
+      "capital_preserved": 0.8489389746191,
+      "win_rate": 0.34183673469387754
+    }
+  ]
+}

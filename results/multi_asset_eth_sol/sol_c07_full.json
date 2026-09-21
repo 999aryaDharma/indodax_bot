@@ -1,0 +1,20 @@
+{
+  "asset": "SOL",
+  "pair": "sol_idr",
+  "strategy_id": "C07",
+  "strategy_family": "RSI Mean Reversion",
+  "period": "4+ Years (Nov 2021-2025)",
+  "bars_tested": 36283,
+  "final_equity": 489411.7770681933,
+  "total_gross_pnl": -6910.2229318067,
+  "total_net_pnl": -10588.2229318067,
+  "total_fees_paid": 3678.0,
+  "fills": 14,
+  "trade_count": 7,
+  "win_count": 2,
+  "loss_count": 5,
+  "win_rate_pct": 28.6,
+  "return_pct": -2.12,
+  "postings_hash": "86e75c9569680cc0e0519246e92f62646ecc4153a875c1716c93ad7e4f502e78",
+  "artifact_sha256": "6fcb8e650aae2d6bc85ec7b7ad20ae5ad9ee416ed042221aacd62a8cac5dedbf"
+}

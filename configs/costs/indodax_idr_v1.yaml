@@ -133,14 +133,15 @@ intervals:
     role: maker
     valid_from: '2024-01-01T00:00:00Z'
     valid_to: null
-    service_fee_rate: '0.000811'
-    tax_rate: '0.001100'
-    exchange_fee_rate: '0.000200'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
     sources:
       - 'PMK 68/PMK.03/2022'
       - 'Indodax CFX Fee Schedule 2024'
+      - 'Indodax Help Center PRO Mode Fee Table'
 
   - schedule_id: indodax_idr_cfx_buy_taker
     market: spot_idr
@@ -148,14 +149,15 @@ intervals:
     role: taker
     valid_from: '2024-01-01T00:00:00Z'
     valid_to: null
-    service_fee_rate: '0.000811'
-    tax_rate: '0.001100'
-    exchange_fee_rate: '0.000200'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
     sources:
       - 'PMK 68/PMK.03/2022'
       - 'Indodax CFX Fee Schedule 2024'
+      - 'Indodax Help Center PRO Mode Fee Table'
 
   - schedule_id: indodax_idr_cfx_sell_maker
     market: spot_idr
@@ -163,14 +165,15 @@ intervals:
     role: maker
     valid_from: '2024-01-01T00:00:00Z'
     valid_to: null
-    service_fee_rate: '0.003011'
-    tax_rate: '0.001000'
-    exchange_fee_rate: '0.000200'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
     sources:
       - 'PMK 68/PMK.03/2022'
       - 'Indodax CFX Fee Schedule 2024'
+      - 'Indodax Help Center PRO Mode Fee Table'
 
   - schedule_id: indodax_idr_cfx_sell_taker
     market: spot_idr
@@ -178,11 +181,12 @@ intervals:
     role: taker
     valid_from: '2024-01-01T00:00:00Z'
     valid_to: null
-    service_fee_rate: '0.003011'
-    tax_rate: '0.001000'
-    exchange_fee_rate: '0.000200'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
     sources:
       - 'PMK 68/PMK.03/2022'
       - 'Indodax CFX Fee Schedule 2024'
+      - 'Indodax Help Center PRO Mode Fee Table'

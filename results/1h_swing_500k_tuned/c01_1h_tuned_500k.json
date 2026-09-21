@@ -1,0 +1,25 @@
+{
+  "report_schema_version": "1.0.0",
+  "strategy_id": "C01_Tuned",
+  "family": "breakout",
+  "tuning_enhancements": [
+    "EMA_200_macro_bull_regime_filter",
+    "asymmetric_risk_reward_take_profit",
+    "volatility_adjusted_atr_stops",
+    "official_indodax_fee_schedule"
+  ],
+  "initial_cash_idr": "500000",
+  "final_cash_idr": "454234.48786606730000000000",
+  "final_equity_idr": "454234.48786606730000000000",
+  "total_realized_gross_pnl_idr": "8243.48786606730000000000",
+  "total_realized_net_pnl_idr": "-45765.51213393270000000000",
+  "total_fees_paid_idr": "54009",
+  "total_fills": 154,
+  "trade_count": 76,
+  "win_count": 36,
+  "loss_count": 40,
+  "win_rate": "0.4736842105263157894736842105",
+  "return_pct": -9.15,
+  "ledger_reconciliation_status": "PASS",
+  "artifact_sha256": "90546bc97cfda70400a255a75a8628e05b5ab000117cfa16ee1b79a101468dd7"
+}

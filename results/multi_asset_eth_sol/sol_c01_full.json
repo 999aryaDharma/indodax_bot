@@ -1,0 +1,20 @@
+{
+  "asset": "SOL",
+  "pair": "sol_idr",
+  "strategy_id": "C01",
+  "strategy_family": "Donchian Breakout",
+  "period": "4+ Years (Nov 2021-2025)",
+  "bars_tested": 36283,
+  "final_equity": 428887.2096449743,
+  "total_gross_pnl": -45542.7903550257,
+  "total_net_pnl": -71112.7903550257,
+  "total_fees_paid": 25570.0,
+  "fills": 74,
+  "trade_count": 37,
+  "win_count": 8,
+  "loss_count": 29,
+  "win_rate_pct": 21.6,
+  "return_pct": -14.22,
+  "postings_hash": "272e98de2b21aec3c0037d4fd72ca5a3266571c4d350cbdac23b46ee6ec482ab",
+  "artifact_sha256": "b4165448c74850d94a07f0612f1d0f4189893ee8564aef9471ed9cc297e4b8d0"
+}

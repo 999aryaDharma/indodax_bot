@@ -1,0 +1,12 @@
+{
+  "model_id": "D04",
+  "model_name": "D04_iTransformer",
+  "version": "1.0.0",
+  "hardware_target": "NVIDIA_CUDA",
+  "test_metrics_2025_oos": {
+    "auc_roc": 0.5608,
+    "precision_40": 0.3896,
+    "recall_40": 0.3129
+  },
+  "exported_at_utc": "2026-09-16T13:15:49.211243+00:00"
+}

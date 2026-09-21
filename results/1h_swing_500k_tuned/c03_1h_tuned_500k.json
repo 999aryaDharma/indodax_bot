@@ -1,0 +1,25 @@
+{
+  "report_schema_version": "1.0.0",
+  "strategy_id": "C03_Tuned",
+  "family": "time_series_momentum",
+  "tuning_enhancements": [
+    "EMA_200_macro_bull_regime_filter",
+    "asymmetric_risk_reward_take_profit",
+    "volatility_adjusted_atr_stops",
+    "official_indodax_fee_schedule"
+  ],
+  "initial_cash_idr": "500000",
+  "final_cash_idr": "440453.52909049110000000000",
+  "final_equity_idr": "440453.52909049110000000000",
+  "total_realized_gross_pnl_idr": "-2577.47090950890000000000",
+  "total_realized_net_pnl_idr": "-59546.47090950890000000000",
+  "total_fees_paid_idr": "56969",
+  "total_fills": 168,
+  "trade_count": 81,
+  "win_count": 35,
+  "loss_count": 46,
+  "win_rate": "0.4320987654320987654320987654",
+  "return_pct": -11.91,
+  "ledger_reconciliation_status": "PASS",
+  "artifact_sha256": "d9e8c5803c26bbc75a0de9a63eb4e0889ab3dfd878ab1228276c9eb8e0cbf5fd"
+}
