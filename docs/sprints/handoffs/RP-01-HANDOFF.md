@@ -8,7 +8,7 @@ Status: REVIEW
 - Implementation owner: Codex `/root` (LUNA execution)
 - Independent reviewer: `/root/architecture_doc_review`
 - Base SHA: `5924a70`
-- Code SHA: `d2f1b68`
+- Code SHA: `5d9629e`
 - Branch: `docs/architecture-runtime-plan`
 - Scope: shared decision contract ownership and import compatibility only
 
@@ -31,11 +31,12 @@ Status: REVIEW
 - Fix GREEN: the same focused command → 23 passed; both fresh-process import checks pass.
 - Fresh-process identity check → `True` for shared and legacy imports.
 - `python -m compileall` for changed source paths → exit 0.
+- Targeted Ruff for the new package initializer, architecture test, and risk engine → all checks passed.
 - `git diff --check` → exit 0.
 
 ## Full-suite gate
 
-`python -m pytest -q` was attempted at code SHA `7385194` and independently reproduced at the follow-up code SHA `d2f1b68`; the repository suite cannot collect because this environment lacks required declared research dependencies, including `pandas`, `pyarrow`, and `scipy`. No dependency was installed into the shared environment. This is an external environment blocker, not a test pass claim.
+`python -m pytest -q` was attempted at code SHA `7385194` and independently reproduced at follow-up code SHA `d2f1b68`; the repository suite cannot collect because this environment lacks required declared research dependencies, including `pandas`, `pyarrow`, and `scipy`. No dependency was installed into the shared environment. This is an external environment blocker, not a test pass claim.
 
 The required focused suite is green. Existing repository lint also reports pre-existing violations in touched strategy files; the moved contract itself has no new reported violation after removing obsolete event imports. Full lint remains blocked by the baseline findings and unavailable research environment.
 
@@ -51,4 +52,4 @@ No schema, field, default, validator, persistence, venue, accounting, or executi
 
 ## Reviewer decision
 
-Pending independent re-review on code SHA `d2f1b68`. Coordinator must not mark the manifest DONE until the reviewer records PASS on this exact code SHA and the external full-suite gate is resolved or explicitly preserved as a blocker.
+Pending independent re-review on code SHA `5d9629e`. Coordinator must not mark the manifest DONE until the reviewer records PASS on this exact code SHA and the external full-suite gate is resolved or explicitly preserved as a blocker.
