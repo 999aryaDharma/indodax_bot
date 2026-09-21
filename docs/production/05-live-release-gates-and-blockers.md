@@ -36,10 +36,14 @@ Bounded capital + universe, immutable candidate, no online learning, no automati
 
 ## Current blockers
 
-- no real-money venue adapter;
-- no private exchange reconciliation service;
-- no durable production OMS uncertain-order state machine;
-- no real venue fill -> double-entry ledger integration;
+- canonical private **read-only** venue adapter is implemented, but has not yet been
+  smoke-tested with a designated view-only Indodax credential/account;
+- reconciliation engine/service is implemented, but has not yet accumulated real-account
+  operational evidence or a durable production reconciliation cursor/runbook;
+- durable OMS uncertain-order state machine/store is implemented, but there is still no
+  write-capable venue adapter and no real uncertain-write recovery drill;
+- venue-fill -> ledger normalization exists for IDR-denominated commission, but automated
+  production fill ingestion/cursoring and non-IDR fee valuation remain blocked;
 - no measured production node / HA evidence;
 - no selected-host restore RPO/RTO evidence;
 - no recorded 90d + 100-trade qualified champion in this package;
@@ -63,6 +67,10 @@ Bounded capital + universe, immutable candidate, no online learning, no automati
 - canonical quantity flows from risk approval into fill, ledger, and checkpoint;
 - cross-platform path traversal rejection;
 - portable content-addressed snapshot path encoding;
-- architecture guard prevents canonical `indodax_lab` code from importing legacy flat engines.
+- architecture guard prevents canonical `indodax_lab` code from importing legacy flat engines;
+- private read-only Indodax adapter uses current Trade API v2 for order/fill history;
+- private reconciliation fails closed on balance/order/fill/staleness mismatches;
+- OMS persists `UNKNOWN` outcomes across restart with integrity/version fencing;
+- verified IDR-denominated venue fills can be normalized into the canonical ledger Fill contract.
 
 These fixes strengthen research/shadow truth; they do not authorize live trading.
