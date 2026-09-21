@@ -24,7 +24,7 @@ from indodax_lab.data.bars import (
 )
 from indodax_lab.data.checksums import sha256_bytes
 from indodax_lab.data.event_bars import TradeContinuity, build_event_bars, load_event_bar_config
-from indodax_lab.data.manifest import canonical_json_bytes
+from indodax_lab.data.manifest import canonical_json_bytes, snapshot_manifest_path
 from indodax_lab.data.publication import publish_immutable_bytes, rollback_or_raise_indeterminate
 from indodax_lab.data.sentry import require_approved_snapshot_decision
 from indodax_lab.data.trade_sentry import require_existing_approved_trade_decision
@@ -367,7 +367,7 @@ def _publish(
         Path(data_root) / "silver" / "dataset=bars" / "schema=v1" / f"output={digest}" / "bars.json"
     )
     artifact_bytes = canonical_json_bytes(payload)
-    manifest_path = Path(data_root) / "snapshots" / output_id / "manifest.json"
+    manifest_path = snapshot_manifest_path(Path(data_root), output_id)
     manifest = {
         "dataset": "silver_bars_v1",
         "manifest_version": "1.0.0",
