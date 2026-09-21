@@ -95,8 +95,8 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | QA-03 | Capacity and crash recovery qualification | verification | P0 | performance | OPS-01, OPS-03, QA-01 | REVIEW | [Spec](verification\QA-03-capacity-and-crash-recovery-qualification.md) |
 | REL-01 | Paper research release candidate | verification | P0 | release | QA-02, QA-03, QA-01, REPORT-02 | REVIEW | [Spec](verification\REL-01-paper-research-release-candidate.md) |
 | DOC-01 | Frozen architecture audit and delivery program | planning | P0 | planning | — | DONE | [Spec](planning\DOC-01-frozen-architecture-audit-and-delivery-program.md) |
-| RP-01 | Shared SignalIntent ownership with compatibility | runtime-parity | P0 | integration | DOC-01, BASE-01 | REVIEW | [Spec](runtime-parity\RP-01-shared-signalintent-ownership-with-compatibility.md) |
-| RW0-01 | Immutable Workbench domain manifests | research-workbench | P0 | integration | RP-01, DATA-01 | PLANNED | [Spec](research-workbench\RW0-01-immutable-workbench-domain-manifests.md) |
+| RP-01 | Shared SignalIntent ownership with compatibility | runtime-parity | P0 | integration | DOC-01, BASE-01 | DONE | [Spec](runtime-parity\RP-01-shared-signalintent-ownership-with-compatibility.md) |
+| RW0-01 | Immutable Workbench domain manifests | research-workbench | P0 | integration | RP-01, DATA-01 | READY | [Spec](research-workbench\RW0-01-immutable-workbench-domain-manifests.md) |
 | RW1-01 | Reusable immutable dataset registry | research-workbench | P1 | integration | RW0-01, DATA-06 | PLANNED | [Spec](research-workbench\RW1-01-reusable-immutable-dataset-registry.md) |
 | RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | PLANNED | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
 | RW2-02 | Model registry and offline training services | research-workbench | P1 | integration | RW0-01, ML-04, JOB-01 | PLANNED | [Spec](research-workbench\RW2-02-model-registry-and-offline-training-services.md) |

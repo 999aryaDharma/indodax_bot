@@ -68,8 +68,9 @@ def validate(manifest: dict, documents: dict[str, str]) -> list[str]:
         errors.append('Missing shared result schemas')
     nxt = documents.get('docs/implementation/handoff/LUNA-NEXT.md', '')
     ids = re.findall(r'^## TASK ID\n\n([A-Z0-9]+-\d{2})', nxt, re.M)
-    if ids != ['RP-01']:
-        errors.append('Next task must be RP-01 only')
+    expected_next = 'RW0-01' if rows.get('RP-01', {}).get('status') == 'DONE' else 'RP-01'
+    if ids != [expected_next]:
+        errors.append(f'Next task must be {expected_next} only')
     for heading in HANDOFF:
         if '## ' + heading + '\n' not in nxt:
             errors.append('Missing next-task heading: ' + heading)

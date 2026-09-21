@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-No task is READY; RP-01 review is blocked by the unavailable full-suite research environment.
+RW0-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -21,14 +21,14 @@ No task is READY; RP-01 review is blocked by the unavailable full-suite research
 - BASE-03 — Trade v2 ownership parsing [DONE; CORE]
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
-- RP-01 — Shared SignalIntent ownership with compatibility [REVIEW; CORE]
+- RP-01 — Shared SignalIntent ownership with compatibility [DONE; CORE]
 
 ## Wave 2
 
 - BASE-05 — Unbiased signal observations [DONE; CORE]
 - DATA-02 — Durable immutable publication [DONE; CORE]
 - COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
-- RW0-01 — Immutable Workbench domain manifests [PLANNED; CORE]
+- RW0-01 — Immutable Workbench domain manifests [READY; CORE]
 
 ## Wave 3
 

@@ -1,6 +1,6 @@
 # RP-01 Handoff — Shared SignalIntent ownership with compatibility
 
-Status: REVIEW — code review PASS; full-suite environment gate BLOCKED
+Status: DONE — code review PASS; full-suite gate PASS in declared research environment
 
 ## Identity
 
@@ -36,9 +36,15 @@ Status: REVIEW — code review PASS; full-suite environment gate BLOCKED
 
 ## Full-suite gate
 
-`python -m pytest -q` was attempted at code SHA `7385194` and independently reproduced at follow-up code SHA `d2f1b68`; the repository suite cannot collect because this environment lacks required declared research dependencies, including `pandas`, `pyarrow`, and `scipy`. No dependency was installed into the shared environment. This is an external environment blocker, not a test pass claim.
+Full suite gate is RESOLVED. Rerun in the pre-existing isolated research environment (`C:\Users\User\miniconda3\envs\ML\python.exe`, Python 3.12.13 with pandas 2.2.3, pyarrow 24.0.0, scipy 1.18.1):
 
-The required focused suite is green. Existing repository lint also reports pre-existing violations in touched strategy files; the moved contract itself has no new reported violation after removing obsolete event imports. Full lint remains blocked by the baseline findings and unavailable research environment.
+- `python -m pytest tests/architecture/test_decision_contract_ownership.py tests/unit/lab/test_decision_contract_compatibility.py -q` → 23 passed in 1.88s (exit 0).
+- `ruff check src/indodax_lab/backtest/__init__.py src/indodax_lab/risk/engine.py tests/architecture/test_decision_contract_ownership.py` → all checks passed (exit 0).
+- `python -m pytest -q` → 941 passed, 2 skipped (platform-dependent symlink/Linux `/proc`), 0 failed in 37.71s (exit 0).
+- `git diff --check` → exit 0.
+- `python -m compileall -q src` → exit 0.
+
+No dependency was installed into the shared/base environment; all required declared research dependencies were confirmed present in the dedicated research runtime.
 
 ## Compatibility and migration
 
@@ -47,9 +53,12 @@ No schema, field, default, validator, persistence, venue, accounting, or executi
 ## Safety and scope checks
 
 - No credentials, real order authority, network calls, runtime databases, or production activation were used.
-- No `main` change, merge, push, or deployment.
+- No `main` or `dev` branch change, merge, push, or deployment.
 - No product-path files outside the declared RP-01 source/test scope were modified.
+- `dashboard.pen` and `DESIGN.md` were preserved and untouched.
 
-## Reviewer decision
+## Reviewer and coordinator decision
 
-Independent reviewer `/root/architecture_doc_review` returned PASS on exact code SHA `5d9629e` with no Critical, Important, or Minor findings. The mandatory full-suite gate remains blocked by unavailable `pandas`, `pyarrow`, and `scipy`; coordinator must not mark the manifest DONE or unlock RW0-01 until that environment gate is resolved and the full suite is rerun.
+- Independent reviewer `/root/architecture_doc_review` returned PASS on exact code SHA `5d9629e` with no Critical, Important, or Minor findings.
+- Delivery coordinator verified the full-suite environment execution (941 passed, 0 failed) at code SHA `5d9629e`.
+- Gate status: DONE. RP-01 is marked DONE in sprint-manifest.json, unlocking downstream RW0-01.

@@ -30,7 +30,7 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: runtime-parity | Portfolio: CORE
 
