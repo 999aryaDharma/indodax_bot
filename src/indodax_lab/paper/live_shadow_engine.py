@@ -5,7 +5,7 @@ Autonomous paper trading engine for Indodax Research Lab:
 - Public Indodax live market data ingestion (OHLCV 1h & ticker)
 - Multi-asset strategy evaluation (ETH C02, BTC C07, SOL C02)
 - M02 XGBoost + Platt Sigmoid probability inference
-- Fixed Fractional Risk sizing (1.5% equity, ATR-based lot sizing)
+- Conservative centrally-governed risk sizing (0.5% big-cap / 0.25% high-beta proposal risk)
 - Time-valid cost lookup; ticker proxy fills are treated as taker, never claimed as exact maker fills
 - Trailing ATR stop, time-decay breakeven, Take-Profit management on closed-bar time
 - Transactional SQLite checkpointing with integrity verification
@@ -401,7 +401,12 @@ class LiveShadowEngine:
             if is_tp or is_sl:
                 exit_reason = "TAKE_PROFIT" if is_tp else "STOP_LOSS"
                 qty_dec = Decimal(str(pos.qty))
-                exit_px_dec = Decimal(str(curr_px))
+                # Do not reward a TP trigger with a better-than-target last-trade price.
+                # A stop gap may still execute worse than the stop, so keep the lower live price.
+                conservative_exit_px = (
+                    min(curr_px, pos.take_profit) if is_tp else min(curr_px, pos.stop_loss)
+                )
+                exit_px_dec = Decimal(str(conservative_exit_px))
                 gross_proceeds = qty_dec * exit_px_dec
                 exit_cost = lookup_cost(
                     self.cost_table,
@@ -416,7 +421,7 @@ class LiveShadowEngine:
                 cash_debited_dec = Decimal(str(pos.cash_debited))
                 gross_pnl = float(gross_proceeds - (qty_dec * Decimal(str(pos.entry_price))))
                 net_pnl = float(net_credit - cash_debited_dec)
-                pnl_pct = (curr_px - pos.entry_price) / pos.entry_price
+                pnl_pct = (conservative_exit_px - pos.entry_price) / pos.entry_price
 
                 # Credit cash back to ledger
                 self.available_cash += net_credit
@@ -429,7 +434,7 @@ class LiveShadowEngine:
                     entry_ts=pos.entry_ts,
                     exit_ts=now_str,
                     entry_price=pos.entry_price,
-                    exit_price=curr_px,
+                    exit_price=conservative_exit_px,
                     qty=pos.qty,
                     cash_debited=pos.cash_debited,
                     cash_credited=float(net_credit),
