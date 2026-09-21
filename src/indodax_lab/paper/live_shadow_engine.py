@@ -757,35 +757,27 @@ class LiveShadowEngine:
                     "pair": pair, "reason": risk_result.reason_code,
                 })
                 continue
-            allocated_budget = min(
-                allocated_budget,
-                risk_result.approved_notional * (Decimal("1") + active_entry_cost.total_rate),
-            )
-
-            if allocated_budget < self.min_order_idr:
-                diag["action"] = "REJECT_BELOW_MIN_NOTIONAL"
-                diag["reason"] = f"Budget Rp {allocated_budget:,.0f} < Min order Rp {self.min_order_idr:,.0f}"
-                eval_results.append(diag)
-                continue
-
-            if allocated_budget > self.available_cash:
-                diag["action"] = "REJECT_INSUFFICIENT_CASH"
-                diag["reason"] = f"Required Rp {allocated_budget:,.0f} > Available Rp {self.available_cash:,.0f}"
-                eval_results.append(diag)
-                continue
-
             # PAPER EXECUTION PROXY
-            # A live ticker is not evidence of maker queue execution. Treat the immediate
-            # proxy as taker and charge the point-in-time taker schedule.
+            # Use the risk manager's already-quantized quantity as the canonical size.
+            # A live ticker is not evidence of maker queue execution, so the proxy is taker.
             entry_cost = active_entry_cost
-            gross_notional = allocated_budget / (Decimal("1") + entry_cost.total_rate)
+            qty_dec = risk_result.approved_qty
+            gross_notional = risk_result.approved_notional
             if gross_notional < max(self.min_order_idr, entry_cost.min_notional):
                 diag["action"] = "REJECT_BELOW_MIN_NOTIONAL"
                 diag["reason"] = "Gross notional is below the active cost-schedule minimum"
                 eval_results.append(diag)
                 continue
             buy_fee = gross_notional * entry_cost.total_rate
-            qty_dec = gross_notional / Decimal(str(live_px))
+            actual_cash_debit = gross_notional + buy_fee
+            if actual_cash_debit > self.available_cash:
+                diag["action"] = "REJECT_INSUFFICIENT_CASH"
+                diag["reason"] = (
+                    f"Required Rp {actual_cash_debit:,.0f} > "
+                    f"Available Rp {self.available_cash:,.0f}"
+                )
+                eval_results.append(diag)
+                continue
             qty = float(qty_dec)
 
             sl_price = live_px - (sl_mult * atr_val)
@@ -799,7 +791,7 @@ class LiveShadowEngine:
                 entry_ts=now_str,
                 entry_price=live_px,
                 qty=qty,
-                cash_debited=float(allocated_budget),
+                cash_debited=float(actual_cash_debit),
                 buy_fee_paid=float(buy_fee),
                 stop_loss=sl_price,
                 take_profit=tp_price,
@@ -828,7 +820,7 @@ class LiveShadowEngine:
 
             diag["action"] = "ENTER_POSITION"
             diag["reason"] = (
-                f"PAPER_TAKER_PROXY_FILL: cash Rp {float(allocated_budget):,.0f} "
+                f"PAPER_TAKER_PROXY_FILL: cash Rp {float(actual_cash_debit):,.0f} "
                 f"(Qty {qty:.6f}) | cost_schedule={entry_cost.schedule_id} | "
                 f"TP Rp {tp_price:,.0f} | SL Rp {sl_price:,.0f}"
             )
