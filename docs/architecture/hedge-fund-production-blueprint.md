@@ -1,3 +1,25 @@
+> [!CAUTION]
+> **STATUS: SUPERSEDED FOR PRODUCTION DECISIONS — 2026-09-21**
+>
+> Dokumen ini dipertahankan sebagai historical design draft. Sumber authoritative untuk
+> real-money architecture, risk, ledger, deployment, disaster recovery, dan release gates sekarang:
+> - `docs/production/README.md`
+> - `docs/quality/release-gates.md`
+> - master product/technical specification yang ditautkan dari `docs/README.md`
+>
+> Asumsi berikut dari draft ini **tidak lagi authoritative**:
+> - ASUS X441U sebagai sole production execution node;
+> - fixed 1.5% risk per trade;
+> - 100% maker/post-only execution atau exact ticker fill;
+> - fixed fee 0.1111% buy / 0.3211% sell lintas waktu;
+> - promotion setelah 14 hari atau 15 closed trades;
+> - dashboard toggle langsung ke full-autonomous;
+> - klaim double-entry sebelum venue fills benar-benar masuk ledger dan reconciliation;
+> - target backtest berbasis angka detik sebagai release criterion;
+> - hardware latency/RAM claims yang belum dibuktikan benchmark target host.
+>
+> Gunakan dokumen ini hanya untuk ide UI/fitur yang belum bertentangan dengan kontrak production baru.
+
 # Cetak Biru Produksi & Spesifikasi Sistem: Hedge-Fund Grade Trading Platform
 **Target Deployment: Homelab Server ASUS X441U (Intel Core i3-6006U | 4GB RAM | 500GB HDD)**
 
