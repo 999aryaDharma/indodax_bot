@@ -36,8 +36,7 @@ def _new_order():
     )
 
 
-def test_unknown_state_survives_restart_and_requires_reconciliation():
-    store = OmsStore
+def test_unknown_state_requires_reconciliation():
     order = _new_order()
     submitting = OmsStateMachine.transition(
         order,
