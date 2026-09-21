@@ -232,8 +232,9 @@ class OmsStateMachine:
         if next_filled > 0 and next_avg is None:
             raise OmsTransitionError("OMS_FILL_PRICE_REQUIRED")
 
-        return order.model_copy(
-            update={
+        next_payload = order.model_dump()
+        next_payload.update(
+            {
                 "state": to_state,
                 "venue_order_id": next_venue_id,
                 "filled_qty": next_filled,
@@ -243,3 +244,4 @@ class OmsStateMachine:
                 "version": order.version + 1,
             }
         )
+        return OmsOrder.model_validate(next_payload)
