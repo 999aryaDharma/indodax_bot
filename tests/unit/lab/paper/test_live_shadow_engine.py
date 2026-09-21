@@ -10,7 +10,7 @@ Tests:
 """
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 import tempfile
 
@@ -31,11 +31,17 @@ from indodax_lab.paper.live_shadow_engine import (
 
 def _seed_open_position(engine: LiveShadowEngine, pos: ShadowPosition) -> None:
     """Create a test position through the same double-entry boundary as runtime."""
-    fee = Decimal(str(pos.buy_fee_paid))
     cash_debit = Decimal(str(pos.cash_debited))
-    gross = cash_debit - fee
-    qty = gross / Decimal(str(pos.entry_price))
+    requested_fee = Decimal(str(pos.buy_fee_paid))
+    requested_gross = cash_debit - requested_fee
+    qty = (requested_gross / Decimal(str(pos.entry_price))).quantize(
+        Decimal("0.00000001"),
+        rounding=ROUND_DOWN,
+    )
+    gross = qty * Decimal(str(pos.entry_price))
+    fee = cash_debit - gross
     pos.qty = float(qty)
+    pos.buy_fee_paid = float(fee)
     fill = Fill(
         fill_id=f"seed-{pos.position_id}",
         order_id=f"seed-order-{pos.position_id}",
