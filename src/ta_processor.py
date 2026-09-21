@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta_classic as ta
 
 from config import TA_CONFIG
 from indodax_api import OHLCVCandle
