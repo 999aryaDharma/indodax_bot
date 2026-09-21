@@ -9,7 +9,7 @@ from indodax_lab.execution.indodax_readonly import (
     VenueAccountSnapshot,
     VenueBalance,
 )
-from indodax_lab.execution.read_only_smoke import run_read_only_smoke
+from indodax_lab.execution.read_only_smoke import main, run_read_only_smoke
 
 NOW = datetime(2026, 9, 21, 11, 0, tzinfo=UTC)
 
@@ -62,3 +62,23 @@ def test_smoke_result_contains_only_structural_health_not_private_amounts():
     assert any(call[0] == "open" for call in client.calls)
     assert any(call[0] == "orders" for call in client.calls)
     assert any(call[0] == "fills" for call in client.calls)
+
+
+def test_smoke_main_reports_blocked_external_when_credentials_missing(
+    monkeypatch, capsys
+) -> None:
+    import json
+
+    monkeypatch.delenv("INDODAX_VIEW_API_KEY", raising=False)
+    monkeypatch.delenv("INDODAX_VIEW_SECRET_KEY", raising=False)
+    monkeypatch.setattr("sys.argv", ["read_only_smoke", "btc_idr"])
+
+    exit_code = main()
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+
+    assert exit_code == 2
+    assert payload["ok"] is False
+    assert payload["status"] == "BLOCKED_EXTERNAL"
+    assert payload["error"] == "INDODAX_VIEW_CREDENTIALS_MISSING"
+

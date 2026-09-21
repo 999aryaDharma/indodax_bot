@@ -92,8 +92,9 @@ def main() -> int:
         print(
             json.dumps(
                 {
-                    "ok": False,
                     "error": "INDODAX_VIEW_CREDENTIALS_MISSING",
+                    "ok": False,
+                    "status": "BLOCKED_EXTERNAL",
                 },
                 sort_keys=True,
             )
