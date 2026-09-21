@@ -324,3 +324,48 @@ def test_led_01_contract_3() -> None:
     assert len(ledger.transactions) == initial_tx_count
     assert ledger.cash == initial_cash
     assert ledger.get_position("btc_idr").base_qty == initial_qty
+
+
+
+def test_ledger_state_roundtrip_preserves_balanced_history() -> None:
+    ledger = ResearchLedger(
+        initial_cash=Decimal("500000"),
+        valuation_currency="IDR",
+        init_timestamp=BASE_TS,
+    )
+    ledger.process_fill(
+        Fill(
+            fill_id="persist-buy",
+            order_id="persist-order",
+            event_id="persist-event",
+            pair="eth_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0.002"),
+            price=Decimal("100000000"),
+            fees=Decimal("200"),
+            timestamp=BASE_TS + timedelta(minutes=1),
+        )
+    )
+
+    restored = ResearchLedger.from_dict(ledger.to_dict())
+
+    assert restored.cash == ledger.cash
+    assert restored.total_fees_paid == ledger.total_fees_paid
+    assert restored.positions["eth_idr"].base_qty == Decimal("0.002")
+    assert restored.positions["eth_idr"].cost_basis == Decimal("200000")
+    assert restored.to_dict() == ledger.to_dict()
+    assert all(tx.is_balanced for tx in restored.transactions)
+
+
+def test_ledger_state_tamper_fails_closed() -> None:
+    ledger = ResearchLedger(
+        initial_cash=Decimal("500000"),
+        valuation_currency="IDR",
+        init_timestamp=BASE_TS,
+    )
+    state = ledger.to_dict()
+    state["cash"] = "999999"
+
+    with pytest.raises(ValueError, match="LEDGER_STATE_CASH_MISMATCH"):
+        ResearchLedger.from_dict(state)
