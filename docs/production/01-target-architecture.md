@@ -1,3 +1,5 @@
+> **SUPERSEDED FOR ARCHITECTURE DECISIONS (2026-09-21):** The canonical frozen Production Main contract now lives in `docs/production/main/` and `docs/production/FROZEN-SYSTEMS.md`. Keep this file as historical/contextual documentation; when it conflicts with the frozen contract, the frozen contract wins.
+
 # Target production architecture
 
 ## Objective
