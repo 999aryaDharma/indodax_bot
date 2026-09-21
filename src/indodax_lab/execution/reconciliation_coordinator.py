@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence, Set
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AbstractSet, Sequence
 
 from indodax_lab.backtest.ledger import ResearchLedger
 from indodax_lab.execution.read_only_reconciler import (
@@ -55,7 +55,7 @@ class DurableReconciliationCoordinator:
         *,
         ledger: ResearchLedger,
         tracked_pairs: Sequence[str],
-        expected_open_order_ids: AbstractSet[str],
+        expected_open_order_ids: Set[str],
         evaluation_time: datetime,
         history_limit: int = 1000,
     ) -> ReconciliationCycleResult:
