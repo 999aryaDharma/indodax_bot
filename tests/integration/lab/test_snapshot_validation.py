@@ -17,6 +17,8 @@ from indodax_lab.data.manifest import (
     ImmutableContentConflictError,
     build_dataset_manifest,
     canonical_json_bytes,
+    content_id_path_component,
+    snapshot_manifest_path,
 )
 from indodax_lab.data.parquet_store import (
     CANDLE_SCHEMA_IDENTITY,
@@ -173,7 +175,9 @@ def test_full_shaped_inconsistent_pass_cannot_authorize_silver(tmp_path, mutatio
         as_of=START + timedelta(hours=1),
     )
     assert result.eligible_for_silver
-    quality_dir = tmp_path / "quality" / "snapshots" / written.dataset_snapshot_id
+    quality_dir = (
+        tmp_path / "quality" / "snapshots" / content_id_path_component(written.dataset_snapshot_id)
+    )
     record = next(quality_dir.glob("*.json"))
     report = json.loads(record.read_text(encoding="utf-8"))
     mutation(report)
@@ -233,7 +237,7 @@ def test_symlink_loop_in_snapshot_path_is_structured_content_failure(tmp_path):
     """Following a corrupt snapshot symlink must not escape the root or turn into a traceback."""
     written = ParquetStore(tmp_path).write_candles([_candle()])
     assert written.dataset_snapshot_id is not None
-    snapshot_dir = tmp_path / "snapshots" / written.dataset_snapshot_id
+    snapshot_dir = snapshot_manifest_path(tmp_path, written.dataset_snapshot_id).parent
     snapshot_dir.rename(tmp_path / "saved-snapshot")
     snapshot_dir.symlink_to(snapshot_dir)
     output = io.StringIO()
@@ -318,7 +322,7 @@ def _write_schema_valid_snapshot(root, *, interval: str) -> str:
     }
     manifest = build_dataset_manifest([audit])
     snapshot_id = str(manifest["dataset_snapshot_id"])
-    manifest_path = root / "snapshots" / snapshot_id / "manifest.json"
+    manifest_path = snapshot_manifest_path(root, snapshot_id)
     manifest_path.parent.mkdir(parents=True)
     manifest_path.write_bytes(canonical_json_bytes(manifest))
     return snapshot_id
