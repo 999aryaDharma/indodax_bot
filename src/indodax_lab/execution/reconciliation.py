@@ -91,6 +91,7 @@ class ReconciliationEngine:
         venue_open_orders: Sequence[VenueOrder] = (),
         venue_fills: Sequence[VenueFill] = (),
         expected_open_order_ids: AbstractSet[str] = frozenset(),
+        expected_recent_fill_ids: AbstractSet[str] = frozenset(),
         tracked_pairs: Sequence[str] | None = None,
         evaluation_time: datetime,
     ) -> ReconciliationReport:
@@ -208,10 +209,18 @@ class ReconciliationEngine:
                         detail="venue fill window contains duplicate trade IDs",
                     )
                 )
-            for fill_id in sorted(set(venue_fill_ids) - ledger_fill_ids):
+            venue_fill_id_set = set(venue_fill_ids)
+            for fill_id in sorted(venue_fill_id_set - ledger_fill_ids):
                 issues.append(
                     ReconciliationIssue(
                         code="VENUE_FILL_MISSING_FROM_LEDGER",
+                        detail=f"fill_id={fill_id}",
+                    )
+                )
+            for fill_id in sorted(set(expected_recent_fill_ids) - venue_fill_id_set):
+                issues.append(
+                    ReconciliationIssue(
+                        code="LEDGER_FILL_MISSING_AT_VENUE",
                         detail=f"fill_id={fill_id}",
                     )
                 )
