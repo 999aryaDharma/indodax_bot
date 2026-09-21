@@ -1,0 +1,92 @@
+"""Coordinator that couples reconciliation evidence with durable cursor advancement."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from typing import AbstractSet, Sequence
+
+from indodax_lab.backtest.ledger import ResearchLedger
+from indodax_lab.execution.read_only_reconciler import (
+    PrivateReadOnlyReconciliationService,
+)
+from indodax_lab.execution.reconciliation import ReconciliationReport
+from indodax_lab.execution.reconciliation_store import (
+    ReconciliationCursor,
+    ReconciliationCursorStore,
+)
+
+
+@dataclass(frozen=True)
+class ReconciliationCycleResult:
+    """One durable reconciliation cycle and its cursor movement."""
+
+    report: ReconciliationReport
+    cursor_before: ReconciliationCursor
+    cursor_after: ReconciliationCursor
+
+    @property
+    def cursor_advanced(self) -> bool:
+        return self.cursor_after.revision > self.cursor_before.revision
+
+
+class DurableReconciliationCoordinator:
+    """Advance fill-history evidence only after a healthy reconciliation cycle."""
+
+    def __init__(
+        self,
+        *,
+        service: PrivateReadOnlyReconciliationService,
+        cursor_store: ReconciliationCursorStore,
+        scope_id: str,
+        overlap_ms: int = 5000,
+    ) -> None:
+        if not scope_id.strip():
+            raise ValueError("RECONCILIATION_SCOPE_REQUIRED")
+        if overlap_ms < 0:
+            raise ValueError("RECONCILIATION_CURSOR_OVERLAP_INVALID")
+        self.service = service
+        self.cursor_store = cursor_store
+        self.scope_id = scope_id
+        self.overlap_ms = overlap_ms
+
+    def run(
+        self,
+        *,
+        ledger: ResearchLedger,
+        tracked_pairs: Sequence[str],
+        expected_open_order_ids: AbstractSet[str],
+        evaluation_time: datetime,
+        history_limit: int = 1000,
+    ) -> ReconciliationCycleResult:
+        cursor = self.cursor_store.load(self.scope_id)
+        if cursor is None:
+            raise RuntimeError("RECONCILIATION_CURSOR_NOT_INITIALIZED")
+
+        report = self.service.run(
+            ledger=ledger,
+            tracked_pairs=tracked_pairs,
+            expected_open_order_ids=expected_open_order_ids,
+            fill_window_start_ms=cursor.next_start_ms,
+            evaluation_time=evaluation_time,
+            history_limit=history_limit,
+        )
+        if not report.healthy:
+            return ReconciliationCycleResult(
+                report=report,
+                cursor_before=cursor,
+                cursor_after=cursor,
+            )
+
+        observed_end_ms = int(evaluation_time.timestamp() * 1000)
+        advanced = self.cursor_store.advance_after_healthy(
+            cursor,
+            observed_end_ms=observed_end_ms,
+            overlap_ms=self.overlap_ms,
+            at=evaluation_time,
+        )
+        return ReconciliationCycleResult(
+            report=report,
+            cursor_before=cursor,
+            cursor_after=advanced,
+        )
