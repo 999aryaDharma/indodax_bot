@@ -24,5 +24,6 @@ Targetnya adalah systematic trading platform dengan disiplin institusional: dete
 3. 03-ledger-reconciliation.md
 4. 04-slo-disaster-recovery.md
 5. 05-live-release-gates-and-blockers.md
+6. 06-production-node-build-sheet.md
 
 Master specification dan quality release gates tetap authoritative jika dokumen ini tidak memperketatnya.
