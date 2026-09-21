@@ -65,18 +65,22 @@ class ReconciliationCursorStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS reconciliation_cursors (
-                    scope_id TEXT PRIMARY KEY,
-                    payload TEXT NOT NULL,
-                    sha256 TEXT NOT NULL,
-                    revision INTEGER NOT NULL,
-                    updated_at_utc TEXT NOT NULL
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS reconciliation_cursors (
+                        scope_id TEXT PRIMARY KEY,
+                        payload TEXT NOT NULL,
+                        sha256 TEXT NOT NULL,
+                        revision INTEGER NOT NULL,
+                        updated_at_utc TEXT NOT NULL
+                    )
+                    """
                 )
-                """
-            )
+        finally:
+            conn.close()
 
     @staticmethod
     def _canonical(cursor: ReconciliationCursor) -> str:
@@ -140,8 +144,9 @@ class ReconciliationCursorStore:
             updated_at=at or datetime.now(UTC),
         )
         payload = self._canonical(cursor)
+        conn = self._connect()
         try:
-            with self._connect() as conn:
+            with conn:
                 conn.execute(
                     """
                     INSERT INTO reconciliation_cursors(
@@ -161,10 +166,13 @@ class ReconciliationCursorStore:
             raise ReconciliationCursorConcurrencyError(
                 "RECONCILIATION_CURSOR_ALREADY_EXISTS"
             ) from exc
+        finally:
+            conn.close()
         return cursor
 
     def load(self, scope_id: str) -> ReconciliationCursor | None:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             row = conn.execute(
                 """
                 SELECT payload, sha256
@@ -173,6 +181,8 @@ class ReconciliationCursorStore:
                 """,
                 (scope_id,),
             ).fetchone()
+        finally:
+            conn.close()
         if row is None:
             return None
         cursor = self._decode(row[0], row[1])
@@ -209,45 +219,48 @@ class ReconciliationCursorStore:
         )
         payload = self._canonical(updated)
 
-        with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                """
-                SELECT payload, sha256, revision
-                FROM reconciliation_cursors
-                WHERE scope_id = ?
-                """,
-                (cursor.scope_id,),
-            ).fetchone()
-            if row is None:
-                raise ReconciliationCursorConcurrencyError(
-                    "RECONCILIATION_CURSOR_NOT_FOUND"
-                )
-            persisted = self._decode(row[0], row[1])
-            if row[2] != cursor.revision or persisted != cursor:
-                raise ReconciliationCursorConcurrencyError(
-                    "RECONCILIATION_CURSOR_STALE_WRITER"
-                )
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute("BEGIN IMMEDIATE")
+                row = conn.execute(
+                    """
+                    SELECT payload, sha256, revision
+                    FROM reconciliation_cursors
+                    WHERE scope_id = ?
+                    """,
+                    (cursor.scope_id,),
+                ).fetchone()
+                if row is None:
+                    raise ReconciliationCursorConcurrencyError(
+                        "RECONCILIATION_CURSOR_NOT_FOUND"
+                    )
+                persisted = self._decode(row[0], row[1])
+                if row[2] != cursor.revision or persisted != cursor:
+                    raise ReconciliationCursorConcurrencyError(
+                        "RECONCILIATION_CURSOR_STALE_WRITER"
+                    )
 
-            result = conn.execute(
-                """
-                UPDATE reconciliation_cursors
-                SET payload = ?, sha256 = ?, revision = ?, updated_at_utc = ?
-                WHERE scope_id = ? AND revision = ?
-                """,
-                (
-                    payload,
-                    self._digest(payload),
-                    updated.revision,
-                    updated.updated_at.isoformat(),
-                    updated.scope_id,
-                    cursor.revision,
-                ),
-            )
-            if result.rowcount != 1:
-                raise ReconciliationCursorConcurrencyError(
-                    "RECONCILIATION_CURSOR_STALE_WRITER"
+                result = conn.execute(
+                    """
+                    UPDATE reconciliation_cursors
+                    SET payload = ?, sha256 = ?, revision = ?, updated_at_utc = ?
+                    WHERE scope_id = ? AND revision = ?
+                    """,
+                    (
+                        payload,
+                        self._digest(payload),
+                        updated.revision,
+                        updated.updated_at.isoformat(),
+                        updated.scope_id,
+                        cursor.revision,
+                    ),
                 )
-            conn.commit()
+                if result.rowcount != 1:
+                    raise ReconciliationCursorConcurrencyError(
+                        "RECONCILIATION_CURSOR_STALE_WRITER"
+                    )
+        finally:
+            conn.close()
 
         return updated

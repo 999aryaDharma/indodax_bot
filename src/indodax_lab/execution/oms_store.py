@@ -35,33 +35,37 @@ class OmsStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
-            conn.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS oms_orders (
-                    internal_order_id TEXT PRIMARY KEY,
-                    payload TEXT NOT NULL,
-                    sha256 TEXT NOT NULL,
-                    version INTEGER NOT NULL,
-                    updated_at_utc TEXT NOT NULL
-                );
+        conn = self._connect()
+        try:
+            with conn:
+                conn.executescript(
+                    """
+                    CREATE TABLE IF NOT EXISTS oms_orders (
+                        internal_order_id TEXT PRIMARY KEY,
+                        payload TEXT NOT NULL,
+                        sha256 TEXT NOT NULL,
+                        version INTEGER NOT NULL,
+                        updated_at_utc TEXT NOT NULL
+                    );
 
-                CREATE TABLE IF NOT EXISTS oms_events (
-                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                    event_id TEXT NOT NULL UNIQUE,
-                    internal_order_id TEXT NOT NULL,
-                    from_state TEXT,
-                    to_state TEXT NOT NULL,
-                    payload TEXT NOT NULL,
-                    created_at_utc TEXT NOT NULL,
-                    FOREIGN KEY(internal_order_id)
-                        REFERENCES oms_orders(internal_order_id)
-                );
+                    CREATE TABLE IF NOT EXISTS oms_events (
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        event_id TEXT NOT NULL UNIQUE,
+                        internal_order_id TEXT NOT NULL,
+                        from_state TEXT,
+                        to_state TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at_utc TEXT NOT NULL,
+                        FOREIGN KEY(internal_order_id)
+                            REFERENCES oms_orders(internal_order_id)
+                    );
 
-                CREATE INDEX IF NOT EXISTS idx_oms_events_order
-                    ON oms_events(internal_order_id, seq);
-                """
-            )
+                    CREATE INDEX IF NOT EXISTS idx_oms_events_order
+                        ON oms_events(internal_order_id, seq);
+                    """
+                )
+        finally:
+            conn.close()
 
     @staticmethod
     def _canonical_order(order: OmsOrder) -> str:
@@ -114,8 +118,9 @@ class OmsStore:
         canonical = self._canonical_order(order)
         digest = self._digest(canonical)
         event_json = self._canonical_payload(event_payload or {})
+        conn = self._connect()
         try:
-            with self._connect() as conn:
+            with conn:
                 conn.execute("BEGIN IMMEDIATE")
                 conn.execute(
                     """
@@ -148,9 +153,10 @@ class OmsStore:
                         order.updated_at.isoformat(),
                     ),
                 )
-                conn.commit()
         except sqlite3.IntegrityError as exc:
             raise OmsConcurrencyError("OMS_DUPLICATE_ORDER_OR_EVENT") from exc
+        finally:
+            conn.close()
 
     def apply_transition(
         self,
@@ -171,66 +177,70 @@ class OmsStore:
         current_digest = self._digest(current_json)
         event_json = self._canonical_payload(event_payload or {})
 
-        with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute(
-                """
-                SELECT payload, sha256, version
-                FROM oms_orders
-                WHERE internal_order_id = ?
-                """,
-                (previous.internal_order_id,),
-            ).fetchone()
-            if row is None:
-                raise OmsConcurrencyError("OMS_ORDER_NOT_FOUND")
-
-            stored_payload, stored_digest, stored_version = row
-            stored_order = self._decode_order(stored_payload, stored_digest)
-            if stored_version != previous.version or stored_order != previous:
-                raise OmsConcurrencyError("OMS_STALE_WRITER")
-
-            cursor = conn.execute(
-                """
-                UPDATE oms_orders
-                SET payload = ?, sha256 = ?, version = ?, updated_at_utc = ?
-                WHERE internal_order_id = ? AND version = ?
-                """,
-                (
-                    current_json,
-                    current_digest,
-                    current.version,
-                    current.updated_at.isoformat(),
-                    current.internal_order_id,
-                    previous.version,
-                ),
-            )
-            if cursor.rowcount != 1:
-                raise OmsConcurrencyError("OMS_STALE_WRITER")
-
-            try:
-                conn.execute(
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute("BEGIN IMMEDIATE")
+                row = conn.execute(
                     """
-                    INSERT INTO oms_events(
-                        event_id, internal_order_id, from_state, to_state,
-                        payload, created_at_utc
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    SELECT payload, sha256, version
+                    FROM oms_orders
+                    WHERE internal_order_id = ?
+                    """,
+                    (previous.internal_order_id,),
+                ).fetchone()
+                if row is None:
+                    raise OmsConcurrencyError("OMS_ORDER_NOT_FOUND")
+
+                stored_payload, stored_digest, stored_version = row
+                stored_order = self._decode_order(stored_payload, stored_digest)
+                if stored_version != previous.version or stored_order != previous:
+                    raise OmsConcurrencyError("OMS_STALE_WRITER")
+
+                cursor = conn.execute(
+                    """
+                    UPDATE oms_orders
+                    SET payload = ?, sha256 = ?, version = ?, updated_at_utc = ?
+                    WHERE internal_order_id = ? AND version = ?
                     """,
                     (
-                        event_id,
-                        current.internal_order_id,
-                        previous.state.value,
-                        current.state.value,
-                        event_json,
+                        current_json,
+                        current_digest,
+                        current.version,
                         current.updated_at.isoformat(),
+                        current.internal_order_id,
+                        previous.version,
                     ),
                 )
-            except sqlite3.IntegrityError as exc:
-                raise OmsConcurrencyError("OMS_DUPLICATE_EVENT_ID") from exc
-            conn.commit()
+                if cursor.rowcount != 1:
+                    raise OmsConcurrencyError("OMS_STALE_WRITER")
+
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO oms_events(
+                            event_id, internal_order_id, from_state, to_state,
+                            payload, created_at_utc
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            event_id,
+                            current.internal_order_id,
+                            previous.state.value,
+                            current.state.value,
+                            event_json,
+                            current.updated_at.isoformat(),
+                        ),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    raise OmsConcurrencyError("OMS_DUPLICATE_EVENT_ID") from exc
+        finally:
+            conn.close()
 
     def load_order(self, internal_order_id: str) -> OmsOrder | None:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             row = conn.execute(
                 """
                 SELECT payload, sha256
@@ -239,6 +249,8 @@ class OmsStore:
                 """,
                 (internal_order_id,),
             ).fetchone()
+        finally:
+            conn.close()
         if row is None:
             return None
         return self._decode_order(row[0], row[1])
@@ -246,7 +258,8 @@ class OmsStore:
     def load_nonterminal_orders(self) -> tuple[OmsOrder, ...]:
         """Restore every order whose lifecycle still requires supervision."""
 
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             rows = conn.execute(
                 """
                 SELECT payload, sha256
@@ -254,6 +267,8 @@ class OmsStore:
                 ORDER BY internal_order_id
                 """
             ).fetchall()
+        finally:
+            conn.close()
 
         active: list[OmsOrder] = []
         for payload, digest in rows:
