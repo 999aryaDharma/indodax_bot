@@ -193,8 +193,13 @@ class LiveShadowEngine:
         """Restore a verified transactional checkpoint; corruption stops startup."""
         data = self.state_store.load_checkpoint()
         if data is None:
+            legacy_json = self.state_file.with_suffix(".json")
+            if legacy_json.exists():
+                raise RuntimeError("LEGACY_SHADOW_JSON_STATE_REQUIRES_EXPLICIT_MIGRATION")
             self.save_state(event_type="INITIALIZE")
             return
+        if data.get("schema_version") != 3:
+            raise RuntimeError("SHADOW_CHECKPOINT_SCHEMA_UNSUPPORTED")
         ledger_state = data.get("ledger_state")
         if not isinstance(ledger_state, dict):
             raise RuntimeError("SHADOW_LEDGER_STATE_MISSING")
