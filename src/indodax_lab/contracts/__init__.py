@@ -1,13 +1,61 @@
 """Validated domain objects shared by research ingestion and storage."""
 
 from .common import AggressorSide, CanonicalPair, QualityStatus, UtcTimestamp
+from .decision import SignalIntent
+from .identity import ArtifactRef, canonical_bytes, manifest_digest
 from .market import CandleRecord, TradeEvent
+from .workbench import (
+    AgentManifest,
+    CandidateManifest,
+    DatasetManifest,
+    ExperimentManifest,
+    ExperimentStatus,
+    MetricValidity,
+    MetricValue,
+    ModelManifest,
+    PipelineEdge,
+    PipelineManifest,
+    PipelineNode,
+    Provenance,
+    RuntimePlan,
+    ServiceError,
+    ServiceResponse,
+    StrategyManifest,
+    TerminalExperimentLockedError,
+    VerifiedCandidate,
+    VerifiedRuntimePlan,
+    verify_runtime_plan,
+)
 
 __all__ = [
+    "AgentManifest",
     "AggressorSide",
+    "ArtifactRef",
+    "CandidateManifest",
     "CandleRecord",
     "CanonicalPair",
+    "DatasetManifest",
+    "ExperimentManifest",
+    "ExperimentStatus",
+    "MetricValidity",
+    "MetricValue",
+    "ModelManifest",
+    "PipelineEdge",
+    "PipelineManifest",
+    "PipelineNode",
+    "Provenance",
     "QualityStatus",
+    "RuntimePlan",
+    "ServiceError",
+    "ServiceResponse",
+    "SignalIntent",
+    "StrategyManifest",
+    "TerminalExperimentLockedError",
     "TradeEvent",
     "UtcTimestamp",
+    "VerifiedCandidate",
+    "VerifiedRuntimePlan",
+    "canonical_bytes",
+    "manifest_digest",
+    "verify_runtime_plan",
 ]
