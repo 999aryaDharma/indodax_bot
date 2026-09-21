@@ -14,7 +14,11 @@ Canonical code lives under `src/indodax_lab/execution/`.
 - `IndodaxReadOnlyClient`: signed private account/view access only.
 - `PrivateReadOnlyReconciliationService`: fetches account balances, open orders and
   recent fills, then performs fail-closed reconciliation.
-- `ReconciliationEngine`: compares venue truth with ledger/order expectations.
+- `ReconciliationEngine`: compares venue truth with ledger/order expectations,
+  including venue->ledger and recent ledger->venue fill checks.
+- `ReconciliationCursorStore` + `DurableReconciliationCoordinator`: persist the
+  fill-history boundary with integrity/version fencing and advance it only after a
+  `HEALTHY` cycle.
 - `OmsStateMachine`: deterministic order lifecycle including `UNKNOWN`.
 - `OmsStore`: SQLite WAL + FULL synchronous persistence, event journal, integrity hash,
   and optimistic version fencing.
@@ -102,7 +106,7 @@ The code in this phase does **not** mean G5 is passed. Remaining evidence:
 3. run private API smoke tests against the designated account;
 4. verify actual timestamp/recvWindow, auth failure, rate-limit and outage behavior;
 5. capture redacted reconciliation evidence;
-6. prove reconciliation restart/cursor behavior over an extended run;
+6. prove reconciliation restart/cursor behavior over an extended real-account run;
 7. verify how every fee/tax component appears in actual venue fill/balance evidence.
 
 No order-write credential is required or permitted for this phase.
