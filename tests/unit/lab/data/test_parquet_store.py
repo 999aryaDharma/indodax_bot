@@ -12,7 +12,7 @@ import pytest
 
 from indodax_lab.contracts import CandleRecord, CanonicalPair, QualityStatus
 from indodax_lab.data import parquet_store
-from indodax_lab.data.manifest import ImmutableContentConflictError
+from indodax_lab.data.manifest import ImmutableContentConflictError, snapshot_manifest_path
 from indodax_lab.data.parquet_store import (
     CANDLE_SCHEMA_V1,
     IndeterminatePublicationError,
@@ -61,9 +61,7 @@ def test_store_writes_sorted_zstd_utc_partitions_and_content_addressed_manifest(
     assert result.status is WriteStatus.SUCCESS
     assert len(result.partitions) == 2
     assert not list(tmp_path.rglob("*.partial"))
-    assert result.manifest_path == (
-        tmp_path / "snapshots" / result.dataset_snapshot_id / "manifest.json"
-    )
+    assert result.manifest_path == snapshot_manifest_path(tmp_path, result.dataset_snapshot_id)
     assert result.manifest_path.is_file()
     manifest = result.manifest_path.read_text(encoding="utf-8")
     assert str(tmp_path) not in manifest
