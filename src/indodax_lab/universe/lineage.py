@@ -598,7 +598,7 @@ def load_bar_artifact(
     data_root: Path, output_id: str, config_path: Path
 ) -> LoadedBarArtifact:
     root = Path(data_root).resolve()
-    manifest_path = _contained(root, root / "snapshots" / output_id / "manifest.json")
+    manifest_path = _contained(root, snapshot_manifest_path(root, output_id))
     manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes)
     required = {
