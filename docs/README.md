@@ -25,8 +25,15 @@ Status berasal dari [manifest](sprints/sprint-manifest.json); seluruh 35 task la
 | `agent/` | Panduan Codex/Antigravity dan prompt operasional |
 | `templates/` | Handoff, review, perubahan, eksperimen, insiden |
 | `runbooks/` | Instalasi terkontrol, backup/restore, insiden, pengumpulan evidence |
+| `production/` | Target infra real-money, security, OMS/reconciliation, SLO/DR, live release gates |
 | `../.agents/` | Aturan kolaborasi, roles, workflows, orchestrator specification |
 
 `docs/superpowers/` dipertahankan sebagai arsip baseline desain/plan. Bagian yang konflik mengikuti precedence master dan ADR v2. Dokumen baru tidak menyatakan provider terms, fee, kapasitas host, atau profitabilitas sudah diverifikasi saat ini.
 
 Jalankan `python docs/quality/validate_planning.py` dari root repo untuk memeriksa struktur, DAG, status, reading links, dan pemetaan requirement.
+
+
+## Production target
+
+Dokumen [production infrastructure](production/README.md) adalah target future real-money yang fail-closed.
+Ia tidak mengubah status proyek saat ini: research/shadow belum diotorisasi untuk live order execution.
