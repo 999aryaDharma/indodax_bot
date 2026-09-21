@@ -76,12 +76,25 @@ class PrivateReadOnlyReconciliationService:
             if len(pair_fills) >= history_limit:
                 saturated_pairs.append(pair)
 
+        tracked_pair_set = {pair.lower() for pair in tracked_pairs}
+        expected_recent_fill_ids = frozenset(
+            tx.fill_id
+            for tx in ledger.transactions
+            if tx.fill_id is not None
+            and tx.pair is not None
+            and tx.pair.lower() in tracked_pair_set
+            and fill_window_start_ms
+            <= int(tx.timestamp.timestamp() * 1000)
+            <= end_ms
+        )
+
         report = self.engine.reconcile(
             ledger=ledger,
             account=account,
             venue_open_orders=tuple(venue_orders),
             venue_fills=tuple(venue_fills),
             expected_open_order_ids=expected_open_order_ids,
+            expected_recent_fill_ids=expected_recent_fill_ids,
             tracked_pairs=tuple(tracked_pairs),
             evaluation_time=evaluation_time,
         )
