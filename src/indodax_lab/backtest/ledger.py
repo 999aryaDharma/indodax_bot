@@ -444,6 +444,17 @@ class ResearchLedger:
             ),
             Decimal("0"),
         )
+        capital_from_postings = -sum(
+            (
+                posting.amount
+                for tx in transactions
+                for posting in tx.postings
+                if posting.account == AccountType.CAPITAL
+            ),
+            Decimal("0"),
+        )
+        if capital_from_postings != initial_cash:
+            raise ValueError("LEDGER_STATE_INITIAL_CAPITAL_MISMATCH")
         if cash_from_postings != cash:
             raise ValueError("LEDGER_STATE_CASH_MISMATCH")
         if fees_from_postings != total_fees:
