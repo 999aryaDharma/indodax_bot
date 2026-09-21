@@ -55,9 +55,14 @@ Bounded capital + universe, immutable candidate, no online learning, no automati
 - decisions use fully closed 1h bars;
 - bars-held advances by closed-bar event, not polling cycle;
 - SQLite transactional shadow checkpoint + integrity hash;
-- time-valid Indodax tax/CFX intervals;
+- shadow cash/inventory now derives from the balanced double-entry ledger;
+- ledger state restore validates cash, positions, fills, fees, PnL, and initial capital postings;
+- time-valid Indodax tax/CFX intervals and observed-current Pro minimum;
 - central portfolio risk authority + persistent drawdown halt;
+- missing ticker, stale closed bars, model-pair mismatch, and feature-schema mismatch fail closed;
+- canonical quantity flows from risk approval into fill, ledger, and checkpoint;
 - cross-platform path traversal rejection;
-- portable content-addressed snapshot path encoding.
+- portable content-addressed snapshot path encoding;
+- architecture guard prevents canonical `indodax_lab` code from importing legacy flat engines.
 
 These fixes strengthen research/shadow truth; they do not authorize live trading.
