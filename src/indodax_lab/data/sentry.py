@@ -13,7 +13,13 @@ import pyarrow.parquet as pq
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .checksums import sha256_bytes, sha256_file
-from .manifest import ImmutableContentConflictError, canonical_json_bytes, read_manifest
+from .manifest import (
+    ImmutableContentConflictError,
+    canonical_json_bytes,
+    content_id_path_component,
+    read_manifest,
+    snapshot_manifest_path,
+)
 from .publication import (
     IndeterminatePublicationError,
     ensure_directory_tree,
@@ -146,7 +152,9 @@ def validate_snapshot(
         return _unrecorded_failure("SNAPSHOT_PATH_UNRESOLVABLE")
     checksums: list[str] = []
     try:
-        manifest_path = _contained_path(root, "snapshots", snapshot_id, "manifest.json")
+        manifest_path = snapshot_manifest_path(root, snapshot_id)
+        if _contained_path(root, str(manifest_path.relative_to(root))) is None:
+            return _finalize(root, snapshot_id, failure_report("SNAPSHOT_INVALID"))
         if manifest_path is None:
             return _finalize(root, snapshot_id, failure_report("SNAPSHOT_INVALID"))
         manifest = read_manifest(manifest_path)
@@ -244,8 +252,8 @@ def require_approved_snapshot_decision(
     """
     validate_snapshot_id(snapshot_id)
     root = Path(data_root).resolve()
-    manifest_path = _contained_path(root, "snapshots", snapshot_id, "manifest.json")
-    if manifest_path is None:
+    manifest_path = snapshot_manifest_path(root, snapshot_id)
+    if _contained_path(root, str(manifest_path.relative_to(root))) is None:
         raise ValueError("source snapshot quality decision is unavailable")
     try:
         manifest = read_manifest(manifest_path)
@@ -268,7 +276,7 @@ def require_approved_snapshot_decision(
     except (OSError, ValueError, TypeError, SnapshotPathUnresolvableError) as error:
         raise ValueError("source snapshot quality decision checksum mismatch") from error
 
-    directory = _contained_path(root, "quality", "snapshots", snapshot_id)
+    directory = _contained_path(root, "quality", "snapshots", content_id_path_component(snapshot_id))
     if directory is None or not directory.is_dir():
         raise ValueError("source snapshot quality decision is missing")
     records = sorted(directory.glob("*.json"))
@@ -398,7 +406,7 @@ def _finalize(
             root,
             record_kind,
             "snapshots",
-            snapshot_id,
+            content_id_path_component(snapshot_id),
             f"{sha256_bytes(payload)}.json",
         )
     except SnapshotPathUnresolvableError:
