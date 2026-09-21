@@ -34,8 +34,8 @@ from indodax_lab.backtest.costs import (
     load_cost_schedule_table,
     lookup_cost,
 )
-from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.backtest.ledger import Position as RiskPosition
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.ledger import ResearchLedger
 from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy

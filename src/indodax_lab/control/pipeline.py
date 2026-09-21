@@ -10,8 +10,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.backtest.ledger import Position
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.control.approval import (
     ManualApprovalStore,
     PendingProposal,

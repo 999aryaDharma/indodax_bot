@@ -12,8 +12,8 @@ from decimal import Decimal
 from pathlib import Path
 
 from indodax_lab.backtest.costs import OrderSide
-from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.backtest.ledger import Position
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.risk import (
     PortfolioRiskManager,
     RiskAssessmentResult,

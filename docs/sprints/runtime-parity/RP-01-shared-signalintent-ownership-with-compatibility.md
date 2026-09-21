@@ -34,7 +34,7 @@ Status: READY
 
 Priority: P0 | Type: integration | Domain: runtime-parity | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root (LUNA execution) | Independent Reviewer: /root/architecture_doc_review
 
 Recommended Branch: `feat/rp-01-shared-signalintent-ownership-with-compatibility`
 

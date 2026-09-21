@@ -9,8 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 
-from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.strategies.c01 import c01_decide, load_c01_specification
 from indodax_lab.strategies.c07 import c07_decide, load_c07_specification
 from indodax_lab.strategies.registry import StrategyRegistry

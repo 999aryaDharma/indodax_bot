@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide, lookup_cost
-from indodax_lab.backtest.events import ExecutionStatus, MarketBar, SignalIntent
+from indodax_lab.backtest.events import ExecutionStatus, MarketBar
 from indodax_lab.backtest.execution import ConservativeExecutionSimulator
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.ledger import ResearchLedger, Position
 from indodax_lab.backtest.result import BacktestResult
 from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy

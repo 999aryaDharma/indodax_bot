@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from indodax_lab.backtest.costs import OrderRole, OrderSide
-from indodax_lab.backtest.events import SignalIntent
+from indodax_lab.contracts.decision import SignalIntent
 
 
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:

@@ -8,7 +8,7 @@ from typing import Any, Callable
 import yaml
 from pydantic import ValidationError
 
-from indodax_lab.backtest.events import SignalIntent
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.strategies.base import (
     DecisionFrame,
     RegisteredStrategy,

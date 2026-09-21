@@ -33,8 +33,8 @@
       "path": "docs/sprints/agent-governance/AGENT-01-governed-research-curator.md",
       "priority": "P0",
       "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root (LUNA execution)",
+      "independent_reviewer": "/root/architecture_doc_review",
       "recommended_branch": "feat/agent-01-governed-research-curator",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."

@@ -11,8 +11,8 @@ from pathlib import Path
 import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
-from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.strategies.registry import StrategyRegistry
 
 

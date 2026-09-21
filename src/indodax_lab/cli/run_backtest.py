@@ -33,12 +33,13 @@ import yaml
 
 from indodax_lab.backtest.costs import load_cost_schedule_table
 from indodax_lab.backtest.engine import ReplayBacktestEngine
-from indodax_lab.backtest.events import MarketBar, SignalIntent
+from indodax_lab.backtest.events import MarketBar
 from indodax_lab.backtest.feature_replay import (
     FeatureReplayAdapter,
     FeatureReplayConfig,
     load_bars_from_parquet_dir,
 )
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.metrics import compute_performance_metrics
 from indodax_lab.backtest.risk import RiskPolicy
 from indodax_lab.strategies.base import (

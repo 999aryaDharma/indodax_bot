@@ -5,8 +5,9 @@ from __future__ import annotations
 from decimal import Decimal, ROUND_DOWN
 
 from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide, lookup_cost
-from indodax_lab.backtest.events import ExecutionResult, ExecutionStatus, MarketBar, SignalIntent
+from indodax_lab.backtest.events import ExecutionResult, ExecutionStatus, MarketBar
 from indodax_lab.backtest.orders import Fill
+from indodax_lab.contracts.decision import SignalIntent
 
 
 class ConservativeExecutionSimulator:
