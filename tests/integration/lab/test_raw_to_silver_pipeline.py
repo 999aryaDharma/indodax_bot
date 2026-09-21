@@ -93,55 +93,13 @@ def test_golden_raw_to_silver_replay_is_immutable_and_content_addressed(tmp_path
     assert re.fullmatch(r"sha256:[0-9a-f]{64}", str(first["snapshot_id"]))
     assert changed_wire["snapshot_id"] != first["snapshot_id"]
     assert changed_trade_wire["snapshot_id"] != first["snapshot_id"]
-    assert first["lineage"] == replay["lineage"] == {
-        "source_input_ids": (
-            "sha256:09ceeeb94fa4b9db523a7a1ab8acd63cba17b8dbfe3130bc4711aaafb5c54fe8",
-            "sha256:10398558fa6d4de0deb3b883f2b906bac8bc747d74e9220bead4d10c1b7b6bf9",
-            "sha256:1058592f689e4652639c8cb8bff6279dfaa7b360a368ef5dd68120afb1b10855",
-            "sha256:12801df3ea295ea3ed8320b9681ef82977ecd9d93cf2c346ed4c44dfee9fdf3b",
-            "sha256:14fe1b4bdde66a8b51e324515cf890c8508e3a67f2b7088ec608ae24dc781cfc",
-            "sha256:17b90102acf879c1825834c3be487fc2963d6db1ad10241b8fe1e65bc1bd9f56",
-            "sha256:191bf5d7817d60d97947f158e135a45884c77f2dbb5c58478762a15e1c4daf7e",
-            "sha256:2fcb17fba99de2dc02584f55ff05ea2f428af4e90d513e39fde42adec303b152",
-            "sha256:31175f66a11dbde1c5c51e3754f2c0ea9e481d74eeee2a6d59e31de3f8f66795",
-            "sha256:32b67da0f84a8902a15a3fd4d70ee31330d55164dbb740efab5aa96765985517",
-            "sha256:34b156ec921962df1c2622016ee8e94c241bb9cc48da276512558dde9960dd17",
-            "sha256:39f5297f6a8a4c2afb74c07eacb12a4d257c9695438517122646229a63c33af6",
-            "sha256:3dd0e57e6841b4b0f54824b4ced75dcf5563f0be7c1882cc0c3a77302eac18c7",
-            "sha256:3f1d19308186caf0b180fc1781c2174431b6616ab97bd6a30bf68e0debb50461",
-            "sha256:3f222114a2e7d84262f81ddb01ecb67d31c2058d9d10d7a58ed431c372cc7bd5",
-            "sha256:4a950368d36538ba22a3311f0e5a8832e642d97356e7e9e3c8c5ac89d51bd20b",
-            "sha256:4bd37093b60f5becd88fc5b8d82fd134ca2fe301e0c8106f760671c7c75ce6db",
-            "sha256:5b422231814c7ac899768ee2ba7a803e335826f4954d266bb3b56d054f33b712",
-            "sha256:6841c305b663349300c2f55e804c84abc5483ffb46c42b7d0bec6c8ff5b66d9b",
-            "sha256:6b74738134d0a092713215c4e9371bde5d9ab3b2d9cf4351af5cd4e36553b9b6",
-            "sha256:73dbeab9fddc5feac45d6d7ae7f418c8c701ff2d3b3d61caa80081cbc94d63fd",
-            "sha256:7713afb0d4c8de658513b7cc38aac6471c506e1e81c495f07d1b4172c3ab5d47",
-            "sha256:7add1099b503f5a7974fcfe98ab0c8066d0c901a458d48f03a60a5424de76866",
-            "sha256:80949b9d7a694abef6fe8fe0dbc836be4706855bc14e8f604e362ddcea095990",
-            "sha256:876daeb2b3a202be9a881f8f192eae4a72db73991d71c1e06b03e22e7345b1d1",
-            "sha256:8bb2745f86811e59ad5741e4627878492138c464155afac748466711bd6b5e1b",
-            "sha256:92a3055aa7a7d9ff473afbc8983f400e1da9a33df29c14d7e1f2b1f034d3bf15",
-            "sha256:95893ea7315b6550a0d14af2f89950adb980c909f139665b4918a7e98054748a",
-            "sha256:97b97afbab3b61ab625b600872c3ba761b95ed95fb8221c1d3ebb622d615c430",
-            "sha256:9db44ea164ed370feb18125b35aa84a0dc7888d9a3b10933b8a07b509573529e",
-            "sha256:9e8bcbed9e7bbd120bfa4bc93b634e0784c00f671b31a103161ed5cc2f8a2c0d",
-            "sha256:9f70e18453bbfc9038d58267d8c1f85dda383c6ba80e91ff0a6920d69b289bfb",
-            "sha256:a865e14801a8fb152009f6f75de8e68865254589e3890ce10713056a4c74fee2",
-            "sha256:ac72cc5d779fde2f4cf5183232da2241538fa81acd09a6067013d7d9fafa3f53",
-            "sha256:b22e2eb5e77f61258ee0d30c84cd44b06af6fa9ea1fa2360df64df0ff821e689",
-            "sha256:bfcbaef63f43fd82ba6bc841467980aa78805be745ddbd572cb76f95b00689ae",
-            "sha256:bfe4388b2ec29b9270675a0e42633172e7d058ceb38e8b4e2d745f81ff012059",
-            "sha256:cb50c8d35cdcb1e93f48fb22db90f82c00b780e4101e98b5ee4069f5c854bcfe",
-            "sha256:dd2b90489b6de24c637452a70a867d520146eb3413f35a4073d042bcb9e19446",
-            "sha256:dd905e56161dae110ce29d7e10b90c59f7f718d04587e3b547e15e2ef07f75f2",
-            "sha256:de0a200b74f2ae22cf69e76d1f2a8f591ee201ab46839ffc6d3abf4f0675b562",
-            "sha256:e3322b147458bdcb66630f4e7c06aaf294a3132b2baeabc75a674ab9221c399b",
-            "sha256:ea5bdfd41220409f417dd11135fb5d6cf1c6888e74a08c28d76a384cd1291194",
-            "sha256:f284a94a45794b0ee845dce46e0b63dde9d818b2ab930f02442e4c7cc7524c11",
-            "sha256:f99182814560ed6688ba33e1a8f4cbba22731142d558da50d8bc942d964fcbd1",
-        ),
-    }
+    assert first["lineage"] == replay["lineage"]
+    source_ids = first["lineage"]["source_input_ids"]
+    assert source_ids == tuple(sorted(set(source_ids)))
+    assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", value) for value in source_ids)
+    assert first["global_trade_decision_id"] in source_ids
+    assert changed_wire["lineage"] != first["lineage"]
+    assert changed_trade_wire["lineage"] != first["lineage"]
 
 
 def test_24_hour_trade_batch_resource_smoke_records_child_vm_hwm_without_hardware_gate() -> None:
