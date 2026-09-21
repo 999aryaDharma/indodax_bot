@@ -11,6 +11,7 @@ from pydantic import ValidationError
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.execution.oms import (
+    OmsOrder,
     OmsOrderState,
     OmsStateMachine,
     OmsTransitionError,
@@ -200,3 +201,29 @@ def test_tampered_oms_payload_fails_closed(tmp_path):
 
     with pytest.raises(OmsStateCorruptionError, match="OMS_ORDER_HASH_MISMATCH"):
         store.load_order(order.internal_order_id)
+
+
+def test_model_boundary_rejects_acknowledged_without_venue_id():
+    with pytest.raises(ValidationError, match="OMS_VENUE_ORDER_ID_REQUIRED"):
+        OmsOrder(
+            internal_order_id="internal-2",
+            client_order_id="bot-2",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            desired_qty=Decimal("0.00005"),
+            state=OmsOrderState.ACKNOWLEDGED,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+
+
+def test_client_order_id_contract_matches_indodax_limit():
+    with pytest.raises(ValidationError, match="OMS_CLIENT_ORDER_ID_INVALID"):
+        OmsStateMachine.create(
+            internal_order_id="internal-3",
+            client_order_id="x" * 37,
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            desired_qty=Decimal("0.00005"),
+            created_at=NOW,
+        )
