@@ -101,16 +101,13 @@ def test_take_profit_exit_and_fee_accounting(temp_engine):
     assert len(closed) == 1
     trade = closed[0]
     assert trade.exit_reason == "TAKE_PROFIT"
-    assert trade.exit_price == 43500000.0
+    assert trade.exit_price == 43000000.0
 
-    # Verify Proceeds & Fees:
-    # Gross proceeds = 0.0025 * 43,500,000 = 108,750
-    # Maker Sell Fee = 108,750 * 0.003211 = 349.19625
-    # Net Credit = 108,750 - 349.19625 = 108,400.80375
-    # Net PnL = Net Credit (108,400.80) - Cash Debited (100,000) = +8,400.80
-    assert trade.net_pnl > 8000.0
+    # TP proxy is capped at the target (43m), never rewarded with the better 43.5m ticker.
+    # Runtime sell cost is resolved point-in-time as taker, not assumed maker.
+    assert trade.net_pnl > 6000.0
     assert len(temp_engine.open_positions) == 0
-    assert temp_engine.available_cash > Decimal("508000.00")
+    assert temp_engine.available_cash > Decimal("506000.00")
 
 
 def test_stop_loss_exit_and_capital_protection(temp_engine):
