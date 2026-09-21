@@ -33,7 +33,7 @@ def run_single_scan(engine: LiveShadowEngine, pairs: list[str]) -> None:
         return
 
     print(">>> [2/3] Memeriksa posisi terbuka (Stop Loss, Take Profit, Trailing Stops)...")
-    exits_triggered = engine.check_open_positions(live_prices)
+    exits_triggered = engine.check_open_positions(live_prices, candle_dfs)
 
     print(">>> [3/3] Menjalankan Sensory Engine, Sinyal Kuantitatif & Otak AI XGBoost...")
     eval_diagnostics = engine.evaluate_market_scan(live_prices, candle_dfs)
@@ -56,7 +56,7 @@ def run_continuous_watch(engine: LiveShadowEngine, pairs: list[str], interval_se
             time.sleep(interval_sec)
             iteration += 1
     except KeyboardInterrupt:
-        print("\n\n[INFO] Monitor dihentikan oleh user. Seluruh state tersimpan aman di logs/shadow_portfolio_state.json.")
+        print("\n\n[INFO] Monitor dihentikan oleh user. Seluruh state tersimpan aman di logs/shadow_portfolio_state.sqlite3.")
 
 
 def main():
