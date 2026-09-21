@@ -35,5 +35,10 @@ jobs:
         run: python -m compileall -q src
       - name: Test
         run: python -m pytest -q
-      - name: Lint
-        run: ruff check src tests
+      - name: Fatal static checks across repository
+        run: ruff check src tests --select=E9,F63,F7,F82
+      - name: Strict lint new safety boundaries
+        run: |
+          ruff check src/indodax_lab/paper/shadow_store.py
+          ruff check tests/unit/lab/paper/test_shadow_store.py
+          ruff check tests/unit/lab/backtest/test_indodax_cost_boundaries.py
