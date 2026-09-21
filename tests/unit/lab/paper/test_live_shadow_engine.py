@@ -9,16 +9,48 @@ Tests:
 5. Trailing stop and take profit trigger logic
 """
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 import tempfile
-import pytest
+
 import pandas as pd
+import pytest
+
+from indodax_lab.backtest.costs import OrderRole, OrderSide
+from indodax_lab.backtest.orders import Fill
 
 from indodax_lab.paper.live_shadow_engine import (
     LiveShadowEngine,
     ShadowPosition,
 )
+
+
+
+
+def _seed_open_position(engine: LiveShadowEngine, pos: ShadowPosition) -> None:
+    """Create a test position through the same double-entry boundary as runtime."""
+    fee = Decimal(str(pos.buy_fee_paid))
+    cash_debit = Decimal(str(pos.cash_debited))
+    gross = cash_debit - fee
+    qty = gross / Decimal(str(pos.entry_price))
+    pos.qty = float(qty)
+    fill = Fill(
+        fill_id=f"seed-{pos.position_id}",
+        order_id=f"seed-order-{pos.position_id}",
+        event_id=f"seed-event-{pos.position_id}",
+        pair=pos.pair,
+        side=OrderSide.BUY,
+        role=OrderRole.TAKER,
+        qty=qty,
+        price=Decimal(str(pos.entry_price)),
+        fees=fee,
+        timestamp=datetime(2026, 9, 17, tzinfo=UTC),
+        fee_components={"total": fee},
+    )
+    engine.ledger.process_fill(fill)
+    engine.open_positions[pos.position_id] = pos
+    engine._assert_accounting_consistency()
 
 
 @pytest.fixture
@@ -41,6 +73,7 @@ def test_initial_ledger_state(temp_engine):
     assert temp_engine.available_cash == Decimal("500000.00")
     assert len(temp_engine.open_positions) == 0
     assert len(temp_engine.closed_trades) == 0
+    assert all(tx.is_balanced for tx in temp_engine.ledger.transactions)
 
 
 def test_state_persistence_and_recovery(temp_engine):
@@ -60,8 +93,7 @@ def test_state_persistence_and_recovery(temp_engine):
         entry_atr=500000.0,
         highest_price=40000000.0,
     )
-    temp_engine.open_positions["pos_test_1"] = pos
-    temp_engine.available_cash = Decimal("400000.00")
+    _seed_open_position(temp_engine, pos)
     temp_engine.save_state()
 
     # Re-instantiate from the same state file
@@ -73,6 +105,8 @@ def test_state_persistence_and_recovery(temp_engine):
     assert len(recovered_engine.open_positions) == 1
     assert "pos_test_1" in recovered_engine.open_positions
     assert recovered_engine.open_positions["pos_test_1"].entry_price == 40000000.0
+    assert recovered_engine.ledger.cash == Decimal("400000.00")
+    assert all(tx.is_balanced for tx in recovered_engine.ledger.transactions)
 
 
 def test_take_profit_exit_and_fee_accounting(temp_engine):
@@ -91,8 +125,7 @@ def test_take_profit_exit_and_fee_accounting(temp_engine):
         entry_atr=1000000.0,
         highest_price=40000000.0,
     )
-    temp_engine.open_positions["pos_tp_test"] = pos
-    temp_engine.available_cash = Decimal("400000.00")
+    _seed_open_position(temp_engine, pos)
 
     # Live price hits 43,500,000 (above TP 43,000,000)
     live_prices = {"eth_idr": 43500000.0}
@@ -126,8 +159,7 @@ def test_stop_loss_exit_and_capital_protection(temp_engine):
         entry_atr=10000000.0,
         highest_price=1000000000.0,
     )
-    temp_engine.open_positions["pos_sl_test"] = pos
-    temp_engine.available_cash = Decimal("400000.00")
+    _seed_open_position(temp_engine, pos)
 
     # Live price drops to 975,000,000 (below SL 980,000,000)
     live_prices = {"btc_idr": 975000000.0}
@@ -158,7 +190,7 @@ def test_trailing_stop_advancement(temp_engine):
         entry_atr=1000000.0,
         highest_price=40000000.0,
     )
-    temp_engine.open_positions["pos_trail_test"] = pos
+    _seed_open_position(temp_engine, pos)
 
     # Price rises to 42,000,000
     live_prices = {"eth_idr": 42000000.0}
@@ -201,7 +233,7 @@ def test_bars_held_advances_only_on_new_closed_bar(temp_engine):
         highest_price=40000000.0,
         last_bar_timestamp=100,
     )
-    temp_engine.open_positions[pos.position_id] = pos
+    _seed_open_position(temp_engine, pos)
     prices = {"eth_idr": 40500000.0}
 
     same_bar = {"eth_idr": pd.DataFrame([{"timestamp": 100}])}
