@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-RW0-01. Verify external gates and shared-file ownership before claim.
+RW1-01, PM-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -28,7 +28,7 @@ RW0-01. Verify external gates and shared-file ownership before claim.
 - BASE-05 — Unbiased signal observations [DONE; CORE]
 - DATA-02 — Durable immutable publication [DONE; CORE]
 - COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
-- RW0-01 — Immutable Workbench domain manifests [READY; CORE]
+- RW0-01 — Immutable Workbench domain manifests [DONE; CORE]
 
 ## Wave 3
 
@@ -36,7 +36,7 @@ RW0-01. Verify external gates and shared-file ownership before claim.
 - DATA-03 — Auditable candle backfill [DONE; CORE]
 - DATA-05 — Reliable forward market collection [DONE; CORE]
 - LED-01 — Balanced research postings [REVIEW; CORE]
-- PM-01 — Authoritative fail-closed pre-write gate [PLANNED; CORE]
+- PM-01 — Authoritative fail-closed pre-write gate [READY; CORE]
 
 ## Wave 4
 
@@ -59,7 +59,7 @@ RW0-01. Verify external gates and shared-file ownership before claim.
 
 - FEAT-01 — Versioned feature registry [REVIEW; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
-- RW1-01 — Reusable immutable dataset registry [PLANNED; CORE]
+- RW1-01 — Reusable immutable dataset registry [READY; CORE]
 
 ## Wave 8
 

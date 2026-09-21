@@ -1,6 +1,6 @@
 # RW0-01 Handoff — Immutable Workbench domain manifests
 
-Status: REVIEW — implementation complete; independent review requested
+Status: DONE — code review PASS (Round 2); full-suite gate PASS
 
 ## Identity
 
@@ -8,7 +8,7 @@ Status: REVIEW — implementation complete; independent review requested
 - Implementation owner: Codex `/root` (LUNA execution)
 - Independent reviewer: `/root/architecture_doc_review`
 - Base SHA: `9e29469`
-- Code SHA: `db5905c`
+- Code SHA: `627c53f`
 - Branch: `docs/architecture-runtime-plan`
 - Scope: deep immutable domain manifests, artifact references, and canonical digest functions
 
@@ -35,10 +35,11 @@ Status: REVIEW — implementation complete; independent review requested
 ## Observed TDD evidence
 
 - RED: `python -m pytest tests/unit/lab/test_workbench_contracts.py -q` failed during collection with expected `ModuleNotFoundError: No module named 'indodax_lab.contracts.identity'`.
-- GREEN focused: `python -m pytest tests/unit/lab/test_workbench_contracts.py -q` → 11 passed in 0.41s.
+- GREEN focused (Round 1): `python -m pytest tests/unit/lab/test_workbench_contracts.py -q` → 11 passed in 0.41s.
+- GREEN focused (Round 2): `python -m pytest tests/unit/lab/test_workbench_contracts.py -q` → 15 passed in 0.45s (after adding regression tests for Decimal normalization, microseconds, and ID validation).
 - Targeted Ruff: `ruff check src/indodax_lab/contracts tests/unit/lab/test_workbench_contracts.py` → all checks passed (exit 0).
 - Bytecode compilation: `python -m compileall -q src` → exit 0.
-- Full suite gate: `python -m pytest -q` → 952 passed, 2 skipped, 0 failed in 34.76s (exit 0).
+- Full suite gate: `python -m pytest -q` → 956 passed, 2 skipped, 0 failed in 35.29s (exit 0).
 - Whitespace check: `git diff --check` → exit 0.
 
 ## Acceptance Criteria Mapping
@@ -49,6 +50,7 @@ Status: REVIEW — implementation complete; independent review requested
 - RW0-01-AC3 (`test_rw0_01_3`): Extra fields, naive time, NaN and invalid hash reject. PASS.
 - RW0-01-AC4 (`test_rw0_01_4`): Terminal experiment configuration cannot be edited. PASS.
 - RW0-01-AC5 (`test_rw0_01_bootstrap_recovery`): Runtime plan can be verified before any completed experiment exists. PASS.
+- Regression tests: Decimal normalization, microsecond preservation, `missing_intervals` UTC validation, and manifest ID path validation all PASS.
 
 ## Compatibility and migration
 
@@ -61,6 +63,9 @@ Additive domain contracts in `indodax_lab.contracts`. Existing `SignalIntent`, `
 - No product-path files outside declared RW0-01 scope were modified.
 - `dashboard.pen` and `DESIGN.md` were preserved and untouched.
 
-## Reviewer decision
+## Reviewer and coordinator decision
 
-Submitted for independent review on code SHA `db5905c`.
+- Round 1 on SHA `db5905c`: Independent reviewer `/root/architecture_doc_review` returned `CHANGES_REQUESTED` (Important Finding 1 on Decimal canonical normalization, Minor findings 2, 3, 4).
+- Remediation on SHA `627c53f`: All findings resolved cleanly with regression test coverage.
+- Round 2 on SHA `627c53f`: Independent reviewer `/root/architecture_doc_review` returned **PASS** (0 Critical, 0 Important, 0 Minor).
+- Delivery coordinator verified full-suite test evidence (956 passed, 0 failed) and marked RW0-01 **DONE** in sprint-manifest.json.

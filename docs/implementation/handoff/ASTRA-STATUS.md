@@ -7,9 +7,9 @@
 - Completed planning areas: current-state inventory; runtime divergences; frozen-boundary interpretation; conservative manifest reconstruction; RW/RP/PM task program; domain contract design; next LUNA unit.
 - Open architecture questions: none needed for RP-01. Future changes to frozen boundaries require explicit conflict/CR/ADR, not implementer discretion.
 - Known blockers: historical later handoffs lack independently established PASS; production A01–A15; unverified data/licenses/costs/hardware/private venue evidence; no production activation authorization.
-- Current implementation phase: RP-01 DONE (code review PASS at `5d9629e`, full-suite 941 PASS in isolated research environment verified). RW0-01 is READY as the sole eligible program task.
-- Next expected LUNA task: RW0-01 — Immutable Workbench domain manifests.
-- Review evidence: [review record](REVIEW.md), [DOC-01 handoff](../../sprints/handoffs/DOC-01-HANDOFF.md), [RP-01 handoff](../../sprints/handoffs/RP-01-HANDOFF.md).
+- Current implementation phase: RW0-01 DONE (code review PASS at `627c53f`, full-suite 956 PASS in isolated research environment verified). PM-01 and RW1-01 are READY; PM-01 (Priority P0) is the active program task.
+- Next expected LUNA task: PM-01 — Authoritative fail-closed pre-write gate.
+- Review evidence: [review record](REVIEW.md), [DOC-01 handoff](../../sprints/handoffs/DOC-01-HANDOFF.md), [RP-01 handoff](../../sprints/handoffs/RP-01-HANDOFF.md), [RW0-01 handoff](../../sprints/handoffs/RW0-01-HANDOFF.md).
 
 ## Execution ledger
 
@@ -26,5 +26,6 @@
 11. Independent round 2 PASS on `6868d24de1056e86638a8c48bcd56a65187ca2fc`, no remaining findings. Coordinator records DOC-01 DONE and RP-01 READY; all other legacy review and external gates remain.
 12. User requested work in the VS Code workspace. Switched `D:/bot-trading` to the documentation branch after confirming both worktrees clean; former temporary checkout detached. No merge, push, main modification or product change.
 13. RP-01 full-suite gate resolved in isolated research environment (`C:\Users\User\miniconda3\envs\ML\python.exe` with pandas 2.2.3, pyarrow 24.0.0, scipy 1.18.1). Ran focused decision contract tests (23 passed), targeted ruff (all checks passed), full suite (941 passed, 2 skipped, 0 failed in 37.71s), diff check (exit 0). Updated RP-01 handoff to DONE with exact SHA evidence. Refreshed planning manifest; RW0-01 dependencies fulfilled and unlocked as READY. Updated LUNA-NEXT handoff for RW0-01.
+14. RW0-01 implemented in `indodax_lab.contracts` (`identity.py`, `workbench.py`, `__init__.py`) and tested (`tests/unit/lab/test_workbench_contracts.py`). Independent code review by subagent: Round 1 CHANGES_REQUESTED (`db5905c`), Round 2 PASS (`627c53f`). Full suite gate verified (956 passed, 2 skipped, 0 failed in 35.29s). Marked RW0-01 DONE with exact SHA evidence. Refreshed planning DAG unlocking PM-01 (P0) and RW1-01 (P1) as READY. Updated LUNA-NEXT for PM-01.
 
-Exact final commands/results and reviewer SHA are recorded in DOC-01 and RP-01 handoffs; do not copy historical counts as new test evidence.
+Exact final commands/results and reviewer SHA are recorded in DOC-01, RP-01, and RW0-01 handoffs; do not copy historical counts as new test evidence.
