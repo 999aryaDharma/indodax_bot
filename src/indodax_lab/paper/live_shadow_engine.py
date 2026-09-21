@@ -475,7 +475,13 @@ class LiveShadowEngine:
             px = live_prices.get(pos.pair, pos.entry_price)
             mark_value += Decimal(str(pos.qty)) * Decimal(str(px))
         total_equity = self.available_cash + mark_value
+        was_halted = self.risk_manager.is_halted
         self.risk_manager.observe_equity(total_equity, now_utc)
+        if self.risk_manager.is_halted != was_halted:
+            self.save_state(
+                event_type="RISK_HALT",
+                event_payload={"reason": self.risk_manager.halt_reason or "UNKNOWN"},
+            )
 
         for pair, df in candle_dfs.items():
             if len(df) < 200:
