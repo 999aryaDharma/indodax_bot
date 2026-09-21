@@ -54,9 +54,9 @@ Actual maker/taker role berasal dari venue evidence jika tersedia. Limit touch b
 
 ## Implementation status — 2026-09-21
 
-Canonical read-only venue access, reconciliation comparison/orchestration, durable OMS
-state, and quote-fee venue-fill normalization now exist in
-`src/indodax_lab/execution/`.
+Canonical read-only venue access, bidirectional reconciliation, durable reconciliation
+cursor/coordinator, durable OMS state, and quote-fee venue-fill normalization now exist
+in `src/indodax_lab/execution/`.
 
 This does not yet authorize venue writes. The read-only adapter intentionally has no
 trade/cancel/withdraw method. G5 remains open until a designated view-only credential is
