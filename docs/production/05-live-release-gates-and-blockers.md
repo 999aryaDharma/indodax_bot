@@ -1,3 +1,5 @@
+> **PARTIALLY SUPERSEDED / OPERATIONAL REFERENCE (2026-09-21):** Canonical frozen gates and production architecture now live in `docs/production/main/SOP-AND-GATES.md`, `docs/production/main/IMPLEMENTATION-ROADMAP.md`, and `docs/production/FROZEN-SYSTEMS.md`. Use this file only where it does not conflict with those frozen documents.
+
 # Live release gates and current blockers
 
 Passing CI adalah syarat perlu, bukan cukup. Gate bersifat kumulatif.
