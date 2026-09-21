@@ -6,9 +6,9 @@ Autonomous paper trading engine for Indodax Research Lab:
 - Multi-asset strategy evaluation (ETH C02, BTC C07, SOL C02)
 - M02 XGBoost + Platt Sigmoid probability inference
 - Fixed Fractional Risk sizing (1.5% equity, ATR-based lot sizing)
-- Exact double-entry Maker accounting (0.1111% buy, 0.3211% sell)
-- Trailing ATR stop, time-decay breakeven, Take-Profit management
-- Persistent state in logs/shadow_portfolio_state.json
+- Time-valid cost lookup; ticker proxy fills are treated as taker, never claimed as exact maker fills
+- Trailing ATR stop, time-decay breakeven, Take-Profit management on closed-bar time
+- Transactional SQLite checkpointing with integrity verification
 """
 
 from __future__ import annotations
@@ -16,11 +16,10 @@ from __future__ import annotations
 import json
 import logging
 import math
-import os
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -29,11 +28,20 @@ import pandas as pd
 import requests
 import xgboost as xgb
 
+from indodax_lab.backtest.costs import (
+    OrderRole,
+    OrderSide,
+    load_cost_schedule_table,
+    lookup_cost,
+)
+from indodax_lab.paper.shadow_store import ShadowStateStore
+
 logger = logging.getLogger("live_shadow_engine")
 
-# Fee constants (Indodax PRO Maker fees)
-MAKER_BUY_FEE_RATE = Decimal("0.001111")   # 0.1111%
-MAKER_SELL_FEE_RATE = Decimal("0.003211")  # 0.3211%
+# Current maker totals retained only for backwards-compatible reporting/tests.
+# Runtime execution costs are resolved point-in-time from configs/costs/indodax_idr_v1.yaml.
+MAKER_BUY_FEE_RATE = Decimal("0.001111")
+MAKER_SELL_FEE_RATE = Decimal("0.003211")
 
 FEATURE_COLS = [
     'log_ret_1', 'log_ret_6', 'log_ret_24', 'atr_pct_14',
@@ -58,6 +66,7 @@ class ShadowPosition:
     highest_price: float
     bars_held: int = 0
     time_decay_breakeven: bool = False
+    last_bar_timestamp: int | None = None
 
 
 @dataclass
@@ -87,14 +96,18 @@ class LiveShadowEngine:
 
     def __init__(
         self,
-        state_file: Path = Path("logs/shadow_portfolio_state.json"),
+        state_file: Path = Path("logs/shadow_portfolio_state.sqlite3"),
         initial_cash: Decimal = Decimal("500000.00"),
         max_positions: int = 2,
-        fixed_risk_pct: float = 0.015,  # 1.5% capital risk
-        max_cash_per_trade_pct: float = 0.25,  # 25% max cash allocation
+        fixed_risk_pct: float = 0.015,
+        max_cash_per_trade_pct: float = 0.25,
         min_order_idr: Decimal = Decimal("10000.00"),
+        cost_schedule_path: Path = Path("configs/costs/indodax_idr_v1.yaml"),
     ) -> None:
         self.state_file = state_file
+        self.state_store = ShadowStateStore(state_file)
+        self.cost_schedule_path = cost_schedule_path
+        self.cost_table = load_cost_schedule_table(cost_schedule_path)
         self.initial_cash = initial_cash
         self.max_positions = max_positions
         self.fixed_risk_pct = fixed_risk_pct
@@ -127,39 +140,45 @@ class LiveShadowEngine:
                 self.metadata[pair_key] = json.loads(json_path.read_text())
 
     def load_state(self) -> None:
-        """Load portfolio state from JSON file."""
-        if not self.state_file.exists():
-            self.save_state()
+        """Restore a verified transactional checkpoint; corruption stops startup."""
+        data = self.state_store.load_checkpoint()
+        if data is None:
+            self.save_state(event_type="INITIALIZE")
             return
-
-        try:
-            data = json.loads(self.state_file.read_text())
-            self.available_cash = Decimal(str(data.get("available_cash", self.initial_cash)))
-            self.open_positions = {
-                pos_id: ShadowPosition(**p_dict)
-                for pos_id, p_dict in data.get("open_positions", {}).items()
-            }
-            self.closed_trades = [
-                ClosedTrade(**t_dict) for t_dict in data.get("closed_trades", [])
-            ]
-            self.audit_log = data.get("audit_log", [])[-50:]  # Keep last 50
-        except Exception as e:
-            logger.error(f"Failed to load state file: {e}. Keeping current state.")
-
-    def save_state(self) -> None:
-        """Persist current state to JSON file."""
-        self.state_file.parent.mkdir(parents=True, exist_ok=True)
-        data = {
-            "initial_cash": float(self.initial_cash),
-            "available_cash": float(self.available_cash),
-            "open_positions": {
-                k: asdict(v) for k, v in self.open_positions.items()
-            },
-            "closed_trades": [asdict(t) for t in self.closed_trades],
-            "audit_log": self.audit_log[-50:],
-            "last_updated_utc": datetime.now(UTC).isoformat(),
+        self.available_cash = Decimal(str(data.get("available_cash", self.initial_cash)))
+        self.open_positions = {
+            pos_id: ShadowPosition(**p_dict)
+            for pos_id, p_dict in data.get("open_positions", {}).items()
         }
-        self.state_file.write_text(json.dumps(data, indent=2))
+        self.closed_trades = [
+            ClosedTrade(**t_dict) for t_dict in data.get("closed_trades", [])
+        ]
+        self.audit_log = data.get("audit_log", [])[-200:]
+
+    def save_state(
+        self,
+        *,
+        event_type: str = "CHECKPOINT",
+        event_payload: Dict[str, Any] | None = None,
+    ) -> None:
+        """Persist state and the causal event in one SQLite transaction."""
+        now = datetime.now(UTC)
+        data = {
+            "schema_version": 2,
+            "initial_cash": str(self.initial_cash),
+            "available_cash": str(self.available_cash),
+            "open_positions": {k: asdict(v) for k, v in self.open_positions.items()},
+            "closed_trades": [asdict(t) for t in self.closed_trades],
+            "audit_log": self.audit_log[-200:],
+            "last_updated_utc": now.isoformat(),
+        }
+        event_id = f"{event_type}:{now.isoformat()}:{len(self.closed_trades)}:{len(self.open_positions)}"
+        self.state_store.save_checkpoint(
+            data,
+            event_id=event_id,
+            event_type=event_type,
+            event_payload=event_payload or {},
+        )
 
     def reset_portfolio(self) -> None:
         """Reset paper trading portfolio to clean initial state."""
@@ -193,7 +212,7 @@ class LiveShadowEngine:
             # 2. Fetch OHLCV 1h candles
             symbol = pair.replace("_", "").upper()
             now_ts = int(time.time())
-            from_ts = now_ts - (200 * 3600)  # 200 hours
+            from_ts = now_ts - (260 * 3600)  # buffer so at least 200 fully closed bars remain
             try:
                 c_resp = session.get(
                     "https://indodax.com/tradingview/history_v2",
@@ -212,7 +231,11 @@ class LiveShadowEngine:
                             "base_volume": float(c["Volume"]),
                         } for c in raw_data]
                         df = pd.DataFrame(recs).sort_values("timestamp").reset_index(drop=True)
-                        candle_dfs[pair] = df
+                        # history_v2 can include the currently forming 1h candle. Features and
+                        # time-decay state may only consume fully closed candles.
+                        df = df[(df["timestamp"] + 3600) <= now_ts].reset_index(drop=True)
+                        if not df.empty:
+                            candle_dfs[pair] = df
             except Exception as e:
                 logger.warning(f"Failed to fetch candles for {pair}: {e}")
 
@@ -269,10 +292,10 @@ class LiveShadowEngine:
         df['vol_z_20'] = (((df['base_volume'] - vol_mean) / vol_std)).fillna(0.0)
         return df
 
-    def predict_probability(self, pair: str, features_series: pd.Series) -> float:
-        """Standardize features and run Platt-calibrated XGBoost inference."""
+    def predict_probability(self, pair: str, features_series: pd.Series) -> Optional[float]:
+        """Run calibrated inference; unavailable/malformed model state fails closed."""
         if pair not in self.models or pair not in self.metadata:
-            return 0.50
+            return None
 
         booster = self.models[pair]
         meta = self.metadata[pair]
@@ -289,18 +312,26 @@ class LiveShadowEngine:
         dmat = xgb.DMatrix(np.array([scaled_vals], dtype=np.float32))
         margin = float(booster.predict(dmat, output_margin=True)[0])
 
-        calib = meta.get("calibration", {})
-        a = float(calib.get("a", 1.0))
-        b = float(calib.get("b", 0.0))
+        calib = meta.get("calibration")
+        if not isinstance(calib, dict) or "a" not in calib or "b" not in calib:
+            return None
+        a = float(calib["a"])
+        b = float(calib["b"])
+        if not math.isfinite(a) or not math.isfinite(b) or not math.isfinite(margin):
+            return None
 
         prob = 1.0 / (1.0 + math.exp(-(a * margin + b)))
-        return prob
+        return prob if math.isfinite(prob) else None
 
     # =========================================================================
     # POSITION MONITORING & EXIT ENGINE
     # =========================================================================
-    def check_open_positions(self, live_prices: Dict[str, float]) -> List[ClosedTrade]:
-        """Check open positions against live prices for TP, SL, and Trailing Stops."""
+    def check_open_positions(
+        self,
+        live_prices: Dict[str, float],
+        candle_dfs: Dict[str, pd.DataFrame] | None = None,
+    ) -> List[ClosedTrade]:
+        """Check exits; candle counters advance only on a newly closed 1h bar."""
         closed_this_cycle = []
         positions_to_delete = []
 
@@ -311,9 +342,14 @@ class LiveShadowEngine:
             if curr_px is None:
                 continue
 
-            # Update highest price for trailing stop
+            # Price monitoring may run every minute, but "bars held" is a 1h closed-bar
+            # concept. Never advance time-decay merely because the scheduler polled again.
             pos.highest_price = max(pos.highest_price, curr_px)
-            pos.bars_held += 1
+            if candle_dfs is not None and pos.pair in candle_dfs and not candle_dfs[pos.pair].empty:
+                latest_bar_ts = int(candle_dfs[pos.pair].iloc[-1]["timestamp"])
+                if pos.last_bar_timestamp != latest_bar_ts:
+                    pos.bars_held += 1
+                    pos.last_bar_timestamp = latest_bar_ts
 
             # Trailing stop update (C02 trails 2.0x ATR behind highest price)
             if pos.strategy_id == "C02_EMA_TREND_PULLBACK":
@@ -335,7 +371,14 @@ class LiveShadowEngine:
                 qty_dec = Decimal(str(pos.qty))
                 exit_px_dec = Decimal(str(curr_px))
                 gross_proceeds = qty_dec * exit_px_dec
-                sell_fee = gross_proceeds * MAKER_SELL_FEE_RATE
+                exit_cost = lookup_cost(
+                    self.cost_table,
+                    market="spot_idr",
+                    side=OrderSide.SELL,
+                    role=OrderRole.TAKER,
+                    event_ts=datetime.now(UTC),
+                )
+                sell_fee = gross_proceeds * exit_cost.total_rate
                 net_credit = gross_proceeds - sell_fee
 
                 cash_debited_dec = Decimal(str(pos.cash_debited))
@@ -374,7 +417,10 @@ class LiveShadowEngine:
             del self.open_positions[pid]
 
         if closed_this_cycle:
-            self.save_state()
+            self.save_state(
+                event_type="PAPER_EXIT",
+                event_payload={"trade_ids": [trade.trade_id for trade in closed_this_cycle]},
+            )
 
         return closed_this_cycle
 
@@ -399,7 +445,7 @@ class LiveShadowEngine:
         total_equity = self.available_cash + mark_value
 
         for pair, df in candle_dfs.items():
-            if len(df) < 50:
+            if len(df) < 200:
                 continue
 
             df = self.compute_features(df)
@@ -421,7 +467,7 @@ class LiveShadowEngine:
                 "adx14": float(curr['adx_14']),
                 "strategy": "",
                 "technical_signal": False,
-                "ai_probability": 0.0,
+                "ai_probability": None,
                 "threshold": 0.0,
                 "action": "SKIP",
                 "reason": "",
@@ -443,7 +489,9 @@ class LiveShadowEngine:
             diag["threshold"] = min_threshold
 
             # Technical signal check
-            close_val = live_px
+            # Technical decisions are based on the last fully closed bar. Live ticker is
+            # used only as a conservative paper execution proxy after the decision.
+            close_val = float(curr['close'])
             ema200_val = float(curr['ema_200'])
             atr_val = float(curr['atr_14'])
 
@@ -479,6 +527,11 @@ class LiveShadowEngine:
             # Run AI Probability Inference
             prob = self.predict_probability(pair, curr)
             diag["ai_probability"] = prob
+            if prob is None:
+                diag["action"] = "REJECT_MODEL_UNAVAILABLE"
+                diag["reason"] = "MODEL_UNAVAILABLE_OR_INVALID: fail-closed; no neutral 0.50 fallback"
+                eval_results.append(diag)
+                continue
 
             if prob < min_threshold:
                 diag["action"] = "REJECT_AI_LOW_PROB"
@@ -528,10 +581,24 @@ class LiveShadowEngine:
                 eval_results.append(diag)
                 continue
 
-            # EXECUTE PAPER BUY
-            buy_fee = allocated_budget * MAKER_BUY_FEE_RATE
-            net_trade_cash = allocated_budget - buy_fee
-            qty = float(net_trade_cash / Decimal(str(live_px)))
+            # PAPER EXECUTION PROXY
+            # A live ticker is not evidence of maker queue execution. Treat the immediate
+            # proxy as taker and charge the point-in-time taker schedule.
+            entry_cost = lookup_cost(
+                self.cost_table,
+                market="spot_idr",
+                side=OrderSide.BUY,
+                role=OrderRole.TAKER,
+                event_ts=now_utc,
+            )
+            gross_notional = allocated_budget / (Decimal("1") + entry_cost.total_rate)
+            if gross_notional < max(self.min_order_idr, entry_cost.min_notional):
+                diag["action"] = "REJECT_BELOW_MIN_NOTIONAL"
+                diag["reason"] = "Gross notional is below the active cost-schedule minimum"
+                eval_results.append(diag)
+                continue
+            buy_fee = gross_notional * entry_cost.total_rate
+            qty = float(gross_notional / Decimal(str(live_px)))
 
             sl_price = live_px - (sl_mult * atr_val)
             tp_price = live_px + (tp_mult * atr_val)
@@ -551,17 +618,29 @@ class LiveShadowEngine:
                 entry_atr=atr_val,
                 highest_price=live_px,
                 bars_held=0,
+                last_bar_timestamp=int(curr["timestamp"]),
             )
 
             self.available_cash -= allocated_budget
             self.open_positions[pos_id] = new_pos
 
             diag["action"] = "ENTER_POSITION"
-            diag["reason"] = f"EXACT_FILL: Allocated Rp {float(allocated_budget):,.0f} (Qty {qty:.6f}) | TP Rp {tp_price:,.0f} | SL Rp {sl_price:,.0f}"
+            diag["reason"] = (
+                f"PAPER_TAKER_PROXY_FILL: cash Rp {float(allocated_budget):,.0f} "
+                f"(Qty {qty:.6f}) | cost_schedule={entry_cost.schedule_id} | "
+                f"TP Rp {tp_price:,.0f} | SL Rp {sl_price:,.0f}"
+            )
             eval_results.append(diag)
 
             self.audit_log.append(diag)
-            self.save_state()
+            self.save_state(
+                event_type="PAPER_ENTRY",
+                event_payload={
+                    "pair": pair,
+                    "position_id": pos_id,
+                    "cost_schedule": entry_cost.schedule_id,
+                },
+            )
 
         return eval_results
 
@@ -643,7 +722,12 @@ class LiveShadowEngine:
             p = diag['pair'].upper()
             strat = diag['strategy'].replace("_", " ")[:22]
             tsig = "TRIGGER" if diag['technical_signal'] else "IDLE"
-            prob = f"{diag['ai_probability']*100:>5.1f}%" if diag['technical_signal'] else "-"
+            prob_value = diag["ai_probability"]
+            prob = (
+                f"{prob_value*100:>5.1f}%"
+                if diag["technical_signal"] and prob_value is not None
+                else "-"
+            )
             thresh = f"{diag['threshold']*100:>5.1f}%"
             act = diag['action']
             reason = diag['reason'][:45]
