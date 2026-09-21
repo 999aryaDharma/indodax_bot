@@ -402,11 +402,20 @@ def _finalize(
     payload = canonical_json_bytes(report.to_dict())
     record_kind = "quarantine" if report.status == "FAIL" else "quality"
     try:
+        snapshot_component = content_id_path_component(snapshot_id)
+    except ValueError:
+        return SnapshotValidationResult(
+            report=report,
+            partition_state="QUARANTINED",
+            eligible_for_silver=False,
+            quarantine_record=None,
+        )
+    try:
         record = _contained_path(
             root,
             record_kind,
             "snapshots",
-            content_id_path_component(snapshot_id),
+            snapshot_component,
             f"{sha256_bytes(payload)}.json",
         )
     except SnapshotPathUnresolvableError:
