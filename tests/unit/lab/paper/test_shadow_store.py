@@ -1,7 +1,7 @@
 """Durability and corruption tests for the shadow SQLite state boundary."""
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 import pytest
 
