@@ -5,12 +5,11 @@ from decimal import Decimal
 from pathlib import Path
 
 from indodax_lab.backtest.costs import (
-    load_cost_schedule_table,
-    lookup_cost,
     OrderRole,
     OrderSide,
+    load_cost_schedule_table,
+    lookup_cost,
 )
-
 
 TABLE = load_cost_schedule_table(Path("configs/costs/indodax_idr_v1.yaml"))
 
