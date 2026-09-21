@@ -28,7 +28,7 @@ from indodax_lab.data.bars import (
     resample_time_bars,
 )
 from indodax_lab.data.indodax_stream import AppendOnlyStreamWriter
-from indodax_lab.data.manifest import canonical_json_bytes
+from indodax_lab.data.manifest import canonical_json_bytes, snapshot_manifest_path
 from indodax_lab.data.parquet_store import ParquetStore, WriteStatus
 from indodax_lab.data.sentry import validate_snapshot
 from indodax_lab.data.stream_protocol import parse_public_message
@@ -511,7 +511,7 @@ def test_cli_publishes_content_addressed_time_bars_without_network(tmp_path):
     )
 
     output_id = stdout.getvalue().split("output_id=")[1].split()[0]
-    manifest = output_root / "snapshots" / output_id / "manifest.json"
+    manifest = snapshot_manifest_path(output_root, output_id)
     assert manifest.exists()
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     assert payload["bars_output_id"] == output_id
