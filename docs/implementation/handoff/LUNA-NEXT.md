@@ -4,7 +4,7 @@
 
 RP-01 — Shared SignalIntent ownership with compatibility.
 
-Current scheduling status: BLOCKED until DOC-01 independent review passes and coordinator marks RP-01 READY. Read the manifest at execution time; this handoff is not a permission bypass.
+Current scheduling status: READY after DOC-01 independent PASS on `6868d24de1056e86638a8c48bcd56a65187ca2fc`. Read the manifest at execution time; claim one owner and name an independent reviewer before implementation. READY does not waive external gates.
 
 ## OBJECTIVE
 

@@ -1,6 +1,6 @@
 # DOC-01 — Architecture documentation delivery
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 
@@ -43,3 +43,5 @@ Documentation precedence clarified to frozen architecture. Existing historical s
 Independent exact-SHA review and findings are in `docs/implementation/handoff/REVIEW.md`. Coordinator updates DOC-01 only after independent PASS; reviewer identity and SHA must be real. No merge/push/deploy authorized by this delivery.
 
 Round 1 reviewed `fe9edc17c175f6179bfbb3b2d3b571adaaa9900c`: CHANGES_REQUESTED (2 Important, 3 Minor, no Critical). All five corrections are scoped to documentation/tooling. Program validator first rejected missing bootstrap/recovery/result contracts, then passed after correction (6/6 negative mutations). Planning validator remains 7/7; reordered BASE-01-last suite now passes. Exact fix SHA is submitted for round 2 before any DONE transition.
+
+Round 2 independently reviewed `6868d24de1056e86638a8c48bcd56a65187ca2fc`: PASS, no remaining Critical/Important/Minor findings. Reviewer reran both validators, reorder/READY negative tests, hash checks and base-to-head diff check; product paths unchanged. Coordinator records DOC-01 DONE based on that exact content SHA. Later evidence/status projection changes are administrative and do not claim a new product test run. RP-01 becomes the sole READY next LUNA unit.

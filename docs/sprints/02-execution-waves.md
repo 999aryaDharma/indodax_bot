@@ -8,12 +8,12 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-. Verify external gates and shared-file ownership before claim.
+RP-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
 - BASE-01 — Offline verification harness [DONE; CORE]
-- DOC-01 — Frozen architecture audit and delivery program [REVIEW; CORE]
+- DOC-01 — Frozen architecture audit and delivery program [DONE; CORE]
 
 ## Wave 1
 
@@ -21,7 +21,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 - BASE-03 — Trade v2 ownership parsing [DONE; CORE]
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
-- RP-01 — Shared SignalIntent ownership with compatibility [BLOCKED; CORE]
+- RP-01 — Shared SignalIntent ownership with compatibility [READY; CORE]
 
 ## Wave 2
 

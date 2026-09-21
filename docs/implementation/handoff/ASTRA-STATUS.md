@@ -2,13 +2,13 @@
 
 - Last audit SHA: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`.
 - Planning version: 1.0.0; date 2026-09-21.
-- Branch: `docs/architecture-runtime-plan`; base `dev`; isolated temporary worktree.
+- Branch: `docs/architecture-runtime-plan`; base `dev`; active workspace `D:/bot-trading` per user request. Former temporary worktree is detached and inactive.
 - Scope: documentation, manifest recovery and planning-tool validation only. Product implementation belongs to LUNA.
 - Completed planning areas: current-state inventory; runtime divergences; frozen-boundary interpretation; conservative manifest reconstruction; RW/RP/PM task program; domain contract design; next LUNA unit.
 - Open architecture questions: none needed for RP-01. Future changes to frozen boundaries require explicit conflict/CR/ADR, not implementer discretion.
 - Known blockers: historical later handoffs lack independently established PASS; production A01–A15; unverified data/licenses/costs/hardware/private venue evidence; no production activation authorization.
-- Current implementation phase: documentation review. No product task implemented by ASTRA.
-- Next expected LUNA task: RP-01 only, after DOC-01 independent PASS and manifest readiness update.
+- Current implementation phase: DOC-01 independently accepted; planning delivery complete. No product task implemented by ASTRA.
+- Next expected LUNA task: RP-01 only, structurally READY. LUNA must claim ownership and name an independent reviewer before implementation.
 - Review evidence: [review record](REVIEW.md), [DOC-01 handoff](../../sprints/handoffs/DOC-01-HANDOFF.md).
 
 ## Execution ledger
@@ -23,5 +23,7 @@
 8. Ruling: fix documentation validator UTF-8 I/O and order-dependent cycle/false-DONE self-tests. The existing refresh failed under Windows cp1252 and its self-test assumed BASE-01 was the first row; preserve invariants rather than row order. Cost if wrong: documentation-tool regression, covered by refresh and negative checks. Restored affected refresh inputs from baseline and regenerated; no product code changed.
 9. Independent round 1 on fe9edc1 requested changes: first-experiment bootstrap and full event/cursor recovery needed explicit contracts. Added verified RuntimePlan before candidate packaging and one chosen durable inbox/outbox protocol; same evaluator and financial rules remain shared. Cost if wrong: later implementation dependency/recovery defect; new documentation assertions and independent re-review cover the change.
 10. Scoped review corrections also define result envelopes, label LF/CRLF source hashes and make READY negative testing order-independent. No product implementation performed. Reviewer declined live/product qualification matters; they remain external/unverified rather than silently accepted.
+11. Independent round 2 PASS on `6868d24de1056e86638a8c48bcd56a65187ca2fc`, no remaining findings. Coordinator records DOC-01 DONE and RP-01 READY; all other legacy review and external gates remain.
+12. User requested work in the VS Code workspace. Switched `D:/bot-trading` to the documentation branch after confirming both worktrees clean; former temporary checkout detached. No merge, push, main modification or product change.
 
 Exact final commands/results and reviewer SHA are recorded in DOC-01 handoff; do not copy historical counts as new test evidence.

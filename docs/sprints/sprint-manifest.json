@@ -8506,9 +8506,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/planning/DOC-01-frozen-architecture-audit-and-delivery-program.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "ASTRA",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/architecture_doc_review",
       "recommended_branch": "docs/architecture-runtime-plan",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -8557,7 +8557,14 @@
         }
       ],
       "risk_level": "high",
-      "complexity": "XL"
+      "complexity": "XL",
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "6868d24de1056e86638a8c48bcd56a65187ca2fc",
+        "code_target": "6868d24de1056e86638a8c48bcd56a65187ca2fc",
+        "path": "docs/implementation/handoff/REVIEW.md",
+        "review": "Round 2 PASS; no remaining findings; documentation only"
+      }
     },
     {
       "id": "RP-01",
@@ -8589,7 +8596,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/runtime-parity/RP-01-shared-signalintent-ownership-with-compatibility.md",
       "priority": "P0",
-      "status": "BLOCKED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rp-01-shared-signalintent-ownership-with-compatibility",
@@ -8640,8 +8647,7 @@
         }
       ],
       "risk_level": "medium",
-      "complexity": "S",
-      "blocker": "DOC-01 independent review and parity contract acceptance pending."
+      "complexity": "S"
     },
     {
       "id": "RW0-01",
