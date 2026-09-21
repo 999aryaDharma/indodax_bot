@@ -1,9 +1,9 @@
 schedule_set_id: indodax_idr
-version: 1.0.0
+version: 2.0.0
 intervals:
-  # ============================================================================
-  # Period 1: Pre-PMK 68 (2021-01-01 to 2022-05-01)
-  # ============================================================================
+  # Historical intervals before CFX preserve the repository's prior service/tax assumptions.
+  # Promotion on periods whose historical source evidence is not independently verified remains blocked.
+
   - schedule_id: indodax_idr_pre_pmk68_buy_maker
     market: spot_idr
     side: buy
@@ -15,8 +15,7 @@ intervals:
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'Indodax Historical Fee Schedule 2021'
+    sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_buy_taker
     market: spot_idr
@@ -29,8 +28,7 @@ intervals:
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'Indodax Historical Fee Schedule 2021'
+    sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_sell_maker
     market: spot_idr
@@ -43,8 +41,7 @@ intervals:
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'Indodax Historical Fee Schedule 2021'
+    sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_sell_taker
     market: spot_idr
@@ -57,136 +54,270 @@ intervals:
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'Indodax Historical Fee Schedule 2021'
+    sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
-  # ============================================================================
-  # Period 2: PMK 68 Tax Era (2022-05-01 to 2024-01-01)
-  # ============================================================================
   - schedule_id: indodax_idr_pmk68_buy_maker
     market: spot_idr
     side: buy
     role: maker
     valid_from: '2022-05-01T00:00:00Z'
-    valid_to: '2024-01-01T00:00:00Z'
+    valid_to: '2024-10-31T17:00:00Z'
     service_fee_rate: '0.000000'
     tax_rate: '0.001100'
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax Announcement May 2022'
+    sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_buy_taker
     market: spot_idr
     side: buy
     role: taker
     valid_from: '2022-05-01T00:00:00Z'
-    valid_to: '2024-01-01T00:00:00Z'
+    valid_to: '2024-10-31T17:00:00Z'
     service_fee_rate: '0.002000'
     tax_rate: '0.001100'
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax Announcement May 2022'
+    sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_sell_maker
     market: spot_idr
     side: sell
     role: maker
     valid_from: '2022-05-01T00:00:00Z'
-    valid_to: '2024-01-01T00:00:00Z'
+    valid_to: '2024-10-31T17:00:00Z'
     service_fee_rate: '0.000000'
     tax_rate: '0.001000'
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax Announcement May 2022'
+    sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_sell_taker
     market: spot_idr
     side: sell
     role: taker
     valid_from: '2022-05-01T00:00:00Z'
-    valid_to: '2024-01-01T00:00:00Z'
+    valid_to: '2024-10-31T17:00:00Z'
     service_fee_rate: '0.003000'
     tax_rate: '0.001000'
     exchange_fee_rate: '0.000000'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax Announcement May 2022'
+    sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
-  # ============================================================================
-  # Period 3: CFX Integration & Current Schedule (2024-01-01 onward)
-  # Matches paper trader parameters: buy 0.2111%, sell 0.4211%
-  # ============================================================================
-  - schedule_id: indodax_idr_cfx_buy_maker
+  # CFX introduced at 2024-10-31 23:59:59 WIB; boundary normalized to 2024-11-01 00:00 WIB.
+  # CFX IDR was 0.0222% before the January 2025 VAT adjustment.
+  - schedule_id: indodax_idr_cfx2024_buy_maker
     market: spot_idr
     side: buy
     role: maker
-    valid_from: '2024-01-01T00:00:00Z'
+    valid_from: '2024-10-31T17:00:00Z'
+    valid_to: '2024-12-31T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
+
+  - schedule_id: indodax_idr_cfx2024_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2024-10-31T17:00:00Z'
+    valid_to: '2024-12-31T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.001100'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
+
+  - schedule_id: indodax_idr_cfx2024_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2024-10-31T17:00:00Z'
+    valid_to: '2024-12-31T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
+
+  - schedule_id: indodax_idr_cfx2024_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2024-10-31T17:00:00Z'
+    valid_to: '2024-12-31T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
+
+  # 1 Jan 2025 WIB: buy VAT component 0.12%; IDR CFX component 0.0224%.
+  - schedule_id: indodax_idr_2025h1_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2024-12-31T17:00:00Z'
+    valid_to: '2025-07-31T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.001200'
+    exchange_fee_rate: '0.000224'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
+
+  - schedule_id: indodax_idr_2025h1_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2024-12-31T17:00:00Z'
+    valid_to: '2025-07-31T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.001200'
+    exchange_fee_rate: '0.000224'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
+
+  - schedule_id: indodax_idr_2025h1_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2024-12-31T17:00:00Z'
+    valid_to: '2025-07-31T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000224'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
+
+  - schedule_id: indodax_idr_2025h1_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2024-12-31T17:00:00Z'
+    valid_to: '2025-07-31T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.001000'
+    exchange_fee_rate: '0.000224'
+    min_notional: '10000'
+    precision: 0
+    sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
+
+  # PMK 50/2025 effective 1 Aug 2025 00:00 WIB: no buy VAT; domestic sell PPh 22 = 0.21%.
+  # CFX reverted/was listed at 0.0222% on IDR until the March 2026 reduction.
+  - schedule_id: indodax_idr_pmk50_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2025-07-31T17:00:00Z'
+    valid_to: '2026-02-28T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
+
+  - schedule_id: indodax_idr_pmk50_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2025-07-31T17:00:00Z'
+    valid_to: '2026-02-28T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
+
+  - schedule_id: indodax_idr_pmk50_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2025-07-31T17:00:00Z'
+    valid_to: '2026-02-28T17:00:00Z'
+    service_fee_rate: '0.001000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
+
+  - schedule_id: indodax_idr_pmk50_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2025-07-31T17:00:00Z'
+    valid_to: '2026-02-28T17:00:00Z'
+    service_fee_rate: '0.002000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000222'
+    min_notional: '10000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
+
+  # 1 Mar 2026 00:00 WIB: CFX IDR reduced from 0.0222% to 0.0111%.
+  - schedule_id: indodax_idr_2026_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2026-02-28T17:00:00Z'
     valid_to: null
     service_fee_rate: '0.001000'
     tax_rate: '0.000000'
     exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax CFX Fee Schedule 2024'
-      - 'Indodax Help Center PRO Mode Fee Table'
+    sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
-  - schedule_id: indodax_idr_cfx_buy_taker
+  - schedule_id: indodax_idr_2026_buy_taker
     market: spot_idr
     side: buy
     role: taker
-    valid_from: '2024-01-01T00:00:00Z'
+    valid_from: '2026-02-28T17:00:00Z'
     valid_to: null
     service_fee_rate: '0.002000'
     tax_rate: '0.000000'
     exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax CFX Fee Schedule 2024'
-      - 'Indodax Help Center PRO Mode Fee Table'
+    sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
-  - schedule_id: indodax_idr_cfx_sell_maker
+  - schedule_id: indodax_idr_2026_sell_maker
     market: spot_idr
     side: sell
     role: maker
-    valid_from: '2024-01-01T00:00:00Z'
+    valid_from: '2026-02-28T17:00:00Z'
     valid_to: null
     service_fee_rate: '0.001000'
     tax_rate: '0.002100'
     exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax CFX Fee Schedule 2024'
-      - 'Indodax Help Center PRO Mode Fee Table'
+    sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
-  - schedule_id: indodax_idr_cfx_sell_taker
+  - schedule_id: indodax_idr_2026_sell_taker
     market: spot_idr
     side: sell
     role: taker
-    valid_from: '2024-01-01T00:00:00Z'
+    valid_from: '2026-02-28T17:00:00Z'
     valid_to: null
     service_fee_rate: '0.002000'
     tax_rate: '0.002100'
     exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
-    sources:
-      - 'PMK 68/PMK.03/2022'
-      - 'Indodax CFX Fee Schedule 2024'
-      - 'Indodax Help Center PRO Mode Fee Table'
+    sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
