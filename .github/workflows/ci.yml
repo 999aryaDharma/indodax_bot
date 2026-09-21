@@ -42,3 +42,5 @@ jobs:
           ruff check src/indodax_lab/paper/shadow_store.py
           ruff check tests/unit/lab/paper/test_shadow_store.py
           ruff check tests/unit/lab/backtest/test_indodax_cost_boundaries.py
+          ruff check src/indodax_lab/execution
+          ruff check tests/unit/lab/execution
