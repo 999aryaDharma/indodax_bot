@@ -159,3 +159,86 @@ def test_client_exposes_no_order_write_or_withdraw_methods():
         "withdraw_coin",
     }
     assert all(not hasattr(client, name) for name in forbidden_names)
+
+
+def test_open_buy_order_with_idr_amount_normalizes_to_base_quantity():
+    session = FakeSession(
+        [
+            FakeResponse(
+                {
+                    "success": 1,
+                    "return": {
+                        "orders": [
+                            {
+                                "order_id": "173",
+                                "client_order_id": "clientx-sj82ks83j",
+                                "submit_time": "1693280465",
+                                "price": "421003000.00000000",
+                                "type": "buy",
+                                "order_type": "stoplimit",
+                                "order_idr": "1266293.00000000",
+                                "remain_idr": "1266293.00000000",
+                            }
+                        ]
+                    },
+                }
+            )
+        ]
+    )
+    client = IndodaxReadOnlyClient(
+        "view-key",
+        "secret",
+        session=session,
+        clock_ms=lambda: 1_726_000_001_000,
+        max_attempts=1,
+    )
+
+    orders = client.get_open_orders("btc_idr")
+
+    assert len(orders) == 1
+    order = orders[0]
+    expected_qty = Decimal("1266293") / Decimal("421003000")
+    assert order.original_qty == expected_qty
+    assert order.remaining_qty == expected_qty
+    assert order.executed_qty == Decimal("0")
+
+
+def test_get_order_by_client_id_handles_legacy_rp_buy_amount():
+    session = FakeSession(
+        [
+            FakeResponse(
+                {
+                    "success": 1,
+                    "return": {
+                        "order": {
+                            "order_id": "59639504",
+                            "client_order_id": "clientx-sj82ks82j",
+                            "price": "100207000",
+                            "type": "buy",
+                            "order_rp": "336058",
+                            "remain_rp": "336058",
+                            "submit_time": "1578648363",
+                            "finish_time": "1578649332",
+                            "status": "cancelled",
+                        }
+                    },
+                }
+            )
+        ]
+    )
+    client = IndodaxReadOnlyClient(
+        "view-key",
+        "secret",
+        session=session,
+        clock_ms=lambda: 1_726_000_001_000,
+        max_attempts=1,
+    )
+
+    order = client.get_order_by_client_order_id(
+        "btc_idr",
+        "clientx-sj82ks82j",
+    )
+
+    assert order.order_id == "59639504"
+    assert order.status == "CANCELLED"
+    assert order.original_qty == Decimal("336058") / Decimal("100207000")
