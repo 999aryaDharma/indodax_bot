@@ -381,6 +381,8 @@ class LiveShadowEngine:
 
         booster = self.models[pair]
         meta = self.metadata[pair]
+        if meta.get("pair") != pair or meta.get("feature_names") != FEATURE_COLS:
+            return None
         f_means = meta.get("feature_means")
         f_stds = meta.get("feature_stds")
         if not isinstance(f_means, dict) or not isinstance(f_stds, dict):
