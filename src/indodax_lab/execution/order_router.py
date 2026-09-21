@@ -6,7 +6,10 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from indodax_lab.control.authority import WritePermit
 from indodax_lab.execution.oms import (
     OmsOrder,
     OmsOrderState,
@@ -29,16 +32,56 @@ class UnresolvedOrderStateError(RuntimeError):
 class OrderRouter:
     """Coordinates order submissions, cancellations, and UNKNOWN resolution with durability."""
 
-    def __init__(self, oms_store: OmsStore, venue: TradingVenue) -> None:
+    def __init__(
+        self,
+        oms_store: OmsStore,
+        venue: TradingVenue,
+        *,
+        require_permit: bool = False,
+    ) -> None:
         self.oms_store = oms_store
         self.venue = venue
+        self.require_permit = require_permit
+        self._consumed_permit_ids: set[str] = set()
 
     def _generate_event_id(self, prefix: str) -> str:
         return f"{prefix}_{uuid.uuid4().hex}"
 
-    def submit_order(self, order: OmsOrder, *, now: datetime | None = None) -> OmsOrder:
+    def submit_order(
+        self,
+        order: OmsOrder,
+        *,
+        permit: WritePermit | None = None,
+        now: datetime | None = None,
+    ) -> OmsOrder:
         """Submit an order with guaranteed pre-network durability and uncertainty capture."""
         current_time = max(order.updated_at, now or datetime.now(UTC))
+
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
+        # Pre-write permit enforcement at real writer / configured boundary
+        if (
+            self.require_permit
+            or isinstance(self.venue, IndodaxTradingClient)
+            or permit is not None
+        ):
+            if permit is None:
+                raise PermissionError(
+                    "MISSING_WRITE_PERMIT: Direct real-writer call without valid permit fails"
+                )
+            if permit.permit_id in self._consumed_permit_ids:
+                raise PermissionError(f"PERMIT_ALREADY_USED:{permit.permit_id}")
+            if current_time > permit.expires_at:
+                raise PermissionError(f"PERMIT_EXPIRED:{permit.permit_id}")
+            if permit.action != "SUBMIT":
+                raise PermissionError(f"PERMIT_ACTION_MISMATCH:{permit.action}!=SUBMIT")
+            if permit.order_internal_id != order.internal_order_id:
+                raise PermissionError(
+                    f"PERMIT_ORDER_MISMATCH:{permit.order_internal_id}!={order.internal_order_id}"
+                )
+            if not permit.verify_order(order):
+                raise PermissionError("PERMIT_ORDER_DIGEST_MISMATCH")
+            self._consumed_permit_ids.add(permit.permit_id)
 
         # 1. NEW -> SUBMITTING
         submitting_order = OmsStateMachine.transition(
@@ -110,9 +153,37 @@ class OrderRouter:
         )
         return ack_order
 
-    def cancel_order(self, order: OmsOrder, *, now: datetime | None = None) -> OmsOrder:
+    def cancel_order(
+        self,
+        order: OmsOrder,
+        *,
+        permit: WritePermit | None = None,
+        now: datetime | None = None,
+    ) -> OmsOrder:
         """Cancel an open order, correctly handling in-flight fills and cancel/fill races."""
         current_time = max(order.updated_at, now or datetime.now(UTC))
+
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
+        # Pre-write permit enforcement at cancel writer boundary
+        if (
+            self.require_permit
+            or isinstance(self.venue, IndodaxTradingClient)
+            or permit is not None
+        ):
+            if permit is None:
+                raise PermissionError("MISSING_WRITE_PERMIT: Cancel without valid permit fails")
+            if permit.permit_id in self._consumed_permit_ids:
+                raise PermissionError(f"PERMIT_ALREADY_USED:{permit.permit_id}")
+            if current_time > permit.expires_at:
+                raise PermissionError(f"PERMIT_EXPIRED:{permit.permit_id}")
+            if permit.action != "CANCEL":
+                raise PermissionError(f"PERMIT_ACTION_MISMATCH:{permit.action}!=CANCEL")
+            if permit.order_internal_id != order.internal_order_id:
+                raise PermissionError(
+                    f"PERMIT_ORDER_MISMATCH:{permit.order_internal_id}!={order.internal_order_id}"
+                )
+            self._consumed_permit_ids.add(permit.permit_id)
 
         # 1. ACKNOWLEDGED / PARTIALLY_FILLED -> CANCEL_PENDING
         pending_order = OmsStateMachine.transition(

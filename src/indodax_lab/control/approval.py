@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from threading import RLock
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -64,6 +65,7 @@ class PendingProposal(BaseModel):
     decided_by: str | None = None
     decision_reason: str | None = None
     approval_token: str | None = None
+    snapshot_digest: str | None = None
 
 
 class ManualApprovalStore:
@@ -141,6 +143,7 @@ class ManualApprovalStore:
         *,
         at: datetime,
         ttl_seconds: int | None = None,
+        snapshot_digest: str | None = None,
     ) -> PendingProposal:
         """Create a new pending proposal."""
         ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
@@ -153,6 +156,7 @@ class ManualApprovalStore:
             created_at=at,
             expires_at=expires_at,
             status=ProposalStatus.PENDING,
+            snapshot_digest=snapshot_digest,
         )
 
         with self._lock:
@@ -175,6 +179,7 @@ class ManualApprovalStore:
         at: datetime,
         reason: str = "OPERATOR_APPROVED",
         token: str | None = None,
+        snapshot_digest: str | None = None,
     ) -> PendingProposal:
         """Operator explicitly approves order proposal."""
         with self._lock:
@@ -209,15 +214,17 @@ class ManualApprovalStore:
                 ):
                     raise PermissionError(f"INVALID_APPROVAL_TOKEN:{proposal_id}")
 
-            approved = current.model_copy(
-                update={
-                    "status": ProposalStatus.APPROVED,
-                    "decided_at": at,
-                    "decided_by": operator_id,
-                    "decision_reason": reason,
-                    "approval_token": token,
-                }
-            )
+            update_dict: dict[str, Any] = {
+                "status": ProposalStatus.APPROVED,
+                "decided_at": at,
+                "decided_by": operator_id,
+                "decision_reason": reason,
+                "approval_token": token,
+            }
+            if snapshot_digest is not None:
+                update_dict["snapshot_digest"] = snapshot_digest
+
+            approved = current.model_copy(update=update_dict)
             self._proposals[proposal_id] = approved
             self._save()
             logger.info("ManualApprovalStore: Approved %s by %s", proposal_id, operator_id)

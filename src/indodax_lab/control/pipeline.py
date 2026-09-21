@@ -18,6 +18,11 @@ from indodax_lab.control.approval import (
     ProposalStatus,
     verify_approval_token,
 )
+from indodax_lab.control.authority import (
+    AuthorityGate,
+    ExecutionSnapshot,
+    MissingEvidenceError,
+)
 from indodax_lab.control.mode import (
     AutonomousLimits,
     DurableModeStore,
@@ -70,6 +75,9 @@ class TradingPipeline:
         mode_store: DurableModeStore | None = None,
         reconciliation_coordinator: Any | None = None,
         max_reconciliation_age_seconds: float = 120.0,
+        authority_gate: AuthorityGate | None = None,
+        require_execution_snapshot: bool = False,
+        release_ref: str = "release_cand_001",
     ) -> None:
         self.mode_store = mode_store
         self.mode = mode_store.get_mode() if mode_store is not None else mode
@@ -82,6 +90,11 @@ class TradingPipeline:
         self.autonomous_limits = autonomous_limits or AutonomousLimits()
         self.reconciliation_coordinator = reconciliation_coordinator
         self.max_reconciliation_age_seconds = max_reconciliation_age_seconds
+        self.authority_gate = authority_gate or AuthorityGate(
+            max_reconciliation_age_seconds=max_reconciliation_age_seconds
+        )
+        self.require_execution_snapshot = require_execution_snapshot
+        self.release_ref = release_ref
 
         # Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter
         if self.mode == ExecutionMode.SHADOW and isinstance(
@@ -119,6 +132,7 @@ class TradingPipeline:
         mark_prices_override: Mapping[str, Decimal] | None = None,
         ticker_overrides: Mapping[str, TickerSnapshot] | None = None,
         reconciliation_report: ReconciliationReport | None = None,
+        execution_snapshot: ExecutionSnapshot | None = None,
         cumulative_daily_loss: Decimal = Decimal("0"),
     ) -> PipelineStepReport:
         """Execute one complete trading cycle with strict mode isolation."""
@@ -220,6 +234,23 @@ class TradingPipeline:
                         approved_count=0,
                         rejected_reasons=("RECONCILIATION_STALE",),
                     )
+
+        # 3c. Pre-write execution snapshot requirement
+        if (
+            self.mode == ExecutionMode.AUTONOMOUS_LIMITED
+            and self.require_execution_snapshot
+            and execution_snapshot is None
+        ):
+            logger.critical(
+                "TradingPipeline: Missing execution snapshot in autonomous mode. Blocking."
+            )
+            return PipelineStepReport(
+                mode=self.mode,
+                evaluated_at=now,
+                intents_evaluated=len(intents),
+                approved_count=0,
+                rejected_reasons=("MISSING_EXECUTION_SNAPSHOT",),
+            )
 
         # 4. Collect mark prices and market health from gateway
         mark_prices: dict[str, Decimal] = dict(mark_prices_override or {})
@@ -353,7 +384,22 @@ class TradingPipeline:
                     oms_order,
                     event_id=f"evt_init_{oms_order.internal_order_id}",
                 )
-                submitted = self.order_router.submit_order(oms_order, now=now)
+                permit = None
+                if execution_snapshot is not None:
+                    try:
+                        permit = self.authority_gate.authorize(
+                            order=oms_order,
+                            execution_snapshot=execution_snapshot,
+                            release_ref=self.release_ref,
+                            approval=None,
+                            now=now,
+                        )
+                    except Exception as exc:
+                        logger.critical("AuthorityGate rejected autonomous order: %s", exc)
+                        rejected_reasons.append(f"{oms_order.pair}:{exc}")
+                        continue
+
+                submitted = self.order_router.submit_order(oms_order, permit=permit, now=now)
                 submitted_orders.append(submitted)
 
                 # If submission ended in UNKNOWN, immediately trip kill switch!
@@ -389,11 +435,17 @@ class TradingPipeline:
         available_cash: Decimal | None = None,
         current_equity: Decimal | None = None,
         reconciliation_report: ReconciliationReport | None = None,
+        execution_snapshot: ExecutionSnapshot | None = None,
     ) -> OmsOrder:
         """Safely execute a human-approved proposal with pre-flight re-validation."""
         exec_now = now or at or datetime.now(UTC)
         if self.mode != ExecutionMode.MANUAL_APPROVAL:
             raise ValueError(f"CANNOT_EXECUTE_PROPOSAL_IN_MODE:{self.mode.value}")
+
+        if self.require_execution_snapshot and execution_snapshot is None:
+            raise MissingEvidenceError(
+                "MISSING_EXECUTION_SNAPSHOT: Valid ExecutionSnapshot required for venue writes"
+            )
 
         # 1. Load proposal
         proposal = self.approval_store.get(proposal_id)
@@ -491,8 +543,18 @@ class TradingPipeline:
         if self.oms_store.load_order(order.internal_order_id) is None:
             self.oms_store.create_order(order, event_id=f"evt_init_{order.internal_order_id}")
 
+        permit = None
+        if execution_snapshot is not None:
+            permit = self.authority_gate.authorize(
+                order=order,
+                execution_snapshot=execution_snapshot,
+                release_ref=self.release_ref,
+                approval=proposal,
+                now=exec_now,
+            )
+
         # 4. Submit exact approved order
-        submitted = self.order_router.submit_order(order, now=exec_now)
+        submitted = self.order_router.submit_order(order, permit=permit, now=exec_now)
         if submitted.state == OmsOrderState.UNKNOWN:
             self.risk_engine.trigger_kill_switch("ORDER_SUBMIT_UNKNOWN")
         return submitted
