@@ -203,6 +203,8 @@ class OmsStateMachine:
         next_filled = (
             Decimal(str(filled_qty)) if filled_qty is not None else order.filled_qty
         )
+        if not next_filled.is_finite() or next_filled < 0:
+            raise OmsTransitionError("OMS_FILLED_QTY_INVALID")
         if next_filled < order.filled_qty:
             raise OmsTransitionError("OMS_FILLED_QTY_REGRESSION")
         next_avg = (
@@ -210,6 +212,8 @@ class OmsStateMachine:
             if average_fill_price is not None
             else order.average_fill_price
         )
+        if next_avg is not None and (not next_avg.is_finite() or next_avg <= 0):
+            raise OmsTransitionError("OMS_AVERAGE_FILL_PRICE_INVALID")
 
         if to_state in {
             OmsOrderState.ACKNOWLEDGED,
