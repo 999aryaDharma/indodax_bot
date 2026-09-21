@@ -142,6 +142,42 @@ def _required_text(value: Any, field_name: str) -> str:
     return text
 
 
+def _legacy_order_quantities(
+    pair: str,
+    side: OrderSide,
+    row: Mapping[str, Any],
+    *,
+    field_prefix: str,
+) -> tuple[Decimal, Decimal]:
+    """Normalize legacy order amount fields into base-asset quantity."""
+
+    base, quote = pair.split("_", 1)
+    base_order_key = f"order_{base}"
+    base_remain_key = f"remain_{base}"
+    if base_order_key in row and base_remain_key in row:
+        original = _decimal(row[base_order_key], f"{field_prefix}.original_qty")
+        remaining = _decimal(row[base_remain_key], f"{field_prefix}.remaining_qty")
+        return original, remaining
+
+    if side != OrderSide.BUY:
+        raise VenueProtocolError(f"INDODAX_{field_prefix.upper()}_QUANTITY_MISSING")
+
+    aliases = [quote]
+    if quote == "idr":
+        aliases.append("rp")
+    for alias in aliases:
+        order_key = f"order_{alias}"
+        remain_key = f"remain_{alias}"
+        if order_key not in row or remain_key not in row:
+            continue
+        price = _decimal(row.get("price"), f"{field_prefix}.price", positive=True)
+        original_quote = _decimal(row[order_key], f"{field_prefix}.original_quote")
+        remaining_quote = _decimal(row[remain_key], f"{field_prefix}.remaining_quote")
+        return original_quote / price, remaining_quote / price
+
+    raise VenueProtocolError(f"INDODAX_{field_prefix.upper()}_QUANTITY_MISSING")
+
+
 def _validate_time_window(start_time_ms: int | None, end_time_ms: int | None) -> None:
     if start_time_ms is not None and start_time_ms <= 0:
         raise ValueError("INVALID_START_TIME")
@@ -489,9 +525,13 @@ class IndodaxReadOnlyClient:
     def _parse_legacy_open_order(pair: str, row: Any) -> VenueOrder:
         if not isinstance(row, Mapping):
             raise VenueProtocolError("INDODAX_OPEN_ORDER_ROW_INVALID")
-        base = pair.split("_", 1)[0]
-        original = _decimal(row.get(f"order_{base}"), "open_order.original_qty")
-        remaining = _decimal(row.get(f"remain_{base}"), "open_order.remaining_qty")
+        side = _side(row.get("type"), "open_order.type")
+        original, remaining = _legacy_order_quantities(
+            pair,
+            side,
+            row,
+            field_prefix="open_order",
+        )
         if remaining > original:
             raise VenueProtocolError("INDODAX_OPEN_ORDER_REMAIN_EXCEEDS_ORIGINAL")
         return VenueOrder(
@@ -500,7 +540,7 @@ class IndodaxReadOnlyClient:
                 str(row["client_order_id"]) if row.get("client_order_id") else None
             ),
             pair=pair,
-            side=_side(row.get("type"), "open_order.type"),
+            side=side,
             order_type=str(row.get("order_type", "limit")).lower(),
             status="OPEN",
             price=_decimal(row.get("price"), "open_order.price", positive=True),
@@ -512,17 +552,13 @@ class IndodaxReadOnlyClient:
 
     @staticmethod
     def _parse_legacy_order(pair: str, row: Mapping[str, Any]) -> VenueOrder:
-        base = pair.split("_", 1)[0]
         side = _side(row.get("type"), "order.type")
-        original_key = f"order_{base}"
-        remaining_key = f"remain_{base}"
-
-        if original_key in row and remaining_key in row:
-            original = _decimal(row[original_key], "order.original_qty")
-            remaining = _decimal(row[remaining_key], "order.remaining_qty")
-        else:
-            original = Decimal("0")
-            remaining = Decimal("0")
+        original, remaining = _legacy_order_quantities(
+            pair,
+            side,
+            row,
+            field_prefix="order",
+        )
 
         if remaining > original:
             raise VenueProtocolError("INDODAX_ORDER_REMAIN_EXCEEDS_ORIGINAL")
