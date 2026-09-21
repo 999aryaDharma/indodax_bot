@@ -50,3 +50,18 @@ Jangan auto-flatten hanya karena reconciliation gagal.
 Jika submit/cancel timeout setelah request mungkin sudah diterima exchange, adapter tidak boleh blind retry. Status menjadi UNKNOWN dan reconciliation/query venue dilakukan lebih dulu untuk mencegah duplicate order.
 
 Actual maker/taker role berasal dari venue evidence jika tersedia. Limit touch bukan bukti fill. Partial fills tetap event terpisah.
+
+
+## Implementation status — 2026-09-21
+
+Canonical read-only venue access, reconciliation comparison/orchestration, durable OMS
+state, and quote-fee venue-fill normalization now exist in
+`src/indodax_lab/execution/`.
+
+This does not yet authorize venue writes. The read-only adapter intentionally has no
+trade/cancel/withdraw method. G5 remains open until a designated view-only credential is
+smoke-tested against Indodax and reconciliation evidence is collected from a real
+account.
+
+Legacy `tradeHistory` and `orderHistory` are not used by the new path because Indodax
+decommissioned them on 2026-04-07. Current history reads use Trade API v2.
