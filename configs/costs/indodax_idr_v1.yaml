@@ -275,7 +275,7 @@ intervals:
     side: buy
     role: maker
     valid_from: '2026-02-28T17:00:00Z'
-    valid_to: null
+    valid_to: '2026-09-21T00:00:00Z'
     service_fee_rate: '0.001000'
     tax_rate: '0.000000'
     exchange_fee_rate: '0.000111'
@@ -288,7 +288,7 @@ intervals:
     side: buy
     role: taker
     valid_from: '2026-02-28T17:00:00Z'
-    valid_to: null
+    valid_to: '2026-09-21T00:00:00Z'
     service_fee_rate: '0.002000'
     tax_rate: '0.000000'
     exchange_fee_rate: '0.000111'
@@ -301,7 +301,7 @@ intervals:
     side: sell
     role: maker
     valid_from: '2026-02-28T17:00:00Z'
-    valid_to: null
+    valid_to: '2026-09-21T00:00:00Z'
     service_fee_rate: '0.001000'
     tax_rate: '0.002100'
     exchange_fee_rate: '0.000111'
@@ -314,10 +314,66 @@ intervals:
     side: sell
     role: taker
     valid_from: '2026-02-28T17:00:00Z'
-    valid_to: null
+    valid_to: '2026-09-21T00:00:00Z'
     service_fee_rate: '0.002000'
     tax_rate: '0.002100'
     exchange_fee_rate: '0.000111'
     min_notional: '10000'
     precision: 0
     sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
+
+
+  # Observed-current Pro rule as of 2026-09-21: direct Pro orders require Rp25,000.
+  # The actual policy start date is not inferred backwards; earlier historical minimum remains
+  # governed by the preceding evidence interval until a dated official source is captured.
+  - schedule_id: indodax_idr_2026_current_buy_maker
+    market: spot_idr
+    side: buy
+    role: maker
+    valid_from: '2026-09-21T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.001000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000111'
+    min_notional: '25000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
+
+  - schedule_id: indodax_idr_2026_current_buy_taker
+    market: spot_idr
+    side: buy
+    role: taker
+    valid_from: '2026-09-21T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.002000'
+    tax_rate: '0.000000'
+    exchange_fee_rate: '0.000111'
+    min_notional: '25000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
+
+  - schedule_id: indodax_idr_2026_current_sell_maker
+    market: spot_idr
+    side: sell
+    role: maker
+    valid_from: '2026-09-21T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.001000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000111'
+    min_notional: '25000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
+
+  - schedule_id: indodax_idr_2026_current_sell_taker
+    market: spot_idr
+    side: sell
+    role: taker
+    valid_from: '2026-09-21T00:00:00Z'
+    valid_to: null
+    service_fee_rate: '0.002000'
+    tax_rate: '0.002100'
+    exchange_fee_rate: '0.000111'
+    min_notional: '25000'
+    precision: 0
+    sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
