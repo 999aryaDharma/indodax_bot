@@ -1,3 +1,5 @@
+> **SUPERSEDED FOR SYSTEM ARCHITECTURE (2026-09-21):** Research-agent architecture is now frozen in `docs/production/research-workbench/`. This document remains historical research context. In particular, a production executor is no longer modeled as a mutable research agent; Research Workbench creates immutable candidates and isolated shadow agents, while Production Main owns real execution.
+
 # Arsitektur Agen Kuantitatif, Pembelajaran Berkelanjutan, dan Desain Position Sizing
 
 **Dokumen Rujukan Desain Produksi & Roadmap Masa Depan**  
