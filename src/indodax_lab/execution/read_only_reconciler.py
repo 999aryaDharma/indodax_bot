@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence, Set
 from datetime import datetime, timedelta
-from typing import AbstractSet, Sequence
 
 from indodax_lab.backtest.ledger import ResearchLedger
 from indodax_lab.execution.indodax_readonly import IndodaxReadOnlyClient
@@ -31,7 +31,7 @@ class PrivateReadOnlyReconciliationService:
         *,
         ledger: ResearchLedger,
         tracked_pairs: Sequence[str],
-        expected_open_order_ids: AbstractSet[str],
+        expected_open_order_ids: Set[str],
         fill_window_start_ms: int,
         evaluation_time: datetime,
         history_limit: int = 1000,
