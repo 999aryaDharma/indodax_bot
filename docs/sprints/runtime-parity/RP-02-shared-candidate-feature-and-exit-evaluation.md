@@ -87,7 +87,7 @@ Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact depend
 
 ## In Scope
 
-- Construct offline fixture manifests from RW0 contracts; packaging service is not prerequisite
+- Resolve immutable RuntimePlan through verified component/policy refs for first historical experiment; packaging later wraps the same plan
 
 - Resolve feature and registered pipeline nodes once by digest
 
@@ -119,13 +119,13 @@ Research/operator consumer invokes the declared interface on verified inputs. It
 
 ## Domain Rules / Invariants
 
-CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load(manifest:CandidateManifest,artifact_resolver)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
+CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load_plan(plan:VerifiedRuntimePlan)->CandidateRuntime; CandidateRuntime.load(candidate:VerifiedCandidate)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
 
 Decimal accounting, UTC availability, immutable identities, exactly-once effects and separate execution authority follow CONTRACTS.md/ADR-002. Simulator assumptions cannot redefine accounting.
 
 ## Architecture / Design Contract
 
-Reuse existing primitives named under Current Context. New files own only the declared service/contract. CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load(manifest:CandidateManifest,artifact_resolver)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
+Reuse existing primitives named under Current Context. New files own only the declared service/contract. CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load_plan(plan:VerifiedRuntimePlan)->CandidateRuntime; CandidateRuntime.load(candidate:VerifiedCandidate)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
 
 ## Planned Files / Artifacts
 
@@ -145,13 +145,15 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+Historical bootstrap uses CandidateRuntime.load_plan(plan: VerifiedRuntimePlan); forward/production CandidateRuntime.load(candidate: VerifiedCandidate) validates the wrapper then delegates to the identical evaluator. IDs derive runtime-plan digest; candidate digest is provenance.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
 
 ```text
 
-CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load(manifest:CandidateManifest,artifact_resolver)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
+CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load_plan(plan:VerifiedRuntimePlan)->CandidateRuntime; CandidateRuntime.load(candidate:VerifiedCandidate)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
 
 ```
 
@@ -165,7 +167,7 @@ Schema: use the named manifest/state/result model; append-only identity and life
 
 ## API / External Contract Impact
 
-CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load(manifest:CandidateManifest,artifact_resolver)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
+CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load_plan(plan:VerifiedRuntimePlan)->CandidateRuntime; CandidateRuntime.load(candidate:VerifiedCandidate)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.
 
 No new production write authority. Provider facts are not asserted by offline fixtures.
 
@@ -175,7 +177,7 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 
 ## Implementation Steps
 
-- [ ] Step 1: Construct offline fixture manifests from RW0 contracts; packaging service is not prerequisite.
+- [ ] Step 1: Resolve immutable RuntimePlan through verified component/policy refs for first historical experiment; packaging later wraps the same plan.
 
 - [ ] Step 2: Resolve feature and registered pipeline nodes once by digest.
 
@@ -192,6 +194,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_rp_02_bootstrap_recovery`: Historical plan executes before candidate packaging and yields same decision trace when later wrapped as a candidate. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/unit/lab/runtime/test_candidate_runtime.py`.
 
@@ -249,6 +253,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **RP-02-AC5** Historical plan executes before candidate packaging and yields same decision trace when later wrapped as a candidate. Evidence: `test_rp_02_bootstrap_recovery` through public interfaces.
 - [ ] **RP-02-AC0** Same candidate/event/state gives identical intent bytes. Evidence: named test on exact committed SHA.
 
 - [ ] **RP-02-AC1** Future-row perturbation leaves past decisions unchanged. Evidence: named test on exact committed SHA.

@@ -8731,6 +8731,12 @@
           "test_case": "test_rw0_01_4",
           "behavior": "Terminal experiment configuration cannot be edited",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW0-01-AC5",
+          "test_case": "test_rw0_01_bootstrap_recovery",
+          "behavior": "Runtime plan can be verified before any completed experiment exists",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9088,7 +9094,7 @@
         "FEAT-02"
       ],
       "goal": "One verified evaluator independent of venue, training and ambient clock.",
-      "contract": "CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load(manifest:CandidateManifest,artifact_resolver)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.",
+      "contract": "CandidateRuntime.evaluate(event:CanonicalMarketEvent,state:RuntimeState)->tuple[SignalIntent,...]; CandidateRuntime.load_plan(plan:VerifiedRuntimePlan)->CandidateRuntime; CandidateRuntime.load(candidate:VerifiedCandidate)->CandidateRuntime. RuntimeState and event fields are fixed in CONTRACTS.md.",
       "checks": [
         "Same candidate/event/state gives identical intent bytes",
         "Future-row perturbation leaves past decisions unchanged",
@@ -9160,6 +9166,12 @@
           "criterion": "RP-02-AC4",
           "test_case": "test_rp_02_4",
           "behavior": "Missing M02/D04 declared artifact cannot silently degrade to TA-only",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-02-AC5",
+          "test_case": "test_rp_02_bootstrap_recovery",
+          "behavior": "Historical plan executes before candidate packaging and yields same decision trace when later wrapped as a candidate",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -9423,6 +9435,12 @@
           "criterion": "PM-02-AC4",
           "test_case": "test_pm_02_4",
           "behavior": "Corrupt snapshot/journal linkage blocks restore",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-02-AC5",
+          "test_case": "test_pm_02_bootstrap_recovery",
+          "behavior": "No-intent event crash and partial two-order submission recover once without cursor loss or blind resubmission",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -9689,6 +9707,12 @@
           "test_case": "test_rp_04_4",
           "behavior": "Restart cannot duplicate a processed event",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-04-AC5",
+          "test_case": "test_rp_04_bootstrap_recovery",
+          "behavior": "No-fill market events advance feature and risk state once while delayed fills remain recoverable after cursor acknowledgement",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9868,6 +9892,12 @@
           "test_case": "test_rw3_01_4",
           "behavior": "Same manifest/seed/events reproduces normalized result digest",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW3-01-AC5",
+          "test_case": "test_rw3_01_bootstrap_recovery",
+          "behavior": "First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9956,6 +9986,12 @@
           "criterion": "RW4-01-AC4",
           "test_case": "test_rw4_01_4",
           "behavior": "Lifecycle metadata cannot alter frozen configuration",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW4-01-AC5",
+          "test_case": "test_rw4_01_bootstrap_recovery",
+          "behavior": "Packaged candidate refers to the original executed runtime plan with no change in decision identity",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],

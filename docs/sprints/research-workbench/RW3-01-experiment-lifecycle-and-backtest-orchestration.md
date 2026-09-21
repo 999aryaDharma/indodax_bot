@@ -150,6 +150,8 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+validate() resolves and persists a verified RuntimePlan before QUEUED. run_backtest uses CandidateRuntime.load_plan, never a fabricated CandidateManifest. ResultArtifact binds exact runtime-plan digest.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
@@ -197,6 +199,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_rw3_01_bootstrap_recovery`: First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/integration/lab/test_experiment_lifecycle.py`.
 
@@ -254,6 +258,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **RW3-01-AC5** First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest. Evidence: `test_rw3_01_bootstrap_recovery` through public interfaces.
 - [ ] **RW3-01-AC0** Completed experiment edit rejects and clone gets new ID. Evidence: named test on exact committed SHA.
 
 - [ ] **RW3-01-AC1** Cancel racing stale worker prevents successful publication. Evidence: named test on exact committed SHA.

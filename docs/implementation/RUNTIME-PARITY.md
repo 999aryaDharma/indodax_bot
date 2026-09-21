@@ -23,6 +23,8 @@ Baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. CURRENT IMPLEMENTATION is 
 
 ## Frozen target path
 
+Historical experiments first pin a verified RuntimePlan; reviewed candidate packaging binds that same plan plus completed evidence. Forward shadow/production require the candidate wrapper and delegate to the same evaluator. Intent identity binds the runtime-plan digest, so adding evidence cannot change decisions.
+
 Canonical event → verified feature schema → immutable CandidateRuntime → SignalIntent → PortfolioConstructor → RiskEngine → authority gate → OMS → environment venue → normalized Fill → accounting transaction → reconciliation → audit/metrics.
 
 - BACKTEST: HistoricalEventClock, historical source, simulator venue/fill model, isolated research persistence. Completed-bar/open ordering and availability remain causal. Simulator differences are versioned assumptions, not different accounting.

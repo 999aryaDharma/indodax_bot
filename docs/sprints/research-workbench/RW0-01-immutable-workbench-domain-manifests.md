@@ -145,6 +145,8 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+RuntimePlan and VerifiedRuntimePlan identity wrappers plus shared ServiceError/MetricValue/report envelope are included in the schema scope.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
@@ -192,6 +194,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_rw0_01_bootstrap_recovery`: Runtime plan can be verified before any completed experiment exists. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/unit/lab/test_workbench_contracts.py`.
 
@@ -249,6 +253,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **RW0-01-AC5** Runtime plan can be verified before any completed experiment exists. Evidence: `test_rw0_01_bootstrap_recovery` through public interfaces.
 - [ ] **RW0-01-AC0** Key reordering gives same digest; local-root relocation cannot affect it. Evidence: named test on exact committed SHA.
 
 - [ ] **RW0-01-AC1** Nested mutation cannot change published manifest. Evidence: named test on exact committed SHA.

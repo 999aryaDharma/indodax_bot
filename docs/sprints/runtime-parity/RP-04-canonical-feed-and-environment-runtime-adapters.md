@@ -156,6 +156,8 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+Sequence the selected PREPARED/DECIDED/ATTEMPTING/ACKNOWLEDGED protocol through PM-02 store. Do not wait for future fills to acknowledge market event; delayed fills use separate durable evidence events.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
@@ -203,6 +205,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_rp_04_bootstrap_recovery`: No-fill market events advance feature and risk state once while delayed fills remain recoverable after cursor acknowledgement. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/integration/lab/test_runtime_adapters.py`.
 
@@ -260,6 +264,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **RP-04-AC5** No-fill market events advance feature and risk state once while delayed fills remain recoverable after cursor acknowledgement. Evidence: `test_rp_04_bootstrap_recovery` through public interfaces.
 - [ ] **RP-04-AC0** N agents cause one upstream poll per stream, not N. Evidence: named test on exact committed SHA.
 
 - [ ] **RP-04-AC1** Slow consumer has explicit gap/backpressure and resumable cursor. Evidence: named test on exact committed SHA.

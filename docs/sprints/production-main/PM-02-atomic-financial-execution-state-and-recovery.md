@@ -147,6 +147,8 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+Own ExecutionStateStore.prepare_event, commit_decision, claim_submission, record_submission, acknowledge_event, apply_fill and recover APIs exactly as CONTRACTS.md event protocol. Store inbox/outbox plus feature/exit/risk/reservations/cursor state atomically by phase.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
@@ -194,6 +196,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_pm_02_bootstrap_recovery`: No-intent event crash and partial two-order submission recover once without cursor loss or blind resubmission. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/integration/lab/test_execution_transaction_recovery.py`.
 
@@ -251,6 +255,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **PM-02-AC5** No-intent event crash and partial two-order submission recover once without cursor loss or blind resubmission. Evidence: `test_pm_02_bootstrap_recovery` through public interfaces.
 - [ ] **PM-02-AC0** Crash at each boundary yields either zero or one complete effect after restart. Evidence: named test on exact committed SHA.
 
 - [ ] **PM-02-AC1** Duplicate replay cannot double OMS quantity or fees. Evidence: named test on exact committed SHA.

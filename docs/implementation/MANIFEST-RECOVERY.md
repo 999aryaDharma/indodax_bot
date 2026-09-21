@@ -3,8 +3,8 @@
 Classification: FACT / DOCUMENTATION REPAIR. Date: 2026-09-21.
 
 Source SHA: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`.
-Corrupted source SHA-256: `1ace3784ec638263effb188955a42881b3a55874786760d6e51c101236791a51`.
-The original bytes remain in Git at that SHA; no runtime evidence was rewritten.
+Corrupted Windows checkout bytes SHA-256 (CRLF working-tree representation): `1ace3784ec638263effb188955a42881b3a55874786760d6e51c101236791a51`.
+The original logical source remains in Git at that SHA; its LF Git-blob SHA-256 is `acef546b4f8ed95816379b03dbe83358930454d8939e7d0537d9506fc7356713`. Checkout CRLF conversion explains the different byte digest. No runtime evidence was rewritten.
 
 The source contained a literal truncation header and an internal truncation marker. All 18 available manifest revisions failed JSON parsing. 63 intact records were salvageable; all 92 sprint documents were used to reconstruct paths, readings, dependencies and acceptance behavior. User selected conservative reconstruction. Handoffs do not establish independent approval; later handoffs remain REVIEW. Status means delivery governance, not absent implementation. Legacy aliases in test mappings are retained as planned identities, not assertions that functions exist.
 

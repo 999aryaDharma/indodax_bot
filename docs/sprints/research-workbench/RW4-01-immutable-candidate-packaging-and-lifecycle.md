@@ -143,6 +143,8 @@ Actual import-only consumer changes for RP-01 are enumerated in its focused hand
 
 ## Interfaces & Contracts
 
+Package binds the exact RuntimePlan from the reviewed completed ResultArtifact; it cannot recompile/replace components during packaging. CandidateRuntime.load delegates to load_plan after verification.
+
 Consumes: verified dependency artifacts/contracts and policy versions described above.
 
 Produces:
@@ -190,6 +192,8 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 - [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
 
 ## Required Tests
+
+`test_rw4_01_bootstrap_recovery`: Packaged candidate refers to the original executed runtime plan with no change in decision identity. Use the event phases/bootstrap sequence in CONTRACTS.md as the independently specified expected result.
 
 Planned test paths: `tests/unit/lab/evaluation/test_candidate_packaging.py`.
 
@@ -247,6 +251,7 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
+- [ ] **RW4-01-AC5** Packaged candidate refers to the original executed runtime plan with no change in decision identity. Evidence: `test_rw4_01_bootstrap_recovery` through public interfaces.
 - [ ] **RW4-01-AC0** Changed model/feature/policy bytes invalidate package. Evidence: named test on exact committed SHA.
 
 - [ ] **RW4-01-AC1** Failed or unreviewed experiment cannot package as verified. Evidence: named test on exact committed SHA.

@@ -57,6 +57,15 @@ def validate(manifest: dict, documents: dict[str, str]) -> list[str]:
     for layer in LAYERS:
         if '| ' + layer + ' |' not in parity:
             errors.append('Missing parity layer: ' + layer)
+    contracts = documents.get('docs/implementation/CONTRACTS.md', '')
+    if 'CandidateRuntime.load_plan' not in contracts or '| RuntimePlan |' not in contracts:
+        errors.append('Missing pre-candidate experiment bootstrap contract')
+    event_methods = ('prepare_event(', 'commit_decision(', 'claim_submission(',
+                     'record_submission(', 'acknowledge_event(', 'recover()')
+    if any(method not in contracts for method in event_methods):
+        errors.append('Missing complete event recovery protocol')
+    if '| ResultArtifact /' not in contracts or '| ComparisonReport /' not in contracts:
+        errors.append('Missing shared result schemas')
     nxt = documents.get('docs/implementation/handoff/LUNA-NEXT.md', '')
     ids = re.findall(r'^## TASK ID\n\n([A-Z0-9]+-\d{2})', nxt, re.M)
     if ids != ['RP-01']:
@@ -89,9 +98,16 @@ def self_test(manifest: dict, documents: dict[str, str]) -> None:
     changed_docs = dict(documents)
     changed_docs['docs/implementation/handoff/LUNA-NEXT.md'] = '## TASK ID\n\nRW9-01\n'
     cases.append((manifest, changed_docs, 'Next task must'))
+    changed_docs = dict(documents)
+    changed_docs['docs/implementation/CONTRACTS.md'] = ''
+    cases.append((manifest, changed_docs, 'Missing pre-candidate'))
+    changed_docs = dict(documents)
+    changed_docs['docs/implementation/CONTRACTS.md'] = documents[
+        'docs/implementation/CONTRACTS.md'].replace('acknowledge_event(', 'omitted_ack(')
+    cases.append((manifest, changed_docs, 'Missing complete event'))
     for changed, changed_docs, expected in cases:
         assert any(expected in e for e in validate(changed, changed_docs)), expected
-    print('Program negative mutations: 4/4 rejected')
+    print('Program negative mutations: 6/6 rejected')
 
 
 def main() -> int:

@@ -135,7 +135,7 @@ def self_test(m):
     x=copy.deepcopy(m);x['sprints'][0]['dependencies']=['DOES-NOT-EXIST'];mutations.append(('unknown dependency',x,'Unknown dependency'))
     x=copy.deepcopy(m);x['sprints'][0]['dependencies']=[x['sprints'][0]['id']];mutations.append(('cycle',x,'Dependency cycle'))
     x=copy.deepcopy(m);x['sprints'][0]['path']='docs/sprints/missing.md';mutations.append(('missing file',x,'Missing sprint file'))
-    x=copy.deepcopy(m);x['sprints'][-1]['status']='READY';mutations.append(('premature READY',x,'Premature READY'))
+    x=copy.deepcopy(m);x['sprints'][0]['status']='READY';x['sprints'][0]['dependencies']=[x['sprints'][0]['id']];mutations.append(('premature READY',x,'Premature READY'))
     x=copy.deepcopy(m);x['sprints'][0]['required_reading'].append('nonexistent-spec.md');mutations.append(('missing reading',x,'Missing Required Reading'))
     x=copy.deepcopy(m);x['sprints'][0]['status']='DONE';x['sprints'][0]['evidence']=None;mutations.append(('false DONE',x,'DONE without evidence'))
     for name,x,expected in mutations:
