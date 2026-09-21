@@ -18,7 +18,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 _SHA256_REGEX = re.compile(r"^[a-f0-9]{64}$")
 _PATH_SEPARATOR_REGEX = re.compile(r"[/\\:]|\.\.")
@@ -82,16 +82,17 @@ def canonical_json_value(val: Any, exclude_audit: bool = False) -> Any:
     if isinstance(val, Decimal):
         if not val.is_finite():
             raise ValueError("NON_FINITE_NUMBER_FORBIDDEN")
-        # Format Decimal as normalized non-exponent string
         normalized = val.normalize()
-        sign, digits, exponent = normalized.as_tuple()
-        if exponent > 0:
-            return str(val)
-        return format(val, "f")
+        if normalized == 0:
+            return "0"
+        return format(normalized, "f")
 
     if isinstance(val, datetime):
         utc_dt = _ensure_utc(val)
-        return utc_dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        iso = utc_dt.astimezone(UTC).isoformat()
+        if iso.endswith("+00:00"):
+            iso = iso[:-6] + "Z"
+        return iso
 
     if isinstance(val, Enum):
         return val.value
@@ -142,6 +143,27 @@ class ImmutableManifest(BaseModel):
     """Base class for all deeply immutable domain manifests."""
 
     model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    @model_validator(mode="after")
+    def validate_manifest_id_non_path(self) -> ImmutableManifest:
+        for id_attr in (
+            "manifest_id",
+            "dataset_id",
+            "strategy_id",
+            "model_id",
+            "pipeline_id",
+            "experiment_id",
+            "plan_id",
+            "candidate_id",
+            "agent_id",
+        ):
+            val = getattr(self, id_attr, None)
+            if val is not None and isinstance(val, str):
+                if not val or not val.strip():
+                    raise ValueError(f"NON_EMPTY_REQUIRED:{id_attr}")
+                if _PATH_SEPARATOR_REGEX.search(val) or val.startswith(("/", "\\")):
+                    raise ValueError(f"PATH_SEPARATOR_FORBIDDEN:{id_attr}")
+        return self
 
     def semantic_digest(self) -> str:
         """Compute content digest of semantic fields."""

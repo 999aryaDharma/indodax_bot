@@ -457,3 +457,69 @@ def test_shared_service_envelopes():
         runtime_plan_digest=DUMMY_SHA_2,
     )
     assert prov.source_sha.startswith("1234")
+
+
+def test_canonical_decimal_normalization_regression():
+    """Verify identical Decimals produce identical canonical bytes without exponent."""
+    assert canonical_bytes(Decimal("100.00")) == canonical_bytes(Decimal("100")) == b'"100"'
+    assert canonical_bytes(Decimal("1.50")) == canonical_bytes(Decimal("1.5")) == b'"1.5"'
+    assert canonical_bytes(Decimal("1e6")) == canonical_bytes(Decimal("1000000")) == b'"1000000"'
+    assert canonical_bytes(Decimal("0.00")) == canonical_bytes(Decimal("0")) == b'"0"'
+    assert canonical_bytes(Decimal("0.000010")) == b'"0.00001"'
+
+
+def test_canonical_datetime_microsecond_preservation():
+    """Verify ISO8601 formatting preserves microseconds when present and formats with Z."""
+    dt_zero_us = datetime(2026, 9, 21, 12, 0, 0, tzinfo=UTC)
+    assert canonical_bytes(dt_zero_us) == b'"2026-09-21T12:00:00Z"'
+
+    dt_with_us = datetime(2026, 9, 21, 12, 0, 0, 123456, tzinfo=UTC)
+    assert canonical_bytes(dt_with_us) == b'"2026-09-21T12:00:00.123456Z"'
+
+
+def test_dataset_manifest_missing_intervals_utc_validation():
+    """Verify construction-time validation rejects naive datetimes in missing_intervals."""
+    naive_start = datetime(2026, 9, 21, 10, 0, 0)
+    utc_end = datetime(2026, 9, 21, 11, 0, 0, tzinfo=UTC)
+
+    with pytest.raises(ValidationError, match="UTC_TIMEZONE_AWARE_REQUIRED"):
+        DatasetManifest(
+            dataset_id="ds-001",
+            version="1.0.0",
+            venue="indodax",
+            pair="btc_idr",
+            timeframe="1h",
+            requested_start=NOW,
+            requested_end=NOW,
+            actual_start=NOW,
+            actual_end=NOW,
+            bar_count=100,
+            source_id="src-1",
+            source_version="1.0",
+            partition_refs=(),
+            quality_report_ref=make_dummy_artifact_ref(kind="report", id_="qr-1"),
+            missing_intervals=((naive_start, utc_end),),
+            created_at_utc=NOW,
+        )
+
+
+def test_manifest_id_path_traversal_validation():
+    """Verify manifests reject path traversal characters in logical IDs upon construction."""
+    with pytest.raises(ValidationError, match="PATH_SEPARATOR_FORBIDDEN"):
+        DatasetManifest(
+            dataset_id="../escape_dir",
+            version="1.0.0",
+            venue="indodax",
+            pair="btc_idr",
+            timeframe="1h",
+            requested_start=NOW,
+            requested_end=NOW,
+            actual_start=NOW,
+            actual_end=NOW,
+            bar_count=100,
+            source_id="src-1",
+            source_version="1.0",
+            partition_refs=(),
+            quality_report_ref=make_dummy_artifact_ref(kind="report", id_="qr-1"),
+            created_at_utc=NOW,
+        )

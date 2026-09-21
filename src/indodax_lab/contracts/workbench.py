@@ -96,6 +96,23 @@ class DatasetManifest(ImmutableManifest):
     def validate_utc(cls, value: datetime, info: Any) -> datetime:
         return _ensure_utc(value, info.field_name)
 
+    @field_validator("missing_intervals", mode="after")
+    @classmethod
+    def validate_missing_intervals_utc(
+        cls, value: tuple[tuple[datetime, datetime], ...]
+    ) -> tuple[tuple[datetime, datetime], ...]:
+        validated = []
+        for interval in value:
+            if len(interval) != 2:
+                raise ValueError("INTERVAL_TUPLE_LENGTH_MUST_BE_2")
+            start, end = interval
+            _ensure_utc(start, "missing_interval_start")
+            _ensure_utc(end, "missing_interval_end")
+            if start >= end:
+                raise ValueError("INTERVAL_START_MUST_PRECEDE_END")
+            validated.append((start, end))
+        return tuple(validated)
+
     @field_validator("bar_count", "duplicate_count")
     @classmethod
     def validate_non_negative(cls, value: int, info: Any) -> int:
