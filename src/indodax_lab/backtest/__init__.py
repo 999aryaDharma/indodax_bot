@@ -24,7 +24,10 @@ from indodax_lab.backtest.costs import (
 _LAZY_EXPORTS: Final[dict[str, tuple[str, str]]] = {
     "AccountType": ("indodax_lab.backtest.ledger", "AccountType"),
     "BacktestResult": ("indodax_lab.backtest.result", "BacktestResult"),
-    "ConservativeExecutionSimulator": ("indodax_lab.backtest.execution", "ConservativeExecutionSimulator"),
+    "ConservativeExecutionSimulator": (
+        "indodax_lab.backtest.execution",
+        "ConservativeExecutionSimulator",
+    ),
     "CostStressMetrics": ("indodax_lab.backtest.metrics", "CostStressMetrics"),
     "DuplicateFillError": ("indodax_lab.backtest.ledger", "DuplicateFillError"),
     "ExecutionResult": ("indodax_lab.backtest.events", "ExecutionResult"),

@@ -2,9 +2,9 @@
 
 import ast
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 
 def test_signal_intent_has_one_shared_owner() -> None:
