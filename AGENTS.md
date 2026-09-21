@@ -10,6 +10,16 @@ Read `docs/README.md` then `docs/specs/00-master-product-technical-spec.md`. Cur
 
 This project is paper/shadow research only. No trade/withdraw keys, real orders, promised profit, LLM discretionary execution or auto-merge. Do not start product work when request is documentation-only.
 
+## Required global agent tooling
+
+The global `Caveman`, `Ponytail`, and `RTK` tooling is part of the project workflow for both Antigravity (`agy`) and Codex.
+
+- Use Caveman for compact task framing, repository exploration, delegation, and evidence-oriented workflow coordination. On Codex use the installed Caveman skills; on Agy use the imported Caveman skills/commands.
+- Use Ponytail for every implementation or review task to enforce reuse, YAGNI, standard-library-first choices, and the smallest correct change. On Codex use the installed Ponytail skills; on Agy use the imported Ponytail skills/commands.
+- Use `rtk` for supported shell, git, search, test, lint, and dependency commands when its wrapper exists. Prefer `rtk git`, `rtk rg`, `rtk pytest`, `rtk ruff`, `rtk test`, `rtk diff`, or the closest supported wrapper so command output stays compact. Use the native command when RTK has no safe equivalent or when exact unfiltered output is required for evidence.
+- These tools optimize communication and command output; they do not override repository safety, testing, review, dependency, or production-gate rules in this file.
+- If a required plugin is unavailable in the current agent host, record the capability gap and continue with the repository rules. Do not install credentials, unknown binaries, or project-local copies as a workaround.
+
 ## Select work
 
 Use `docs/sprints/sprint-manifest.json` as status/DAG authority. One READY sprint → one owner → one isolated worktree → one independent final reviewer. Verify dependencies DONE and external resource/data/policy gates. Do not equate READY with real-data availability. Imported DONE Tasks1–14 are historical evidence; do not rebuild them without a defect/CR. Task15 untracked WIP on original implementation branch is unverified; inspect before reuse and never overwrite it.
