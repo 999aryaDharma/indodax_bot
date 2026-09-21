@@ -38,8 +38,8 @@ Bounded capital + universe, immutable candidate, no online learning, no automati
 
 - canonical private **read-only** venue adapter is implemented, but has not yet been
   smoke-tested with a designated view-only Indodax credential/account;
-- reconciliation engine/service is implemented, but has not yet accumulated real-account
-  operational evidence or a durable production reconciliation cursor/runbook;
+- reconciliation engine/service plus durable cursor/coordinator are implemented, but
+  have not yet accumulated real-account operational evidence or a completed operator runbook;
 - durable OMS uncertain-order state machine/store is implemented, but there is still no
   write-capable venue adapter and no real uncertain-write recovery drill;
 - venue-fill -> ledger normalization exists for IDR-denominated commission, but automated
