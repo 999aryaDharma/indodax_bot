@@ -15,7 +15,7 @@ import yaml
 from indodax_lab.contracts import CanonicalPair, QualityStatus, TradeEvent
 from indodax_lab.data.bars import SilverBar, load_time_bar_config
 from indodax_lab.data.checksums import sha256_bytes, sha256_file
-from indodax_lab.data.manifest import canonical_json_bytes, read_manifest
+from indodax_lab.data.manifest import canonical_json_bytes, read_manifest, snapshot_manifest_path
 from indodax_lab.data.parquet_store import CANDLE_SCHEMA_IDENTITY
 from indodax_lab.data.quality import POLICY_VERSION as CANDLE_POLICY_VERSION
 from indodax_lab.data.sentry import require_approved_snapshot_decision
@@ -505,7 +505,7 @@ def load_bronze_snapshot_artifact(
     data_root: Path, snapshot_id: str
 ) -> BronzeSnapshotArtifactRef:
     root = Path(data_root).resolve()
-    manifest_path = _contained(root, root / "snapshots" / snapshot_id / "manifest.json")
+    manifest_path = _contained(root, snapshot_manifest_path(root, snapshot_id))
     manifest = read_manifest(manifest_path)
     if (
         manifest.get("dataset_snapshot_id") != snapshot_id
