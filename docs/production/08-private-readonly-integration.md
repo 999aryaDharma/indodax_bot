@@ -116,3 +116,23 @@ No order-write credential is required or permitted for this phase.
 A write-capable venue adapter may be developed behind the OMS only after the read-only
 integration is venue-proven. Even then, initial activation remains MANUAL_APPROVAL with
 bounded capital and reconciliation after fills.
+
+
+## Redacted view-only smoke command
+
+After creating an Indodax key with **view permission only** and keeping trade/withdraw
+disabled at the exchange, inject credentials only into the local process environment.
+Do not commit them and do not paste them into tickets/chat/logs.
+
+PowerShell example:
+
+~~~powershell
+$env:INDODAX_VIEW_API_KEY="<local-view-key>"
+$env:INDODAX_VIEW_SECRET_KEY="<local-view-secret>"
+python -m indodax_lab.execution.read_only_smoke btc_idr eth_idr
+~~~
+
+The command probes `getInfo`, `openOrders`, Trade API v2 order history, and Trade API
+v2 fill history. Its JSON output intentionally excludes credentials, balances, order
+IDs, client order IDs, quantities, and fill contents. A successful smoke is necessary
+evidence for G5, but is not by itself enough to pass G5.
