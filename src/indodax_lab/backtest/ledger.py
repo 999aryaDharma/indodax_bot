@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from threading import RLock
-from typing import Mapping
+from typing import Any, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -343,3 +343,146 @@ class ResearchLedger:
         self.transactions.append(tx)
         self._processed_fill_ids.add(fill.fill_id)
         return tx
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the complete ledger state for durable checkpointing."""
+        with self.allocation_lock:
+            return {
+                "schema_version": 1,
+                "valuation_currency": self.valuation_currency,
+                "initial_cash": str(self._initial_cash),
+                "cash": str(self._cash),
+                "reservations": {key: str(value) for key, value in self._reservations.items()},
+                "transactions": [
+                    tx.model_dump(mode="json") for tx in self.transactions
+                ],
+                "positions": {
+                    pair: position.model_dump(mode="json")
+                    for pair, position in self._positions.items()
+                },
+                "processed_fill_ids": sorted(self._processed_fill_ids),
+                "total_fees_paid": str(self._total_fees_paid),
+                "total_realized_gross_pnl": str(self._total_realized_gross_pnl),
+            }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ResearchLedger":
+        """Restore and verify a previously serialized ledger fail-closed."""
+        if data.get("schema_version") != 1:
+            raise ValueError("LEDGER_STATE_SCHEMA_UNSUPPORTED")
+        valuation_currency = str(data.get("valuation_currency", ""))
+        if not valuation_currency:
+            raise ValueError("LEDGER_STATE_CURRENCY_MISSING")
+
+        ledger = cls(initial_cash=Decimal("0"), valuation_currency=valuation_currency)
+        initial_cash = Decimal(str(data.get("initial_cash")))
+        cash = Decimal(str(data.get("cash")))
+        total_fees = Decimal(str(data.get("total_fees_paid")))
+        gross_pnl = Decimal(str(data.get("total_realized_gross_pnl")))
+        decimals = (initial_cash, cash, total_fees, gross_pnl)
+        if any(not value.is_finite() for value in decimals):
+            raise ValueError("LEDGER_STATE_NONFINITE")
+        if initial_cash < 0 or cash < 0 or total_fees < 0:
+            raise ValueError("LEDGER_STATE_NEGATIVE_BALANCE")
+
+        raw_transactions = data.get("transactions")
+        raw_positions = data.get("positions")
+        raw_reservations = data.get("reservations")
+        raw_processed = data.get("processed_fill_ids")
+        if not isinstance(raw_transactions, list):
+            raise ValueError("LEDGER_STATE_TRANSACTIONS_INVALID")
+        if not isinstance(raw_positions, dict):
+            raise ValueError("LEDGER_STATE_POSITIONS_INVALID")
+        if not isinstance(raw_reservations, dict):
+            raise ValueError("LEDGER_STATE_RESERVATIONS_INVALID")
+        if not isinstance(raw_processed, list):
+            raise ValueError("LEDGER_STATE_PROCESSED_IDS_INVALID")
+
+        transactions = [LedgerTransaction.model_validate(row) for row in raw_transactions]
+        if any(not tx.is_balanced for tx in transactions):
+            raise ValueError("LEDGER_STATE_UNBALANCED_TRANSACTION")
+        positions = {
+            str(pair): Position.model_validate(row)
+            for pair, row in raw_positions.items()
+        }
+        reservations = {
+            str(key): Decimal(str(value))
+            for key, value in raw_reservations.items()
+        }
+        if any(not value.is_finite() or value <= 0 for value in reservations.values()):
+            raise ValueError("LEDGER_STATE_RESERVATION_INVALID")
+
+        processed = {str(value) for value in raw_processed}
+        transaction_fill_ids = {tx.fill_id for tx in transactions if tx.fill_id is not None}
+        if processed != transaction_fill_ids:
+            raise ValueError("LEDGER_STATE_FILL_ID_MISMATCH")
+
+        cash_from_postings = sum(
+            (
+                posting.amount
+                for tx in transactions
+                for posting in tx.postings
+                if posting.account == AccountType.CASH
+            ),
+            Decimal("0"),
+        )
+        fees_from_postings = sum(
+            (
+                posting.amount
+                for tx in transactions
+                for posting in tx.postings
+                if posting.account == AccountType.FEE
+            ),
+            Decimal("0"),
+        )
+        gross_pnl_from_postings = -sum(
+            (
+                posting.amount
+                for tx in transactions
+                for posting in tx.postings
+                if posting.account == AccountType.PNL
+            ),
+            Decimal("0"),
+        )
+        if cash_from_postings != cash:
+            raise ValueError("LEDGER_STATE_CASH_MISMATCH")
+        if fees_from_postings != total_fees:
+            raise ValueError("LEDGER_STATE_FEE_MISMATCH")
+        if gross_pnl_from_postings != gross_pnl:
+            raise ValueError("LEDGER_STATE_PNL_MISMATCH")
+
+        for pair, position in positions.items():
+            quantity_from_postings = sum(
+                (
+                    tx.base_qty_delta
+                    for tx in transactions
+                    if tx.pair == pair
+                ),
+                Decimal("0"),
+            )
+            asset_value_from_postings = sum(
+                (
+                    posting.amount
+                    for tx in transactions
+                    if tx.pair == pair
+                    for posting in tx.postings
+                    if posting.account == AccountType.ASSET
+                ),
+                Decimal("0"),
+            )
+            if quantity_from_postings != position.base_qty:
+                raise ValueError(f"LEDGER_STATE_QTY_MISMATCH:{pair}")
+            if asset_value_from_postings != position.cost_basis:
+                raise ValueError(f"LEDGER_STATE_COST_BASIS_MISMATCH:{pair}")
+
+        ledger._initial_cash = initial_cash
+        ledger._cash = cash
+        ledger._reservations = reservations
+        ledger.transactions = transactions
+        ledger._positions = positions
+        ledger._processed_fill_ids = processed
+        ledger._total_fees_paid = total_fees
+        ledger._total_realized_gross_pnl = gross_pnl
+        ledger._total_net_pnl = gross_pnl - total_fees
+        return ledger
+
