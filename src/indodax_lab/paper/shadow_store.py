@@ -85,7 +85,9 @@ class ShadowStateStore:
                 event_json = self._canonical(event_payload or {})
                 conn.execute(
                     """
-                    INSERT OR IGNORE INTO shadow_events(event_id, event_type, payload, created_at_utc)
+                    INSERT OR IGNORE INTO shadow_events(
+                        event_id, event_type, payload, created_at_utc
+                    )
                     VALUES (?, ?, ?, ?)
                     """,
                     (event_id, event_type, event_json, now),
