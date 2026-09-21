@@ -17,8 +17,6 @@ import pandas as pd
 
 from indodax_lab.paper.live_shadow_engine import (
     LiveShadowEngine,
-    MAKER_BUY_FEE_RATE,
-    MAKER_SELL_FEE_RATE,
     ShadowPosition,
 )
 
