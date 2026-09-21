@@ -103,6 +103,27 @@ class OmsOrder(BaseModel):
     updated_at: datetime
     version: int = 1
 
+    @field_validator("pair", mode="after")
+    @classmethod
+    def validate_pair(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        parts = normalized.split("_")
+        if len(parts) != 2 or not all(part.isalnum() for part in parts):
+            raise ValueError("OMS_PAIR_INVALID")
+        return normalized
+
+    @field_validator("client_order_id", mode="after")
+    @classmethod
+    def validate_client_order_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if (
+            not normalized
+            or len(normalized) > 36
+            or not all(ch.isalnum() or ch in "_-" for ch in normalized)
+        ):
+            raise ValueError("OMS_CLIENT_ORDER_ID_INVALID")
+        return normalized
+
     @field_validator("desired_qty", mode="before")
     @classmethod
     def validate_desired_qty(cls, value: Any) -> Decimal:
@@ -136,7 +157,7 @@ class OmsOrder(BaseModel):
 
     @model_validator(mode="after")
     def validate_snapshot(self) -> Self:
-        if not self.internal_order_id or not self.client_order_id:
+        if not self.internal_order_id.strip():
             raise ValueError("OMS_ORDER_ID_REQUIRED")
         if self.version < 1:
             raise ValueError("OMS_VERSION_INVALID")
@@ -144,10 +165,38 @@ class OmsOrder(BaseModel):
             raise ValueError("OMS_TIMESTAMP_ORDER_INVALID")
         if self.filled_qty > self.desired_qty:
             raise ValueError("OMS_OVERFILL")
+
+        venue_id_required_states = {
+            OmsOrderState.ACKNOWLEDGED,
+            OmsOrderState.PARTIALLY_FILLED,
+            OmsOrderState.FILLED,
+            OmsOrderState.CANCEL_PENDING,
+            OmsOrderState.CANCELLED,
+        }
+        if self.state in venue_id_required_states and not (
+            self.venue_order_id and self.venue_order_id.strip()
+        ):
+            raise ValueError("OMS_VENUE_ORDER_ID_REQUIRED")
+
+        zero_fill_states = {
+            OmsOrderState.NEW,
+            OmsOrderState.SUBMITTING,
+            OmsOrderState.ACKNOWLEDGED,
+            OmsOrderState.REJECTED,
+        }
+        if self.state in zero_fill_states and self.filled_qty != Decimal("0"):
+            raise ValueError("OMS_STATE_FORBIDS_FILL_QTY")
+        if self.state == OmsOrderState.PARTIALLY_FILLED and not (
+            Decimal("0") < self.filled_qty < self.desired_qty
+        ):
+            raise ValueError("OMS_PARTIAL_FILL_QTY_INVALID")
         if self.state == OmsOrderState.FILLED and self.filled_qty != self.desired_qty:
             raise ValueError("OMS_FILLED_STATE_QTY_MISMATCH")
+
         if self.filled_qty > 0 and self.average_fill_price is None:
             raise ValueError("OMS_FILL_PRICE_REQUIRED")
+        if self.filled_qty == 0 and self.average_fill_price is not None:
+            raise ValueError("OMS_ZERO_FILL_HAS_PRICE")
         return self
 
 
