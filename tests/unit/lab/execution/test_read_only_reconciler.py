@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from indodax_lab.backtest.costs import OrderRole, OrderSide
 from indodax_lab.backtest.ledger import ResearchLedger
+from indodax_lab.backtest.orders import Fill
 from indodax_lab.execution.indodax_readonly import (
     VenueAccountSnapshot,
     VenueBalance,
@@ -142,3 +144,46 @@ def test_service_rejects_implicit_or_too_wide_fill_window():
         assert str(exc) == "FILL_WINDOW_EXCEEDS_INDODAX_7_DAY_LIMIT"
     else:
         raise AssertionError("unsupported history window must fail closed")
+
+
+def test_ledger_fill_absent_from_venue_history_halts():
+    ledger = ResearchLedger(initial_cash=Decimal("100000"), init_timestamp=NOW)
+    ledger.process_fill(
+        Fill(
+            fill_id="ledger-only-fill",
+            order_id="order-1",
+            event_id="venue-fill:ledger-only-fill",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0.00001"),
+            price=Decimal("1000000000"),
+            fees=Decimal("0"),
+            timestamp=NOW - timedelta(minutes=1),
+            fee_components={"venue_commission": Decimal("0")},
+        )
+    )
+    client = FakeReadOnlyClient(
+        account=VenueAccountSnapshot(
+            server_time=NOW,
+            balances={
+                "idr": VenueBalance("idr", ledger.cash, Decimal("0")),
+                "btc": VenueBalance("btc", Decimal("0.00001"), Decimal("0")),
+            },
+        )
+    )
+    service = PrivateReadOnlyReconciliationService(client)
+
+    report = service.run(
+        ledger=ledger,
+        tracked_pairs=("btc_idr",),
+        expected_open_order_ids=frozenset(),
+        fill_window_start_ms=int((NOW - timedelta(minutes=5)).timestamp() * 1000),
+        evaluation_time=NOW,
+        history_limit=10,
+    )
+
+    assert report.status == ReconciliationStatus.HALT_NEW_ORDERS
+    assert "LEDGER_FILL_MISSING_AT_VENUE" in {
+        issue.code for issue in report.issues
+    }
