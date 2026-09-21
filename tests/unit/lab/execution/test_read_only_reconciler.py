@@ -18,7 +18,6 @@ from indodax_lab.execution.read_only_reconciler import (
 )
 from indodax_lab.execution.reconciliation import ReconciliationStatus
 
-
 NOW = datetime(2026, 9, 21, 7, 0, tzinfo=UTC)
 
 

@@ -239,7 +239,10 @@ def test_symlink_loop_in_snapshot_path_is_structured_content_failure(tmp_path):
     assert written.dataset_snapshot_id is not None
     snapshot_dir = snapshot_manifest_path(tmp_path, written.dataset_snapshot_id).parent
     snapshot_dir.rename(tmp_path / "saved-snapshot")
-    snapshot_dir.symlink_to(snapshot_dir)
+    try:
+        snapshot_dir.symlink_to(snapshot_dir)
+    except OSError as exc:
+        pytest.skip(f"Symlink creation not permitted in this environment: {exc}")
     output = io.StringIO()
 
     exit_code = main(

@@ -11,7 +11,6 @@ from indodax_lab.execution.indodax_readonly import (
 )
 from indodax_lab.execution.read_only_smoke import run_read_only_smoke
 
-
 NOW = datetime(2026, 9, 21, 11, 0, tzinfo=UTC)
 
 

@@ -34,24 +34,28 @@ class ShadowStateStore:
         return conn
 
     def _init_schema(self) -> None:
-        with self._connect() as conn:
-            conn.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS shadow_checkpoint (
-                    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-                    payload TEXT NOT NULL,
-                    sha256 TEXT NOT NULL,
-                    updated_at_utc TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS shadow_events (
-                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                    event_id TEXT NOT NULL UNIQUE,
-                    event_type TEXT NOT NULL,
-                    payload TEXT NOT NULL,
-                    created_at_utc TEXT NOT NULL
-                );
-                """
-            )
+        conn = self._connect()
+        try:
+            with conn:
+                conn.executescript(
+                    """
+                    CREATE TABLE IF NOT EXISTS shadow_checkpoint (
+                        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                        payload TEXT NOT NULL,
+                        sha256 TEXT NOT NULL,
+                        updated_at_utc TEXT NOT NULL
+                    );
+                    CREATE TABLE IF NOT EXISTS shadow_events (
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        event_id TEXT NOT NULL UNIQUE,
+                        event_type TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at_utc TEXT NOT NULL
+                    );
+                    """
+                )
+        finally:
+            conn.close()
 
     @staticmethod
     def _canonical(payload: dict[str, Any]) -> str:
@@ -68,37 +72,43 @@ class ShadowStateStore:
         canonical = self._canonical(payload)
         digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         now = datetime.now(UTC).isoformat()
-        with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            conn.execute(
-                """
-                INSERT INTO shadow_checkpoint(singleton, payload, sha256, updated_at_utc)
-                VALUES (1, ?, ?, ?)
-                ON CONFLICT(singleton) DO UPDATE SET
-                    payload=excluded.payload,
-                    sha256=excluded.sha256,
-                    updated_at_utc=excluded.updated_at_utc
-                """,
-                (canonical, digest, now),
-            )
-            if event_id is not None and event_type is not None:
-                event_json = self._canonical(event_payload or {})
+        conn = self._connect()
+        try:
+            with conn:
+                conn.execute("BEGIN IMMEDIATE")
                 conn.execute(
                     """
-                    INSERT OR IGNORE INTO shadow_events(
-                        event_id, event_type, payload, created_at_utc
-                    )
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO shadow_checkpoint(singleton, payload, sha256, updated_at_utc)
+                    VALUES (1, ?, ?, ?)
+                    ON CONFLICT(singleton) DO UPDATE SET
+                        payload=excluded.payload,
+                        sha256=excluded.sha256,
+                        updated_at_utc=excluded.updated_at_utc
                     """,
-                    (event_id, event_type, event_json, now),
+                    (canonical, digest, now),
                 )
-            conn.commit()
+                if event_id is not None and event_type is not None:
+                    event_json = self._canonical(event_payload or {})
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO shadow_events(
+                            event_id, event_type, payload, created_at_utc
+                        )
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (event_id, event_type, event_json, now),
+                    )
+        finally:
+            conn.close()
 
     def load_checkpoint(self) -> dict[str, Any] | None:
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             row = conn.execute(
                 "SELECT payload, sha256 FROM shadow_checkpoint WHERE singleton = 1"
             ).fetchone()
+        finally:
+            conn.close()
         if row is None:
             return None
         payload, stored_digest = row
@@ -112,3 +122,4 @@ class ShadowStateStore:
         if not isinstance(decoded, dict):
             raise ShadowStateCorruptionError("SHADOW_CHECKPOINT_NOT_MAPPING")
         return decoded
+

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-import sqlite3
 
 import pytest
 from pydantic import ValidationError
@@ -21,7 +21,6 @@ from indodax_lab.execution.oms_store import (
     OmsStateCorruptionError,
     OmsStore,
 )
-
 
 NOW = datetime(2026, 9, 21, 6, 0, tzinfo=UTC)
 

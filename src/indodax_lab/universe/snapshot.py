@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from indodax_lab.data.checksums import sha256_bytes
-from indodax_lab.data.manifest import canonical_json_bytes
+from indodax_lab.data.manifest import canonical_json_bytes, snapshot_manifest_path
 from indodax_lab.data.publication import publish_immutable_bytes, rollback_or_raise_indeterminate
 
 from .contracts import UniverseDecision, UniverseMetrics, UniversePolicy
@@ -126,7 +126,7 @@ def build_daily_snapshot(
     )
     root = Path(data_root)
     data_path = root / prepared.relative_data_path
-    manifest_path = root / "snapshots" / prepared.universe_snapshot_id / "manifest.json"
+    manifest_path = snapshot_manifest_path(root, prepared.universe_snapshot_id)
     data_published = publish_immutable_bytes(data_path, prepared.data_bytes)
     try:
         publish_immutable_bytes(manifest_path, canonical_json_bytes(prepared.manifest))

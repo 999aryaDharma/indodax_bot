@@ -16,7 +16,6 @@ from indodax_lab.execution.reconciliation_coordinator import (
 )
 from indodax_lab.execution.reconciliation_store import ReconciliationCursorStore
 
-
 NOW = datetime(2026, 9, 21, 10, 0, tzinfo=UTC)
 
 

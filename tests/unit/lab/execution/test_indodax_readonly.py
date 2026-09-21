@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from decimal import Decimal
 import hashlib
 import hmac
+from datetime import UTC, datetime
+from decimal import Decimal
 from urllib.parse import urlencode
 
 from indodax_lab.backtest.costs import OrderRole, OrderSide

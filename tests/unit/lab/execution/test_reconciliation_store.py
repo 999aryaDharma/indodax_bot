@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import sqlite3
+from datetime import UTC, datetime
 
 import pytest
 
@@ -12,7 +12,6 @@ from indodax_lab.execution.reconciliation_store import (
     ReconciliationCursorCorruptionError,
     ReconciliationCursorStore,
 )
-
 
 NOW = datetime(2026, 9, 21, 9, 0, tzinfo=UTC)
 

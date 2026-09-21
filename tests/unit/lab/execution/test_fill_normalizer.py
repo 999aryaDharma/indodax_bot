@@ -14,7 +14,6 @@ from indodax_lab.execution.fill_normalizer import (
 )
 from indodax_lab.execution.indodax_readonly import VenueFill
 
-
 NOW = datetime(2026, 9, 21, 8, 0, tzinfo=UTC)
 
 
