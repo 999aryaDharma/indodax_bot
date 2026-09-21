@@ -68,3 +68,25 @@ def read_manifest(path: Path) -> dict[str, Any]:
         raise ValueError("manifest must be a JSON object")
     validate_manifest(manifest)
     return manifest
+
+
+
+def content_id_path_component(content_id: str) -> str:
+    """Map canonical sha256:<digest> identities to one portable filesystem segment.
+
+    The canonical identity remains unchanged in manifests and APIs. Only its storage
+    directory encoding changes so the same dataset works on Windows and POSIX hosts.
+    """
+    if (
+        not isinstance(content_id, str)
+        or not content_id.startswith("sha256:")
+        or len(content_id) != 71
+        or any(ch not in "0123456789abcdef" for ch in content_id[7:])
+    ):
+        raise ValueError("INVALID_CONTENT_ID")
+    return "sha256_" + content_id[7:]
+
+
+def snapshot_manifest_path(data_root: Path, snapshot_id: str) -> Path:
+    """Return the portable on-disk manifest location for a canonical snapshot ID."""
+    return Path(data_root) / "snapshots" / content_id_path_component(snapshot_id) / "manifest.json"
