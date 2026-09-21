@@ -21,7 +21,7 @@ from indodax_lab.data.event_bars import (
     load_event_bar_config,
 )
 from indodax_lab.data.indodax_stream import AppendOnlyStreamWriter
-from indodax_lab.data.manifest import canonical_json_bytes
+from indodax_lab.data.manifest import canonical_json_bytes, snapshot_manifest_path
 from indodax_lab.data.parquet_store import ParquetStore, WriteStatus
 from indodax_lab.data.sentry import validate_snapshot
 from indodax_lab.data.stream_protocol import parse_public_message
@@ -719,7 +719,11 @@ def test_event_cli_publishes_fitted_threshold_id_version_and_policy_lineage(tmp_
     assert payload["bars"][0]["threshold_artifact_id"] == "sha256:" + "d" * 64
     assert payload["bars"][0]["threshold_train_end"] == "2023-12-31T23:59:58Z"
     assert payload["bars"][0]["threshold_available_at"] == "2023-12-31T23:59:59Z"
-    manifest = json.loads(next(data_root.rglob("manifest.json")).read_text(encoding="utf-8"))
+    match = __import__("re").search(r"output_id=(sha256:[0-9a-f]{64})", stdout.getvalue())
+    assert match is not None
+    manifest = json.loads(
+        snapshot_manifest_path(data_root, match.group(1)).read_text(encoding="utf-8")
+    )
     assert manifest["threshold_lineage"] == payload["threshold_lineage"]
 
 
