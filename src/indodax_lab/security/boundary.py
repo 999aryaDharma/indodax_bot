@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Mapping
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -73,8 +73,14 @@ def safe_resolve_artifact_path(base_dir: Path, target_subpath: str | Path) -> Pa
     base_resolved = base_dir.resolve()
     target_str = str(target_subpath)
 
-    # Reject obvious traversal indicators before resolution
-    if ".." in target_str.replace("\\", "/").split("/"):
+    # Reject traversal and foreign-platform absolute paths before host resolution.
+    normalized_parts = target_str.replace("\\", "/").split("/")
+    windows_path = PureWindowsPath(target_str)
+    if windows_path.is_absolute() or windows_path.drive:
+        raise PathTraversalError(
+            f"PATH_TRAVERSAL_DETECTED: Absolute Windows path is forbidden: '{target_str}'."
+        )
+    if ".." in normalized_parts:
         raise PathTraversalError(
             f"PATH_TRAVERSAL_DETECTED: Relative path traversal ('..') detected in '{target_str}'."
         )
@@ -120,7 +126,9 @@ def verify_artifact_bytes_safe(data: bytes) -> bool:
         if data.startswith(b"PAR1") and data.endswith(b"PAR1"):
             return True
 
-    return True
+    raise SecurityViolationError(
+        "UNSUPPORTED_ARTIFACT_FORMAT: Only validated JSON or Parquet artifacts are accepted."
+    )
 
 
 def audit_no_trade_withdraw_keys(env_dict: Mapping[str, str] | None = None) -> list[str]:
