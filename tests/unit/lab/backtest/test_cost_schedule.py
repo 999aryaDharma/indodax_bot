@@ -62,7 +62,7 @@ def test_cost_01_valid_contract() -> None:
     """COST-01-AC0: Lookup fee memilih schedule historis yang tepat atau memblokir klaim promosi."""
     table = load_cost_schedule_table(CANONICAL_COST_CONFIG)
     assert table.schedule_set_id == "indodax_idr"
-    assert table.version == "1.0.0"
+    assert table.version == "2.0.0"
     assert len(table.intervals) > 0
 
     # Historical lookup during 2023
