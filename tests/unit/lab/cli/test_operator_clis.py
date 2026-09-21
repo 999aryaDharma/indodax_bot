@@ -67,6 +67,7 @@ def test_approval_cli_lifecycle(tmp_path: Path) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.05"),
+        limit_price=Decimal("1000000000"),
         created_at=now,
         updated_at=now,
     )
@@ -131,6 +132,7 @@ def test_approval_cli_reject_and_clean(tmp_path: Path) -> None:
         pair="btc_idr",
         side=OrderSide.SELL,
         desired_qty=Decimal("0.02"),
+        limit_price=Decimal("1000000000"),
         created_at=now,
         updated_at=now,
     )
@@ -161,6 +163,7 @@ def test_approval_cli_reject_and_clean(tmp_path: Path) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.01"),
+        limit_price=Decimal("1000000000"),
         created_at=now,
         updated_at=now,
     )

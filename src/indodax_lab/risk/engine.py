@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import json
 import logging
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
@@ -34,12 +37,52 @@ class RiskEngine:
         *,
         max_orders_per_minute: int = 15,
         kill_switch_path: Path | None = None,
+        throttle_history_path: Path | None = None,
+        reset_confirmation_secret: bytes | str | None = None,
     ) -> None:
         self.risk_manager = risk_manager
         self.max_orders_per_minute = max_orders_per_minute
         self.kill_switch_path = Path(kill_switch_path) if kill_switch_path is not None else None
+        self.throttle_history_path = (
+            Path(throttle_history_path) if throttle_history_path is not None else None
+        )
+        self.reset_confirmation_secret = (
+            reset_confirmation_secret.encode("utf-8")
+            if isinstance(reset_confirmation_secret, str)
+            else reset_confirmation_secret
+        )
         self._manual_kill_switch: bool = False
         self._order_timestamps: list[datetime] = []
+        if self.throttle_history_path is not None and self.throttle_history_path.exists():
+            self._load_throttle_history()
+
+    def _load_throttle_history(self) -> None:
+        if self.throttle_history_path is None or not self.throttle_history_path.exists():
+            return
+        try:
+            raw = json.loads(self.throttle_history_path.read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                self._order_timestamps = [
+                    datetime.fromisoformat(ts).astimezone(UTC) for ts in raw if isinstance(ts, str)
+                ]
+        except Exception as exc:
+            logger.warning(
+                "Failed to load throttle history from %s: %s", self.throttle_history_path, exc
+            )
+
+    def _save_throttle_history(self) -> None:
+        if self.throttle_history_path is None:
+            return
+        try:
+            self.throttle_history_path.parent.mkdir(parents=True, exist_ok=True)
+            temp = self.throttle_history_path.with_suffix(".tmp")
+            data = [ts.isoformat() for ts in self._order_timestamps]
+            temp.write_text(json.dumps(data), encoding="utf-8")
+            temp.replace(self.throttle_history_path)
+        except Exception as exc:
+            logger.warning(
+                "Failed to save throttle history to %s: %s", self.throttle_history_path, exc
+            )
 
     @property
     def is_kill_switch_active(self) -> bool:
@@ -61,11 +104,41 @@ class RiskEngine:
                 encoding="utf-8",
             )
 
-    def reset_kill_switch(self) -> None:
-        """Explicitly disarm the kill switch."""
+    def reset_kill_switch(
+        self,
+        *,
+        operator_id: str = "OPERATOR_ADMIN",
+        confirmation_token: str | None = None,
+        reconciliation_healthy: bool = True,
+        unknown_orders_count: int = 0,
+    ) -> None:
+        """Explicitly disarm the kill switch after verifying operator authority
+        and system health.
+        """
+        if not operator_id or not operator_id.strip():
+            raise ValueError("OPERATOR_ID_REQUIRED")
+        if not reconciliation_healthy:
+            raise RuntimeError("CANNOT_RESET_KILL_SWITCH_UNHEALTHY_RECONCILIATION")
+        if unknown_orders_count > 0:
+            raise RuntimeError(
+                f"CANNOT_RESET_KILL_SWITCH_UNKNOWN_ORDERS_EXIST:{unknown_orders_count}"
+            )
+
+        if self.reset_confirmation_secret is not None:
+            if not confirmation_token:
+                raise PermissionError("CONFIRMATION_TOKEN_REQUIRED")
+            expected = hmac.new(
+                self.reset_confirmation_secret,
+                f"RESET_KILL_SWITCH:{operator_id}".encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            if not hmac.compare_digest(confirmation_token, expected):
+                raise PermissionError("INVALID_CONFIRMATION_TOKEN")
+
         self._manual_kill_switch = False
         if self.kill_switch_path is not None and self.kill_switch_path.exists():
             self.kill_switch_path.unlink()
+        logger.info("RiskEngine: Kill switch disarmed by %s", operator_id)
 
     def assess_intent(
         self,
@@ -122,6 +195,7 @@ class RiskEngine:
         if result.approved:
             # Record order timestamp in throttle history
             self._order_timestamps = recent_orders + [evaluation_time]
+            self._save_throttle_history()
 
         return result
 
@@ -146,5 +220,7 @@ class RiskEngine:
             pair=intent.pair,
             side=intent.side,
             desired_qty=assessment.approved_qty,
+            limit_price=intent.limit_price,
+            time_in_force=intent.time_in_force,
             created_at=created_at,
         )

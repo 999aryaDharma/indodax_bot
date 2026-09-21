@@ -6,6 +6,7 @@ import logging
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.execution.indodax_readonly import VenueOrder
 from indodax_lab.execution.oms import OmsOrder
 from indodax_lab.execution.venue import (
@@ -50,6 +51,9 @@ class DeterministicFakeVenue(TradingVenue):
         if self.submit_scenario == "TIMEOUT_BEFORE":
             raise ConnectionError("Network unreachable before write")
 
+        if getattr(order, "limit_price", None) is None or order.limit_price <= Decimal("0"):
+            raise ValueError("EXPLICIT_POSITIVE_LIMIT_PRICE_REQUIRED")
+
         # Generate venue order ID
         self._next_id += 1
         venue_order_id = f"venue_{self._next_id}"
@@ -59,8 +63,8 @@ class DeterministicFakeVenue(TradingVenue):
             client_order_id=order.client_order_id,
             pair=order.pair,
             side=order.side,
-            order_type="limit",
-            price=order.average_fill_price or Decimal("1000"),
+            order_type=order.order_type,
+            price=order.limit_price,
             original_qty=order.desired_qty,
             remaining_qty=order.desired_qty,
             executed_qty=Decimal("0"),
@@ -90,6 +94,7 @@ class DeterministicFakeVenue(TradingVenue):
         pair: str,
         venue_order_id: str | None = None,
         client_order_id: str | None = None,
+        side: OrderSide | str | None = None,
     ) -> VenueOrder:
         """Process an order cancellation according to current scenario."""
         target: VenueOrder | None = None
@@ -206,3 +211,6 @@ class DeterministicFakeVenue(TradingVenue):
         if current.client_order_id:
             self.orders_by_client_id[current.client_order_id] = updated
         return updated
+
+
+FakeVenueAdapter = DeterministicFakeVenue

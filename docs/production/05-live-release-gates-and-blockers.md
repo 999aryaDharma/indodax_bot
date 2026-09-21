@@ -50,7 +50,7 @@ The following items are strictly external and cannot be satisfied by code alone 
 - **Write-Capable Venue Adapter & OrderRouter:** Added `IndodaxTradingClient` and `OrderRouter` enforcing fail-closed `UNKNOWN` order recovery without blind retries, backed by deterministic `FakeVenueAdapter`;
 - **Automated Fill Ingestion & Durable Reconciliation:** Implemented `VenueFillIngester` and integrated fill-history cursoring into `DurableReconciliationCoordinator` for automatic double-entry ledger posting;
 - **Centralized Risk & Portfolio Authority:** Implemented `PortfolioConstructor` and `RiskEngine` with rate limits, notional limits, daily loss halts, and immediate kill switch triggers;
-- **Control Modes & Manual Approval Store:** Implemented full runtime mode gating (`DISABLED`, `READ_ONLY`, `SHADOW`, `SEMI_AUTOMATED`, `FULL_AUTOMATION`) and persistent `ManualApprovalStore` with strict TTL;
+- **Control Modes & Manual Approval Store:** Implemented full runtime mode gating (`DISABLED`, `READ_ONLY`, `SHADOW`, `SEMI_AUTOMATED`, `FULL_AUTOMATION`, `HALTED`, `RECOVERY`) with validated transition graphs, durable atomic file persistence, HMAC cryptographic operator tokens, and strict TTL;
 - **Operator CLI Suite:** Implemented canonical operator CLI tools (`approval.py`, `reconcile.py`, `kill_switch.py`) with explicit `BLOCKED_EXTERNAL` exit handling;
 - **Comprehensive Operator Runbooks:** Created step-by-step procedures in `docs/production/runbooks/` for routine reconciliation, uncertain-write recovery, emergency kill switch, and operator approval workflow;
 - **Failure Injection Disaster Drills:** Verified network dropouts, clock skews, unknown-order crash recovery, and cancel-fill race conditions via end-to-end integration tests;

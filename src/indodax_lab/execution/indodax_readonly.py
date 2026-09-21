@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -282,16 +282,13 @@ class IndodaxReadOnlyClient:
             raise VenueAuthenticationError(marker)
         raise VenueReadError(marker)
 
-    def _request_json(
+    def _execute_request_with_retry(
         self,
-        method: str,
-        url: str,
-        *,
-        headers: Mapping[str, str],
-        body: str | None = None,
+        request_factory: Callable[[], tuple[str, str, Mapping[str, str], str | None]],
     ) -> Mapping[str, Any]:
         last_exception: Exception | None = None
         for attempt in range(self.max_attempts):
+            method, url, headers, body = request_factory()
             try:
                 response = self._session.request(
                     method,
@@ -329,30 +326,39 @@ class IndodaxReadOnlyClient:
 
         raise VenueReadError("INDODAX_REQUEST_EXHAUSTED") from last_exception
 
+    def _request_json(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        body: str | None = None,
+    ) -> Mapping[str, Any]:
+        return self._execute_request_with_retry(lambda: (method, url, headers, body))
+
     def _legacy_view_call(
         self,
         method: str,
         params: Sequence[tuple[str, Any]] = (),
     ) -> Mapping[str, Any]:
-        encoded = urlencode(
-            [
-                ("method", method),
-                *[(key, str(value)) for key, value in params],
-                ("timestamp", str(self._timestamp_ms())),
-                ("recvWindow", str(self.recv_window_ms)),
-            ]
-        )
-        payload = self._request_json(
-            "POST",
-            self.legacy_tapi_url,
-            headers={
+        def _build_request() -> tuple[str, str, Mapping[str, str], str | None]:
+            encoded = urlencode(
+                [
+                    ("method", method),
+                    *[(key, str(value)) for key, value in params],
+                    ("timestamp", str(self._timestamp_ms())),
+                    ("recvWindow", str(self.recv_window_ms)),
+                ]
+            )
+            headers = {
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Key": self._api_key,
                 "Sign": self._sign(encoded),
-            },
-            body=encoded,
-        )
+            }
+            return "POST", self.legacy_tapi_url, headers, encoded
+
+        payload = self._execute_request_with_retry(_build_request)
         if payload.get("success") != 1:
             self._raise_api_error(200, payload)
         returned = payload.get("return")
@@ -365,23 +371,24 @@ class IndodaxReadOnlyClient:
         path: str,
         params: Sequence[tuple[str, Any]],
     ) -> list[Mapping[str, Any]]:
-        encoded = urlencode(
-            [
-                *[(key, str(value)) for key, value in params],
-                ("timestamp", str(self._timestamp_ms())),
-                ("recvWindow", str(self.recv_window_ms)),
-            ]
-        )
-        payload = self._request_json(
-            "GET",
-            f"{self.trade_api_v2_url}{path}?{encoded}",
-            headers={
+        def _build_request() -> tuple[str, str, Mapping[str, str], str | None]:
+            encoded = urlencode(
+                [
+                    *[(key, str(value)) for key, value in params],
+                    ("timestamp", str(self._timestamp_ms())),
+                    ("recvWindow", str(self.recv_window_ms)),
+                ]
+            )
+            url = f"{self.trade_api_v2_url}{path}?{encoded}"
+            headers = {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 "X-APIKEY": self._api_key,
                 "Sign": self._sign(encoded),
-            },
-        )
+            }
+            return "GET", url, headers, None
+
+        payload = self._execute_request_with_retry(_build_request)
         if payload.get("error"):
             self._raise_api_error(200, payload)
         data = payload.get("data")
@@ -537,9 +544,7 @@ class IndodaxReadOnlyClient:
             raise VenueProtocolError("INDODAX_OPEN_ORDER_REMAIN_EXCEEDS_ORIGINAL")
         return VenueOrder(
             order_id=_required_text(row.get("order_id"), "open_order.order_id"),
-            client_order_id=(
-                str(row["client_order_id"]) if row.get("client_order_id") else None
-            ),
+            client_order_id=(str(row["client_order_id"]) if row.get("client_order_id") else None),
             pair=pair,
             side=side,
             order_type=str(row.get("order_type", "limit")).lower(),
@@ -566,9 +571,7 @@ class IndodaxReadOnlyClient:
         finish_raw = row.get("finish_time")
         return VenueOrder(
             order_id=_required_text(row.get("order_id"), "order.order_id"),
-            client_order_id=(
-                str(row["client_order_id"]) if row.get("client_order_id") else None
-            ),
+            client_order_id=(str(row["client_order_id"]) if row.get("client_order_id") else None),
             pair=pair,
             side=side,
             order_type=str(row.get("order_type", "limit")).lower(),
@@ -578,9 +581,7 @@ class IndodaxReadOnlyClient:
             executed_qty=original - remaining,
             remaining_qty=remaining,
             submitted_at=_utc_from_epoch(row.get("submit_time"), "submit_time"),
-            finished_at=(
-                _utc_from_epoch(finish_raw, "finish_time") if finish_raw else None
-            ),
+            finished_at=(_utc_from_epoch(finish_raw, "finish_time") if finish_raw else None),
         )
 
     @staticmethod
@@ -594,9 +595,7 @@ class IndodaxReadOnlyClient:
         finish_raw = row.get("finishTime")
         return VenueOrder(
             order_id=_required_text(row.get("orderId"), "order.orderId"),
-            client_order_id=(
-                str(row["clientOrderId"]) if row.get("clientOrderId") else None
-            ),
+            client_order_id=(str(row["clientOrderId"]) if row.get("clientOrderId") else None),
             pair=pair,
             side=_side(row.get("side"), "order.side"),
             order_type=str(row.get("type", "")).lower(),
@@ -606,12 +605,8 @@ class IndodaxReadOnlyClient:
             executed_qty=executed,
             remaining_qty=original - executed,
             submitted_at=_utc_from_epoch(row.get("submitTime"), "submitTime"),
-            finished_at=(
-                _utc_from_epoch(finish_raw, "finishTime") if finish_raw else None
-            ),
-            cancel_reason=(
-                str(row["cancelReason"]) if row.get("cancelReason") else None
-            ),
+            finished_at=(_utc_from_epoch(finish_raw, "finishTime") if finish_raw else None),
+            cancel_reason=(str(row["cancelReason"]) if row.get("cancelReason") else None),
         )
 
     @staticmethod
@@ -625,9 +620,7 @@ class IndodaxReadOnlyClient:
         return VenueFill(
             fill_id=_required_text(row.get("tradeId"), "fill.tradeId"),
             order_id=_required_text(row.get("orderId"), "fill.orderId"),
-            client_order_id=(
-                str(row["clientOrderId"]) if row.get("clientOrderId") else None
-            ),
+            client_order_id=(str(row["clientOrderId"]) if row.get("clientOrderId") else None),
             pair=pair,
             side=OrderSide.BUY if is_buyer else OrderSide.SELL,
             role=OrderRole.MAKER if is_maker else OrderRole.TAKER,

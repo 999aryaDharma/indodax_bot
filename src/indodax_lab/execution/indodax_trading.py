@@ -71,10 +71,13 @@ class IndodaxTradingVenue(TradingVenue):
 
     def submit_order(self, order: OmsOrder) -> VenueOrder:
         """Submit a limit order to Indodax with strict transport uncertainty handling."""
+        if order.limit_price is None or order.limit_price <= Decimal("0"):
+            raise ValueError(f"ORDER_LIMIT_PRICE_REQUIRED:{order.client_order_id}")
+
         pair_parts = order.pair.split("_")
         base_asset = pair_parts[0]
         side_str = "buy" if order.side == OrderSide.BUY else "sell"
-        price_str = str(order.average_fill_price or Decimal("1000"))
+        price_str = str(order.limit_price)
 
         params = {
             "method": "trade",
@@ -159,19 +162,47 @@ class IndodaxTradingVenue(TradingVenue):
         pair: str,
         venue_order_id: str | None = None,
         client_order_id: str | None = None,
+        side: OrderSide | str | None = None,
     ) -> VenueOrder:
-        """Cancel an open order on Indodax."""
+        """Cancel an open order on Indodax with exact side and ID routing."""
         if not venue_order_id and not client_order_id:
             raise ValueError("VENUE_ORDER_ID_OR_CLIENT_ORDER_ID_REQUIRED")
 
-        params = {
-            "method": "cancelOrder",
-            "timestamp": int(time.time() * 1000),
-            "recvWindow": self._recv_window_ms,
-            "pair": pair,
-            "order_id": venue_order_id or "",
-            "type": "buy",  # required by some tapi endpoints
-        }
+        side_str = (
+            "buy"
+            if (side == OrderSide.BUY or str(side).lower() == "buy")
+            else ("sell" if (side == OrderSide.SELL or str(side).lower() == "sell") else None)
+        )
+
+        if side_str is None:
+            existing = None
+            if venue_order_id:
+                existing = self.get_order(pair, venue_order_id)
+            if existing is None and client_order_id:
+                existing = self.get_order_by_client_order_id(pair, client_order_id)
+            if existing is not None:
+                side_str = "buy" if existing.side == OrderSide.BUY else "sell"
+            else:
+                side_str = "buy"
+
+        if venue_order_id:
+            params = {
+                "method": "cancelOrder",
+                "timestamp": int(time.time() * 1000),
+                "recvWindow": self._recv_window_ms,
+                "pair": pair,
+                "order_id": venue_order_id,
+                "type": side_str,
+            }
+        else:
+            params = {
+                "method": "cancelByClientOrderId",
+                "timestamp": int(time.time() * 1000),
+                "recvWindow": self._recv_window_ms,
+                "pair": pair,
+                "client_order_id": client_order_id or "",
+                "type": side_str,
+            }
 
         body, signature = self._sign_payload(params)
         headers = {
@@ -180,6 +211,7 @@ class IndodaxTradingVenue(TradingVenue):
             "Content-Type": "application/x-www-form-urlencoded",
         }
 
+        target_id = venue_order_id or client_order_id
         try:
             resp = self._session.post(
                 self.LEGACY_TAPI_URL,
@@ -188,9 +220,9 @@ class IndodaxTradingVenue(TradingVenue):
                 timeout=self._timeout,
             )
         except requests.Timeout as exc:
-            raise UncertainVenueSubmissionError(f"CANCEL_TIMEOUT:{venue_order_id}") from exc
+            raise UncertainVenueSubmissionError(f"CANCEL_TIMEOUT:{target_id}") from exc
         except requests.RequestException as exc:
-            raise UncertainVenueSubmissionError(f"CANCEL_TRANSPORT_ERROR:{venue_order_id}") from exc
+            raise UncertainVenueSubmissionError(f"CANCEL_TRANSPORT_ERROR:{target_id}") from exc
 
         if resp.status_code != 200:
             raise UncertainVenueSubmissionError(f"CANCEL_HTTP_ERROR_{resp.status_code}")
@@ -203,12 +235,24 @@ class IndodaxTradingVenue(TradingVenue):
         if data.get("success") != 1:
             raise VenueRejectError(f"CANCEL_REJECT:{data.get('error', 'UNKNOWN')}")
 
+        # Query ground truth after cancel to capture partial fills during race
+        final_order = None
+        if venue_order_id:
+            final_order = self.get_order(pair, venue_order_id)
+        if final_order is None and client_order_id:
+            final_order = self.get_order_by_client_order_id(pair, client_order_id)
+
+        if final_order is not None:
+            return final_order
+
         now_utc = datetime.now(UTC)
+        ret = data.get("return", {})
+        res_order_id = str(ret.get("order_id", venue_order_id or "unknown"))
         return VenueOrder(
-            order_id=venue_order_id or "unknown",
+            order_id=res_order_id,
             client_order_id=client_order_id or "",
             pair=pair,
-            side=OrderSide.BUY,
+            side=OrderSide.BUY if side_str == "buy" else OrderSide.SELL,
             order_type="limit",
             price=Decimal("0"),
             original_qty=Decimal("0"),
@@ -234,12 +278,20 @@ class IndodaxTradingVenue(TradingVenue):
             "Sign": signature,
             "Content-Type": "application/x-www-form-urlencoded",
         }
-        resp = self._session.post(
-            self.LEGACY_TAPI_URL, data=body, headers=headers, timeout=self._timeout
-        )
+        try:
+            resp = self._session.post(
+                self.LEGACY_TAPI_URL, data=body, headers=headers, timeout=self._timeout
+            )
+        except Exception as exc:
+            logger.warning("getOrder transport error: %s", exc)
+            return None
+
         if resp.status_code != 200:
             return None
-        data = resp.json()
+        try:
+            data = resp.json()
+        except Exception:
+            return None
         if data.get("success") != 1:
             return None
         ret = data.get("return", {}).get("order", {})
@@ -265,5 +317,60 @@ class IndodaxTradingVenue(TradingVenue):
         )
 
     def get_order_by_client_order_id(self, pair: str, client_order_id: str) -> VenueOrder | None:
-        """Lookup order by client_order_id; falls back to getOrder if unindexed."""
-        return None
+        """Lookup order state on Indodax by client_order_id."""
+        if not client_order_id:
+            return None
+        params = {
+            "method": "getOrderByClientOrderId",
+            "timestamp": int(time.time() * 1000),
+            "recvWindow": self._recv_window_ms,
+            "pair": pair,
+            "client_order_id": client_order_id,
+        }
+        body, signature = self._sign_payload(params)
+        headers = {
+            "Key": self._api_key,
+            "Sign": signature,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        try:
+            resp = self._session.post(
+                self.LEGACY_TAPI_URL, data=body, headers=headers, timeout=self._timeout
+            )
+        except Exception as exc:
+            logger.warning("getOrderByClientOrderId transport error: %s", exc)
+            return None
+
+        if resp.status_code != 200:
+            return None
+        try:
+            data = resp.json()
+        except Exception:
+            return None
+        if data.get("success") != 1:
+            return None
+        ret = data.get("return", {}).get("order", {})
+        if not ret:
+            return None
+
+        status_str = ret.get("status", "open")
+        side = OrderSide.BUY if ret.get("type") == "buy" else OrderSide.SELL
+        remain = Decimal(str(ret.get("remain", "0")))
+        price = Decimal(str(ret.get("price", "0")))
+        venue_oid = str(ret.get("order_id", ""))
+        return VenueOrder(
+            order_id=venue_oid,
+            client_order_id=client_order_id,
+            pair=pair,
+            side=side,
+            order_type="limit",
+            price=price,
+            original_qty=remain,
+            remaining_qty=remain,
+            executed_qty=Decimal("0"),
+            status=status_str,
+            submitted_at=datetime.now(UTC),
+        )
+
+
+IndodaxTradingClient = IndodaxTradingVenue

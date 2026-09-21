@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
@@ -28,25 +27,36 @@ class FillIngestionStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
-@dataclass(frozen=True)
+class OverfillInvariantError(RuntimeError):
+    """Raised when observed venue fills exceed the target order desired quantity."""
+
+
 class FillIngestionResult:
-    fill_id: str
-    status: FillIngestionStatus
-    fill: Fill | None = None
-    oms_order: OmsOrder | None = None
-    error: str | None = None
+    def __init__(
+        self,
+        fill_id: str,
+        status: FillIngestionStatus,
+        fill: Fill | None = None,
+        oms_order: OmsOrder | None = None,
+        error: str | None = None,
+    ) -> None:
+        self.fill_id = fill_id
+        self.status = status
+        self.fill = fill
+        self.oms_order = oms_order
+        self.error = error
 
 
 class VenueFillIngester:
-    """Ingests verified exchange venue fills into double-entry ledger and OMS."""
+    """Ingest venue executions into double-entry ledger and update OMS state machine."""
 
     def __init__(
         self,
-        ledger: ResearchLedger,
         *,
+        ledger: ResearchLedger,
         oms_store: OmsStore | None = None,
         valuation_currency: str = "IDR",
-        quote_notional_tolerance: Decimal = Decimal("0.00000001"),
+        quote_notional_tolerance: Decimal = Decimal("1.0"),
         fail_closed: bool = True,
     ) -> None:
         self.ledger = ledger
@@ -56,7 +66,7 @@ class VenueFillIngester:
         self.fail_closed = fail_closed
 
     def ingest_fill(self, venue_fill: VenueFill) -> FillIngestionResult:
-        """Normalize and journal a single venue execution."""
+        """Ingest a single venue fill deterministically."""
         # 1. Normalization with fail-closed non-quote fee validation
         try:
             norm_fill = normalize_venue_fill(
@@ -81,20 +91,27 @@ class VenueFillIngester:
         # 2. Check if already processed in ledger (idempotent duplicate prevention)
         processed_ids = self.ledger.to_dict()["processed_fill_ids"]
         if norm_fill.fill_id in processed_ids:
+            # Crash consistency self-healing:
+            # If a crash occurred after ledger posting but before OMS sync,
+            # repair the stale OMS order state rather than leaving it out of sync.
+            repaired_oms = self._repair_oms_order_if_stale(norm_fill, venue_fill)
             return FillIngestionResult(
                 fill_id=norm_fill.fill_id,
                 status=FillIngestionStatus.DUPLICATE_SKIPPED,
                 fill=norm_fill,
+                oms_order=repaired_oms,
             )
 
         # 3. Post to double-entry ledger
         try:
             self.ledger.process_fill(norm_fill)
         except DuplicateFillError:
+            repaired_oms = self._repair_oms_order_if_stale(norm_fill, venue_fill)
             return FillIngestionResult(
                 fill_id=norm_fill.fill_id,
                 status=FillIngestionStatus.DUPLICATE_SKIPPED,
                 fill=norm_fill,
+                oms_order=repaired_oms,
             )
 
         # 4. If OMS store configured, synchronize matching order
@@ -109,20 +126,39 @@ class VenueFillIngester:
             oms_order=updated_oms_order,
         )
 
+    def _repair_oms_order_if_stale(self, norm_fill: Fill, venue_fill: VenueFill) -> OmsOrder | None:
+        """Idempotently repair an OMS order if a crash left the ledger updated but OMS stale."""
+        if self.oms_store is None:
+            return None
+        target_order = self._find_matching_order(venue_fill)
+        if target_order is None:
+            return None
+        # If target order is still in ACKNOWLEDGED or has not accounted for this fill
+        if target_order.filled_qty < target_order.desired_qty:
+            logger.warning(
+                "VenueFillIngester: Detected stale OMS order %s "
+                "during duplicate fill replay. Repairing.",
+                target_order.internal_order_id,
+            )
+            return self._sync_oms_order(norm_fill, venue_fill)
+        return None
+
+    def _find_matching_order(self, venue_fill: VenueFill) -> OmsOrder | None:
+        if self.oms_store is None:
+            return None
+        for order in self.oms_store.load_nonterminal_orders():
+            if (order.venue_order_id and order.venue_order_id == venue_fill.order_id) or (
+                venue_fill.client_order_id and order.client_order_id == venue_fill.client_order_id
+            ):
+                return order
+        return None
+
     def _sync_oms_order(self, norm_fill: Fill, venue_fill: VenueFill) -> OmsOrder | None:
         """Synchronize OMS order state from fill evidence."""
         if self.oms_store is None:
             return None
 
-        # Locate matching open or in-flight OMS order
-        target_order: OmsOrder | None = None
-        for order in self.oms_store.load_nonterminal_orders():
-            if (order.venue_order_id and order.venue_order_id == venue_fill.order_id) or (
-                venue_fill.client_order_id and order.client_order_id == venue_fill.client_order_id
-            ):
-                target_order = order
-                break
-
+        target_order = self._find_matching_order(venue_fill)
         if target_order is None:
             return None
 
@@ -131,8 +167,13 @@ class VenueFillIngester:
         new_fill_qty = norm_fill.qty
         total_filled_qty = prev_qty + new_fill_qty
 
-        # Clamp to desired_qty if rounding or micro-overflow
-        target_qty = min(total_filled_qty, target_order.desired_qty)
+        # Strict fail-closed check: OVERFILL IS FORBIDDEN
+        if total_filled_qty > target_order.desired_qty:
+            raise OverfillInvariantError(
+                f"OVERFILL_INVARIANT_BREACH: observed total fills {total_filled_qty} "
+                f"exceeds desired {target_order.desired_qty} "
+                f"for order {target_order.internal_order_id}"
+            )
 
         prev_avg_price = target_order.average_fill_price or Decimal("0")
         weighted_notional = (prev_qty * prev_avg_price) + (new_fill_qty * norm_fill.price)
@@ -142,12 +183,12 @@ class VenueFillIngester:
 
         step_time = max(target_order.updated_at, norm_fill.timestamp)
 
-        if target_qty >= target_order.desired_qty:
+        if total_filled_qty >= target_order.desired_qty:
             target_state = OmsOrderState.FILLED
             final_qty = target_order.desired_qty
         else:
             target_state = OmsOrderState.PARTIALLY_FILLED
-            final_qty = target_qty
+            final_qty = total_filled_qty
 
         updated_order = OmsStateMachine.transition(
             target_order,

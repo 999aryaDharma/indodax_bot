@@ -18,11 +18,13 @@ class MarketHealthState(StrEnum):
 
 
 # Non-negotiable safety invariant: these states MUST halt new orders
-UNSAFE_TRADING_STATES = frozenset({
-    MarketHealthState.STALE,
-    MarketHealthState.UNAVAILABLE,
-    MarketHealthState.CLOCK_UNSAFE,
-})
+UNSAFE_TRADING_STATES = frozenset(
+    {
+        MarketHealthState.STALE,
+        MarketHealthState.UNAVAILABLE,
+        MarketHealthState.CLOCK_UNSAFE,
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -46,5 +48,9 @@ class MarketHealthReport:
     def is_clean(self) -> bool:
         """Feed is healthy without critical findings."""
         return self.state in (MarketHealthState.HEALTHY, MarketHealthState.DEGRADED) and not any(
-            f.startswith("CRITICAL_") or f.startswith("HALT_") for f in self.findings
+            f.startswith("CRITICAL_")
+            or f.startswith("HALT_")
+            or f.startswith("INVALID_")
+            or f.startswith("CROSSED_")
+            for f in self.findings
         )

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
+from pathlib import Path
+from threading import RLock
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -13,18 +17,22 @@ class ExecutionMode(StrEnum):
     """Institutional execution operating modes.
 
     Progression path:
-    DISABLED -> READ_ONLY -> SHADOW -> MANUAL_APPROVAL -> AUTONOMOUS_LIMITED
+    DISABLED -> RECOVERY -> READ_ONLY -> SHADOW -> MANUAL_APPROVAL -> AUTONOMOUS_LIMITED
+    Any mode -> HALTED
+    HALTED -> RECOVERY -> READ_ONLY
     """
 
     DISABLED = "DISABLED"
+    RECOVERY = "RECOVERY"
     READ_ONLY = "READ_ONLY"
     SHADOW = "SHADOW"
     MANUAL_APPROVAL = "MANUAL_APPROVAL"
     AUTONOMOUS_LIMITED = "AUTONOMOUS_LIMITED"
+    HALTED = "HALTED"
 
     @property
     def can_read_market(self) -> bool:
-        return self != ExecutionMode.DISABLED
+        return self not in {ExecutionMode.DISABLED, ExecutionMode.HALTED}
 
     @property
     def can_reconcile(self) -> bool:
@@ -37,6 +45,112 @@ class ExecutionMode(StrEnum):
     @property
     def is_shadow(self) -> bool:
         return self == ExecutionMode.SHADOW
+
+
+ALLOWED_MODE_TRANSITIONS: dict[ExecutionMode, set[ExecutionMode]] = {
+    ExecutionMode.DISABLED: {
+        ExecutionMode.RECOVERY,
+        ExecutionMode.READ_ONLY,
+        ExecutionMode.HALTED,
+    },
+    ExecutionMode.RECOVERY: {
+        ExecutionMode.READ_ONLY,
+        ExecutionMode.HALTED,
+        ExecutionMode.DISABLED,
+    },
+    ExecutionMode.READ_ONLY: {
+        ExecutionMode.SHADOW,
+        ExecutionMode.RECOVERY,
+        ExecutionMode.HALTED,
+        ExecutionMode.DISABLED,
+    },
+    ExecutionMode.SHADOW: {
+        ExecutionMode.MANUAL_APPROVAL,
+        ExecutionMode.READ_ONLY,
+        ExecutionMode.HALTED,
+        ExecutionMode.DISABLED,
+    },
+    ExecutionMode.MANUAL_APPROVAL: {
+        ExecutionMode.AUTONOMOUS_LIMITED,
+        ExecutionMode.SHADOW,
+        ExecutionMode.READ_ONLY,
+        ExecutionMode.HALTED,
+        ExecutionMode.DISABLED,
+    },
+    ExecutionMode.AUTONOMOUS_LIMITED: {
+        ExecutionMode.MANUAL_APPROVAL,
+        ExecutionMode.SHADOW,
+        ExecutionMode.READ_ONLY,
+        ExecutionMode.HALTED,
+        ExecutionMode.DISABLED,
+    },
+    ExecutionMode.HALTED: {
+        ExecutionMode.RECOVERY,
+        ExecutionMode.DISABLED,
+    },
+}
+
+
+class InvalidModeTransitionError(ValueError):
+    """Raised when an illegal execution mode transition is attempted."""
+
+
+def validate_mode_transition(from_mode: ExecutionMode, to_mode: ExecutionMode) -> bool:
+    """Validate whether an execution mode transition is structurally allowed."""
+    if from_mode == to_mode:
+        return True
+    return to_mode in ALLOWED_MODE_TRANSITIONS.get(from_mode, set())
+
+
+class DurableModeStore:
+    """Thread-safe persistent store for runtime execution mode."""
+
+    def __init__(
+        self,
+        path: Path | None = None,
+        default_mode: ExecutionMode = ExecutionMode.RECOVERY,
+        initial_mode: ExecutionMode | None = None,
+    ) -> None:
+        self.path = Path(path) if path is not None else None
+        self._lock = RLock()
+        self._mode = initial_mode or default_mode
+        if self.path is not None and self.path.exists():
+            self._load()
+
+    def _save(self) -> None:
+        if self.path is None:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(".tmp")
+        payload = {
+            "mode": self._mode.value,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temp_path.replace(self.path)
+
+    def _load(self) -> None:
+        if self.path is None or not self.path.exists():
+            return
+        text = self.path.read_text(encoding="utf-8").strip()
+        if not text:
+            return
+        data = json.loads(text)
+        self._mode = ExecutionMode(data["mode"])
+
+    def get_mode(self) -> ExecutionMode:
+        with self._lock:
+            return self._mode
+
+    def transition_to(self, new_mode: ExecutionMode, reason: str = "") -> ExecutionMode:
+        with self._lock:
+            if not validate_mode_transition(self._mode, new_mode):
+                raise InvalidModeTransitionError(
+                    f"ILLEGAL_MODE_TRANSITION:{self._mode.value}->{new_mode.value}"
+                )
+            self._mode = new_mode
+            self._save()
+            return self._mode
 
 
 class AutonomousLimits(BaseModel):

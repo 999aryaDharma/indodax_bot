@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.execution.indodax_readonly import VenueOrder
 from indodax_lab.execution.oms import OmsOrder
 
@@ -38,6 +39,7 @@ class TradingVenue(Protocol):
         pair: str,
         venue_order_id: str | None = None,
         client_order_id: str | None = None,
+        side: OrderSide | str | None = None,
     ) -> VenueOrder:
         """Request cancellation of an open order."""
         ...

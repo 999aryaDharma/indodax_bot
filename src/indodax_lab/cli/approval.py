@@ -10,7 +10,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
 
-from indodax_lab.control.approval import ManualApprovalStore, ProposalStatus
+from indodax_lab.control.approval import (
+    ManualApprovalStore,
+    ProposalStatus,
+    generate_approval_token,
+)
 
 
 def _argument_parser() -> argparse.ArgumentParser:
@@ -20,6 +24,11 @@ def _argument_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("var/approval_store.json"),
         help="Path to the persistent JSON approval store (default: var/approval_store.json)",
+    )
+    parser.add_argument(
+        "--signing-secret",
+        default=None,
+        help="Optional HMAC signing secret for cryptographic operator verification",
     )
 
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
@@ -39,12 +48,31 @@ def _argument_parser() -> argparse.ArgumentParser:
     approve_parser.add_argument(
         "--operator-id",
         required=True,
-        help="Operator ID or authentication token confirming approval",
+        help="Operator ID confirming approval",
+    )
+    approve_parser.add_argument(
+        "--token",
+        default=None,
+        help="Cryptographic HMAC authorization token",
     )
     approve_parser.add_argument(
         "--reason",
         default="OPERATOR_MANUAL_APPROVED",
         help="Optional justification for audit log",
+    )
+
+    # Subcommand: sign
+    sign_parser = subparsers.add_parser("sign", help="Generate authorization token for a proposal")
+    sign_parser.add_argument("proposal_id", help="Proposal ID to sign")
+    sign_parser.add_argument(
+        "--operator-id",
+        required=True,
+        help="Operator ID",
+    )
+    sign_parser.add_argument(
+        "--secret-key",
+        required=True,
+        help="HMAC signing secret key",
     )
 
     # Subcommand: reject
@@ -74,8 +102,37 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
     except SystemExit as exc:
         return int(exc.code) if exc.code is not None else 3
 
-    store = ManualApprovalStore(persistence_path=args.store_path)
+    store = ManualApprovalStore(
+        persistence_path=args.store_path,
+        signing_secret=args.signing_secret,
+    )
     now = datetime.now(UTC)
+
+    if args.subcommand == "sign":
+        prop = store.get(args.proposal_id)
+        if prop is None:
+            output = {
+                "ok": False,
+                "error": f"PROPOSAL_NOT_FOUND:{args.proposal_id}",
+            }
+            stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
+            return 1
+        token = generate_approval_token(
+            proposal_id=prop.proposal_id,
+            operator_id=args.operator_id,
+            expires_at=prop.expires_at,
+            secret_key=args.secret_key,
+        )
+        output = {
+            "ok": True,
+            "action": "SIGNED",
+            "proposal_id": prop.proposal_id,
+            "operator_id": args.operator_id,
+            "token": token,
+            "expires_at": prop.expires_at.isoformat(),
+        }
+        stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
+        return 0
 
     if args.subcommand == "list":
         if args.status == "ALL":
@@ -102,6 +159,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
                 operator_id=args.operator_id,
                 at=now,
                 reason=args.reason,
+                token=args.token,
             )
             output = {
                 "ok": True,
@@ -124,6 +182,13 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
             }
             stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
             return 2
+        except PermissionError as exc:
+            output = {
+                "ok": False,
+                "error": str(exc),
+            }
+            stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
+            return 1
         except ValueError as exc:
             output = {
                 "ok": False,

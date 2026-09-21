@@ -13,7 +13,12 @@ class ReleaseBundleIntegrityError(ValueError):
 
 
 class ReleaseBundle(BaseModel):
-    """Immutable release bundle certifying exact code, config, and schema hashes."""
+    """Immutable release bundle certifying exact code, config, and schema hashes.
+
+    NOTE: The bundle_digest is a content-integrity hash (SHA-256 over all constituent fields),
+    designed for tamper detection and deterministic pipeline gating. It is not an asymmetric
+    cryptographic signature.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -24,6 +29,9 @@ class ReleaseBundle(BaseModel):
     packaged_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
     author: str
     bundle_digest: str
+
+
+ContentIntegrityBundle = ReleaseBundle
 
 
 def compute_sha256(data: str | bytes) -> str:

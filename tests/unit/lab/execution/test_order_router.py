@@ -35,6 +35,7 @@ def test_order_router_normal_submit_acknowledged(temp_router) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.5"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     store.create_order(order, event_id="evt_init_1")
@@ -62,6 +63,7 @@ def test_order_router_definite_reject(temp_router) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("1.0"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     store.create_order(order, event_id="evt_init_2")
@@ -86,6 +88,7 @@ def test_order_router_uncertain_submit_transitions_to_unknown(temp_router) -> No
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.2"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     store.create_order(order, event_id="evt_init_3")
@@ -111,6 +114,7 @@ def test_order_router_cancel_fill_race_partial_fill(temp_router) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("1.0"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     store.create_order(order, event_id="evt_init_4")
@@ -137,6 +141,7 @@ def test_order_router_cancel_fill_race_full_fill(temp_router) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("1.0"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     store.create_order(order, event_id="evt_init_5")

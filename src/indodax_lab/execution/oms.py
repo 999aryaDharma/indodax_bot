@@ -94,6 +94,9 @@ class OmsOrder(BaseModel):
     pair: str
     side: OrderSide
     desired_qty: Decimal
+    limit_price: Decimal | None = None
+    order_type: str = "limit"
+    time_in_force: str = "GTC"
     state: OmsOrderState = OmsOrderState.NEW
     venue_order_id: str | None = None
     filled_qty: Decimal = Decimal("0")
@@ -102,6 +105,16 @@ class OmsOrder(BaseModel):
     created_at: datetime
     updated_at: datetime
     version: int = 1
+
+    @field_validator("limit_price", mode="before")
+    @classmethod
+    def validate_limit_price(cls, value: Any) -> Decimal | None:
+        if value is None:
+            return None
+        parsed = Decimal(str(value))
+        if not parsed.is_finite() or parsed <= 0:
+            raise ValueError("OMS_LIMIT_PRICE_INVALID")
+        return parsed
 
     @field_validator("pair", mode="after")
     @classmethod
@@ -197,6 +210,10 @@ class OmsOrder(BaseModel):
             raise ValueError("OMS_FILL_PRICE_REQUIRED")
         if self.filled_qty == 0 and self.average_fill_price is not None:
             raise ValueError("OMS_ZERO_FILL_HAS_PRICE")
+        if self.order_type == "limit" and (
+            self.limit_price is None or self.limit_price <= Decimal("0")
+        ):
+            raise ValueError("LIMIT_PRICE_REQUIRED")
         return self
 
 
@@ -216,6 +233,9 @@ class OmsStateMachine:
         side: OrderSide,
         desired_qty: Decimal,
         created_at: datetime,
+        limit_price: Decimal | None = None,
+        order_type: str = "limit",
+        time_in_force: str = "GTC",
     ) -> OmsOrder:
         _ensure_utc(created_at, "created_at")
         return OmsOrder(
@@ -224,6 +244,9 @@ class OmsStateMachine:
             pair=pair,
             side=side,
             desired_qty=desired_qty,
+            limit_price=limit_price,
+            order_type=order_type,
+            time_in_force=time_in_force,
             created_at=created_at,
             updated_at=created_at,
         )
@@ -242,16 +265,12 @@ class OmsStateMachine:
         _ensure_utc(at, "transition_at")
         allowed = _ALLOWED_TRANSITIONS[order.state]
         if to_state not in allowed:
-            raise OmsTransitionError(
-                f"OMS_INVALID_TRANSITION:{order.state}->{to_state}"
-            )
+            raise OmsTransitionError(f"OMS_INVALID_TRANSITION:{order.state}->{to_state}")
         if at < order.updated_at:
             raise OmsTransitionError("OMS_TRANSITION_TIME_REGRESSION")
 
         next_venue_id = venue_order_id or order.venue_order_id
-        next_filled = (
-            Decimal(str(filled_qty)) if filled_qty is not None else order.filled_qty
-        )
+        next_filled = Decimal(str(filled_qty)) if filled_qty is not None else order.filled_qty
         if not next_filled.is_finite() or next_filled < 0:
             raise OmsTransitionError("OMS_FILLED_QTY_INVALID")
         if next_filled < order.filled_qty:
@@ -264,13 +283,17 @@ class OmsStateMachine:
         if next_avg is not None and (not next_avg.is_finite() or next_avg <= 0):
             raise OmsTransitionError("OMS_AVERAGE_FILL_PRICE_INVALID")
 
-        if to_state in {
-            OmsOrderState.ACKNOWLEDGED,
-            OmsOrderState.PARTIALLY_FILLED,
-            OmsOrderState.FILLED,
-            OmsOrderState.CANCEL_PENDING,
-            OmsOrderState.CANCELLED,
-        } and not next_venue_id:
+        if (
+            to_state
+            in {
+                OmsOrderState.ACKNOWLEDGED,
+                OmsOrderState.PARTIALLY_FILLED,
+                OmsOrderState.FILLED,
+                OmsOrderState.CANCEL_PENDING,
+                OmsOrderState.CANCELLED,
+            }
+            and not next_venue_id
+        ):
             raise OmsTransitionError("OMS_VENUE_ORDER_ID_REQUIRED")
 
         if to_state == OmsOrderState.PARTIALLY_FILLED:
@@ -298,3 +321,16 @@ class OmsStateMachine:
             }
         )
         return OmsOrder.model_validate(next_payload)
+
+
+# Re-export OmsStore for convenient modular access
+from indodax_lab.execution.oms_store import OmsStore  # noqa: E402
+
+__all__ = [
+    "OmsOrder",
+    "OmsOrderState",
+    "OmsStateMachine",
+    "OmsStore",
+    "OmsTransitionError",
+    "TERMINAL_STATES",
+]

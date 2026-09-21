@@ -94,13 +94,7 @@ class DataQualityGuard:
         findings: list[str] = []
 
         # 1. OHLC numeric invariants
-        if (
-            bar.open <= 0
-            or bar.high <= 0
-            or bar.low <= 0
-            or bar.close <= 0
-            or bar.base_volume < 0
-        ):
+        if bar.open <= 0 or bar.high <= 0 or bar.low <= 0 or bar.close <= 0 or bar.base_volume < 0:
             findings.append("INVALID_CANDLE_NEGATIVE_OR_ZERO_PRICE")
 
         if bar.high < bar.low:
@@ -129,13 +123,12 @@ class DataQualityGuard:
                 findings.append("DUPLICATE_CANDLE_TIMESTAMP")
             elif bar_end < last_end:
                 findings.append("OUT_OF_ORDER_CANDLE_TIMESTAMP")
-                if bar_start > last_end:
-                    gap_seconds = (bar_start - last_end).total_seconds()
-                    findings.append(f"MISSING_CANDLE_INTERVAL_GAP_{gap_seconds:.0f}S")
+            elif bar_start > last_end:
+                gap_seconds = (bar_start - last_end).total_seconds()
+                findings.append(f"MISSING_CANDLE_INTERVAL_GAP_{gap_seconds:.0f}S")
 
         has_seq_err = (
-            "DUPLICATE_CANDLE_TIMESTAMP" in findings
-            or "OUT_OF_ORDER_CANDLE_TIMESTAMP" in findings
+            "DUPLICATE_CANDLE_TIMESTAMP" in findings or "OUT_OF_ORDER_CANDLE_TIMESTAMP" in findings
         )
         if not has_seq_err:
             self._last_bar_end_by_pair_interval[pair_key] = bar_end

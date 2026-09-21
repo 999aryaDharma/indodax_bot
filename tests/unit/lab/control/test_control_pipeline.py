@@ -166,6 +166,7 @@ def test_pipeline_shadow_mode_routes_to_venue(pipeline_fixture) -> None:
 
 def test_pipeline_manual_approval_queues_proposal(pipeline_fixture) -> None:
     pipeline, _, _, approval_store, _, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
     pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
 
     intent = SignalIntent(
@@ -202,6 +203,8 @@ def test_pipeline_manual_approval_queues_proposal(pipeline_fixture) -> None:
 
 def test_pipeline_autonomous_limited_success_and_breach(pipeline_fixture) -> None:
     pipeline, _, _, _, risk_engine, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
     pipeline.set_mode(ExecutionMode.AUTONOMOUS_LIMITED)
 
     # 1. Order within limit (0.0001 BTC * 1e9 = 100,000 IDR <= 500,000 limit)
@@ -249,6 +252,8 @@ def test_pipeline_autonomous_limited_uncertain_submit_trips_kill_switch(
     pipeline_fixture,
 ) -> None:
     pipeline, fake_venue, _, _, risk_engine, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
     pipeline.set_mode(ExecutionMode.AUTONOMOUS_LIMITED)
 
     # Configure fake venue to time out after write -> transitions to UNKNOWN

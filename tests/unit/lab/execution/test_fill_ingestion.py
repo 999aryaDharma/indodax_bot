@@ -79,6 +79,7 @@ def test_fill_ingestion_single_buy_updates_ledger_and_oms(temp_env) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.10"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     oms_store.create_order(order, event_id="evt_1")
@@ -130,6 +131,7 @@ def test_fill_ingestion_completes_order_to_filled(temp_env) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.05"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     oms_store.create_order(order, event_id="evt_1")

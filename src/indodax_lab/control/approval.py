@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import uuid
@@ -15,6 +17,30 @@ from pydantic import BaseModel, ConfigDict
 from indodax_lab.execution.oms import OmsOrder
 
 logger = logging.getLogger("approval_store")
+
+
+def generate_approval_token(
+    proposal_id: str,
+    operator_id: str,
+    expires_at: datetime,
+    secret_key: bytes | str,
+) -> str:
+    """Generate deterministic HMAC-SHA256 authorization token for operator approval."""
+    secret = secret_key.encode() if isinstance(secret_key, str) else secret_key
+    payload = f"{proposal_id}:{operator_id}:{expires_at.isoformat()}".encode()
+    return hmac.new(secret, payload, hashlib.sha256).hexdigest()
+
+
+def verify_approval_token(
+    token: str,
+    proposal_id: str,
+    operator_id: str,
+    expires_at: datetime,
+    secret_key: bytes | str,
+) -> bool:
+    """Constant-time verification of operator approval authorization token."""
+    expected = generate_approval_token(proposal_id, operator_id, expires_at, secret_key)
+    return hmac.compare_digest(token, expected)
 
 
 class ProposalStatus(StrEnum):
@@ -37,6 +63,7 @@ class PendingProposal(BaseModel):
     decided_at: datetime | None = None
     decided_by: str | None = None
     decision_reason: str | None = None
+    approval_token: str | None = None
 
 
 class ManualApprovalStore:
@@ -46,9 +73,16 @@ class ManualApprovalStore:
         self,
         default_ttl_seconds: int = 300,
         persistence_path: Path | None = None,
+        signing_secret: bytes | str | None = None,
     ) -> None:
         self.default_ttl_seconds = default_ttl_seconds
         self.persistence_path = Path(persistence_path) if persistence_path is not None else None
+        if signing_secret is not None:
+            self.signing_secret: bytes | None = (
+                signing_secret.encode() if isinstance(signing_secret, str) else signing_secret
+            )
+        else:
+            self.signing_secret = None
         self._lock = RLock()
         self._proposals: dict[str, PendingProposal] = {}
         if self.persistence_path is not None and self.persistence_path.exists():
@@ -121,6 +155,7 @@ class ManualApprovalStore:
         operator_id: str,
         at: datetime,
         reason: str = "OPERATOR_APPROVED",
+        token: str | None = None,
     ) -> PendingProposal:
         """Operator explicitly approves order proposal."""
         with self._lock:
@@ -143,12 +178,25 @@ class ManualApprovalStore:
                 self._save()
                 raise TimeoutError(f"PROPOSAL_EXPIRED:{proposal_id}")
 
+            if self.signing_secret is not None:
+                if not token:
+                    raise PermissionError(f"MISSING_APPROVAL_TOKEN:{proposal_id}")
+                if not verify_approval_token(
+                    token,
+                    proposal_id,
+                    operator_id,
+                    current.expires_at,
+                    self.signing_secret,
+                ):
+                    raise PermissionError(f"INVALID_APPROVAL_TOKEN:{proposal_id}")
+
             approved = current.model_copy(
                 update={
                     "status": ProposalStatus.APPROVED,
                     "decided_at": at,
                     "decided_by": operator_id,
                     "decision_reason": reason,
+                    "approval_token": token,
                 }
             )
             self._proposals[proposal_id] = approved

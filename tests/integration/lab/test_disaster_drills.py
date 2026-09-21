@@ -51,6 +51,7 @@ def test_drill_1_crash_after_submit_recovers_across_restart(tmp_path: Path) -> N
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.05"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     oms_store_1.create_order(order, event_id="evt_init_d1")
@@ -105,6 +106,7 @@ def test_drill_2_http_500_server_error_and_kill_switch_halt(tmp_path: Path) -> N
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.02"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     oms_store.create_order(order, event_id="evt_init_d2")
@@ -112,10 +114,29 @@ def test_drill_2_http_500_server_error_and_kill_switch_halt(tmp_path: Path) -> N
     unknown_order = router.submit_order(order, now=NOW)
     assert unknown_order.state == OmsOrderState.UNKNOWN
 
-    # Because order never reached venue, resolution resolves to REJECTED
+    # Inconclusive venue lookup: order not found on venue MUST remain UNKNOWN (no silent reject)
     resolved = router.resolve_unknown_order(unknown_order, now=NOW + timedelta(seconds=2))
-    assert resolved.state == OmsOrderState.REJECTED
-    assert "NOT_FOUND_ON_VENUE" in str(resolved.last_reason)
+    assert resolved.state == OmsOrderState.UNKNOWN
+
+    # Only an explicit venue reject status allows transition to REJECTED
+    from indodax_lab.execution.venue import VenueOrder
+
+    venue.orders_by_client_id["cl_drill_2"] = VenueOrder(
+        order_id="venue_rej_2",
+        client_order_id="cl_drill_2",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        order_type="limit",
+        price=Decimal("1000000000"),
+        original_qty=Decimal("0.02"),
+        remaining_qty=Decimal("0.02"),
+        executed_qty=Decimal("0"),
+        status="rejected",
+        submitted_at=NOW,
+    )
+    explicit_resolved = router.resolve_unknown_order(unknown_order, now=NOW + timedelta(seconds=3))
+    assert explicit_resolved.state == OmsOrderState.REJECTED
+    assert "VENUE_EXPLICIT_REJECT" in str(explicit_resolved.last_reason)
 
 
 def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
@@ -139,6 +160,7 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.10"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
     oms_store.create_order(order, event_id="evt_init_d3")

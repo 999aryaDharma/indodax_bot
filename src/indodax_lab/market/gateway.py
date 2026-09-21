@@ -89,6 +89,7 @@ class MarketGateway:
                 if date_hdr:
                     try:
                         from email.utils import parsedate_to_datetime
+
                         venue_server_utc = parsedate_to_datetime(date_hdr).astimezone(UTC)
                     except Exception:
                         venue_server_utc = None
@@ -216,11 +217,16 @@ class MarketGateway:
         # 5. Classify overall health state
         has_stale = any("STALE" in f for f in findings)
         has_critical = any(
-            f in (
+            f
+            in (
+                "INVALID_LAST_PRICE_NON_POSITIVE",
                 "INVALID_BID_NON_POSITIVE",
                 "INVALID_ASK_NON_POSITIVE",
                 "CROSSED_MARKET_ASK_LESS_THAN_BID",
             )
+            or f.startswith("CRITICAL_")
+            or f.startswith("INVALID_")
+            or f.startswith("CROSSED_")
             for f in findings
         )
 

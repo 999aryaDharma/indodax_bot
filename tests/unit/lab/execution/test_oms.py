@@ -32,6 +32,7 @@ def _new_order():
         pair="btc_idr",
         side=OrderSide.BUY,
         desired_qty=Decimal("0.00005000"),
+        limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
 
@@ -210,6 +211,7 @@ def test_model_boundary_rejects_acknowledged_without_venue_id():
             pair="btc_idr",
             side=OrderSide.BUY,
             desired_qty=Decimal("0.00005"),
+            limit_price=Decimal("1000000000"),
             state=OmsOrderState.ACKNOWLEDGED,
             created_at=NOW,
             updated_at=NOW,
@@ -224,5 +226,6 @@ def test_client_order_id_contract_matches_indodax_limit():
             pair="btc_idr",
             side=OrderSide.BUY,
             desired_qty=Decimal("0.00005"),
+            limit_price=Decimal("1000000000"),
             created_at=NOW,
         )
