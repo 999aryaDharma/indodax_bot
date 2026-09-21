@@ -5,6 +5,11 @@ must live behind the OMS and must not be added to the read-only client.
 """
 
 from indodax_lab.execution.fake_venue import DeterministicFakeVenue
+from indodax_lab.execution.fill_ingestion import (
+    FillIngestionResult,
+    FillIngestionStatus,
+    VenueFillIngester,
+)
 from indodax_lab.execution.fill_normalizer import (
     VenueFillNormalizationError,
     normalize_venue_fill,
@@ -62,6 +67,8 @@ from indodax_lab.execution.venue import (
 __all__ = [
     "DeterministicFakeVenue",
     "DurableReconciliationCoordinator",
+    "FillIngestionResult",
+    "FillIngestionStatus",
     "IndodaxReadOnlyClient",
     "IndodaxTradingVenue",
     "OmsConcurrencyError",
@@ -89,6 +96,7 @@ __all__ = [
     "VenueAccountSnapshot",
     "VenueBalance",
     "VenueFill",
+    "VenueFillIngester",
     "VenueFillNormalizationError",
     "VenueOrder",
     "VenueReadError",

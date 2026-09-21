@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from indodax_lab.backtest.ledger import ResearchLedger
+from indodax_lab.execution.fill_ingestion import VenueFillIngester
 from indodax_lab.execution.read_only_reconciler import (
     PrivateReadOnlyReconciliationService,
 )
@@ -40,6 +41,7 @@ class DurableReconciliationCoordinator:
         cursor_store: ReconciliationCursorStore,
         scope_id: str,
         overlap_ms: int = 5000,
+        fill_ingester: VenueFillIngester | None = None,
     ) -> None:
         if not scope_id.strip():
             raise ValueError("RECONCILIATION_SCOPE_REQUIRED")
@@ -49,6 +51,7 @@ class DurableReconciliationCoordinator:
         self.cursor_store = cursor_store
         self.scope_id = scope_id
         self.overlap_ms = overlap_ms
+        self.fill_ingester = fill_ingester
 
     def run(
         self,
@@ -58,10 +61,26 @@ class DurableReconciliationCoordinator:
         expected_open_order_ids: Set[str],
         evaluation_time: datetime,
         history_limit: int = 1000,
+        auto_ingest_fills: bool = False,
     ) -> ReconciliationCycleResult:
         cursor = self.cursor_store.load(self.scope_id)
         if cursor is None:
             raise RuntimeError("RECONCILIATION_CURSOR_NOT_INITIALIZED")
+
+        end_ms = int(evaluation_time.timestamp() * 1000)
+
+        # Ingest fills into ledger before reconciliation if requested
+        if auto_ingest_fills and self.fill_ingester is not None:
+            if hasattr(self.service, "client") and hasattr(self.service.client, "get_trade_fills"):
+                for pair in tracked_pairs:
+                    pair_fills = self.service.client.get_trade_fills(
+                        pair,
+                        start_time_ms=cursor.next_start_ms,
+                        end_time_ms=end_ms,
+                        limit=history_limit,
+                        sort="asc",
+                    )
+                    self.fill_ingester.ingest_fills(pair_fills)
 
         report = self.service.run(
             ledger=ledger,
