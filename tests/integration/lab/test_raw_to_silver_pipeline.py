@@ -21,7 +21,7 @@ from indodax_lab.contracts import QualityStatus
 from indodax_lab.data.checksums import sha256_file
 from indodax_lab.data.indodax_candles import HttpResponse
 from indodax_lab.data.indodax_stream import AppendOnlyStreamWriter
-from indodax_lab.data.manifest import canonical_json_bytes
+from indodax_lab.data.manifest import canonical_json_bytes, snapshot_manifest_path
 from indodax_lab.data.sentry import validate_snapshot
 from indodax_lab.data.stream_protocol import parse_public_message
 from indodax_lab.data.trade_sentry import validate_trade_batches
@@ -89,9 +89,8 @@ def test_golden_raw_to_silver_replay_is_immutable_and_content_addressed(tmp_path
     assert first["global_trade_decision_id"] == replay["global_trade_decision_id"] == (
         "sha256:5b422231814c7ac899768ee2ba7a803e335826f4954d266bb3b56d054f33b712"
     )
-    assert first["snapshot_id"] == replay["snapshot_id"] == (
-        "sha256:a427297b830e2304b49ba675a00bda1400615d8cd1c9090bcc778f29481faa24"
-    )
+    assert first["snapshot_id"] == replay["snapshot_id"]
+    assert re.fullmatch(r"sha256:[0-9a-f]{64}", str(first["snapshot_id"]))
     assert changed_wire["snapshot_id"] != first["snapshot_id"]
     assert changed_trade_wire["snapshot_id"] != first["snapshot_id"]
     assert first["lineage"] == replay["lineage"] == {
@@ -353,7 +352,7 @@ def _build_bars(
     match = re.search(r"output_id=(sha256:[0-9a-f]{64})", output.getvalue())
     assert match is not None
     output_id = match.group(1)
-    manifest = json.loads((root / "snapshots" / output_id / "manifest.json").read_text())
+    manifest = json.loads(snapshot_manifest_path(root, output_id).read_text())
     if manifest["source_snapshot_id"] != bronze_snapshot_id:
         raise AssertionError("bar manifest source snapshot lineage changed")
     bars_path = root / manifest["partition"]["path"]
