@@ -375,15 +375,26 @@ class LiveShadowEngine:
 
         booster = self.models[pair]
         meta = self.metadata[pair]
-        f_means = meta.get("feature_means", {})
-        f_stds = meta.get("feature_stds", {})
+        f_means = meta.get("feature_means")
+        f_stds = meta.get("feature_stds")
+        if not isinstance(f_means, dict) or not isinstance(f_stds, dict):
+            return None
+        if any(col not in f_means or col not in f_stds for col in FEATURE_COLS):
+            return None
+        if booster.num_features() != len(FEATURE_COLS):
+            return None
 
         scaled_vals = []
         for col in FEATURE_COLS:
-            val = float(features_series.get(col, 0.0))
-            m = float(f_means.get(col, 0.0))
-            s = float(f_stds.get(col, 1.0))
-            scaled_vals.append((val - m) / (s if s != 0 else 1.0))
+            raw_value = features_series.get(col)
+            if raw_value is None:
+                return None
+            val = float(raw_value)
+            m = float(f_means[col])
+            s = float(f_stds[col])
+            if not math.isfinite(val) or not math.isfinite(m) or not math.isfinite(s) or s <= 0:
+                return None
+            scaled_vals.append((val - m) / s)
 
         dmat = xgb.DMatrix(np.array([scaled_vals], dtype=np.float32))
         margin = float(booster.predict(dmat, output_margin=True)[0])
@@ -552,7 +563,8 @@ class LiveShadowEngine:
             df = self.compute_features(df)
             curr = df.iloc[-1]
             prev = df.iloc[-2]
-            live_px = live_prices.get(pair, float(curr['close']))
+            ticker_px = live_prices.get(pair)
+            live_px = ticker_px if ticker_px is not None else float(curr["close"])
 
             # Diagnostics dictionary
             diag = {
@@ -573,6 +585,28 @@ class LiveShadowEngine:
                 "action": "SKIP",
                 "reason": "",
             }
+
+            latest_bar_close = datetime.fromtimestamp(
+                int(curr["timestamp"]) + 3600,
+                tz=UTC,
+            )
+            if ticker_px is None:
+                diag["action"] = "REJECT_MARKET_DATA_UNAVAILABLE"
+                diag["reason"] = "LIVE_TICKER_MISSING: no execution proxy available"
+                eval_results.append(diag)
+                continue
+            if now_utc - latest_bar_close > timedelta(minutes=90):
+                diag["action"] = "REJECT_STALE_MARKET_DATA"
+                diag["reason"] = (
+                    "STALE_CLOSED_BAR: latest 1h close is older than 90 minutes"
+                )
+                eval_results.append(diag)
+                continue
+            if not math.isfinite(float(ticker_px)) or float(ticker_px) <= 0:
+                diag["action"] = "REJECT_MARKET_DATA_INVALID"
+                diag["reason"] = "LIVE_TICKER_INVALID"
+                eval_results.append(diag)
+                continue
 
             # Map strategy and thresholds
             if pair in ["eth_idr", "sol_idr"]:
