@@ -113,10 +113,11 @@ No order-write credential is required or permitted for this phase.
 
 ## Gate to the next phase
 
-A write-capable venue adapter may be developed behind the OMS only after the read-only
-integration is venue-proven. Even then, initial activation remains MANUAL_APPROVAL with
-bounded capital and reconciliation after fills.
+The write-capable venue adapter (`IndodaxTradingClient`), `OrderRouter`, fail-closed `UNKNOWN` recovery engine, and `TradingPipeline` have been implemented and verified under comprehensive deterministic disaster drills on `dev`.
 
+However, initial activation on live accounts remains strictly gated behind:
+1. G5 signoff (view-only credentials proven against live exchange);
+2. G6 manual approval canary (bounded micro-capital, manual approval per order via `python -m indodax_lab.cli.approval`, and continuous reconciliation via `python -m indodax_lab.cli.reconcile`).
 
 ## Redacted view-only smoke command
 
@@ -136,3 +137,24 @@ The command probes `getInfo`, `openOrders`, Trade API v2 order history, and Trad
 v2 fill history. Its JSON output intentionally excludes credentials, balances, order
 IDs, client order IDs, quantities, and fill contents. A successful smoke is necessary
 evidence for G5, but is not by itself enough to pass G5.
+
+## Routine Operator CLI Commands
+
+To execute routine reconciliation:
+~~~powershell
+python -m indodax_lab.cli.reconcile --scope-id indodax_main --pairs btc_idr,eth_idr --cursor-db var/reconciliation_cursor.db
+~~~
+
+To manage human approvals in semi-automated mode:
+~~~powershell
+python -m indodax_lab.cli.approval list --store-path var/approval_store.json
+python -m indodax_lab.cli.approval approve <proposal_id> --operator-id <operator_token> --store-path var/approval_store.json
+~~~
+
+To manage the emergency kill switch:
+~~~powershell
+python -m indodax_lab.cli.kill_switch status
+python -m indodax_lab.cli.kill_switch trip --reason "MANUAL_HALT"
+python -m indodax_lab.cli.kill_switch clear
+~~~
+

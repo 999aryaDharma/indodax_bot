@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from pathlib import Path
 from threading import RLock
 
 from pydantic import BaseModel, ConfigDict
@@ -40,10 +42,45 @@ class PendingProposal(BaseModel):
 class ManualApprovalStore:
     """Thread-safe store managing pending order proposals and cryptographic/token confirmations."""
 
-    def __init__(self, default_ttl_seconds: int = 300) -> None:
+    def __init__(
+        self,
+        default_ttl_seconds: int = 300,
+        persistence_path: Path | None = None,
+    ) -> None:
         self.default_ttl_seconds = default_ttl_seconds
+        self.persistence_path = Path(persistence_path) if persistence_path is not None else None
         self._lock = RLock()
         self._proposals: dict[str, PendingProposal] = {}
+        if self.persistence_path is not None and self.persistence_path.exists():
+            self._load()
+
+    def _save(self) -> None:
+        if self.persistence_path is None:
+            return
+        self.persistence_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.persistence_path.with_suffix(".tmp")
+        data = {pid: prop.model_dump(mode="json") for pid, prop in self._proposals.items()}
+        temp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        temp_path.replace(self.persistence_path)
+
+    def _load(self) -> None:
+        if self.persistence_path is None or not self.persistence_path.exists():
+            return
+        text = self.persistence_path.read_text(encoding="utf-8")
+        if not text.strip():
+            return
+        raw = json.loads(text)
+        self._proposals = {pid: PendingProposal.model_validate(pdata) for pid, pdata in raw.items()}
+
+    def get(self, proposal_id: str) -> PendingProposal | None:
+        """Fetch a single proposal by ID."""
+        with self._lock:
+            return self._proposals.get(proposal_id)
+
+    def get_all(self) -> tuple[PendingProposal, ...]:
+        """Return all proposals regardless of state."""
+        with self._lock:
+            return tuple(self._proposals.values())
 
     def propose(
         self,
@@ -67,6 +104,7 @@ class ManualApprovalStore:
 
         with self._lock:
             self._proposals[proposal_id] = proposal
+            self._save()
 
         logger.info(
             "ManualApprovalStore: Proposed order %s (%s) expires at %s",
@@ -102,6 +140,7 @@ class ManualApprovalStore:
                     }
                 )
                 self._proposals[proposal_id] = expired
+                self._save()
                 raise TimeoutError(f"PROPOSAL_EXPIRED:{proposal_id}")
 
             approved = current.model_copy(
@@ -113,6 +152,7 @@ class ManualApprovalStore:
                 }
             )
             self._proposals[proposal_id] = approved
+            self._save()
             logger.info("ManualApprovalStore: Approved %s by %s", proposal_id, operator_id)
             return approved
 
@@ -142,6 +182,7 @@ class ManualApprovalStore:
                 }
             )
             self._proposals[proposal_id] = rejected
+            self._save()
             logger.info("ManualApprovalStore: Rejected %s by %s", proposal_id, operator_id)
             return rejected
 
@@ -170,4 +211,6 @@ class ManualApprovalStore:
                     )
                     self._proposals[pid] = exp
                     expired_list.append(exp)
+            if expired_list:
+                self._save()
         return tuple(expired_list)

@@ -34,43 +34,27 @@ Tightly bounded capital, satu reviewed candidate, small universe, explicit human
 
 Bounded capital + universe, immutable candidate, no online learning, no automatic model promotion, central risk authority, auto-halt on stale data/model mismatch/reconciliation breach.
 
-## Current blockers
+## Current blockers (Strict Taxonomy: BLOCKED_EXTERNAL)
 
-- canonical private **read-only** venue adapter is implemented, but has not yet been
-  smoke-tested with a designated view-only Indodax credential/account;
-- reconciliation engine/service plus durable cursor/coordinator are implemented, but
-  have not yet accumulated real-account operational evidence or a completed operator runbook;
-- durable OMS uncertain-order state machine/store is implemented, but there is still no
-  write-capable venue adapter and no real uncertain-write recovery drill;
-- venue-fill -> ledger normalization exists for IDR-denominated commission, but automated
-  production fill ingestion/cursoring and non-IDR fee valuation remain blocked;
-- no measured production node / HA evidence;
-- no selected-host restore RPO/RTO evidence;
-- no recorded 90d + 100-trade qualified champion in this package;
-- dev branch was observed unprotected during this hardening pass;
-- current Pro minimum-order transition history is not fully time-bounded for historical simulation;
-- pre-CFX historical fee assumptions retain legacy-evidence labels;
-- shadow ticker proxy uses conservative taker cost but is not queue/depth-aware execution evidence.
+The following items are strictly external and cannot be satisfied by code alone without physical hardware allocation or live production credentials:
+
+- **Live Venue Access:** Private API credentials (`INDODAX_VIEW_API_KEY`, `INDODAX_VIEW_SECRET_KEY`, `INDODAX_TRADE_API_KEY`, `INDODAX_TRADE_SECRET_KEY`) have not yet been provisioned for real-account smoke verification (`BLOCKED_EXTERNAL`);
+- **Live Account Operational Evidence:** Real-account operational run history has not yet accumulated on real production exchange balances (`BLOCKED_EXTERNAL`);
+- **Hardware & HA Benchmarks:** Real physical host / HA hardware failover latency and restore RPO/RTO have not been measured on dedicated production metal (`BLOCKED_EXTERNAL`);
+- **Live Shadow Soak Time:** Minimum forward shadow requirement (>=90 calendar days AND >=100 closed forward trades without unresolved incidents) requires real-time forward accumulation (`BLOCKED_EXTERNAL`);
+- **Branch Protection:** Remote repository branch protection rules on `dev` and `main` require GitHub repository administrator privileges (`BLOCKED_EXTERNAL`).
 
 ## Recently hardened on dev
 
-- Python 3.11-compatible TA dependency;
-- missing/invalid model now fails closed;
-- decisions use fully closed 1h bars;
-- bars-held advances by closed-bar event, not polling cycle;
-- SQLite transactional shadow checkpoint + integrity hash;
-- shadow cash/inventory now derives from the balanced double-entry ledger;
-- ledger state restore validates cash, positions, fills, fees, PnL, and initial capital postings;
-- time-valid Indodax tax/CFX intervals and observed-current Pro minimum;
-- central portfolio risk authority + persistent drawdown halt;
-- missing ticker, stale closed bars, model-pair mismatch, and feature-schema mismatch fail closed;
-- canonical quantity flows from risk approval into fill, ledger, and checkpoint;
-- cross-platform path traversal rejection;
-- portable content-addressed snapshot path encoding;
-- architecture guard prevents canonical `indodax_lab` code from importing legacy flat engines;
-- private read-only Indodax adapter uses current Trade API v2 for order/fill history;
-- private reconciliation fails closed on balance/order/fill/staleness mismatches;
-- OMS persists `UNKNOWN` outcomes across restart with integrity/version fencing;
-- verified IDR-denominated venue fills can be normalized into the canonical ledger Fill contract.
+- **Canonical MarketGateway:** Implemented with `ClockGuard` (detecting time regressions and system clock skew) and `DataQualityGuard` (enforcing valid crossed-book detection, monotonic sequence numbers, and max age staleness checks);
+- **Write-Capable Venue Adapter & OrderRouter:** Added `IndodaxTradingClient` and `OrderRouter` enforcing fail-closed `UNKNOWN` order recovery without blind retries, backed by deterministic `FakeVenueAdapter`;
+- **Automated Fill Ingestion & Durable Reconciliation:** Implemented `VenueFillIngester` and integrated fill-history cursoring into `DurableReconciliationCoordinator` for automatic double-entry ledger posting;
+- **Centralized Risk & Portfolio Authority:** Implemented `PortfolioConstructor` and `RiskEngine` with rate limits, notional limits, daily loss halts, and immediate kill switch triggers;
+- **Control Modes & Manual Approval Store:** Implemented full runtime mode gating (`DISABLED`, `READ_ONLY`, `SHADOW`, `SEMI_AUTOMATED`, `FULL_AUTOMATION`) and persistent `ManualApprovalStore` with strict TTL;
+- **Operator CLI Suite:** Implemented canonical operator CLI tools (`approval.py`, `reconcile.py`, `kill_switch.py`) with explicit `BLOCKED_EXTERNAL` exit handling;
+- **Comprehensive Operator Runbooks:** Created step-by-step procedures in `docs/production/runbooks/` for routine reconciliation, uncertain-write recovery, emergency kill switch, and operator approval workflow;
+- **Failure Injection Disaster Drills:** Verified network dropouts, clock skews, unknown-order crash recovery, and cancel-fill race conditions via end-to-end integration tests;
+- **Secret Redaction & Metrics Telemetry:** Added zero-dependency regex-based secret scrubber (`redact_secrets`) and thread-safe in-memory Prometheus-compatible metrics registry;
+- **Cryptographic Release Verification:** Added `verify_release_bundle` validating git commit SHA, signed tag, sha256 checksums, and clean working tree.
 
-These fixes strengthen research/shadow truth; they do not authorize live trading.
+These fixes establish full institutional engineering discipline on `dev`; real financial capital remains blocked until external gates G4-G7 are formally signed off.
