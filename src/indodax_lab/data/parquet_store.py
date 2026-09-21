@@ -22,6 +22,7 @@ from .manifest import (
     build_dataset_manifest,
     canonical_json_bytes,
     read_manifest,
+    snapshot_manifest_path,
 )
 from .publication import (
     IndeterminatePublicationError,
@@ -242,10 +243,7 @@ class ParquetStore:
 
     def _write_manifest(self, manifest: dict[str, object]) -> Path:
         snapshot_id = str(manifest["dataset_snapshot_id"])
-        # Content IDs retain the canonical ``sha256:<digest>`` form in the
-        # manifest, but ':' is not a legal Windows filename character.
-        path_component = snapshot_id.replace(":", "_")
-        manifest_path = self._data_root / "snapshots" / path_component / "manifest.json"
+        manifest_path = snapshot_manifest_path(self._data_root, snapshot_id)
         _ensure_directory_tree(manifest_path.parent)
         expected_bytes = canonical_json_bytes(manifest)
         partial_path = manifest_path.parent / f".{uuid.uuid4().hex}.partial"
