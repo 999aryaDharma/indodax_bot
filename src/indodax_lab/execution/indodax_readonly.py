@@ -128,6 +128,20 @@ def _symbol(pair: str) -> str:
     return _pair(pair).replace("_", "")
 
 
+def _side(value: Any, field_name: str) -> OrderSide:
+    try:
+        return OrderSide(str(value).lower())
+    except ValueError as exc:
+        raise VenueProtocolError(f"INVALID_ORDER_SIDE:{field_name}") from exc
+
+
+def _required_text(value: Any, field_name: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise VenueProtocolError(f"MISSING_TEXT:{field_name}")
+    return text
+
+
 def _validate_time_window(start_time_ms: int | None, end_time_ms: int | None) -> None:
     if start_time_ms is not None and start_time_ms <= 0:
         raise ValueError("INVALID_START_TIME")
@@ -256,8 +270,20 @@ class IndodaxReadOnlyClient:
                     continue
                 raise VenueReadError("INDODAX_NETWORK_ERROR") from exc
 
-            payload = self._json_payload(response)
-            if response.status_code >= 500 and attempt + 1 < self.max_attempts:
+            retryable = response.status_code == 429 or response.status_code >= 500
+            try:
+                payload = self._json_payload(response)
+            except VenueProtocolError as exc:
+                if retryable and attempt + 1 < self.max_attempts:
+                    self._sleep_fn(0.25 * (2**attempt))
+                    continue
+                if retryable:
+                    raise VenueReadError(
+                        f"INDODAX_RETRYABLE_HTTP_NON_JSON:http={response.status_code}"
+                    ) from exc
+                raise
+
+            if retryable and attempt + 1 < self.max_attempts:
                 self._sleep_fn(0.25 * (2**attempt))
                 continue
             if response.status_code >= 400:
@@ -469,12 +495,12 @@ class IndodaxReadOnlyClient:
         if remaining > original:
             raise VenueProtocolError("INDODAX_OPEN_ORDER_REMAIN_EXCEEDS_ORIGINAL")
         return VenueOrder(
-            order_id=str(row.get("order_id", "")),
+            order_id=_required_text(row.get("order_id"), "open_order.order_id"),
             client_order_id=(
                 str(row["client_order_id"]) if row.get("client_order_id") else None
             ),
             pair=pair,
-            side=OrderSide(str(row.get("type", "")).lower()),
+            side=_side(row.get("type"), "open_order.type"),
             order_type=str(row.get("order_type", "limit")).lower(),
             status="OPEN",
             price=_decimal(row.get("price"), "open_order.price", positive=True),
@@ -487,7 +513,7 @@ class IndodaxReadOnlyClient:
     @staticmethod
     def _parse_legacy_order(pair: str, row: Mapping[str, Any]) -> VenueOrder:
         base = pair.split("_", 1)[0]
-        side = OrderSide(str(row.get("type", "")).lower())
+        side = _side(row.get("type"), "order.type")
         original_key = f"order_{base}"
         remaining_key = f"remain_{base}"
 
@@ -502,7 +528,7 @@ class IndodaxReadOnlyClient:
             raise VenueProtocolError("INDODAX_ORDER_REMAIN_EXCEEDS_ORIGINAL")
         finish_raw = row.get("finish_time")
         return VenueOrder(
-            order_id=str(row.get("order_id", "")),
+            order_id=_required_text(row.get("order_id"), "order.order_id"),
             client_order_id=(
                 str(row["client_order_id"]) if row.get("client_order_id") else None
             ),
@@ -530,12 +556,12 @@ class IndodaxReadOnlyClient:
             raise VenueProtocolError("INDODAX_ORDER_EXECUTED_EXCEEDS_ORIGINAL")
         finish_raw = row.get("finishTime")
         return VenueOrder(
-            order_id=str(row.get("orderId", "")),
+            order_id=_required_text(row.get("orderId"), "order.orderId"),
             client_order_id=(
                 str(row["clientOrderId"]) if row.get("clientOrderId") else None
             ),
             pair=pair,
-            side=OrderSide(str(row.get("side", "")).lower()),
+            side=_side(row.get("side"), "order.side"),
             order_type=str(row.get("type", "")).lower(),
             status=str(row.get("status", "")).upper(),
             price=_decimal(row.get("price"), "order.price"),
@@ -560,8 +586,8 @@ class IndodaxReadOnlyClient:
         if not isinstance(is_buyer, bool) or not isinstance(is_maker, bool):
             raise VenueProtocolError("INDODAX_FILL_ROLE_INVALID")
         return VenueFill(
-            fill_id=str(row.get("tradeId", "")),
-            order_id=str(row.get("orderId", "")),
+            fill_id=_required_text(row.get("tradeId"), "fill.tradeId"),
+            order_id=_required_text(row.get("orderId"), "fill.orderId"),
             client_order_id=(
                 str(row["clientOrderId"]) if row.get("clientOrderId") else None
             ),
