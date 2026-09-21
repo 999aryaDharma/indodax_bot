@@ -2,10 +2,10 @@
 test_live_shadow_engine.py — Unit tests for LiveShadowEngine
 
 Tests:
-1. Exact double-entry fee accounting (Maker 0.1111% buy, 0.3211% sell)
+1. Time-valid fee accounting and conservative taker proxy semantics
 2. Fixed fractional position sizing (1.5% risk capped at 25% cash)
 3. Capacity limit enforcement (Max 2 concurrent positions)
-4. State persistence and recovery from JSON checkpoint
+4. State persistence and recovery from transactional SQLite checkpoint
 5. Trailing stop and take profit trigger logic
 """
 
@@ -26,7 +26,7 @@ from indodax_lab.paper.live_shadow_engine import (
 @pytest.fixture
 def temp_engine():
     with tempfile.TemporaryDirectory() as tmp_dir:
-        state_file = Path(tmp_dir) / "shadow_state.json"
+        state_file = Path(tmp_dir) / "shadow_state.sqlite3"
         engine = LiveShadowEngine(
             state_file=state_file,
             initial_cash=Decimal("500000.00"),
@@ -174,3 +174,46 @@ def test_trailing_stop_advancement(temp_engine):
     updated_pos = temp_engine.open_positions["pos_trail_test"]
     assert updated_pos.highest_price == 42000000.0
     assert updated_pos.stop_loss == 40000000.0
+
+
+
+def test_missing_model_fails_closed(temp_engine):
+    """A missing model must never become a neutral 0.50 probability."""
+    temp_engine.models.clear()
+    temp_engine.metadata.clear()
+    features = pd.Series({name: 0.0 for name in [
+        "log_ret_1", "log_ret_6", "log_ret_24", "atr_pct_14",
+        "ema_ratio_20_50", "dist_ema_200", "bb_z", "bb_width",
+        "rsi_14", "adx_14", "vol_z_20",
+    ]})
+    assert temp_engine.predict_probability("btc_idr", features) is None
+
+
+def test_bars_held_advances_only_on_new_closed_bar(temp_engine):
+    """Polling the same closed 1h candle repeatedly must not age a position."""
+    pos = ShadowPosition(
+        position_id="pos_clock_test",
+        pair="eth_idr",
+        strategy_id="C02_EMA_TREND_PULLBACK",
+        entry_ts="2026-09-17 00:00:00 UTC",
+        entry_price=40000000.0,
+        qty=0.0025,
+        cash_debited=100000.0,
+        buy_fee_paid=100.0,
+        stop_loss=35000000.0,
+        take_profit=50000000.0,
+        entry_atr=1000000.0,
+        highest_price=40000000.0,
+        last_bar_timestamp=100,
+    )
+    temp_engine.open_positions[pos.position_id] = pos
+    prices = {"eth_idr": 40500000.0}
+
+    same_bar = {"eth_idr": pd.DataFrame([{"timestamp": 100}])}
+    temp_engine.check_open_positions(prices, same_bar)
+    temp_engine.check_open_positions(prices, same_bar)
+    assert temp_engine.open_positions[pos.position_id].bars_held == 0
+
+    next_bar = {"eth_idr": pd.DataFrame([{"timestamp": 200}])}
+    temp_engine.check_open_positions(prices, next_bar)
+    assert temp_engine.open_positions[pos.position_id].bars_held == 1
