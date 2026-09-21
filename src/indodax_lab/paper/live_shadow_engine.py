@@ -233,6 +233,7 @@ class LiveShadowEngine:
         event_payload: Dict[str, Any] | None = None,
     ) -> None:
         """Persist state and the causal event in one SQLite transaction."""
+        self._assert_accounting_consistency()
         now = datetime.now(UTC)
         data = {
             "schema_version": 3,
