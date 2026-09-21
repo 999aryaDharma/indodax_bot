@@ -81,6 +81,9 @@ Pada hardening 2026-09-21:
 - shadow risk authority telah memakai canonical `PortfolioRiskManager`;
 - shadow financial state telah memakai canonical balanced `ResearchLedger`;
 - canonical package dilarang mengimpor legacy flat modules;
-- real-money venue adapter/reconciler masih belum diimplementasikan dan tetap production blocker.
+- canonical private read-only venue adapter dan reconciler telah diimplementasikan;
+- durable OMS state machine/store telah diimplementasikan tanpa order-write capability;
+- real order-write venue adapter, production fill ingestion/cursoring, dan venue-proven
+  operational evidence tetap menjadi blocker.
 
 Migration status tidak mengubah project menjadi live-ready.
