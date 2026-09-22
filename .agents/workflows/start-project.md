@@ -1,20 +1,9 @@
 # start-project
 
-## Goal
+**Goal:** Recover repository truth before selecting work.
 
-Recover the project before selecting implementation.
+**Read:** `_BASELINE.md`, `docs/README.md`, master spec, repository audit, branch/worktrees, manifest, imported evidence, and runtime constraints.
 
-## Inputs and preconditions
+**Steps:** Validate the manifest; inspect dirty WIP without mutation; identify current implementation, READY queue, missing external gates, ownership conflicts, and evidence SHA.
 
-Read AGENTS, docs/README, master and repository-audit; inspect branch/worktree status and runtime constraints. Use root AGENTS and the exact relevant feature sprint; no phase-wide implementation scope.
-
-## Procedure
-
-1. Confirm request scope, ownership and current Git state.
-2. Validate manifest; inspect imported evidence and uncommitted WIP without mutation.
-3. Preserve failing evidence and all pre-existing WIP; record command exits rather than impressions.
-4. Output current baseline, READY queue, missing external evidence and ownership proposal.
-
-## Output and failure handling
-
-Output current baseline, READY queue, missing external evidence and ownership proposal. If evidence is unavailable, state that explicitly and use BLOCKED/REVIEW as appropriate. Never bypass dependencies, silently expand scope or manufacture a reviewer identity. Product state changes remain owned by the coordinator.
+**Output:** Baseline, status counts, READY candidates, blockers, preserved WIP list, and owner proposal.

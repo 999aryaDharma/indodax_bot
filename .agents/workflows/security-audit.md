@@ -1,20 +1,9 @@
 # security-audit
 
-## Goal
+**Goal:** Audit changed trust boundaries without live exploitation.
 
-Audit changed trust boundaries.
+**Read:** `_BASELINE.md`, threat surface, sprint, authorized fixtures, and target SHA.
 
-## Inputs and preconditions
+**Steps:** Probe path traversal, untrusted deserialization, chat allowlists, secret redaction, forbidden order access, capability separation, and fail-closed errors with offline tests only.
 
-Read threat surfaces, relevant sprints, authorized local fixture scope and release target SHA. Use root AGENTS and the exact relevant feature sprint; no phase-wide implementation scope.
-
-## Procedure
-
-1. Confirm request scope, ownership and current Git state.
-2. Probe path traversal, untrusted deserialization, chat allowlist, secret redaction and forbidden order access with offline tests.
-3. Preserve failing evidence and all pre-existing WIP; record command exits rather than impressions.
-4. Report reproducible severity findings, mitigation and unresolved acceptance; no live exploit or account mutation.
-
-## Output and failure handling
-
-Report reproducible severity findings, mitigation and unresolved acceptance; no live exploit or account mutation. If evidence is unavailable, state that explicitly and use BLOCKED/REVIEW as appropriate. Never bypass dependencies, silently expand scope or manufacture a reviewer identity. Product state changes remain owned by the coordinator.
+**Output:** Reproducible severity, location, impact, mitigation, test command/exit, unresolved acceptance, and no live account mutation.

@@ -1,20 +1,9 @@
 # change-request
 
-## Goal
+**Goal:** Make a material change traceable before implementation.
 
-Keep major changes traceable.
+**Read:** `_BASELINE.md`, then capture value, alternatives, affected contracts, migration, security, data/compute cost, old-result validity, and DAG impact.
 
-## Inputs and preconditions
+**Steps:** Record the request and CR/ADR decision; update master/spec/feature map/sprint manifest together; validate before implementation; preserve failing evidence and existing WIP.
 
-Record idea, user/system value, alternatives and target capability. Use root AGENTS and the exact relevant feature sprint; no phase-wide implementation scope.
-
-## Procedure
-
-1. Confirm request scope, ownership and current Git state.
-2. Analyze contracts, migration, security, compute/data cost, old result validity and DAG impacts; create ADR when material.
-3. Preserve failing evidence and all pre-existing WIP; record command exits rather than impressions.
-4. Update master/subsystem/feature map/sprints/manifest together and validate before implementation.
-
-## Output and failure handling
-
-Update master/subsystem/feature map/sprints/manifest together and validate before implementation. If evidence is unavailable, state that explicitly and use BLOCKED/REVIEW as appropriate. Never bypass dependencies, silently expand scope or manufacture a reviewer identity. Product state changes remain owned by the coordinator.
+**Output:** Approved scope, affected IDs/files, dependency/status impact, migration/rollback, validator result, and explicit `BLOCKED` reason when evidence is unavailable.

@@ -1,20 +1,9 @@
 # parallel-plan
 
-## Goal
+**Goal:** Plan independent work without shared-file races.
 
-Plan independent work without shared-file races.
+**Read:** `_BASELINE.md`, READY nodes, dependency contracts, worktrees, shared-path list, and host budget.
 
-## Inputs and preconditions
+**Steps:** Partition by ownership; list path/schema/migration overlaps; serialize manifest, central registries, CI, and migrations; assign one owner/reviewer/worktree per unit; publish merge order without merging.
 
-Read DAG ready nodes, input contracts, worktree list and host budget. Use root AGENTS and the exact relevant feature sprint; no phase-wide implementation scope.
-
-## Procedure
-
-1. Confirm request scope, ownership and current Git state.
-2. Partition by capability ownership, list overlapping paths and serialize central config/migrations/status changes.
-3. Preserve failing evidence and all pre-existing WIP; record command exits rather than impressions.
-4. Publish worktree/owner/reviewer map and merge order; DAG independence alone does not authorize parallel writes.
-
-## Output and failure handling
-
-Publish worktree/owner/reviewer map and merge order; DAG independence alone does not authorize parallel writes. If evidence is unavailable, state that explicitly and use BLOCKED/REVIEW as appropriate. Never bypass dependencies, silently expand scope or manufacture a reviewer identity. Product state changes remain owned by the coordinator.
+**Output:** Parallel batch, serialized edges, owner/reviewer map, allowed paths, resource limits, and blockers. DAG independence alone is not permission to write concurrently.
