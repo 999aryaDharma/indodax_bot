@@ -146,6 +146,8 @@ def test_trading_pipeline_execute_approved_proposal(tmp_path: Path) -> None:
         prop.proposal_id,
         at=NOW,
         market_snapshot=snapshot,
+        current_equity=Decimal("5000000000"),   # 5B IDR authoritative equity
+        available_cash=Decimal("5000000000"),   # 5B IDR authoritative cash
     )
 
     # Order was acknowledged/filled via router

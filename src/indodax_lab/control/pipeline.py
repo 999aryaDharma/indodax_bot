@@ -384,6 +384,14 @@ class TradingPipeline:
                     oms_order,
                     event_id=f"evt_init_{oms_order.internal_order_id}",
                 )
+                # Authority gate is invoked when execution_snapshot is available.
+                # When execution_snapshot is None AND require_execution_snapshot=False,
+                # no permit is issued (permit=None). This is intentional for fake/paper
+                # venues where AuthorityGate is not required. Real IndodaxTradingClient
+                # venue enforces the permit boundary independently inside OrderRouter
+                # regardless of this flag (see OrderRouter.submit_order permit check).
+                # Set require_execution_snapshot=True on TradingPipeline to fail-close
+                # autonomous mode when no authoritative snapshot is available.
                 permit = None
                 if execution_snapshot is not None:
                     try:
@@ -508,6 +516,30 @@ class TradingPipeline:
                 )
 
         # 3a. Re-assess risk at execution time
+        # Use authoritative snapshot values when available; caller-supplied
+        # explicit params are accepted as a fallback only for legacy callers.
+        # Invented capital (hardcoded Decimal) is NEVER used — fail closed instead.
+        if execution_snapshot is not None:
+            eq = execution_snapshot.current_equity
+            cash = execution_snapshot.available_cash
+            pos_raw = execution_snapshot.positions
+        else:
+            eq = current_equity
+            cash = available_cash
+            pos_raw = None
+
+        if eq is None:
+            raise MissingEvidenceError(
+                "MISSING_AUTHORITATIVE_EQUITY: current_equity required; "
+                "provide execution_snapshot or current_equity"
+            )
+        if cash is None:
+            raise MissingEvidenceError(
+                "MISSING_AUTHORITATIVE_CASH: available_cash required; "
+                "provide execution_snapshot or available_cash"
+            )
+
+        pos: Mapping[str, Any] = pos_raw if pos_raw is not None else (current_positions or {})
         intent = SignalIntent(
             intent_id=f"exec_{proposal.proposal_id}",
             decision_ts=exec_now,
@@ -516,9 +548,6 @@ class TradingPipeline:
             desired_qty=order.desired_qty,
             limit_price=order.limit_price,
         )
-        eq = current_equity if current_equity is not None else Decimal("100000000")
-        cash = available_cash if available_cash is not None else Decimal("100000000")
-        pos = current_positions or {}
         assessment = self.risk_engine.assess_intent(
             intent,
             current_equity=eq,
