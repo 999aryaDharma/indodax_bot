@@ -1,6 +1,6 @@
 # PM-01 Handoff — Authoritative Fail-Closed Pre-Write Gate
 
-Status: REVIEW — awaiting independent reviewer verdict
+Status: REVIEW — Round 2 remediation at SHA 99c3a0c; awaiting re-review
 
 ## Identity
 
