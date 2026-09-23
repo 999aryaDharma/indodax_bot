@@ -70,7 +70,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 ## Wave 9
 
-- FEAT-04 — Immutable feature materialization [REVIEW; CORE]
+- FEAT-04 — Immutable feature materialization [DONE; CORE]
 - SIM-04 — Net-cost risk and capacity metrics [REVIEW; CORE]
 
 ## Wave 10

@@ -1,11 +1,11 @@
 # FEAT-04 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: FEAT-04 — Immutable feature materialization
 - Implementation agent: Antigravity
-- Independent reviewer: PENDING; exact current code SHA submitted after remediation below.
+- Independent reviewer: `/root/cost01_independent_review` (PASS on exact code SHA `02b349739c28e322f2976f17347f7ba2213f3f58`).
 - Branch / worktree: `feat/feat-04-immutable-feature-materialization`
 - Base SHA: `cefb580`
 - Code target: `feat(feat-04): immutable feature materialization`
@@ -54,7 +54,7 @@ Historical original-target results above refer to implementation SHA `a4bce4d`; 
 ## Review remediation (2026-09-23)
 
 - Continuation owner: Codex; user-requested active worktree branch `feat/feat-02-finalization`, based on `b601db3`.
-- Current exact code target: `dde250fe22319c37ba06d5eecbba1c113653df25` (`fix(feat-04): publish feature artifacts immutably`).
+- Current exact code target: `02b349739c28e322f2976f17347f7ba2213f3f58` (`test(feat-04): cover manifest publish rollback`; includes code fix `dde250fe22319c37ba06d5eecbba1c113653df25`).
 - Finding 1: CLI wrote directly to the requested output and manifest, allowing failed/repeated runs to overwrite prior artifacts. Output now stages to a same-directory partial, fsyncs, publishes with the repository's immutable no-clobber primitive, and rolls back a newly published output if manifest publication fails.
 - Finding 2: feature manifest omitted the validated registry YAML source identity. It now records `feature_registry_source_id` alongside dataset snapshot ID, feature-set version, ordered feature names, and output checksum.
 - RED 1: `python -m pytest tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider -k never_overwrites_existing_artifact` — failed because the old CLI overwrote the existing artifact and did not raise.
@@ -62,7 +62,12 @@ Historical original-target results above refer to implementation SHA `a4bce4d`; 
 - RED 2: `python -m pytest tests/unit/lab/features/test_availability.py -q -p no:cacheprovider -k persists_parquet_and_companion_manifest` — failed because `feature_registry_source_id` was absent.
 - GREEN: full verification `python -m pytest -q -p no:cacheprovider` — 1008 passed, 2 environment-specific skips, 3 sklearn warnings (exit 0).
 - Lint: import-order checks passed for changed CLI/integration files; focused safety/syntax/name checks passed with pre-existing `E712` ignored. Existing unrelated `I001` findings remain in builder and availability tests; broad legacy lint debt was not changed.
-- Re-review status: PENDING; do not mark DONE until independent PASS on the exact code SHA above.
+- First independent review: CHANGES_REQUESTED (Important) on `dde250fe22319c37ba06d5eecbba1c113653df25`: rollback on manifest publish failure lacked a failure-injection test. Reviewer could not complete the focused test command because pytest temp cleanup hit Windows `WinError 5`; source inspection found no other Critical/Important issue.
+- Finding remediation: added `test_build_features_cli_rolls_back_output_when_manifest_publish_fails`, injecting manifest publisher failure after output publication and asserting output rollback, no manifest/partial, and no success output.
+- Remediation verification: `python -m pytest tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider -k rolls_back_output_when_manifest_publish_fails` — 1 passed; combined FEAT-04/availability suite — 34 passed. Import-order lint passed; diff check passed.
+- Independent re-review: PASS on `02b349739c28e322f2976f17347f7ba2213f3f58`; no remaining Critical or Important findings. Reviewer independently ran the 34-test focused FEAT-04/availability suite, including rollback injection, in a fresh Windows temp directory.
+- Owner full suite at the same code SHA: `python -m pytest -q -p no:cacheprovider` — 1009 passed, 2 platform-specific skips, 3 sklearn warnings (exit 0).
+- Review status: PASS; coordinator may mark DONE.
 
 ## Deviations and known risks
 - Deviations: None.

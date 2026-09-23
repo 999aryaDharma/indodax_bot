@@ -2209,9 +2209,9 @@
       "spec": "docs/specs/07-feature-engineering.md",
       "path": "docs/sprints/features/FEAT-04-immutable-feature-materialization.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex (FEAT-04 review remediation)",
+      "independent_reviewer": "Codex independent reviewer agent /root/cost01_independent_review (PASS on exact code SHA 02b349739c28e322f2976f17347f7ba2213f3f58)",
       "recommended_branch": "feat/feat-04-immutable-feature-materialization",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -2235,10 +2235,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/FEAT-04-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "02b349739c28e322f2976f17347f7ba2213f3f58",
+        "code_target": "02b349739c28e322f2976f17347f7ba2213f3f58",
+        "review": "Independent PASS on exact code SHA 02b349739c28e322f2976f17347f7ba2213f3f58. Reviewer verified immutable no-clobber publication, registry source hash in manifest, and failure-injection rollback; focused FEAT-04/availability suite 34 passed. Owner full suite: 1009 passed, 2 environment-specific skips, 3 warnings."
       },
       "acceptance_test_mapping": [
         {
@@ -2270,7 +2271,7 @@
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "Implemented and independently reviewed on exact code SHA 02b349739c28e322f2976f17347f7ba2213f3f58; see FEAT-04 handoff. Original Task 15 WIP provenance remains qualified.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

@@ -25,7 +25,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | FEAT-01 | Versioned feature registry | features | P0 | data | DATA-06 | DONE | [Spec](features\FEAT-01-versioned-feature-registry.md) |
 | FEAT-02 | Golden technical and liquidity transforms | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-02-golden-technical-and-liquidity-transforms.md) |
 | FEAT-03 | As-of market context | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-03-as-of-market-context.md) |
-| FEAT-04 | Immutable feature materialization | features | P0 | data | FEAT-02, FEAT-03 | REVIEW | [Spec](features\FEAT-04-immutable-feature-materialization.md) |
+| FEAT-04 | Immutable feature materialization | features | P0 | data | FEAT-02, FEAT-03 | DONE | [Spec](features\FEAT-04-immutable-feature-materialization.md) |
 | LABEL-01 | Execution-aligned net return labels | labels | P0 | data | FEAT-04, SIM-01 | REVIEW | [Spec](labels\LABEL-01-execution-aligned-net-return-labels.md) |
 | LABEL-02 | Triple barrier outcomes | labels | P0 | data | LABEL-01 | REVIEW | [Spec](labels\LABEL-02-triple-barrier-outcomes.md) |
 | SPLIT-01 | Sealed purged chronological folds | labels | P0 | safety | LABEL-02 | REVIEW | [Spec](labels\SPLIT-01-sealed-purged-chronological-folds.md) |
