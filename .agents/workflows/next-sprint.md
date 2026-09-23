@@ -1,9 +1,9 @@
 # next-sprint
 
-**Goal:** Select one genuinely eligible capability.
+**Goal:** Select a small eligible batch that can progress without file conflicts.
 
 **Read:** `_BASELINE.md`, manifest, execution waves, claims, worktrees, and required reading for candidates.
 
-**Steps:** Compute READY only from DONE dependencies; check external data/host/policy gates and shared-file ownership; select one bounded owner/branch/worktree/reviewer; do not manufacture eligibility.
+**Steps:** Read manifest status once; choose READY nodes with DONE dependencies and disjoint paths; check only applicable external gates; assign one owner per sprint and reserve shared paths; do not manufacture eligibility.
 
-**Output:** Sprint ID, dependencies, required reading, allowed paths, owner/reviewer proposal, base SHA, and exact blocker if none is eligible.
+**Output:** Sprint IDs, dependencies, path owners and concrete blockers only.

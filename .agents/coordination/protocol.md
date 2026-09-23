@@ -1,17 +1,25 @@
-# Coordination and handoff protocol
+# Coordination protocol
 
-## Claims and ownership
+## Start a batch
 
-Before editing, coordinator records sprint ID, owner, branch/worktree, base SHA, requested paths and review owner in a handoff/work log. Claims are exclusive for that sprint. Shared paths (`sprint-manifest.json`, main.py, telegram_bot.py, pyproject.toml, CI, central registry and migrations) need explicit single-writer ownership even when DAG nodes are independent. Actual implementation of a lock service is outside this documentation task.
+1. Check the sprint manifest and working-tree status once.
+2. Pick READY sprints with DONE dependencies. Batch independent sprints when their file scopes do not overlap.
+3. Assign one owner per sprint and one writer per shared path. Record only sprint ID, owner and paths when parallel work makes ownership ambiguous; no separate pre-work dossier is required.
+4. Use the current checkout by default. Create a worktree only when isolation is needed or requested. Preserve all unrelated and user-owned changes.
 
-## Two-agent lifecycle
+Read each sprint spec, its relevant required references and dependency handoff. Reuse context already read in this task. Start coding when scope and dependencies are clear; do not wait for a planning ceremony or routine approval.
 
-Implementer claims READY → IN_PROGRESS; commits scoped work → REVIEW with exact SHA packet. Reviewer returns PASS or CHANGES_REQUESTED with reproducible findings. Implementer fixes only those contracts and updates SHA/evidence. Reviewer verifies new diff and affected invariants. Coordinator releases claim and marks DONE only after final PASS. A third person/agent can coordinate; cannot substitute self-review for independent review.
+## Build and checkpoint
 
-## Interruptions and conflicts
+- Keep changes scoped and use the smallest behavior-level regression check. Show RED when practical, then GREEN.
+- Run focused checks by default. Run broad suites only for shared contracts, schemas/migrations, broad refactors or release gates.
+- Commit coherent, passing slices as they are ready. Stage explicit owned paths; never include another owner's or user's work.
+- Keep one concise handoff per sprint: exact SHA, changed scope, commands/results, review state and external gates. Link existing evidence instead of copying it.
 
-If owner disappears, preserve dirty worktree and record last heartbeat/time; do not reset/clean. Coordinator may reassign after inspecting state, but new owner resumes from recorded WIP and same fix-round count. Merge conflicts require understanding both intended behaviors and rerunning affected acceptance, never blindly ours/theirs. If dependency changes while work runs, rebase review target deliberately and reverify.
+## Review and close
 
-## Status versus artifacts
+An independent reviewer checks the final batch SHA once, verifies each sprint's acceptance criteria, and probes risk-specific negative cases. Record a separate PASS/CHANGES_REQUESTED result for each sprint in the batch. Critical/Important findings block DONE; fixes are scoped and the changed SHA is reviewed again. Preserve review-round count.
 
-Manifest changes are serialized. Projection files are updated together and validated. Code SHA differs from subsequent evidence SHA; record both. A DONE imported before this planning system remains labeled historical. No commit implies push or remote backup. No documentation daemon is running.
+After review, the coordinator updates all affected manifest entries and generated projections in one pass. Only independent PASS plus evidence permits DONE. Shared manifest/projection files have one coordinator writer. If review is unavailable, leave REVIEW honestly.
+
+If work is interrupted, preserve changes and report the last committed SHA and remaining scope. Never reset/clean another owner's work. No push, merge, deployment, live host change, credential access or trading action without explicit task authorization.

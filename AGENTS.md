@@ -6,7 +6,7 @@ Read `docs/production/FROZEN-SYSTEMS.md` and its Production Main/Research Workbe
 
 ## Authority and scope
 
-Read `docs/README.md` then `docs/specs/00-master-product-technical-spec.md`. Current user instruction overrides repo guidance. Accepted ADR resolves material conflicts; exact dataset contract lives in `docs/research/dataset-feature-contracts.md` with overrides in ADR-002. Code/tests describe current behavior, not silent permission to weaken intended invariants. Old 35-task plan is crosswalk history, not active dependency ordering.
+Current user instructions override repo guidance. For a task, read the relevant product/spec section when scope or a conflict requires it; do not reread the full master spec mechanically for every sprint. Accepted ADR resolves material conflicts; exact dataset contract lives in `docs/research/dataset-feature-contracts.md` with overrides in ADR-002. Code/tests describe current behavior, not silent permission to weaken intended invariants. Old 35-task plan is crosswalk history, not active dependency ordering.
 
 Production Main on ASUS is a live real-trading system and reads authoritative Indodax account/portfolio state. Its live trading authority remains in the existing backend services; control-plane UI/API work is read-only unless a separate, explicitly scoped task specifies guarded controls. Research, shadow agents and tournaments on ASUS must remain isolated from Production authority and credentials. Lenovo handles ML/DL training and tuning. Keep processes, state, databases, credentials and resource budgets isolated; qualify realistic mixed load before further deployment changes. Do not access live keys, alter live orders/ledger/state, or change the running host while working on read-only control-plane tasks. No promised profit, LLM discretionary execution or auto-merge.
 
@@ -22,23 +22,23 @@ The global `Caveman`, `Ponytail`, and `RTK` tooling is part of the project workf
 
 ## Select work
 
-Use `docs/sprints/sprint-manifest.json` as status/DAG authority. One READY sprint → one owner → one isolated worktree → one independent final reviewer. Verify dependencies DONE and external resource/data/policy gates. Do not equate READY with real-data availability. Imported DONE Tasks1–14 are historical evidence; do not rebuild them without a defect/CR. Task15 untracked WIP on original implementation branch is unverified; inspect before reuse and never overwrite it.
+Use `docs/sprints/sprint-manifest.json` as status/DAG authority. At task start, check it and `git status` once. Select a batch of READY sprints whose dependencies are DONE; parallelize only when their owned paths do not overlap. Assign one owner per sprint and one writer per shared path. Keep working in the current checkout by default; use a worktree only when isolation is needed or requested. Do not equate READY with real-data availability. Imported DONE Tasks1–14 are historical evidence; do not rebuild them without a defect/CR. Task15 untracked WIP on original implementation branch is unverified; inspect before reuse and never overwrite it.
 
 Root instructions here and `.agents/` are shared by Codex and Antigravity. Configure the local tool to read them explicitly; do not assume tool-specific automatic loading behavior. No agent daemon/scheduler is installed by these docs.
 
 ## Work boundaries
 
-Read only chosen sprint Required Reading, dependency handoffs and actual affected code first. Inspect `git status` and worktrees. Use branch named by sprint or scoped `docs/...`; no direct main changes. No broad staging or destructive reset/clean of another agent's work. Planned filenames may be adapted to existing equivalents; record actual paths. Shared-file ownership is coordinated in `.agents/coordination/protocol.md`.
+Read the chosen sprint spec, only the relevant Required Reading, dependency handoffs and affected code. Reuse already-read context; do not reread unchanged global docs or produce a separate plan/claim log for routine work. Start implementation once scope and dependencies are clear. Keep user changes intact; stage explicit owned paths only. Adapt planned filenames to existing equivalents and record actual paths in the handoff. Shared-file ownership and batching follow `.agents/coordination/protocol.md`.
 
 ## Correctness and testing
 
-Behavior tests first where code changes: demonstrate targeted RED, implement, GREEN, then refactor. Missing dependency/import environment alone is not proof of behavior RED. Use fake network/Telegram and temp DB/data. Verify exact units, chronology, costs once, lineage bytes and transactional failure recovery. Never invent evidence from a previous SHA. No required skipped tests hidden in PASS; record environment, command, exit and source SHA. Follow `docs/specs/20-testing-strategy.md` for full-suite risk gates. Docs-only work uses planning validator and diff-check.
+For behavior changes, add or adapt the smallest regression test; demonstrate RED when practical, then GREEN. Missing dependency/import environment alone is not proof of behavior RED. Use fake network/Telegram and temp DB/data. Verify exact units, chronology, costs once, lineage bytes and transactional failure recovery. Run focused checks by default; run the full suite for shared contracts, schemas/migrations, broad refactors or release gates. Never claim skipped checks passed. Record environment, commands/results and source SHA once in the handoff. Docs-only work uses the planning validator when planning/status files change, plus diff-check.
 
 ## Review and done
 
-Implementation owner self-reviews but cannot final-approve own work. Submit committed SHA and `docs/sprints/handoffs/<ID>-HANDOFF.md`. Reviewer independently checks spec AND quality, attempts sprint-specific negative cases and records Critical/Important/Minor findings. Critical/Important block DONE. Fix only scoped findings, re-review exact new SHA; max five rounds then BLOCKED with preserved evidence. No automatic counter reset by changing agents. If independent reviewer unavailable, state REVIEW pending honestly.
+Commit a coherent slice as soon as its focused checks pass; do not hold all code until sprint close. Self-review and submit the exact committed SHA with a concise `docs/sprints/handoffs/<ID>-HANDOFF.md` (scope, checks, review state, external gates). One independent reviewer may review a completed batch once, checking each sprint's acceptance criteria and risk-specific negative cases against the exact SHA. Critical/Important findings block DONE. Fix only scoped findings and re-review the new SHA; preserve fix-round count. If independent review is unavailable, state REVIEW pending honestly.
 
-Coordinator marks DONE only with evidence and independent PASS, recalculates READY and updates projections. For historical imports, provenance is explicitly qualified and unavailable reviewer identity is never fabricated. No merge/push/deploy unless authorized by task context; branches and commits alone are not remote backups.
+After batch review, coordinator updates all affected manifest entries and generated projections in one pass. Mark DONE only with evidence and independent PASS. For historical imports, provenance is explicitly qualified and unavailable reviewer identity is never fabricated. No merge/push/deploy unless authorized by task context; branches and commits alone are not remote backups. Do not ask again for authorization already given; ask only when scope or authority materially changes.
 
 ## Change control and safety
 

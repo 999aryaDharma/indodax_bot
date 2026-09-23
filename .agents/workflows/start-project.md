@@ -1,9 +1,9 @@
 # start-project
 
-**Goal:** Recover repository truth before selecting work.
+**Goal:** Recover project context on a true cold start, without repeating the full audit on every task.
 
 **Read:** `_BASELINE.md`, `docs/README.md`, master spec, repository audit, branch/worktrees, manifest, imported evidence, and runtime constraints.
 
-**Steps:** Validate the manifest; inspect dirty WIP without mutation; identify current implementation, READY queue, missing external gates, ownership conflicts, and evidence SHA.
+**Steps:** On a cold start, validate the manifest and inspect dirty WIP without mutation. On follow-up tasks, reuse established context and check only the active sprint, current working tree and changed dependencies. Identify only the implementation and gates relevant to requested work.
 
-**Output:** Baseline, status counts, READY candidates, blockers, preserved WIP list, and owner proposal.
+**Output:** Cold start: compact baseline and eligible work. Follow-up: active scope, relevant blocker and next action.

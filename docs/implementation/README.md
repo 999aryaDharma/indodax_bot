@@ -30,6 +30,10 @@ Subsystem classifications are IMPLEMENTED (bounded primitive exists), PARTIAL (t
 
 ## Boundaries and delivery
 
-Work is on `docs/architecture-runtime-plan`, isolated from `dev`; no main change, merge, push, deployment, new credentials or runtime DB operation. LUNA implements one READY unit in its own worktree; an independent reviewer checks exact committed SHA. Critical/Important findings block DONE; preserve review rounds (maximum five). Current branch review is recorded in `handoff/REVIEW.md` and the DOC-01 handoff.
+The original DOC-01 documentation delivery used branch `docs/architecture-runtime-plan` and an isolated worktree. That was delivery provenance, not a standing per-sprint workflow requirement. Live host and trading changes remain separately gated.
 
 This program uses Python 3.11-compatible typed contracts, existing Pydantic/Decimal/SQLite/Parquet primitives, and optional model environments. No distributed scheduler, new database service, provider license or hardware capacity is presumed.
+
+## Agent delivery workflow
+
+Use the current `AGENTS.md` and `.agents/coordination/protocol.md` for execution. Batch independent READY sprints when dependencies are DONE and file scopes do not overlap; keep one owner per sprint and one writer per shared path. Work in the current checkout by default. Commit passing slices promptly, run focused checks by default, and have one independent reviewer check each sprint at the final batch SHA. Update manifest and projections once after review. Full audits, repeated global-doc reads, worktrees and full-suite runs are not routine requirements.

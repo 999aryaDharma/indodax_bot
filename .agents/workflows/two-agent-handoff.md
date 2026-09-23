@@ -1,9 +1,9 @@
 # two-agent-handoff
 
-**Goal:** Transfer complete, reviewable context.
+**Goal:** Transfer only the context needed to continue safely.
 
 **Read:** `_BASELINE.md`, sprint, owner/reviewer, base/code/evidence SHAs, changed paths, and every acceptance contract.
 
-**Steps:** Map each AC to tests and results; record contracts, migrations, risks, deviations, open blockers, and exact receiver verification steps; preserve incomplete evidence.
+**Steps:** Link the sprint and relevant contracts; record exact SHA, completed scope, checks/results, remaining work and blockers. Preserve incomplete evidence without repeating the spec.
 
-**Output:** Receiver-ready packet with status, SHA, commands/exits, AC matrix, rollback/recovery notes, and no invented progress.
+**Output:** Concise receiver-ready status, SHA, commands/results and next action; no invented progress.

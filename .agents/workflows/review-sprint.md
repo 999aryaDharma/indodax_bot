@@ -1,9 +1,9 @@
 # review-sprint
 
-**Goal:** Independently falsify one exact sprint SHA.
+**Goal:** Independently falsify the final SHA for one sprint or a disjoint sprint batch.
 
 **Read:** `_BASELINE.md`, immutable code SHA, handoff, sprint spec, reviewer checklist, and affected production interfaces.
 
-**Steps:** Inspect diff and fixtures; reproduce positive and adversarial cases; check units, provenance, rollback, scope, security, and failure recovery; issue separate spec and quality verdicts.
+**Steps:** Inspect diff and fixtures once; check each sprint's acceptance criteria and probe material risk-specific negative cases; report only reproducible findings.
 
-**Output:** Exact SHA, commands/exits, Critical/Important/Minor findings, spec verdict, quality verdict, and PASS only when both are clean.
+**Output:** Exact SHA, focused checks, findings by severity, and a separate PASS/CHANGES_REQUESTED per sprint.

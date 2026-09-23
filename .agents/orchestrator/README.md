@@ -4,17 +4,17 @@ Status: DOCUMENTED ONLY; no listener, scheduler, daemon or automatic task is cre
 
 ## Input and output
 
-Inputs: validated sprint manifest, explicit active portfolio, claim records, handoffs, independent review reports, user changes. Outputs: one bounded agent assignment or a concrete blocker; coordinator-authored status projection changes. It must never launch real trading activity.
+Inputs: validated sprint manifest, requested portfolio, working-tree ownership and user changes. Outputs: a small batch of independent assignments or a concrete blocker; coordinator-authored status projection changes. It must never launch real trading activity.
 
 ## Scheduler rules for a future implementation
 
-Reconcile manifest dependency status before assignment. A claim includes sprint_id, owner_id, reviewer_id, branch/worktree, base_sha, allowed_paths, lease_generation, heartbeat, fix_round. Allow one implementation owner; reserve overlapping paths. A reviewer must differ from implementation author. Lease loss requires inspection/preservation of WIP before reassignment. Fencing prevents stale owner from changing coordinator state.
+Reconcile manifest dependency status once before assignment. Batch READY sprints with DONE dependencies when paths do not overlap; assign one owner per sprint and reserve shared paths to one writer. Keep the current checkout by default; use a worktree only when isolation is needed. A reviewer must differ from implementation authors. Inspect and preserve WIP before reassignment. Avoid lease/heartbeat machinery unless an actual concurrent coordinator needs it.
 
-When work reaches REVIEW, schedule independent review; on CHANGES_REQUESTED increment round and return scoped fixes. At five unsuccessful rounds set BLOCKED, preserve all evidence and request root redesign review. On DONE recompute descendants, never recursively run every unblocked optional track. Data/compute budget and owner activation remain independent admission checks.
+Schedule one independent review at the end of the implementation batch, with per-sprint acceptance results on the exact batch SHA. On CHANGES_REQUESTED increment the round and return scoped fixes. At five unsuccessful rounds set BLOCKED and preserve evidence. After PASS, recompute readiness once; do not recursively run unrelated optional tracks. Data/compute budget and owner activation remain independent admission checks.
 
 ## Idempotency and audit
 
-Assignment key = sprint + base SHA + claim generation. Review key = sprint + exact code SHA + reviewer identity. Same report cannot mark a different SHA done. Record all transitions, time and reason. No auto-merge. If no callable agent runner exists, follow workflows manually; documentation is not a claim of background execution.
+Review key = sprint + exact code SHA + reviewer identity. Same report cannot mark a different SHA done. Record only decisions needed to explain ownership, review and status changes. No auto-merge. If no callable agent runner exists, follow workflows manually; documentation is not a claim of background execution.
 
 ## Implementation boundary
 

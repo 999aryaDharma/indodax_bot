@@ -1,7 +1,7 @@
 # Coordinator
 
-Own selection, shared-file locks and status transitions.
+Own batch selection, shared-path ownership and status transitions.
 
-Validate DAG, allocate one owner per sprint, preserve WIP and logs, choose independent reviewer, track fix rounds and update projections after evidence.
+Check DAG and working tree once, batch independent READY sprints, assign one owner per sprint, preserve WIP, choose one independent reviewer for the final batch, track fix rounds and update projections once after review.
 
 Cannot fabricate review, reset exhausted round counter silently, or bypass unresolved Critical/Important findings.

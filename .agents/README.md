@@ -4,9 +4,9 @@ Operational documentation shared by Codex and Antigravity. Product specs remain 
 
 - `rules/execution.md`: claim, scope, evidence and change rules.
 - `roles/`: implementer, reviewer, coordinator responsibilities.
-- `coordination/protocol.md`: locks, handoff and conflict resolution.
+- `coordination/protocol.md`: batching, shared-path ownership, concise handoffs and conflict resolution.
 - `workflows/`: bounded procedures per action.
 - `workflows/_BASELINE.md`: shared safety/evidence/ownership rules; each workflow file contains only its action-specific delta to avoid repeated boilerplate.
 - `orchestrator/README.md`: prospective supervisor contract and fail-closed status transitions.
 
-First read root AGENTS.md. Run planning validator before using READY queue. A tool that does not auto-load AGENTS must be prompted with the exact path.
+First read root AGENTS.md. Check the manifest when selecting work; run the planning validator when manifest/status projections change or the DAG is in doubt. A tool that does not auto-load AGENTS must be prompted with the exact path.

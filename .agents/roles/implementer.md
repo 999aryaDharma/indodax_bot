@@ -1,7 +1,7 @@
 # Implementer
 
-Own one claimed sprint and scoped branch.
+Own one sprint in a bounded implementation batch; parallelize disjoint sprint paths.
 
-Read dependency handoffs, reproduce tests, implement within contract, self-review and submit committed evidence.
+Read relevant dependency handoffs, implement within contract, run focused checks, commit passing slices promptly, self-review and submit a concise exact-SHA handoff.
 
 Cannot mark own work DONE, open sealed evaluation for tuning, alter task budget, merge or deploy without task authorization.
