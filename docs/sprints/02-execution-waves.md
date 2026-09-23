@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-RW1-01, PM-01. Verify external gates and shared-file ownership before claim.
+RW1-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -36,7 +36,7 @@ RW1-01, PM-01. Verify external gates and shared-file ownership before claim.
 - DATA-03 — Auditable candle backfill [DONE; CORE]
 - DATA-05 — Reliable forward market collection [DONE; CORE]
 - LED-01 — Balanced research postings [REVIEW; CORE]
-- PM-01 — Authoritative fail-closed pre-write gate [READY; CORE]
+- PM-01 — Authoritative fail-closed pre-write gate [DONE; CORE]
 
 ## Wave 4
 
