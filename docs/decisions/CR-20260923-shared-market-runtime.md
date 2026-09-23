@@ -25,3 +25,13 @@ Outcome: one detailed [runtime design](../production/research-workbench/SHARED-M
 Documentation must preserve Production Main authority and G0–G7, distinguish tournament/portfolio modes, specify bounded failure behavior, expose CLI/service drift, and link all implementation phases to tests, observability and rollback. Run the planning validator, Markdown link checks and diff-check. No product-test or host qualification claim comes from these checks.
 
 Rollback of documentation restores the prior documentation revision without deleting evidence. Runtime rollback is a separate, namespace-aware procedure in the design; no financial history is rewound.
+
+## Documentation verification and review — 2026-09-23
+
+Reviewed design SHA: `624ceadb30a708176d59554886f6d44332f0f521`; cumulative base: `b8b4dc5d88c098e395585cd3d2c8bf724f1dee1b`. This section is a subsequent evidence-only amendment, not an assertion that the design's future implementation has passed.
+
+- `python docs/quality/validate_planning.py`: exit 0, PASS; 119 nodes, 214 edges, zero cycles. Manifest/status files were not changed.
+- `git diff b8b4dc5 HEAD --check -- docs` at reviewed SHA: exit 0. Local Markdown file targets and heading anchors checked across all 15 changed/new documents: PASS.
+- Independent reviewer `/root/shared_runtime_docs_review`: initial review requested one Important correction for periodic-trigger identity; fix adds durable trigger envelopes, original-input binding, deadline/recovery semantics and prescribed regression cases. Re-review of exact design SHA above: PASS, no remaining Critical/Important findings.
+- Review scope: documentation requirements, architecture consistency, recovery/identity/resource/authority boundaries. Product tests, live provider behavior, ASUS measurements and deployment readiness were not certified or claimed. Runtime/config/service files and unrelated `dashboard.pen` were not changed by this task.
+- Output remains on the existing `docs/architecture-runtime-plan` worktree branch; no merge, push, service activation or live execution occurred.
