@@ -8,4 +8,4 @@ Tasks1–14 map to historical DONE capabilities. Basis: committed code/test hist
 
 Task15 is split FEAT-01…04. New manifest starts FEAT-01 READY with WIP explicitly unverified, not IN_PROGRESS under a fictitious active agent. COST-01 is also structurally READY. READY means dependencies DONE; execution additionally obeys external data, policy and resource gates.
 
-Host roles preserve prior ASUS-light/Lenovo-heavy design but deployment capacity and actual available hosts must be audited before activation. Local DBs only; cross-host immutable transfer. No network-shared SQLite WAL, distributed scheduler or production throughput claim is implied.
+Host placement in this ADR is superseded by [ADR-009](ADR-009-asus-production-and-research-runtime.md): ASUS hosts separate Production Main and Research Runtime services, while Lenovo performs ML/DL training and tuning. Local DBs only; cross-host immutable transfer. No network-shared SQLite WAL, distributed scheduler or production throughput claim is implied.

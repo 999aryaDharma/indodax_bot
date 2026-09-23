@@ -1,6 +1,6 @@
 # API-03 — Fail-closed read capability policy and audit context Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Protect access to the existing live Production read surface; do not grant write authority. Independent review is required before DONE.
 
 **Goal:** Require explicit request identity and production.read capability before serving sensitive operational data.
 
@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: READY
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
@@ -181,4 +181,4 @@ Create docs/sprints/handoffs/API-03-HANDOFF.md with exact SHA, commands/results,
 
 ## Ready-to-Run Implementation Prompt
 
-Implement API-03 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement API-03 only. Protect the live Production read surface without granting write authority; stop if any dependency is not DONE.

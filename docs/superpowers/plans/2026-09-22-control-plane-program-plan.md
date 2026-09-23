@@ -65,7 +65,7 @@ Do not start dashboard pages before the relevant read models and API schemas exi
 
 ### Wave A — shared contracts, Production read models and frontend foundation
 
-API-00 and UI-00 can proceed in parallel on disjoint paths. After their independent PASS, API-01, API-03 and UI-01 can proceed according to the manifest DAG. Finish API-02 after API-01/API-03, then UI-02. This is the first paper/shadow-only implementer wave.
+API-00 and UI-00 can proceed in parallel on disjoint paths. After their independent PASS, API-01, API-03 and UI-01 can proceed according to the manifest DAG. Finish API-02 after API-01/API-03, then UI-02. These are read-only control-plane implementation sprints for the owner's live Production Main; Research/shadow state remains isolated. This plan does not authorize live execution changes or host deployment.
 
 ### Wave B — dashboard shell and operational read views
 

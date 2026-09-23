@@ -1,19 +1,16 @@
 # Production node build sheet
 
-Status: DESIGN / NOT LIVE-READY
+Status: DESIGN / NOT LIVE-READY. Current host allocation follows [ADR-009](../decisions/ADR-009-asus-production-and-research-runtime.md): ASUS is the Production Main host and also runs a separate Research Runtime. Co-resident capacity and deployment remain unqualified.
 
-Dokumen ini adalah deployment skeleton untuk future real-money node. Gunakan hanya setelah live release gates lulus.
+Dokumen ini adalah deployment skeleton for the existing live Production Main on ASUS. It does not authorize modifying live operation, credentials, deployment or execution policy; changes still require their scoped approvals and frozen release gates.
 
 ## Host roles
 
-### Research workstation
-Lenovo menjalankan backfill, feature/materialization, model training, experiment registry, sealed evaluation, dan candidate packaging. Host ini tidak memiliki order-write credential.
+### ASUS `asus-server`
+ASUS X441U/X441UV (`asus-server`) hosts Production Main and Research Runtime as separate services and authority domains. Production Main owns its frozen release and state; Research Runtime owns public collection, shared research features, qualified CPU inference, Tournament/Portfolio Shadow and research evidence. They use separate identities, roots, local databases, credentials and measured resource budgets. Neither service trains models. No shared SQLite WAL or second writer.
 
-### Production execution node
-Dedicated x86_64 Linux host, SSD-backed dan wired network preferred. Satu host memiliki satu execution authority. Host ini menjalankan frozen candidate saja, tanpa training.
-
-### ASUS Research Runtime / Shadow Edge
-ASUS X441U/X441UV (`asus-server`) menjalankan public collection, shared features, qualified CPU inference, Tournament/Portfolio Shadow, evidence dan monitoring. Training tetap di Lenovo. ASUS tidak menjadi Production Main execution authority atau second order writer. Perubahan host role dicatat dalam [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md).
+### Lenovo daily laptop
+Runs ML/DL model training and tuning. It stages immutable model outputs for receiving-side verification on ASUS; Lenovo does not receive Production credentials or manage the ASUS Production process.
 
 Baseline dari pemilik: Ubuntu Server 22.04.5 LTS x86_64; i3-6006U 2 core/4 thread ~2 GHz; RAM 4 GB; swap ~3.7 GB; tanpa compute GPU. Root/LVM ~98 GB dan usage ~51% adalah observasi historis untuk diukur ulang. Ethernet diprioritaskan atas Wi-Fi; Tailscale untuk administration/immutable transfer. Host berbagi CPU/RAM/disk/network dengan layanan lain. Swap adalah kapasitas darurat dan aktivitas swap memicu overload handling.
 
@@ -73,7 +70,7 @@ Jika OMS, ledger dan reconciler menjadi multi-process writers atau dipisah linta
 
 ## Planned services
 
-Daftar berikut khusus future Production Main, bukan daftar service ASUS. ASUS target memakai satu `lab-shadow.service` terintegrasi (feed + features + shadow, satu optional inference child); `lab-collector.service` adalah mode collection-only yang mutual-exclusive untuk feed/root sama; `lab-worker.service` tetap Lenovo-only. Pada audited `dev`, modul `cli.shadow` dan `cli.collector` yang dirujuk unit lama belum ada, sedangkan `cli.collect_market_stream` ada. [Kontrak entrypoint/cutover](research-workbench/SHARED-MARKET-RUNTIME.md#concrete-entrypoints-and-cutover) menetapkan perbaikannya sebagai pekerjaan implementasi. Dokumentasi ini tidak mengaktifkan service tersebut.
+Production service definitions below target ASUS Production Main with separate Production roots and identity. Research on ASUS uses `lab-shadow.service` (feed + features + shadow, one optional inference child); `lab-collector.service` is collection-only and mutually exclusive for the same feed/root; `lab-worker.service` remains Lenovo-only for qualified training/tuning jobs. At the audited `dev` SHA, `cli.shadow` and `cli.collector` are missing, while `cli.collect_market_stream` exists. [Entrypoint/cutover contract](research-workbench/SHARED-MARKET-RUNTIME.md#concrete-entrypoints-and-cutover) remains implementation work. This document does not activate services.
 
 ~~~text
 indodax-market.service

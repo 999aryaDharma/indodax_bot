@@ -8,7 +8,7 @@ Research Workbench is the canonical research operating system for strategy disco
 
 It is intentionally flexible. It must never become a shortcut around Production Main safety gates.
 
-The [Shared Market Runtime design](SHARED-MARKET-RUNTIME.md) and [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) extend this frozen boundary with explicit Lenovo/ASUS host roles, WebSocket recovery, shared features/inference and capacity qualification. They describe planned integration; the current REST shadow path and standalone WebSocket collector remain separate at the audited `dev` SHA.
+The [Shared Market Runtime design](SHARED-MARKET-RUNTIME.md), [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) and [ADR-009](../../decisions/ADR-009-asus-production-and-research-runtime.md) extend this frozen boundary with ASUS Production/Research co-location, Lenovo ML/DL training/tuning, WebSocket recovery, shared Research features/inference and mixed-load qualification. They describe planned integration; the current REST shadow path and standalone WebSocket collector remain separate at the audited `dev` SHA.
 
 ## 1. Core principle
 
@@ -164,14 +164,15 @@ This improves rate-limit behavior and guarantees that tournament agents see the 
 
 WebSocket is the target continuous public source. One centrally owned subscription set covers admitted candidate inputs; REST supplies bootstrap/history/metadata/recovery and bounded sanity checks. In-process bounded fan-out delivers durable validated events to recorder, feature runtime and shadow consumers. The same feature snapshot, loaded model instance and deterministic prediction are reused across eligible consumers. Slow consumers pause/resynchronize with recorded coverage gaps; queues never grow without limit.
 
-## 7.1 Compute planes and ASUS constraints
+## 7.1 Compute planes and host boundaries
 
-- Lenovo owns historical data processing, feature research, backtests, walk-forward, ML/DL/RL training, tuning, candidate packaging and runtime artifact optimization.
-- ASUS `asus-server` is an always-on Research Runtime / Shadow Edge. Owner-reported baseline: X441U/X441UV, Ubuntu Server 22.04.5 x86_64, i3-6006U 2 cores/4 threads, 4 GB RAM, approximately 3.7 GB swap, no compute GPU. Swap is overload/emergency capacity. Root/LVM approximately 98 GB and historical usage approximately 51% must be remeasured.
-- ASUS hosts lightweight collection, shared feature computation, shadow evaluation, qualified CPU inference, evidence, local SQLite state and monitoring. It has bounded active models/windows/queues and shares resources with existing services. Training and parameter sweeps are prohibited.
-- Production Main remains a separate execution authority and frozen release chain. ASUS does not authorize real orders. A larger runtime host is a deployment/qualification change, not a different candidate contract.
+- ASUS `asus-server` hosts both Production Main and Research Workbench execution: experiments, backtests, isolated shadow agents, tournaments and qualified CPU inference. The services have separate identities, roots, local state stores, authority and resource budgets. This is one physical host, not independent HA.
+- Lenovo is the owner's daily laptop and is reserved for ML/DL model training and tuning. Model artifacts move to ASUS only through immutable export and receiving-side verification; Lenovo does not manage ASUS processes or state.
+- Research Runtime owns the shared public market-data feed, feature processing, shadow/tournament evidence and its own local SQLite state. Production Main independently owns Production market-data health and authoritative financial state; no feed status, DB, credential or ledger is shared.
+- Read-only SSH inventory on 2026-09-24 00:24 WITA found Ubuntu 22.04.5, kernel `5.15.0-187-generic`, 4 logical CPUs (2 cores), 3.7 GiB RAM (1.9 GiB available), 3.7 GiB swap (1.7 GiB used), and 29 GiB free on the 98 GiB root volume. Several Docker co-tenants were active; one container was restarting. These point-in-time facts are not capacity qualification; the owner-reported CPU-only baseline still needs stress and thermal verification.
+- Training and parameter sweeps stay on Lenovo. ASUS must preserve measured Production headroom; under pressure optional Research work is deferred/stopped first. Unknown resource state blocks new admission.
 
-Qualification covers idle and realistic shared-host conditions, 30-minute and several-hour load tests, and a 24h+ soak. The [design](SHARED-MARKET-RUNTIME.md#m-resource-governance-and-asus-qualification) defines the workload matrix and metrics; no strategy/model capacity is promised from CPU/RAM specifications.
+Qualification covers actual host inventory and realistic co-resident Production + Research workloads, including 30-minute and several-hour tests and a 24h+ soak, restart isolation, disk recovery and bounded queues. The [runtime design](SHARED-MARKET-RUNTIME.md#m-resource-governance-and-asus-qualification) and [QA-03](../../sprints/verification/QA-03-capacity-and-crash-recovery-qualification.md) define evidence; no strategy/model capacity is promised from CPU/RAM specifications.
 
 ## 8. Research/production firewall
 

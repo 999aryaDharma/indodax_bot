@@ -1,6 +1,6 @@
-# Shared Market Runtime — WebSocket migration and ASUS Research Edge
+# Shared Market Runtime — WebSocket migration and ASUS Research Runtime
 
-Status: ACCEPTED TARGET DESIGN; integration/host qualification not implemented by this document. Date: 2026-09-23. Authority: [Frozen Systems](../FROZEN-SYSTEMS.md), [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md), [change request](../../decisions/CR-20260923-shared-market-runtime.md). Code audit baseline: `dev` at `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Existing worktree planning amendments ADR-005/006/007 remain applicable; they are not represented as code present at that baseline.
+Status: ACCEPTED TARGET DESIGN; integration/host qualification not implemented by this document. Host placement follows [ADR-009](../../decisions/ADR-009-asus-production-and-research-runtime.md): ASUS also hosts the separate Production Main service; Lenovo owns ML/DL training and tuning. ADR-009 supersedes ADR-008 only on Production host placement. Date: 2026-09-23. Authority: [Frozen Systems](../FROZEN-SYSTEMS.md), [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md), [change request](../../decisions/CR-20260923-shared-market-runtime.md). Code audit baseline: `dev` at `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Existing worktree planning amendments ADR-005/006/007 remain applicable; they are not represented as code present at that baseline.
 
 This is the single detailed design for the owner's shared-market and ASUS hardware briefs. It belongs under the canonical Research Workbench documents rather than the historical `docs/architecture/hedge-fund-production-blueprint.md`. Existing production documents link here instead of duplicating runtime contracts. All new symbols/paths below are proposed unless section B explicitly identifies existing code. Inspection establishes source behavior; no product suite, venue smoke or ASUS benchmark was run for this documentation change.
 
@@ -8,9 +8,9 @@ This is the single detailed design for the owner's shared-market and ASUS hardwa
 
 The repo already has a bounded public WebSocket collector with book recovery and immutable publication. The operator shadow entrypoint still fetches ticker/history using REST, recomputes Pandas indicators, eagerly loads pair-specific XGBoost files and evaluates hard-coded branches against one paper portfolio. The gap is integration and shared runtime ownership, not absence of a WebSocket adapter.
 
-Extend that collector into a centrally owned, multi-channel feed. Commit validated events once; distribute local immutable references to shared features, qualified inference and candidate-driven shadow. Admit only bounded workloads. Keep raw evidence and execution decisions recoverable independently. Training and artifact optimization remain on Lenovo; Production Main remains a separate execution authority with its existing frozen chain and gates.
+Extend that collector into a centrally owned, multi-channel feed. Commit validated events once; distribute local immutable references to shared features, qualified inference and candidate-driven shadow. Admit only bounded workloads. Keep raw evidence and execution decisions recoverable independently. Training and tuning remain on Lenovo. Production Main remains a separate execution authority, process and local state store on the same physical ASUS host, with its existing frozen chain and gates.
 
-Selected topology: one supervised ASUS runtime process containing collector, journal coordinator, bounded fan-out, incremental features and lightweight candidate objects; one shared inference subprocess only when models are admitted. This isolates native inference hangs without one Python process/model copy per strategy. An in-process-only inference thread cannot enforce a hard native-call deadline; a broker introduces unnecessary service/memory cost at this stage. No Kafka, RabbitMQ, NATS, Redis, Kubernetes or database-server dependency is required.
+Selected topology: one supervised ASUS Research Runtime composition containing collector, journal coordinator, bounded fan-out, incremental features and lightweight candidate objects; one shared inference subprocess only when models are admitted. This is separate from the co-resident Production Main process, state and authority. Lenovo supplies immutable trained/tuned model artifacts for receiving-side verification. ASUS combined resource capacity must be qualified before deployment; reserve Production headroom and defer optional Research load first. This isolates native inference hangs without one Python process/model copy per strategy. An in-process-only inference thread cannot enforce a hard native-call deadline; a broker introduces unnecessary service/memory cost at this stage. No Kafka, RabbitMQ, NATS, Redis, Kubernetes or database-server dependency is required.
 
 ## B. Repository evidence
 
@@ -63,30 +63,29 @@ MarketGateway -> REST ticker + quality/clock guards
 ## D. Target architecture
 
 ```text
-LENOVO — Research Compute
-historical wire/datasets -> research features -> backtest/walk-forward
- -> bounded tuning + ML/DL/RL training -> reviewed immutable RuntimePlan
- -> candidate/model artifacts + optimization/parity evidence
-                         |
-               verified immutable transfer
-                         v
-ASUS — Research Runtime / Shadow Edge
-public Indodax WS -> canonical local feed -> shared features/inference
- -> Tournament Shadow | Portfolio Shadow -> durable forward evidence
-                         |
-              artifacts + promotion REQUEST
-                         v
-FUTURE PRODUCTION MAIN — separate authority
-Market Gateway -> Data Quality / Clock Guard -> Frozen Feature Runtime
- -> Frozen Candidate -> Portfolio Constructor -> Independent Risk Engine
- -> Pre-Write Authority Gate -> Durable OMS -> Venue Adapter -> Indodax
- -> Fill Normalizer -> Durable Ledger -> Reconciliation
+LENOVO — Daily Laptop: ML/DL Training and Tuning
+bounded model training/tuning -> immutable model artifact
+                              |
+                    staged verified import
+                              v
+ASUS — separate services and state roots on one physical host
+  RESEARCH RUNTIME
+  public Indodax WS -> research feed -> experiments/backtests/features/inference
+   -> Tournament Shadow | Portfolio Shadow -> durable forward evidence
+                              |
+                   candidate + promotion REQUEST
+                              v
+  PRODUCTION MAIN — independent authority and market-data truth
+  Market Gateway -> Data Quality / Clock Guard -> Frozen Feature Runtime
+   -> Frozen Candidate -> Portfolio Constructor -> Independent Risk Engine
+   -> Pre-Write Authority Gate -> Durable OMS -> Venue Adapter -> Indodax
+   -> Fill Normalizer -> Durable Ledger -> Reconciliation
 ```
 
-Production may reuse reviewed market/runtime code and artifact formats. It independently verifies its own release, health, account truth and write authority; ASUS uptime does not become a mandatory remote write-authority dependency by this design.
+Production may reuse reviewed market/runtime code and artifact formats. It independently verifies its own release, health, account truth and write authority; Research feed health and state are never Production truth. Physical co-location does not merge processes, databases, credentials or resource budgets.
 
 ```text
-ASUS: one supervised composition (lab-shadow.service)
+ASUS Research Runtime: one supervised composition (lab-shadow.service), separate from Production services/state
   Subscription/connection owner -> existing public transport/protocol
                  |                    ^ centralized REST repair/bootstrap
                  v
@@ -119,7 +118,7 @@ No strategy thread/process/container by default. The journal owns feed ordering;
 2. One semantic feature calculation/snapshot feeds every compatible consumer.
 3. One loaded instance per admitted model artifact/runtime configuration; registered does not mean loaded.
 4. One deterministic prediction per identical input identity is shared; stateful/non-deterministic models need an explicit state/seed identity or are not admitted to this cache.
-5. Training is outside ASUS and outside Production Main. No fallback to online fitting.
+5. ML/DL training and tuning run on Lenovo, outside ASUS Production Main and Research Runtime. No fallback to online fitting.
 6. Tournament wallets, ledgers, positions and risk state are isolated; Portfolio Shadow deliberately shares capital.
 7. Research promotion evidence never grants execution authority; strategies never own exchange order credentials.
 8. All queues, caches, windows, model memory, payload sizes, workers, retry buffers and retention are bounded.
@@ -306,7 +305,7 @@ One host qualification policy owns CPU/memory soft and hard thresholds, swap act
 | P5 | Optional candidates and additional model loads; pause first |
 | P6 | Analytics/UI/noncritical telemetry; coalesce/throttle first |
 
-These are ASUS research priorities, not Production Main execution priorities. A required model is never silently bypassed to keep a strategy running. Linux cgroup/systemd memory/CPU limits form a qualified final containment boundary; they supplement the same admission policy rather than a competing policy system.
+These are ASUS Research Runtime priorities, not Production Main execution priorities. A required model is never silently bypassed to keep a strategy running. Linux cgroup/systemd memory/CPU limits form a qualified final containment boundary; they supplement the same admission policy rather than a competing policy system.
 
 ### Benchmark matrix and evidence
 
@@ -473,7 +472,7 @@ No ADR is required merely to choose a private helper name. A future broker, cros
 ## T. Acceptance checklist and scaling answer
 
 - [ ] Current code evidence, target interfaces and manifest status are distinct; owner/reviewer evidence names exact implemented SHA.
-- [ ] Lenovo training, ASUS runtime and Production Main authority remain separate; ASUS cannot import/run training or resolve a real order-write adapter.
+- [ ] Lenovo training, ASUS Research Runtime and Production Main authority remain separate; the Research service cannot import/run training or resolve a Production credential/write path.
 - [ ] One subscription/acquisition per required source input serves many candidates; provider limits and recovery behavior are evidenced.
 - [ ] Canonical envelopes preserve actual source timestamp/offset/sequence availability and durable local ordering; conflicting duplicates fail closed.
 - [ ] Reconnect, gaps, malformed payloads, stale feed/clock, replay expiry, REST fallback and epoch changes have tested outcomes without false continuity.

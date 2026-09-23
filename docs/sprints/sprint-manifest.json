@@ -4538,10 +4538,10 @@
         "JOB-02",
         "SHADOW-02"
       ],
-      "goal": "Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.",
-      "contract": "systemd service/timer or equivalent local host supervisor -> start/stop/restart with explicit roots and env.",
+      "goal": "Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.",
+      "contract": "Separate service identities/configuration/state on ASUS + measured Production headroom -> isolated lifecycle; Lenovo profile -> ML/DL training and tuning only.",
       "checks": [
-        "Cold boot tidak menjalankan dua writer",
+        "Cold boot does not start duplicate writers or mix Production and Research service identity/configuration/state",
         "SIGTERM flush dan lease release",
         "Missing secret fail tanpa mencetak secret"
       ],
@@ -4576,7 +4576,9 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/17-operations-security-and-recovery.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/decisions/ADR-009-asus-production-and-research-runtime.md",
+        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md"
       ],
       "evidence": {
         "kind": "unverified_handoff",
@@ -4588,7 +4590,7 @@
         {
           "criterion": "OPS-01-AC0",
           "test_case": "test_ops_01_valid_contract",
-          "behavior": "Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur",
+          "behavior": "Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
@@ -8334,12 +8336,12 @@
         "OPS-03",
         "QA-01"
       ],
-      "goal": "Host yang dipilih punya bukti workload dan recovery sebelum release.",
-      "contract": "measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.",
+      "goal": "ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.",
+      "contract": "current ASUS inventory + representative co-resident Production/Research workload -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence; Lenovo model training stays outside ASUS.",
       "checks": [
-        "Disk-full tidak mengakui sukses",
-        "Worker kill tidak duplicate metrics",
-        "Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata"
+        "Disk-full does not acknowledge success",
+        "Worker termination does not duplicate metrics",
+        "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata"
       ],
       "files": [
         "tests/integration/lab/test_operational_recovery.py",
@@ -8368,7 +8370,9 @@
         "AGENTS.md",
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/decisions/ADR-009-asus-production-and-research-runtime.md",
+        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md"
       ],
       "evidence": {
         "kind": "unverified_handoff",
@@ -8380,7 +8384,7 @@
         {
           "criterion": "QA-03-AC0",
           "test_case": "test_qa_03_valid_contract",
-          "behavior": "Host yang dipilih punya bukti workload dan recovery sebelum release",
+          "behavior": "ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
@@ -8398,7 +8402,7 @@
         {
           "criterion": "QA-03-AC3",
           "test_case": "test_qa_03_contract_3",
-          "behavior": "Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata",
+          "behavior": "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -10989,14 +10993,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-00-shared-api-envelope-error-provenance-and-capability-contracts.md",
       "priority": "P0",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "implementation_owner": "/root/api00_backend",
-      "independent_reviewer": "/root/prod_mvp_final_reviewer",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer (PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1)",
       "recommended_branch": "feat/api-00-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "Shared API contracts are implemented in this workspace and awaiting independent review; read models/routes are out of scope.",
+      "current_context": "Implementation independently reviewed PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1. Production read models/routes remain later work.",
       "unlocks": [
         "API-01",
         "API-03"
@@ -11040,8 +11044,15 @@
       "context_complexity": "L",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
-      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+      "implementation_status_note": "Independent PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1; handoff records focused checks. No ASUS deployment or runtime changes.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/API-00-HANDOFF.md",
+        "source_commit": "3bb7e0a89fb268c06de279f140e9004455a526b1",
+        "code_target": "3bb7e0a89fb268c06de279f140e9004455a526b1",
+        "review": "Independent PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1. API tests 3 passed; frontend Vitest 7 passed; TypeScript check and production build passed; planning validation PASS (126 nodes, 226 edges, no cycles). No ASUS deployment or runtime changes."
+      }
     },
     {
       "id": "API-01",
@@ -11072,7 +11083,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-01-production-service-derived-read-models.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/api-01-production-control-plane",
@@ -11152,7 +11163,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-03-fail-closed-read-capability-policy-and-audit-context.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/api-03-production-control-plane",
@@ -11297,7 +11308,8 @@
       "checks": [
         "Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens",
         "Kumo controls use graphite product tokens rather than default branded colors",
-        "Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states"
+        "Typed client validates complete response envelopes, preserves Decimal strings, hides operational values for EMPTY/UNAVAILABLE, and distinguishes error states",
+        "WITA clock updates live; snapshot shows localized date/time and updating age"
       ],
       "files": [
         "frontend/package.json",
@@ -11310,21 +11322,23 @@
         "frontend/src/api/types.ts",
         "frontend/src/styles/tokens.css",
         "frontend/src/assets/fonts/",
-        "frontend/src/api/client.test.ts"
+        "frontend/src/api/client.test.ts",
+        "frontend/src/app/time.ts",
+        "frontend/src/app/time.test.ts"
       ],
       "type": "integration",
       "tier": "CORE",
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-00-kumo-and-geist-shell-foundation-with-typed-api-client.md",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "implementation_owner": "/root",
-      "independent_reviewer": "/root/prod_mvp_final_reviewer",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer (PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1)",
       "recommended_branch": "feat/ui-00-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "Shell and typed API client are implemented; desktop and smartphone layouts were visually inspected; independent review is pending.",
+      "current_context": "Implementation independently reviewed PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1. Production read models/routes remain later work.",
       "unlocks": [
         "UI-01"
       ],
@@ -11366,8 +11380,15 @@
       "context_complexity": "L",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
-      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+      "implementation_status_note": "Independent PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1; handoff records focused checks. No ASUS deployment or runtime changes.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/UI-00-HANDOFF.md",
+        "source_commit": "3bb7e0a89fb268c06de279f140e9004455a526b1",
+        "code_target": "3bb7e0a89fb268c06de279f140e9004455a526b1",
+        "review": "Independent PASS on exact source SHA 3bb7e0a89fb268c06de279f140e9004455a526b1. API tests 3 passed; frontend Vitest 7 passed; TypeScript check and production build passed; planning validation PASS (126 nodes, 226 edges, no cycles). No ASUS deployment or runtime changes."
+      }
     },
     {
       "id": "UI-01",

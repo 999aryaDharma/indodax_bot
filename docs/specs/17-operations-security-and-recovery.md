@@ -6,13 +6,13 @@ Host lifecycle, backup, transfer and retention. Owns the behavior of the capabil
 
 ## Non-responsibilities
 
-No real-money execution, no silent evaluator policy changes, and no direct mutation of upstream artifacts. This subsystem consumes verified contracts; it cannot repair unavailable upstream information by inventing values.
+Production Main is a live real-trading system. Operational/control-plane read surfaces must consume authoritative live Production state and never silently mutate upstream artifacts or financial state. Research/experiment subsystems do not receive Production trading credentials or write authority. This subsystem consumes verified contracts; it cannot repair unavailable upstream information by inventing values.
 
 ## Capability boundaries
 
 | Sprint | Observable result | Detailed execution scope |
 |---|---|---|
-| OPS-01 | Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur. | `docs/sprints/operations/OPS-01-host-profiles-and-service-lifecycle.md` |
+| OPS-01 | Production Main and Research Runtime run as separate ASUS services with measured Production resource headroom; Lenovo handles ML/DL training and tuning. | `docs/sprints/operations/OPS-01-host-profiles-and-service-lifecycle.md` |
 | OPS-02 | Dataset antar-host ditransfer dan dipulihkan melalui staging yang diverifikasi. | `docs/sprints/operations/OPS-02-snapshot-transfer-and-restore.md` |
 | OPS-03 | Cleanup hanya menghapus artifact tidak direferensikan setelah retention dan dry-run audit. | `docs/sprints/operations/OPS-03-storage-retention-and-integrity-maintenance.md` |
 

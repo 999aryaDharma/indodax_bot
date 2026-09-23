@@ -1,6 +1,6 @@
 # CR-2026-09-23 — Admit Production Read API and Read-Only Dashboard
 
-Status: ACCEPTED by the repository owner for scoped implementation planning and paper/shadow-only development. This does not authorize real-money operation, Production deployment, credential use, or any deployment to ASUS.
+Status: ACCEPTED by the repository owner for scoped implementation planning. Production Main on ASUS is live and reads/operates against the real Indodax account; Research Runtime, shadow agents and tournaments are separate environments on ASUS, while Lenovo handles ML/DL training and tuning. This change request authorizes read-only control-plane API/UI implementation only; it does not change live execution, credentials or host state. Host assignment is recorded in [CR-20260924-ASUS](../decisions/CR-20260924-asus-production-and-research-host.md) and [ADR-009](../decisions/ADR-009-asus-production-and-research-runtime.md).
 
 ## Request
 
@@ -13,17 +13,17 @@ Admit a governed Production Main read API and read-only desktop/smartphone dashb
 - Read endpoints expose only backend-derived state. Unknown/unavailable stays explicit; financial values remain Decimal strings; each snapshot carries UTC `as_of`, source revision, request identity and provenance.
 - API-03 fails closed without an explicit principal/capability. Test/development principals are injected, never inferred as Production operators. No public or remote deployment is part of this CR.
 - UI-00/UI-01/UI-02 use `@cloudflare/kumo` 2.14.0 components and self-hosted Vercel Geist Sans/Mono WOFF2 assets under the upstream SIL Open Font License. Product colors, density, type scale, radii and spacing come from `DESIGN.md`; Kumo defaults must be overridden where they diverge. Use desktop and smartphone layouts only. References: [Kumo component library](https://github.com/cloudflare/kumo), [Geist font source](https://github.com/vercel/geist-font).
-- No order/withdrawal/production-command endpoints, live credentials, ledger repair, candidate mutation, Research UI/API, Docker deployment, or runtime host changes are admitted here.
+- No order/withdrawal/production-command endpoints, credential provisioning or exposure, ledger repair, candidate mutation, Research UI/API, Docker deployment, or runtime host changes are admitted here. Read-only Indodax account views may use the existing Production-owned credential/client authority server-side; credentials must never enter this control-plane API contract, browser, Research runtime or logs.
 - PM-01 through PM-04 are currently DONE in the manifest. PM-05/PM-06 remain PLANNED; release evidence must display unavailable/incomplete until its backend source exists. Research and runtime-parity tasks are not prerequisites for this read-only Production MVP.
 
 ## Host, market-feed, and UI transport boundaries
 
-- The three compute planes remain distinct: Lenovo Research Compute, ASUS Research Runtime/shadow edge, and a future separate Production Main host. ASUS hardware figures are owner-reported planning inputs; live inventory, capacity and qualification are unknown. Do not invent host capacity or deploy Production Main there.
+- Host roles follow ADR-009: ASUS hosts Production Main and a separate Research Runtime; Lenovo performs ML/DL training and tuning. ASUS hardware figures are owner-reported planning inputs; live inventory, capacity and combined-load qualification remain unknown. This implementation CR does not deploy services.
 - Research owns one centrally admitted Indodax public WebSocket subscription runtime on ASUS (union subscriptions, validated/recovered events, durable local journal, bounded fan-out). Research strategies do not own exchange sockets. REST is centrally rate-budgeted for metadata/bootstrap/history/recovery; a detected WS gap pauses affected evaluation rather than being silently bridged by REST.
-- Production Main owns and independently verifies its market gateway/feed health, account truth, release and write authority. Its API/UI must never source Production status through ASUS or label the ASUS Research feed as Production market truth. Production may reuse reviewed software/artifact formats only.
+- Production Main runs on ASUS but owns and independently verifies its market gateway/feed health, account truth, release and write authority. Its API/UI never labels the ASUS Research feed or Research state as Production truth. Production may reuse reviewed software/artifact formats only.
 - Browser updates are a separate observability transport from the Indodax market WebSocket. If a future dashboard event stream is admitted, it is backend-to-browser, bounded/coalesced, read-only and non-authoritative; the browser never connects to the exchange feed. No live stream is required by this MVP.
-- The read-only API exposes distinct `/api/v1/production/*`, `/api/v1/research/*`, and `/api/v1/system/*` namespaces as those domains are admitted. UI health views label the authority/host explicitly; future infrastructure views show the Production host as unprovisioned until specified.
-- ASUS co-tenant inventory, free storage/network limits, safe CPU/RAM/queue/model budgets and sustained throughput are unverified. Qualification requires realistic-host benchmarks, thermal soak and 24h+ evidence under a separate Research Runtime sprint. This is not a Production API/UI dependency.
+- The read-only API exposes distinct `/api/v1/production/*`, `/api/v1/research/*`, and `/api/v1/system/*` namespaces as those domains are admitted. UI health views label the authority/host explicitly; ASUS is the selected host while its provisioning and capacity evidence remain pending.
+- ASUS inventory, free storage/network limits, safe CPU/RAM/queue/model budgets and sustained throughput are unverified. OPS-01 and QA-03 must qualify realistic co-resident Production and Research workloads, recovery and 24h+ soak before release/deployment. This does not block read-only API/UI development; it blocks ASUS deployment readiness.
 
 ## Canonical IDs and dependencies
 
@@ -48,7 +48,7 @@ The API-03 security boundary intentionally precedes API-02. UI-00 follows the st
 
 ## Compatibility, safety, and rollback
 
-The frozen Production Main / Research Workbench authority boundary is unchanged. `DESIGN.md` controls visual behavior; Kumo and Geist are implementation inputs, not a replacement theme. UI capabilities never authorize backend access. Development remains DISABLED/RECOVERY/READ_ONLY/SHADOW and the server does not instantiate the production writer. ASUS remains Research Runtime/shadow edge; a separate Production host and deployment contract are required before any Production deployment. The Research WebSocket runtime and dashboard observability stream have separate owners, transports and authority. Rollback is a scoped revert of this CR and its generated planning files; preserve all unrelated design WIP and runtime evidence.
+The frozen Production Main / Research Workbench authority boundary is unchanged. `DESIGN.md` controls visual behavior; Kumo and Geist are implementation inputs, not a replacement theme. UI capabilities never authorize backend access. Development remains DISABLED/RECOVERY/READ_ONLY/SHADOW and the server does not instantiate a real-order writer. ASUS is the owner-selected co-host, but deployment waits for the documented runtime contract and OPS-01/QA-03 qualification. The Research WebSocket runtime and dashboard observability stream have separate owners, transports and authority. Rollback is a scoped revert of this CR and its generated planning files; preserve all unrelated design WIP and runtime evidence.
 
 ## Validation
 

@@ -88,7 +88,7 @@ Auto-trading dana nyata; trade/withdraw API credentials; leverage/short/futures;
 | NFR-02 Reproducibility | Same verified logical inputs give same identity; numeric float tolerance explicitly registered; no absolute path or ambient clock in content hash |
 | NFR-03 Exact accounting | Decimal/integer money, separate quantities and valuation; journal balances; no duplicate fee deduction |
 | NFR-04 Durability | Atomic publication with file and directory fsync where supported; failed/indeterminate result never treated as success |
-| NFR-05 Security | No real trading credentials; safe local paths/artifact loaders; chat allowlist; secret redaction; untrusted content cannot become code |
+| NFR-05 Security | Live Production credentials are restricted to the existing Production runtime and never exposed to UI, Research, logs or artifacts; safe local paths/artifact loaders; chat allowlist; secret redaction; untrusted content cannot become code |
 | NFR-06 Resources | Bounded collection queues/batches; measured admission limits; no heavy imports on collector; no unbounded retries/search |
 | NFR-07 Recovery | Checkpoints after durable artifacts; idempotent restart; backup restore rehearsed; no stale-worker publication |
 | NFR-08 Auditability | Every gate has reason, policy version, source IDs and evidence SHA; implementer is not final reviewer |
@@ -103,7 +103,7 @@ See [data model](02-domain-data-model.md). Pair has canonical identity distinct 
 
 ## Architecture and runtime model
 
-Existing flat Python bot remains alongside `src/indodax_lab`. Collector/sentry/paper processes are lightweight; heavy backtest/ML/DL workers are separate optional environments. Existing design allocates ASUS to light collection/paper and Lenovo to research; actual service activation requires host audit. No assumption that September hardware/workload matches August observations. Local-only single-host profile is supported by logical roots; cross-host transfer is immutable-file staging, never network-shared SQLite WAL. See [architecture](01-system-architecture.md).
+Existing flat Python bot remains alongside `src/indodax_lab`. Owner-confirmed placement: ASUS hosts Production Main and Research Workbench execution for experiments, backtests, shadow and tournaments; Lenovo handles ML/DL training and tuning. Actual service activation requires current ASUS inventory and mixed-load qualification. Production and Research retain distinct processes, authority, local databases and resource budgets. No assumption that reported hardware/workload measurements remain current. Cross-host artifact transfer uses immutable staged files, never network-shared SQLite WAL. See [architecture](01-system-architecture.md) and [ADR-009](../decisions/ADR-009-asus-production-and-research-runtime.md).
 
 ## Integrations, security and privacy
 

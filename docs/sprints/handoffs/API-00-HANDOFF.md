@@ -3,19 +3,19 @@
 ## Implementation
 
 - Sprint: API-00
-- Commit: `438edbfda7b590167c355466362410c8a6bc868d`
+- Source commit: `3bb7e0a89fb268c06de279f140e9004455a526b1` (API-00 code unchanged from `438edbf`; reviewed with UI-00 together)
 - Scope: shared envelope, closed response-status vocabulary, error/provenance contracts, finite Decimal serialization in both data and error details, and capability vocabulary.
 - Production API routes, auth provider, database changes, exchange access, and host changes are not part of this sprint.
 
 ## Verification
 
-- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 3 tests, including nested non-finite Decimal rejection and unsupported status rejection.
+- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 3 tests.
 - `rtk ruff check src/indodax_lab/api tests/unit/lab/api/test_common_contracts.py` — PASS.
 - `python docs/quality/validate_planning.py --refresh --self-test` — PASS, 126 nodes, 226 edges, 0 cycles; seven invalid mutations rejected.
-- Independent review: FAIL on prior commit `7315cc1`; fixes for all Important findings are in `438edbf` and re-review is pending.
+- Independent review: PASS on exact source SHA `3bb7e0a89fb268c06de279f140e9004455a526b1`, no Critical/Important findings.
 
 ## Gates
 
-- Current project scope remains paper/shadow only.
-- No Production host is selected or deployed. ASUS remains Research Runtime only.
+- Production Main is live; API-00 itself only defines read-only control-plane contracts and grants no trading-write capability.
+- ASUS is the selected Production Main host and remains the Research Runtime host under ADR-009; this sprint did not deploy or modify either runtime.
 - No live credentials, exchange writes, or Docker deployment were used.

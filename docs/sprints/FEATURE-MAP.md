@@ -82,7 +82,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 
 ## operations
 
-- [OPS-01 — Host profiles and service lifecycle](operations\OPS-01-host-profiles-and-service-lifecycle.md) — CORE; Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.
+- [OPS-01 — Host profiles and service lifecycle](operations\OPS-01-host-profiles-and-service-lifecycle.md) — CORE; Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
 - [OPS-02 — Snapshot transfer and restore](operations\OPS-02-snapshot-transfer-and-restore.md) — CORE; Dataset antar-host ditransfer dan dipulihkan melalui staging yang diverifikasi.
 - [OPS-03 — Storage retention and integrity maintenance](operations\OPS-03-storage-retention-and-integrity-maintenance.md) — CORE; Cleanup hanya menghapus artifact tidak direferensikan setelah retention dan dry-run audit.
 
@@ -145,7 +145,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 
 - [QA-01 — Wave 1 tournament checkpoint](verification\QA-01-wave-1-tournament-checkpoint.md) — CORE; Turnamen kecil menyatukan baseline classical ML dan follow-up jobs dengan hasil deterministik.
 - [QA-02 — Boundary security verification](verification\QA-02-boundary-security-verification.md) — CORE; Audit membuktikan akses secret, artifact loader dan destructive paths tertutup pada release candidate.
-- [QA-03 — Capacity and crash recovery qualification](verification\QA-03-capacity-and-crash-recovery-qualification.md) — CORE; Host yang dipilih punya bukti workload dan recovery sebelum release.
+- [QA-03 — Capacity and crash recovery qualification](verification\QA-03-capacity-and-crash-recovery-qualification.md) — CORE; ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.
 - [REL-01 — Paper research release candidate](verification\REL-01-paper-research-release-candidate.md) — CORE; Release paper/research terpaket dengan lock, runbook dan rollback yang diverifikasi.
 
 ## planning

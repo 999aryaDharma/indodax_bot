@@ -6,7 +6,9 @@
 
 This document freezes the two-system architecture of the Indodax systematic trading platform.
 
-**2026-09-23 planning amendment:** [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) makes ASUS the Research Workbench runtime/shadow edge and specifies the shared WebSocket substrate. Its explicit host-role override supersedes the older observer-only description. The two-system authority boundary and G0–G7 remain frozen. See [Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md) for implementation status, contracts and qualification.
+**2026-09-24 host clarification:** [ADR-009](../decisions/ADR-009-asus-production-and-research-runtime.md) records the owner's allocation: ASUS hosts Production Main and Research Workbench execution (experiments, backtests, shadow and tournaments); Lenovo handles ML/DL training and tuning. Separate Production and Research processes, state, authority and measured resource budgets are required on ASUS. Host capacity and deployment remain unqualified. ADR-009 supersedes ADR-008 only on Production host placement; the two-system authority boundary and G0–G7 remain frozen. See [Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md) for its remaining contracts and qualification.
+
+**Live Production clarification:** Production Main is the owner's live real-trading system on ASUS and reads real Indodax account/portfolio state. It owns Production orders, risk, ledger and reconciliation authority. Research, shadow and tournament runtimes are separate and cannot read or mutate Production financial state or use Production credentials. Existing live operation is distinct from this repository's read-only control-plane API/UI work; those read surfaces must show live authoritative data with provenance and freshness, and report unavailable/unknown rather than fabricate values.
 
 ## Canonical systems
 
@@ -51,7 +53,7 @@ frozen / safety-first
 
 No research component may directly write a real venue order.
 
-The two systems occupy three logical compute planes: Lenovo Research Compute (training, historical work and packaging), ASUS Research Runtime (shared public collection, features, qualified inference and shadow), and a separate future Production Main execution node. ASUS never trains models and never owns Production Main order-write authority. Sharing feed/feature/model/prediction work does not share candidate wallets or production credentials.
+The two systems occupy two physical host roles and separate logical authority planes: ASUS hosts Production Main plus Research Runtime; Lenovo performs ML/DL training and tuning. Production Main and Research Runtime on ASUS remain separate processes, local state stores, credentials, resource budgets, market-data truth and failure handling. Research never receives Production authority. Co-location is not capacity or recovery qualification.
 
 ## Source-of-truth precedence
 
@@ -83,7 +85,7 @@ Frozen v1.0 explicitly supersedes:
 3. Candidate identity is immutable.
 4. Tournament agents use isolated virtual portfolios.
 5. Portfolio Shadow is a separate shared-capital experiment.
-6. All agents consume one canonical validated market feed.
+6. Research agents consume one canonical validated Research feed; Production Main independently owns and verifies its own feed health and account truth.
 7. Leaderboard rank is not qualification.
 8. Forward promotion requires >=90 days AND >=100 closed trades plus clean operational evidence.
 9. MCP may create/research/test/request promotion; it may not bypass production gates.

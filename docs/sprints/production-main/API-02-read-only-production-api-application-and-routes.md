@@ -1,10 +1,10 @@
 # API-02 — Read-only Production API application and routes Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Expose live Production state, including fresh Indodax account portfolio evidence, through read-only routes; do not create write authority. Independent review is required before DONE.
 
 **Goal:** Expose Production read models through a capability-protected HTTP API with no write authority.
 
-**Architecture:** FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. App construction defaults to non-writing modes and never resolves IndodaxTradingVenue.
+**Architecture:** FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. Composition injects only the Production-owned read-only Indodax account source, explicit Production namespace and Production state root; Research providers/paths are rejected. App construction never resolves IndodaxTradingVenue.
 
 **Tech Stack:** Python 3.11+, existing Pydantic/Decimal services and FastAPI where scoped.
 
@@ -28,7 +28,7 @@ Classification: Planned implementation; dependencies and activation gates are se
 
 ## Goal
 
-Expose Production read models through a capability-protected HTTP API with no write authority.
+Expose live Production read models, including real Indodax account balances, through a capability-protected HTTP API with no write authority.
 
 ## Why This Sprint Exists
 
@@ -62,13 +62,13 @@ Shared contracts, UI shell, and planned read models/capability policy are define
 
 ## In Scope
 
-Expose Production read models through a capability-protected HTTP API with no write authority.
+Expose live Production read models, including real Indodax account balances, through a capability-protected HTTP API with no write authority.
 
-Contract: FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. App construction defaults to non-writing modes and never resolves IndodaxTradingVenue.
+Contract: FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. Composition explicitly supplies the Production state namespace/root and server-side Production-owned read-only Indodax account source; no browser credentials, Research feed/state/provider, or writer adapter. App construction defaults to non-writing modes and never resolves IndodaxTradingVenue.
 
 ## Out of Scope
 
-Real-money activation, credentials, order submission, withdrawal, venue writer access, ledger repair, Research feature implementation, Docker deployment and ASUS host changes.
+Changing live execution, provisioning/rotating/exposing credentials, order submission, withdrawal, venue writer access, ledger repair, Research feature implementation, Docker deployment and ASUS host changes. The existing Production-owned server credential/client authority may support read-only Indodax account reads; credentials stay server-side and are not managed by this API sprint.
 
 ## User / Actor Behavior
 
@@ -90,6 +90,8 @@ Backend domain services own financial and operational truth. Unknown is distinct
 
 Keep Production, Research and System namespaces separate. Production routes do not proxy ASUS Research services or expose the Research market feed as Production truth. Any later browser event stream is a bounded, read-only backend observability transport, separate from Indodax WebSocket ownership.
 
+The composition root must configure the exact Production state namespace/root and a Production-marked `VenueAccountProvider`; missing or Research-bound configuration fails closed. The injected read-only Indodax provider may use the existing Production-owned account credentials but has no order, cancel or withdrawal operations.
+
 FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. App construction defaults to non-writing modes and never resolves IndodaxTradingVenue.
 
 ## Planned Files / Artifacts
@@ -105,11 +107,11 @@ FastAPI /api/v1/production endpoints delegate to ProductionReadService, require 
 
 ## Data / Persistence Impact
 
-Read-only. No schema migration, new database, credential store or cross-host SQLite access.
+Read-only. No schema migration, new database, credential store or cross-host SQLite access. No shared SQLite WAL; the configured Production database root must be distinct from Research roots.
 
 ## API / External Contract Impact
 
-Only the versioned read/API contract specified for this sprint. No exchange network calls or write-capable endpoint.
+Only the versioned read/API contract specified for this sprint. Account reads use the injected Production-owned read-only provider; no write-capable endpoint or direct exchange-client construction in the HTTP application.
 
 ## UI / UX Behavior
 
@@ -124,6 +126,8 @@ Inspect assigned paths and dependencies; write focused behavior tests; implement
 - Every route requires read capability and serializes Decimal/UTC/provenance contracts
 - Router/import graph cannot resolve the write venue or any POST order/withdraw/repair route
 - Unavailable services return explicit safe state and outage responses
+- Missing Production namespace/root/provider fails closed; Research paths/providers never satisfy Production reads
+- Fresh Indodax account evidence is returned with source time/freshness and no credentials
 
 ## Failure / Edge Cases
 
@@ -183,4 +187,4 @@ Create docs/sprints/handoffs/API-02-HANDOFF.md with exact SHA, commands/results,
 
 ## Ready-to-Run Implementation Prompt
 
-Implement API-02 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement API-02 only. Expose live Production state, including fresh Indodax account portfolio evidence, through read-only routes without creating write authority; stop if any dependency is not DONE.

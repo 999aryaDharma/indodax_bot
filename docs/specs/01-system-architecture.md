@@ -36,9 +36,9 @@ flowchart TD
 
 ## Process and host profiles
 
-Logical profiles: `collector_light`, `paper_light`, `research_cpu`, `research_gpu`. Prior plan maps light to ASUS and heavy to Lenovo. That is a deployable topology proposal, not evidence services are active. Use environment-resolved data/artifact roots independent of CWD. Hardware constraints are admission policy inputs; absence/unknown sensor is explicit. A single host can run selected profiles if measured limits permit.
+Logical profiles: `production_main`, `collector_light`, `paper_light`, `research_cpu`, `research_gpu`. Owner-confirmed placement co-locates Production Main and Research Runtime on ASUS as separate services/authorities; Lenovo handles ML/DL training and tuning. This is target placement, not evidence services are active or capacity-qualified. Use separate environment-resolved roots, databases, credentials and resource budgets. Reserve measured ASUS headroom for Production and defer optional Research load first. Hardware constraints are admission policy inputs; unknown sensors/limits block admission. See ADR-009.
 
-Each host owns its local SQLite WAL DB. No NFS/SMB shared DB and no distributed locking invention. Cross-host jobs use explicit import/export of immutable input/result manifests under one authoritative scheduler. Automated remote dispatch beyond that transfer requires its own reviewed protocol. Recovery lease needs a monotonically increasing claim generation; old workers cannot publish after a new lease is issued.
+Each service authority owns its local SQLite WAL DB; even co-resident Production and Research do not share a DB. No NFS/SMB shared DB and no distributed locking invention. Lenovo-to-ASUS model delivery uses explicit import/export of immutable artifact manifests and receiving-side verification. Automated remote dispatch or Production control from Lenovo is forbidden without a separately reviewed protocol. Recovery lease needs a monotonically increasing claim generation; old workers cannot publish after a new lease is issued.
 
 ## Interfaces and identities
 

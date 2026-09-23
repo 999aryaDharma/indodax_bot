@@ -2,13 +2,13 @@
 
 ## Current frozen target and audit
 
-Read `docs/production/FROZEN-SYSTEMS.md` and its Production Main/Research Workbench documents before interpreting older scope text. They supersede conflicting older target boundaries. Current operation remains paper/shadow only. `docs/implementation/README.md` indexes the current audit/program; `docs/sprints/sprint-manifest.json` remains the only status/DAG authority. Historical Task15 WIP notes below are provenance, not the current implementation inventory.
+Read `docs/production/FROZEN-SYSTEMS.md` and its Production Main/Research Workbench documents before interpreting older scope text. Owner-confirmed Production Main is live and reads the real Indodax account/portfolio; Research, shadow agents and tournaments remain isolated research environments. `docs/implementation/README.md` indexes the current audit/program; `docs/sprints/sprint-manifest.json` remains the only status/DAG authority. Historical Task15 WIP notes below are provenance, not the current implementation inventory.
 
 ## Authority and scope
 
 Read `docs/README.md` then `docs/specs/00-master-product-technical-spec.md`. Current user instruction overrides repo guidance. Accepted ADR resolves material conflicts; exact dataset contract lives in `docs/research/dataset-feature-contracts.md` with overrides in ADR-002. Code/tests describe current behavior, not silent permission to weaken intended invariants. Old 35-task plan is crosswalk history, not active dependency ordering.
 
-This project is paper/shadow research only. No trade/withdraw keys, real orders, promised profit, LLM discretionary execution or auto-merge. Do not start product work when request is documentation-only.
+Production Main on ASUS is a live real-trading system and reads authoritative Indodax account/portfolio state. Its live trading authority remains in the existing backend services; control-plane UI/API work is read-only unless a separate, explicitly scoped task specifies guarded controls. Research, shadow agents and tournaments on ASUS must remain isolated from Production authority and credentials. Lenovo handles ML/DL training and tuning. Keep processes, state, databases, credentials and resource budgets isolated; qualify realistic mixed load before further deployment changes. Do not access live keys, alter live orders/ledger/state, or change the running host while working on read-only control-plane tasks. No promised profit, LLM discretionary execution or auto-merge.
 
 ## Required global agent tooling
 

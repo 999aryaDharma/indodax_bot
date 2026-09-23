@@ -14,7 +14,7 @@ No real-money execution, no silent evaluator policy changes, and no direct mutat
 |---|---|---|
 | QA-01 | Turnamen kecil menyatukan baseline classical ML dan follow-up jobs dengan hasil deterministik. | `docs/sprints/verification/QA-01-wave-1-tournament-checkpoint.md` |
 | QA-02 | Audit membuktikan akses secret, artifact loader dan destructive paths tertutup pada release candidate. | `docs/sprints/verification/QA-02-boundary-security-verification.md` |
-| QA-03 | Host yang dipilih punya bukti workload dan recovery sebelum release. | `docs/sprints/verification/QA-03-capacity-and-crash-recovery-qualification.md` |
+| QA-03 | ASUS has capacity, isolation, co-resident workload and recovery evidence for Production Main + Research Runtime before release/deployment. | `docs/sprints/verification/QA-03-capacity-and-crash-recovery-qualification.md` |
 | REL-01 | Release paper/research terpaket dengan lock, runbook dan rollback yang diverifikasi. | `docs/sprints/verification/REL-01-paper-research-release-candidate.md` |
 
 ## Inputs, outputs and public interfaces
@@ -39,12 +39,12 @@ Acceptance boundary:
 
 ### QA-03 — Capacity and crash recovery qualification
 
-measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+current ASUS inventory + representative co-resident Production/Research workload -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence.
 
 Acceptance boundary:
 - Disk-full tidak mengakui sukses.
 - Worker kill tidak duplicate metrics.
-- Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata.
+- Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata.
 
 ### REL-01 — Paper research release candidate
 

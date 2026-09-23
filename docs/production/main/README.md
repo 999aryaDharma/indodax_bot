@@ -7,6 +7,8 @@
 
 This directory is the canonical architecture contract for the real-money production system. If older production/research documents conflict with this directory, this directory wins unless an explicit architecture decision supersedes it.
 
+Owner-confirmed current state: Production Main runs live on ASUS and reads the real Indodax account/portfolio. Production APIs/UI must present that live state from authoritative services. Read-only Indodax views use the existing server-side Production account authority; credentials never pass into the API contract or browser. Read-only control-plane surfaces do not create a second financial authority or invoke order writes. Research, shadow and tournament processes remain isolated from Production credentials, orders, ledger and account truth.
+
 ## 1. Purpose and boundary
 
 Production Main is deliberately conservative. It consumes only reviewed, immutable candidate artifacts produced by Research Workbench. It does not provide a live strategy editor, model trainer, hyperparameter tuner, dataset editor, or online-learning path.
@@ -131,28 +133,16 @@ No candidate mutates itself. Retraining or parameter changes create a **new cand
 
 ## 7. Host responsibilities
 
-**Lenovo workstation**
-- research;
-- historical data;
-- training;
-- backtests;
-- candidate packaging;
-- artifact signing/building.
+**ASUS `asus-server` — Production Main and Research Runtime**
+- Owner-selected Production Main host and existing Research Workbench runtime host, under [ADR-009](../../decisions/ADR-009-asus-production-and-research-runtime.md).
+- Separate services, identities, configuration/data roots, local databases, market-data authority and resource budgets. No shared SQLite WAL, credentials or writer.
+- Production Main owns its release and authoritative Production state. Research owns public collection, research/shadow/tournament state and admitted CPU inference; it cannot access Production credentials or mutate Production state.
+- Production and Research co-resident load must pass [OPS-01](../../sprints/operations/OPS-01-host-profiles-and-service-lifecycle.md) and [QA-03](../../sprints/verification/QA-03-capacity-and-crash-recovery-qualification.md) evidence before release/deployment. The owner-reported hardware profile is not qualification.
 
-**Production execution node**
-- minimal Linux runtime;
-- one authoritative writer;
-- durable production state;
-- exchange credentials;
-- reconciliation;
-- telemetry.
-
-**ASUS X441U**
-- Research Workbench runtime/shadow edge under [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md): public collection, shared features and selected CPU inference, isolated tournament and separate portfolio shadow;
-- training remains on Lenovo; Production Main runs under a separate execution authority;
-- optional observer/backup duties need independent resource/failure-domain qualification; co-resident workload is not independent HA;
-- no shared SQLite WAL;
-- no Production Main order-write credentials or second writer. See the [ASUS runtime design](../research-workbench/SHARED-MARKET-RUNTIME.md).
+**Lenovo daily laptop**
+- ML/DL model training and tuning.
+- Training output is an immutable artifact; ASUS receiving-side verification and governed release/import own any later runtime use. No remote process or database control from Lenovo.
+- See the [Research Workbench host contract](../research-workbench/README.md#71-compute-planes-and-host-boundaries).
 
 HA starts with one authoritative writer + observer. Automatic failover requires lease/epoch/fencing design and measured drills.
 

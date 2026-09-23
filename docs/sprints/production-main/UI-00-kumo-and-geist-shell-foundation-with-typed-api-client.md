@@ -1,6 +1,6 @@
 # UI-00 — Kumo and Geist shell foundation with typed API client Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Display live Production data from the read API; do not create trading authority. Independent review is required before DONE.
 
 **Goal:** Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.
 
@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: IN_PROGRESS
+Status: DONE
 
 Priority: P1 | Type: integration | Domain: production-main | Portfolio: CORE
 
@@ -56,13 +56,13 @@ UI-01
 
 ## Current Context
 
-UI-00 shell and typed API client are implemented in this workspace and awaiting independent review. Production API routes are not available yet.
+UI-00 shell and typed API client are implemented and independently reviewed at source SHA `3bb7e0a89fb268c06de279f140e9004455a526b1`. Production API routes are not available yet.
 
 ## In Scope
 
 Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.
 
-Contract: React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.
+Contract: React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware UTC timestamps, preserves Decimal strings, request IDs and stable errors, clears prior snapshots after a failed refresh, hides data for EMPTY/UNAVAILABLE, displays a live WITA clock and snapshot age, and persists no secrets.
 
 ## Out of Scope
 
@@ -78,7 +78,7 @@ FR-23 in the admitted read-only scope.
 
 - Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens
 - Kumo controls use graphite product tokens rather than default branded colors
-- Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states
+- Typed client validates complete response envelopes, preserves Decimal strings, hides operational data for EMPTY/UNAVAILABLE, distinguishes error states and displays live WITA time/snapshot age
 
 ## Domain Rules / Invariants
 
@@ -188,4 +188,4 @@ Create docs/sprints/handoffs/UI-00-HANDOFF.md with exact SHA, commands/results, 
 
 ## Ready-to-Run Implementation Prompt
 
-Implement UI-00 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement UI-00 only. Display live Production data from the read API without creating trading authority; stop if any dependency is not DONE.

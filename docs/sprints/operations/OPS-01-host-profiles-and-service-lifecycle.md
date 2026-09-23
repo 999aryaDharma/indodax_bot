@@ -18,7 +18,7 @@ Implementation artifacts named below are planned unless present in baseline; WIP
 
 ## Goal
 
-Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.
+Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
 
 ## Why This Sprint Exists
 
@@ -42,6 +42,8 @@ QA-03
 - `docs/specs/17-operations-security-and-recovery.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/decisions/ADR-009-asus-production-and-research-runtime.md`
+- `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
 
 ## Current Context
 
@@ -52,8 +54,8 @@ New capability; dependencies must be DONE before implementation.
 
 ## In Scope
 
-- Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.
-- Cold boot tidak menjalankan dua writer.
+- Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
+- Cold boot tidak menjalankan dua writer dan tidak mencampur service identity/configuration/state Production dengan Research.
 - SIGTERM flush dan lease release.
 - Missing secret fail tanpa mencetak secret.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
@@ -72,7 +74,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Functional Requirements
 
-0. **OPS-01-FR0:** Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.
+0. **OPS-01-FR0:** Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
 1. **OPS-01-FR1:** Cold boot tidak menjalankan dua writer.
 2. **OPS-01-FR2:** SIGTERM flush dan lease release.
 3. **OPS-01-FR3:** Missing secret fail tanpa mencetak secret.
@@ -129,7 +131,7 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-First establish OPS-01-AC0: Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur. Use a minimal valid fixture, independent expected output, and a failing assertion before implementation.
+First establish OPS-01-AC0: Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur. Use a minimal valid fixture, independent expected output, and a failing assertion before implementation.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `OPS-01-AC1`, build minimal fixture proving: Cold boot tidak menjalankan dua writer. Write `test_ops_01_contract_1` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
@@ -141,7 +143,7 @@ First establish OPS-01-AC0: Collector dan paper dapat dikelola sebagai service s
 
 ## Required Tests
 
-Positive contract: **OPS-01-AC0**, `test_ops_01_valid_contract` — Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur. Prove the valid output through public inputs, not only rejection behavior.
+Positive contract: **OPS-01-AC0**, `test_ops_01_valid_contract` — Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur. Prove the valid output through public inputs, not only rejection behavior.
 
 | Acceptance | Planned test identity / map to existing equivalent | Assertion |
 |---|---|---|
@@ -195,7 +197,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **OPS-01-AC0** Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [ ] **OPS-01-AC0** Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [ ] **OPS-01-AC1** Cold boot tidak menjalankan dua writer. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **OPS-01-AC2** SIGTERM flush dan lease release. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **OPS-01-AC3** Missing secret fail tanpa mencetak secret. Evidence: mapped test, exact command/exit and target SHA.
@@ -239,7 +241,7 @@ Read AGENTS.md, docs/sprints/operations/OPS-01-host-profiles-and-service-lifecyc
 Read sprint-manifest.json and verify dependencies DONE; check external gates before execution.
 If status is historical DONE, do not rebuild: only reopen under a documented defect/change request.
 Inspect actual files and any scoped WIP before creating equivalents.
-Goal: Collector dan paper dapat dikelola sebagai service sementara worker berat memakai profil Lenovo terukur.
+Goal: Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
 Contract: systemd service/timer or equivalent local host supervisor -> start/stop/restart with explicit roots and env.
 Use behavior-driven RED -> GREEN for each AC, then affected integration/regression verification.
 Never implement downstream capabilities, loosen gates, use real trading keys or modify live DBs.

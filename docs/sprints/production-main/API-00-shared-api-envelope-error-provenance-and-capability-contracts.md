@@ -1,6 +1,6 @@
 # API-00 — Shared API envelope, error, provenance and capability contracts Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Preserve the existing live Production authority; API-00 is read-only contract work. Independent review is required before DONE.
 
 **Goal:** Define stable typed contracts for safe Production and later Research API consumers.
 
@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: IN_PROGRESS
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
@@ -57,7 +57,7 @@ API-01, API-03
 
 ## Current Context
 
-The shared API contracts are implemented in this workspace and awaiting independent review. This sprint adds contracts only; Production read models and routes remain later work.
+The shared API contracts are implemented and independently reviewed at source SHA `3bb7e0a89fb268c06de279f140e9004455a526b1`. This sprint adds contracts only; Production read models and routes remain later work.
 
 ## In Scope
 
@@ -182,4 +182,4 @@ Create docs/sprints/handoffs/API-00-HANDOFF.md with exact SHA, commands/results,
 
 ## Ready-to-Run Implementation Prompt
 
-Implement API-00 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement API-00 only. Read this sprint and listed dependencies. Preserve live Production authority while keeping this API surface read-only; stop if any dependency is not DONE.

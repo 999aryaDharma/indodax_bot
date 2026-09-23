@@ -1,6 +1,6 @@
 # UI-02 — Read-only Production operational pages Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Show authoritative live Production state, including live Indodax account portfolio evidence, through read-only pages. Independent review is required before DONE.
 
 **Goal:** Render operational truth, authoritative state and failure context through read-only Production pages.
 
@@ -186,4 +186,4 @@ Create docs/sprints/handoffs/UI-02-HANDOFF.md with exact SHA, commands/results, 
 
 ## Ready-to-Run Implementation Prompt
 
-Implement UI-02 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement UI-02 only. Show authoritative live Production state, including live Indodax account portfolio evidence, through read-only pages; stop if any dependency is not DONE.

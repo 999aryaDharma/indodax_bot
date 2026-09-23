@@ -18,11 +18,11 @@ Implementation artifacts named below are planned unless present in baseline; WIP
 
 ## Goal
 
-Host yang dipilih punya bukti workload dan recovery sebelum release.
+ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.
 
 ## Why This Sprint Exists
 
-Tanpa kapabilitas ini, kontrak `QA-03` belum dapat dibuktikan dan downstream tidak boleh mengasumsikan hasilnya tersedia. Nilai spesifiknya: measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+Tanpa kapabilitas ini, kontrak `QA-03` belum dapat dibuktikan dan downstream tidak boleh mengasumsikan hasilnya tersedia. Nilai spesifiknya: current ASUS inventory + representative co-resident Production/Research workloads -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence; Lenovo training remains outside the ASUS load profile.
 
 Direct consumers: REL-01
 
@@ -42,6 +42,8 @@ REL-01
 - `docs/specs/00-master-product-technical-spec.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/decisions/ADR-009-asus-production-and-research-runtime.md`
+- `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
 
 ## Current Context
 
@@ -53,10 +55,10 @@ New capability; dependencies must be DONE before implementation.
 
 ## In Scope
 
-- Host yang dipilih punya bukti workload dan recovery sebelum release.
+- ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.
 - Disk-full tidak mengakui sukses.
 - Worker kill tidak duplicate metrics.
-- Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata.
+- Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -73,14 +75,14 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Functional Requirements
 
-0. **QA-03-FR0:** Host yang dipilih punya bukti workload dan recovery sebelum release.
+0. **QA-03-FR0:** ASUS punya bukti capacity, isolation, workload co-residency and recovery untuk Production Main + Research Runtime sebelum release/deployment.
 1. **QA-03-FR1:** Disk-full tidak mengakui sukses.
 2. **QA-03-FR2:** Worker kill tidak duplicate metrics.
-3. **QA-03-FR3:** Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata.
+3. **QA-03-FR3:** Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata.
 
 ## Domain Rules / Invariants
 
-measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+current ASUS inventory + representative co-resident Production/Research workload -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence.
 
 Feature tests embedded in every sprint; checkpoint is integration of production interfaces not synthetic ID matching.
 
@@ -90,7 +92,7 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 Layer owner: `tests, docs/quality`. Konsumsi hanya public contracts dependency yang tercantum. Side effect berada pada boundary adapter/repository; pure calculation tidak melakukan HTTP.
 
-measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+current ASUS inventory + representative co-resident Production/Research workload -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence.
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 
@@ -105,7 +107,7 @@ Path baru adalah panduan, bukan bukti file sudah ada. Periksa file ekuivalen seb
 
 Detailed domain fields and behavior are specified in `docs/specs/20-testing-strategy.md`; exact table schemas use the Required Reading dataset contract.
 
-measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+current ASUS inventory + representative co-resident Production/Research workload -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence.
 
 Input harus membawa identity dan versi yang disebut di atas. Output memisahkan hasil valid, abstain/excluded/blocked yang sah, dan error teknis. Nilai unknown tidak boleh dikonversi ke nol. Pin enum/field/unit pada contract test; API baru tidak boleh hanya ditulis sebagai contoh tanpa implementation/test.
 
@@ -127,25 +129,25 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-First establish QA-03-AC0: Host yang dipilih punya bukti workload dan recovery sebelum release. Use a minimal valid fixture, independent expected output, and a failing assertion before implementation.
+First establish QA-03-AC0: ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment. Use a minimal valid fixture, independent expected output, and a failing assertion before implementation.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `QA-03-AC1`, build minimal fixture proving: Disk-full tidak mengakui sukses. Write `test_qa_03_contract_1` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 3. For `QA-03-AC2`, build minimal fixture proving: Worker kill tidak duplicate metrics. Write `test_qa_03_contract_2` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
-4. For `QA-03-AC3`, build minimal fixture proving: Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Write `test_qa_03_contract_3` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
+4. For `QA-03-AC3`, build minimal fixture proving: Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata. Write `test_qa_03_contract_3` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 5. Integrate through the public boundary using actual output of dependency fixture; verify the declared contract and failure outcome rather than mock call counts alone.
 6. Run the relevant tests below, inspect diff and record output/exit/source SHA. Refactor only after the contract remains green.
 7. Commit scoped code/tests; prepare handoff with acceptance-to-evidence links, migrations and deviations; submit exact SHA for independent review.
 
 ## Required Tests
 
-Positive contract: **QA-03-AC0**, `test_qa_03_valid_contract` — Host yang dipilih punya bukti workload dan recovery sebelum release. Prove the valid output through public inputs, not only rejection behavior.
+Positive contract: **QA-03-AC0**, `test_qa_03_valid_contract` — ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment. Prove the valid output through public inputs, not only rejection behavior.
 
 | Acceptance | Planned test identity / map to existing equivalent | Assertion |
 |---|---|---|
 | QA-03-AC1 | `test_qa_03_contract_1` | Disk-full tidak mengakui sukses |
 | QA-03-AC2 | `test_qa_03_contract_2` | Worker kill tidak duplicate metrics |
-| QA-03-AC3 | `test_qa_03_contract_3` | Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata |
+| QA-03-AC3 | `test_qa_03_contract_3` | Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -157,7 +159,7 @@ Record focused command and results; run affected regression gates. Shared-contra
 
 - Case 1: Disk-full tidak mengakui sukses. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
 - Case 2: Worker kill tidak duplicate metrics. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
-- Case 3: Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
+- Case 3: Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
 - Interrupted publish: preserve prior valid output and expose incomplete/failed status. For pure functions without publish, deterministic exception/result replaces this case.
 - Same input on retry: no new semantic output/version or duplicate state transition.
 
@@ -193,10 +195,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [x] **QA-03-AC0** Host yang dipilih punya bukti workload dan recovery sebelum release. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **QA-03-AC0** ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [x] **QA-03-AC1** Disk-full tidak mengakui sukses. Evidence: mapped test, exact command/exit and target SHA.
 - [x] **QA-03-AC2** Worker kill tidak duplicate metrics. Evidence: mapped test, exact command/exit and target SHA.
-- [x] **QA-03-AC3** Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **QA-03-AC3** Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
@@ -216,7 +218,7 @@ Historical import note: unchecked boxes describe the gate for future work/reveri
 
 - Attempt to disprove: Disk-full tidak mengakui sukses. Inspect fixture and actual production path.
 - Attempt to disprove: Worker kill tidak duplicate metrics. Inspect fixture and actual production path.
-- Attempt to disprove: Resource ceiling ditetapkan dari baseline bukan spesifikasi CPU semata. Inspect fixture and actual production path.
+- Attempt to disprove: Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata. Inspect fixture and actual production path.
 - Verify provenance and units at the boundary, not only test count or mock calls.
 - Check downstream side effects, compatibility, state rollback and no scope creep.
 - Verify budget, resource and paper-only policy are not bypassed.
@@ -237,8 +239,8 @@ Read AGENTS.md, docs/sprints/verification/QA-03-capacity-and-crash-recovery-qual
 Read sprint-manifest.json and verify dependencies DONE; check external gates before execution.
 If status is historical DONE, do not rebuild: only reopen under a documented defect/change request.
 Inspect actual files and any scoped WIP before creating equivalents.
-Goal: Host yang dipilih punya bukti workload dan recovery sebelum release.
-Contract: measured host profile + representative data volume -> RAM/disk/latency/thermal/recovery evidence.
+Goal: ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.
+Contract: current ASUS inventory + representative co-resident Production/Research workloads -> CPU/RAM/disk/latency/thermal/isolation/recovery evidence.
 Use behavior-driven RED -> GREEN for each AC, then affected integration/regression verification.
 Never implement downstream capabilities, loosen gates, use real trading keys or modify live DBs.
 Commit scoped changes, record exact SHA/commands/AC evidence in handoff, self-review.

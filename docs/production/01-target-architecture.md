@@ -1,5 +1,7 @@
 > **SUPERSEDED FOR ARCHITECTURE DECISIONS (2026-09-21):** The canonical frozen Production Main contract now lives in `docs/production/main/` and `docs/production/FROZEN-SYSTEMS.md`. Keep this file as historical/contextual documentation; when it conflicts with the frozen contract, the frozen contract wins.
 
+> **Host placement amendment (2026-09-24):** [ADR-009](../decisions/ADR-009-asus-production-and-research-runtime.md) supersedes this file's separate Production node / ASUS observer allocation. ASUS hosts separate Production Main and Research Runtime services; Lenovo handles ML/DL training and tuning.
+
 # Target production architecture
 
 ## Objective

@@ -12,4 +12,4 @@ Validation: existing planning validator plus program coverage checks, links, DAG
 
 ## Follow-on Production API/UI admission
 
-[CR-2026-09-23](CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md) admits the read-only Production API and desktop/smartphone UI sprint nodes. It resolves the API/UI ID collisions from the earlier planning proposal, records explicit dependencies, and adds Kumo UI 2.14.0 plus local Geist Sans/Mono under the existing `DESIGN.md` visual contract. It does not authorize deployment or real-money operation.
+[CR-2026-09-23](CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md) admits the read-only Production API and desktop/smartphone UI sprint nodes. It resolves the API/UI ID collisions from the earlier planning proposal, records explicit dependencies, and adds Kumo UI 2.14.0 plus local Geist Sans/Mono under the existing `DESIGN.md` visual contract. It does not change the existing live Production operation, authorize further live-execution changes, or authorize deployment.

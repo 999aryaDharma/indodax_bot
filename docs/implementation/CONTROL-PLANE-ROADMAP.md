@@ -6,7 +6,7 @@ Classification: TARGET PLANNING. `docs/sprints/sprint-manifest.json` is the sole
 
 Production Main domain primitives PM-01 through PM-04 are DONE and independently reviewed in the manifest. PM-05 and PM-06 remain PLANNED. Research Workbench RW0-01 and RW1-01 are DONE; later registry/orchestration and dashboard work remains PLANNED. CR-2026-09-23 admits API-00..03/API-02 and UI-00..02; their current status is shown only in the sprint manifest and generated projections. Existing `DESIGN.md` and `dashboard.pen` are design inputs, not backend authority.
 
-No API or dashboard exists yet. The target is a read-only Production API and desktop/smartphone dashboard on paper/shadow-safe defaults. The UI cannot own authoritative state. ASUS X441U is Research Runtime/shadow edge, never the Production Main execution host.
+API-00 contracts and the UI-00 shell are implemented and independently reviewed; read models/routes and operational pages remain on the sprint DAG. The target stays a read-only Production API and desktop/smartphone dashboard with paper/shadow-safe defaults. The UI cannot own authoritative state. ASUS is the selected Production Main host and continues to host a separate Research Runtime for shadow/tournaments; Lenovo performs ML/DL training and tuning. Host inventory, service isolation and co-resident capacity remain unqualified, so implementation does not imply deployment readiness.
 
 ## Canonical MVP sprint DAG
 
@@ -35,7 +35,7 @@ Use `@cloudflare/kumo` 2.14.0 React components for shared controls and tables; u
 - Research API: RW-API-00..06 keep their Research domain dependencies (RW0/RW1/RW2/RW3/RW4/RW5/RW6/RW9 and PM-05 where required). They do not gate the Production MVP.
 - Research UI: UI-04/UI-05/UI-06 depend on the corresponding RW APIs and research services.
 - Cross-context/browser qualification: API-06 and UI-08 follow their API, UI and PM/RP security dependencies.
-- Docker, remote host setup and deployment require a separately approved Production host, runtime contract, and operational gates. Never deploy Production Main to ASUS.
+- Docker, remote host setup and deployment require an implemented runtime contract and OPS-01/QA-03 evidence on ASUS under realistic co-resident Production + Research load. Production and Research keep separate processes, local state, credentials and resource budgets. Never share SQLite WAL across hosts or domains.
 
 ## Admission rule
 

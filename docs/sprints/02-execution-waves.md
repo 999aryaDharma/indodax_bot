@@ -8,14 +8,14 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-None. Verify external gates and shared-file ownership before claim.
+API-01, API-03. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
 - BASE-01 — Offline verification harness [DONE; CORE]
 - DOC-01 — Frozen architecture audit and delivery program [DONE; CORE]
-- API-00 — Shared API envelope, error, provenance and capability contracts [IN_PROGRESS; CORE]
-- UI-00 — Kumo and Geist shell foundation with typed API client [IN_PROGRESS; CORE]
+- API-00 — Shared API envelope, error, provenance and capability contracts [DONE; CORE]
+- UI-00 — Kumo and Geist shell foundation with typed API client [DONE; CORE]
 
 ## Wave 1
 
@@ -24,7 +24,7 @@ None. Verify external gates and shared-file ownership before claim.
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
 - RP-01 — Shared SignalIntent ownership with compatibility [DONE; CORE]
-- API-03 — Fail-closed read capability policy and audit context [PLANNED; CORE]
+- API-03 — Fail-closed read capability policy and audit context [READY; CORE]
 
 ## Wave 2
 
@@ -58,7 +58,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 - DATA-06 — Provider-derived reproducible snapshot [DONE; CORE]
 - SIM-01 — Conservative execution simulator [REVIEW; CORE]
-- API-01 — Production service-derived read models [PLANNED; CORE]
+- API-01 — Production service-derived read models [READY; CORE]
 
 ## Wave 7
 

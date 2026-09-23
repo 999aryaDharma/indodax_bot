@@ -2,11 +2,11 @@
 
 ## Frozen architecture precedence — 2026-09-21
 
-The canonical target is [Frozen Systems](production/FROZEN-SYSTEMS.md): Production Main plus Research Workbench. Those frozen specifications supersede conflicting older scope/host/UI statements below. Current execution remains paper/shadow only; production target documentation is not activation authorization.
+The canonical target is [Frozen Systems](production/FROZEN-SYSTEMS.md): live Production Main plus the separate Research Workbench. Production Main on ASUS reads and operates against the real Indodax account; Research execution, shadow agents and tournaments also run on ASUS but remain isolated from Production state and authority. Lenovo handles ML/DL training and tuning. These owner-confirmed boundaries supersede conflicting older scope/host/UI statements below. Control-plane read API/UI work does not grant new trading authority or alter the running system.
 
 Start current planning at [implementation program](implementation/README.md), [current state](implementation/CURRENT-STATE.md), [parity](implementation/RUNTIME-PARITY.md) and [LUNA-NEXT](implementation/handoff/LUNA-NEXT.md). The repaired sprint manifest remains the sole status/DAG authority. Historical Task15 WIP wording below describes the old planning baseline; current source exists and its review status must be checked, not assumed absent or complete.
 
-Dokumentasi planning v2, 14 September 2026. Proyek **PARTIALLY IMPLEMENTED / RESEARCH-EXPERIMENTAL**, paper/shadow only.
+Dokumentasi planning v2, 14 September 2026. Proyek **PARTIALLY IMPLEMENTED**. Production Main is live; Research Workbench, shadow and tournament environments are isolated research runtimes.
 
 Mulai dari [master specification](specs/00-master-product-technical-spec.md), lalu [audit keadaan aktual](quality/repository-audit.md), [feature map](sprints/FEATURE-MAP.md), dan [sprint index](sprints/00-sprint-index.md).
 

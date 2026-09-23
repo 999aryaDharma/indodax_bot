@@ -1,6 +1,6 @@
 # UI-01 — Production and Research context navigation with capability boundary Implementation Plan
 
-> For agentic workers: implement this sprint only. Preserve paper/shadow-only authority. Independent review is required before DONE.
+> For agentic workers: implement this sprint only. Keep live Production and isolated Research contexts visibly separate. Independent review is required before DONE.
 
 **Goal:** Keep Production and Research route contexts distinct and reflect backend capability decisions safely.
 
@@ -183,4 +183,4 @@ Create docs/sprints/handoffs/UI-01-HANDOFF.md with exact SHA, commands/results, 
 
 ## Ready-to-Run Implementation Prompt
 
-Implement UI-01 only. Read this sprint and listed dependencies. Preserve paper/shadow-only authority and stop if any dependency is not DONE.
+Implement UI-01 only. Keep live Production and isolated Research contexts visibly separate; stop if any dependency is not DONE.

@@ -15,3 +15,5 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [ADR-007 Execution transaction boundary](ADR-007-execution-transaction-boundary.md)
 - [ADR-008 Shared market runtime and ASUS Research Edge](ADR-008-shared-market-runtime-and-asus-edge.md)
 - [CR-20260923 Shared market runtime impact and scope](CR-20260923-shared-market-runtime.md)
+- [ADR-009 ASUS Production Main and Research Runtime](ADR-009-asus-production-and-research-runtime.md)
+- [CR-20260924 ASUS Production and Research host allocation](CR-20260924-asus-production-and-research-host.md)
