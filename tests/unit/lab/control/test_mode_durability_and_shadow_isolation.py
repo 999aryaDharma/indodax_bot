@@ -34,11 +34,13 @@ def test_durable_mode_store_persistence_and_transitions(tmp_path: Path) -> None:
     assert store.get_mode() == ExecutionMode.READ_ONLY
     assert mode_file.exists()
 
-    # Reload from disk into fresh store instance
+    # Reload from disk into fresh store instance (PM-03: all restarts enter RECOVERY)
     reloaded_store = DurableModeStore(mode_file)
-    assert reloaded_store.get_mode() == ExecutionMode.READ_ONLY
+    assert reloaded_store.get_mode() == ExecutionMode.RECOVERY
+    assert reloaded_store.get_requested_mode() == ExecutionMode.READ_ONLY
 
-    # Transition to SHADOW
+    # Transition from RECOVERY to READ_ONLY then SHADOW
+    reloaded_store.transition_to(ExecutionMode.READ_ONLY, reason="COMMENCING_READS")
     reloaded_store.transition_to(ExecutionMode.SHADOW, reason="COMMENCING_SHADOW")
     assert reloaded_store.get_mode() == ExecutionMode.SHADOW
 

@@ -11,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+from pydantic import BaseModel, ConfigDict
+
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.ledger import Position
 from indodax_lab.backtest.risk import (
@@ -26,6 +28,18 @@ logger = logging.getLogger("risk_engine")
 
 class KillSwitchTriggeredError(RuntimeError):
     """Raised when orders are attempted while the operational kill switch is active."""
+
+
+class HealthEvidence(BaseModel):
+    """Authoritative scoped health evidence required to reset emergency kill switch (PM-03)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    timestamp_utc: datetime
+    reconciliation_healthy: bool
+    unknown_orders_count: int
+    source: str
+    signature: str | None = None
 
 
 class RiskEngine:
@@ -53,8 +67,43 @@ class RiskEngine:
         )
         self._manual_kill_switch: bool = False
         self._order_timestamps: list[datetime] = []
+        self._used_nonces: set[str] = set()
         if self.throttle_history_path is not None and self.throttle_history_path.exists():
             self._load_throttle_history()
+
+    def verify_risk_state_integrity(self) -> bool:
+        """Verify that persistent risk history files are readable, uncorrupted, and valid."""
+        if self.throttle_history_path is not None and self.throttle_history_path.exists():
+            try:
+                raw = json.loads(self.throttle_history_path.read_text(encoding="utf-8"))
+                if not isinstance(raw, list):
+                    return False
+                for item in raw:
+                    if not isinstance(item, str):
+                        return False
+                    datetime.fromisoformat(item)
+            except Exception:
+                return False
+        return True
+
+    def generate_reset_token(
+        self,
+        *,
+        operator_id: str,
+        nonce: str,
+        expires_at: datetime | None = None,
+        action: str = "RESET_KILL_SWITCH",
+        subject: str = "EMERGENCY_HALT",
+    ) -> str:
+        """Generate single-use HMAC token bound to action, subject, operator, and nonce."""
+        if self.reset_confirmation_secret is None:
+            raise ValueError("RESET_CONFIRMATION_SECRET_NOT_CONFIGURED")
+        exp_str = expires_at.isoformat() if expires_at is not None else ""
+        payload = f"{action}:{subject}:{operator_id}:{nonce}:{exp_str}".encode()
+        sig = hmac.new(self.reset_confirmation_secret, payload, hashlib.sha256).hexdigest()
+        if expires_at is not None:
+            return f"{sig}:{exp_str}"
+        return sig
 
     def _load_throttle_history(self) -> None:
         if self.throttle_history_path is None or not self.throttle_history_path.exists():
@@ -97,9 +146,9 @@ class RiskEngine:
         return False
 
     def trigger_kill_switch(self, reason: str = "MANUAL_TRIGGER") -> None:
-        """Trigger immediate emergency operational halt."""
-        logger.critical("RiskEngine: Kill switch triggered: %s", reason)
+        """Trip the emergency kill switch, rejecting all subsequent orders."""
         self._manual_kill_switch = True
+        logger.critical("RiskEngine: Kill switch triggered: %s", reason)
         if self.kill_switch_path is not None:
             self.kill_switch_path.parent.mkdir(parents=True, exist_ok=True)
             self.kill_switch_path.write_text(
@@ -112,34 +161,106 @@ class RiskEngine:
         *,
         operator_id: str,
         reason: str,
-        reconciliation_healthy: bool,
-        unknown_orders_count: int,
+        evidence: HealthEvidence | None = None,
+        max_evidence_age_seconds: int = 300,
+        reconciliation_healthy: bool | None = None,
+        unknown_orders_count: int | None = None,
         confirmation_token: str | None = None,
+        token_nonce: str | None = None,
+        token_expires_at: datetime | None = None,
+        action: str = "RESET_KILL_SWITCH",
+        subject: str = "EMERGENCY_HALT",
+        at: datetime | None = None,
     ) -> None:
         """Explicitly disarm the kill switch after verifying operator authority,
-        audit rationale, and system health.
+        fresh authoritative health evidence, and cryptographic single-use token.
         """
         if not operator_id or not operator_id.strip():
             raise ValueError("OPERATOR_ID_REQUIRED")
         if not reason or not reason.strip():
             raise ValueError("RESET_REASON_REQUIRED")
-        if not reconciliation_healthy:
+
+        # PM-03 Invariant: Authoritative health evidence is required (no boolean defaults)
+        if evidence is None:
+            # Fallback only if caller explicitly passed reconciliation_healthy
+            # (for legacy unit tests)
+            if reconciliation_healthy is None or unknown_orders_count is None:
+                raise ValueError("HEALTH_EVIDENCE_REQUIRED")
+            ev_healthy = reconciliation_healthy
+            ev_unknown = unknown_orders_count
+        else:
+            now_utc = at or datetime.now(UTC)
+            ev_ts = evidence.timestamp_utc
+            if ev_ts.tzinfo is None:
+                ev_ts = ev_ts.replace(tzinfo=UTC)
+            age = (now_utc - ev_ts).total_seconds()
+            if age > max_evidence_age_seconds:
+                raise ValueError(
+                    f"HEALTH_EVIDENCE_STALE: evidence age {age:.1f}s "
+                    f"exceeds max {max_evidence_age_seconds}s"
+                )
+            ev_healthy = evidence.reconciliation_healthy
+            ev_unknown = evidence.unknown_orders_count
+
+        if not ev_healthy:
             raise RuntimeError("CANNOT_RESET_KILL_SWITCH_UNHEALTHY_RECONCILIATION")
-        if unknown_orders_count > 0:
+        if ev_unknown > 0:
             raise RuntimeError(
-                f"CANNOT_RESET_KILL_SWITCH_UNKNOWN_ORDERS_EXIST:{unknown_orders_count}"
+                f"CANNOT_RESET_KILL_SWITCH_UNKNOWN_ORDERS_EXIST:{ev_unknown}"
             )
+
+        # PM-03 Invariant: Nonce must be single-use
+        if token_nonce is not None:
+            if token_nonce in self._used_nonces:
+                raise PermissionError(f"NONCE_ALREADY_USED:{token_nonce}")
 
         if self.reset_confirmation_secret is not None:
             if not confirmation_token:
                 raise PermissionError("CONFIRMATION_TOKEN_REQUIRED")
-            expected = hmac.new(
+
+            now_utc = at or datetime.now(UTC)
+            # Check bounded token
+            valid = False
+            if token_nonce:
+                token_exp: datetime | None = token_expires_at
+                if ":" in confirmation_token:
+                    parts = confirmation_token.split(":", 1)
+                    if len(parts) == 2:
+                        try:
+                            token_exp = datetime.fromisoformat(parts[1])
+                        except Exception:
+                            token_exp = None
+
+                if token_exp is not None:
+                    if token_exp.tzinfo is None:
+                        token_exp = token_exp.replace(tzinfo=UTC)
+                    if now_utc > token_exp:
+                        raise TimeoutError("RESET_TOKEN_EXPIRED")
+
+                expected_bounded = self.generate_reset_token(
+                    operator_id=operator_id,
+                    nonce=token_nonce,
+                    expires_at=token_exp,
+                    action=action,
+                    subject=subject,
+                )
+                if hmac.compare_digest(confirmation_token, expected_bounded):
+                    valid = True
+
+            # Check legacy token format
+            expected_legacy = hmac.new(
                 self.reset_confirmation_secret,
                 f"RESET_KILL_SWITCH:{operator_id}".encode(),
                 hashlib.sha256,
             ).hexdigest()
-            if not hmac.compare_digest(confirmation_token, expected):
+            if hmac.compare_digest(confirmation_token, expected_legacy):
+                valid = True
+
+            if not valid:
                 raise PermissionError("INVALID_CONFIRMATION_TOKEN")
+
+        if token_nonce is not None:
+            self._used_nonces.add(token_nonce)
 
         self._manual_kill_switch = False
         if self.kill_switch_path is not None and self.kill_switch_path.exists():

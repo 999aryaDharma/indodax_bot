@@ -51,6 +51,17 @@ def _argument_parser() -> argparse.ArgumentParser:
         help="HMAC confirmation token if secret is configured",
     )
     clear_parser.add_argument(
+        "--nonce",
+        default=None,
+        help="Token nonce for single-use bounded verification",
+    )
+    clear_parser.add_argument(
+        "--evidence-path",
+        type=Path,
+        default=None,
+        help="Path to health evidence JSON file (required for reset)",
+    )
+    clear_parser.add_argument(
         "--oms-db-path",
         type=Path,
         default=None,
@@ -110,26 +121,59 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
         return 0
 
     if args.subcommand == "clear":
-        from indodax_lab.risk.engine import RiskEngine
+        from indodax_lab.risk.engine import HealthEvidence, RiskEngine
 
-        unknown_count = 0
-        if args.oms_db_path is not None and args.oms_db_path.exists():
+        evidence: HealthEvidence | None = None
+        if args.evidence_path is not None and args.evidence_path.exists():
+            try:
+                ev_data = json.loads(args.evidence_path.read_text(encoding="utf-8"))
+                evidence = HealthEvidence(
+                    timestamp_utc=datetime.fromisoformat(ev_data["timestamp_utc"]),
+                    reconciliation_healthy=bool(ev_data.get("reconciliation_healthy", False)),
+                    unknown_orders_count=int(ev_data.get("unknown_orders_count", 0)),
+                    source=str(ev_data.get("source", "cli")),
+                    signature=ev_data.get("signature"),
+                )
+            except Exception as e:
+                output = {
+                    "ok": False,
+                    "action": "CLEAR_REJECTED",
+                    "error": f"INVALID_HEALTH_EVIDENCE_FILE: {e}",
+                    "sentinel_path": str(sentinel_path),
+                }
+                stdout.write(json.dumps(output, indent=2, sort_keys=True) + "\n")
+                return 1
+        elif (args.oms_db_path is not None and args.oms_db_path.exists()) or (
+            args.reconcile_report_path is not None and args.reconcile_report_path.exists()
+        ):
             from indodax_lab.execution.oms import OmsOrderState
             from indodax_lab.execution.oms_store import OmsStore
 
-            oms = OmsStore(args.oms_db_path)
-            unknown_count = len(
-                [o for o in oms.load_nonterminal_orders() if o.state == OmsOrderState.UNKNOWN]
-            )
+            unknown_count = 0
+            if args.oms_db_path is not None and args.oms_db_path.exists():
+                oms = OmsStore(args.oms_db_path)
+                unknown_count = len(
+                    [o for o in oms.load_nonterminal_orders() if o.state == OmsOrderState.UNKNOWN]
+                )
 
-        reconciliation_healthy = True
-        if args.reconcile_report_path is not None and args.reconcile_report_path.exists():
-            try:
-                report_data = json.loads(args.reconcile_report_path.read_text(encoding="utf-8"))
-                if report_data.get("status") != "HEALTHY":
+            reconciliation_healthy = True
+            report_ts = datetime.now(UTC)
+            if args.reconcile_report_path is not None and args.reconcile_report_path.exists():
+                try:
+                    report_data = json.loads(args.reconcile_report_path.read_text(encoding="utf-8"))
+                    if report_data.get("status") != "HEALTHY":
+                        reconciliation_healthy = False
+                    if "timestamp_utc" in report_data:
+                        report_ts = datetime.fromisoformat(report_data["timestamp_utc"])
+                except Exception:
                     reconciliation_healthy = False
-            except Exception:
-                reconciliation_healthy = False
+
+            evidence = HealthEvidence(
+                timestamp_utc=report_ts,
+                reconciliation_healthy=reconciliation_healthy,
+                unknown_orders_count=unknown_count,
+                source="oms_reconcile_cli",
+            )
 
         was_active = sentinel_path.exists()
         engine = RiskEngine(kill_switch_path=sentinel_path)
@@ -138,9 +182,9 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO = sys.stdout) -> i
             engine.reset_kill_switch(
                 operator_id=args.operator_id,
                 reason=args.reason,
-                reconciliation_healthy=reconciliation_healthy,
-                unknown_orders_count=unknown_count,
+                evidence=evidence,
                 confirmation_token=args.token,
+                token_nonce=args.nonce,
             )
         except Exception as exc:
             output = {

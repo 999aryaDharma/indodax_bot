@@ -25,10 +25,18 @@ def generate_approval_token(
     operator_id: str,
     expires_at: datetime,
     secret_key: bytes | str,
+    nonce: str | None = None,
+    action: str = "APPROVE_PROPOSAL",
 ) -> str:
-    """Generate deterministic HMAC-SHA256 authorization token for operator approval."""
+    """Generate deterministic HMAC-SHA256 authorization token
+    bound to proposal, operator, expiry, and nonce.
+    """
     secret = secret_key.encode() if isinstance(secret_key, str) else secret_key
-    payload = f"{proposal_id}:{operator_id}:{expires_at.isoformat()}".encode()
+    exp_iso = expires_at.isoformat()
+    if nonce is not None:
+        payload = f"{action}:{proposal_id}:{operator_id}:{exp_iso}:{nonce}".encode()
+    else:
+        payload = f"{proposal_id}:{operator_id}:{exp_iso}".encode()
     return hmac.new(secret, payload, hashlib.sha256).hexdigest()
 
 
@@ -38,10 +46,31 @@ def verify_approval_token(
     operator_id: str,
     expires_at: datetime,
     secret_key: bytes | str,
+    nonce: str | None = None,
+    action: str = "APPROVE_PROPOSAL",
 ) -> bool:
     """Constant-time verification of operator approval authorization token."""
-    expected = generate_approval_token(proposal_id, operator_id, expires_at, secret_key)
-    return hmac.compare_digest(token, expected)
+    expected = generate_approval_token(
+        proposal_id=proposal_id,
+        operator_id=operator_id,
+        expires_at=expires_at,
+        secret_key=secret_key,
+        nonce=nonce,
+        action=action,
+    )
+    if hmac.compare_digest(token, expected):
+        return True
+    if nonce is not None:
+        # Fallback to check legacy un-nonced format
+        legacy_expected = generate_approval_token(
+            proposal_id=proposal_id,
+            operator_id=operator_id,
+            expires_at=expires_at,
+            secret_key=secret_key,
+            nonce=None,
+        )
+        return hmac.compare_digest(token, legacy_expected)
+    return False
 
 
 class ProposalStatus(StrEnum):
@@ -87,6 +116,7 @@ class ManualApprovalStore:
             self.signing_secret = None
         self._lock = RLock()
         self._proposals: dict[str, PendingProposal] = {}
+        self._used_nonces: set[str] = set()
         if self.persistence_path is not None and self.persistence_path.exists():
             self._load()
 
@@ -179,6 +209,7 @@ class ManualApprovalStore:
         at: datetime,
         reason: str = "OPERATOR_APPROVED",
         token: str | None = None,
+        nonce: str | None = None,
         snapshot_digest: str | None = None,
     ) -> PendingProposal:
         """Operator explicitly approves order proposal."""
@@ -202,6 +233,10 @@ class ManualApprovalStore:
                 self._save()
                 raise TimeoutError(f"PROPOSAL_EXPIRED:{proposal_id}")
 
+            # PM-03 Invariant: Nonce must be single-use
+            if nonce is not None and nonce in self._used_nonces:
+                raise PermissionError(f"NONCE_ALREADY_USED:{nonce}")
+
             if self.signing_secret is not None:
                 if not token:
                     raise PermissionError(f"MISSING_APPROVAL_TOKEN:{proposal_id}")
@@ -211,8 +246,12 @@ class ManualApprovalStore:
                     operator_id,
                     current.expires_at,
                     self.signing_secret,
+                    nonce=nonce,
                 ):
                     raise PermissionError(f"INVALID_APPROVAL_TOKEN:{proposal_id}")
+
+            if nonce is not None:
+                self._used_nonces.add(nonce)
 
             update_dict: dict[str, Any] = {
                 "status": ProposalStatus.APPROVED,

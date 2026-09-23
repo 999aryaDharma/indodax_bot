@@ -47,9 +47,22 @@ def test_kill_switch_cli_lifecycle(tmp_path: Path) -> None:
     assert res["kill_switch_active"] is True
     assert "TEST_HALT" in res["details"]
 
-    # 4. Clear kill switch
+    # 4. Clear kill switch (requires valid health evidence per PM-03)
+    ev_path = tmp_path / "health_evidence.json"
+    ev_path.write_text(
+        json.dumps({
+            "timestamp_utc": datetime.now(UTC).isoformat(),
+            "reconciliation_healthy": True,
+            "unknown_orders_count": 0,
+            "source": "operator_test",
+        }),
+        encoding="utf-8",
+    )
     out = io.StringIO()
-    code = kill_switch_main(["--sentinel-path", str(sentinel), "clear"], stdout=out)
+    code = kill_switch_main(
+        ["--sentinel-path", str(sentinel), "clear", "--evidence-path", str(ev_path)],
+        stdout=out,
+    )
     assert code == 0
     res = json.loads(out.getvalue())
     assert res["action"] == "CLEARED"
