@@ -25,6 +25,7 @@ from indodax_lab.execution.oms import OmsOrder, OmsOrderState
 from indodax_lab.execution.state_store import (
     ConflictingFillError,
     CorruptStateError,
+    ExecutionStateError,
     ExecutionStateStore,
     OverfillInvariantError,
     UnmatchedFillError,
@@ -52,10 +53,11 @@ def _make_fill(
     price: Decimal = Decimal("500000000"),
     fees: Decimal = Decimal("5000"),
     ts: datetime | None = None,
+    order_id: str = "ord_1",
 ) -> Fill:
     return Fill(
         fill_id=fill_id,
-        order_id="ord_1",
+        order_id=order_id,
         event_id="evt_1",
         pair=pair,
         side=side,
@@ -161,7 +163,15 @@ def test_pm_02_1(tmp_path: Path) -> None:
 # =========================================================================
 def test_pm_02_2(tmp_path: Path) -> None:
     """PM-02-AC2: Conflicting duplicate/overfill/unmatched fill halts without partial posting."""
-    store = _make_store(tmp_path)
+    # 1. Unmatched fill -> must raise UnmatchedFillError, quarantine, and latch halted
+    store_unmatched = _make_store(tmp_path / "unmatched")
+    unmatched_fill = _make_fill("fill_unmatched", order_id="ord_nonexistent")
+    with pytest.raises(UnmatchedFillError):
+        store_unmatched.apply_fill(unmatched_fill, expected_revision=0)
+    assert store_unmatched.restore().halted
+
+    # 2. Conflicting duplicate: same fill_id but changed attributes -> halts
+    store_conflict = _make_store(tmp_path / "conflict")
     order = OmsOrder(
         internal_order_id="ord_1",
         client_order_id="cl_1",
@@ -172,37 +182,28 @@ def test_pm_02_2(tmp_path: Path) -> None:
         created_at=_T0,
         updated_at=_T0,
     )
-    env = store.prepare_event({"event_id": "evt_1"}, expected_revision=0)
-    store.commit_decision(env.envelope_id, 0, {}, [order], {})
+    env = store_conflict.prepare_event({"event_id": "evt_1"}, expected_revision=0)
+    store_conflict.commit_decision(env.envelope_id, 0, {}, [order], {})
 
-    # 1. Unmatched fill -> must raise UnmatchedFillError and quarantine
-    unmatched_fill = Fill(
-        fill_id="fill_unmatched",
-        order_id="ord_nonexistent",
-        event_id="evt_x",
-        pair="btc_idr",
-        side=OrderSide.BUY,
-        role=OrderRole.TAKER,
-        qty=Decimal("0.01"),
-        price=Decimal("500000000"),
-        fees=Decimal("5000"),
-        timestamp=_T0,
-    )
-    with pytest.raises(UnmatchedFillError):
-        store.apply_fill(unmatched_fill, expected_revision=1)
-
-    # 2. Conflicting duplicate: same fill_id but different qty/price
     fill1 = _make_fill("fill_1", qty=Decimal("0.005"))
-    store.apply_fill(fill1, expected_revision=1)
+    store_conflict.apply_fill(fill1, expected_revision=1)
 
     conflicting_fill = _make_fill("fill_1", qty=Decimal("0.008"))  # Changed qty
     with pytest.raises(ConflictingFillError):
-        store.apply_fill(conflicting_fill, expected_revision=2)
+        store_conflict.apply_fill(conflicting_fill, expected_revision=2)
+    assert store_conflict.restore().halted
 
-    # 3. Overfill: fill exceeds desired_qty (0.01)
-    overfill = _make_fill("fill_2", qty=Decimal("0.01"))  # 0.005 + 0.01 > 0.01
+    # 3. Overfill: fill exceeds desired_qty (0.01) -> halts
+    store_overfill = _make_store(tmp_path / "overfill")
+    env_ov = store_overfill.prepare_event({"event_id": "evt_1"}, expected_revision=0)
+    store_overfill.commit_decision(env_ov.envelope_id, 0, {}, [order], {})
+    fill_first = _make_fill("fill_first", qty=Decimal("0.005"))
+    store_overfill.apply_fill(fill_first, expected_revision=1)
+
+    overfill = _make_fill("fill_second", qty=Decimal("0.01"))  # 0.005 + 0.01 > 0.01
     with pytest.raises(OverfillInvariantError):
-        store.apply_fill(overfill, expected_revision=2)
+        store_overfill.apply_fill(overfill, expected_revision=2)
+    assert store_overfill.restore().halted
 
 
 # =========================================================================
@@ -339,3 +340,157 @@ def test_pm_02_bootstrap_recovery(tmp_path: Path) -> None:
     # Unfinished attempting submission must resolve to UNKNOWN and latch halted
     assert report.halted
     assert "outbox_ord_b" in report.reconciled_attempts or "att_" in str(report.reconciled_attempts)
+
+
+def test_pm_02_acknowledge_requires_finished_outbox(tmp_path: Path) -> None:
+    """F-02: acknowledge_event blocks cursor advancement if outbox submissions are in-flight."""
+    store = _make_store(tmp_path)
+    order = OmsOrder(
+        internal_order_id="ord_pending",
+        client_order_id="cl_pending",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.05"),
+        limit_price=Decimal("500000000"),
+        created_at=_T0,
+        updated_at=_T0,
+    )
+    env = store.prepare_event({"event_id": "evt_ack_test"}, expected_revision=0)
+    store.commit_decision(env.envelope_id, 0, {}, [order], {})
+
+    # Outbox has a PENDING submission -> acknowledge_event must fail closed
+    with pytest.raises(ExecutionStateError, match="UNFINISHED_OUTBOX_SUBMISSIONS"):
+        store.acknowledge_event(env.envelope_id, expected_revision=1)
+
+    # Claim submission -> status becomes ATTEMPTING -> still must fail closed
+    attempt = store.claim_submission("outbox_ord_pending", expected_revision=1)
+    with pytest.raises(ExecutionStateError, match="UNFINISHED_OUTBOX_SUBMISSIONS"):
+        store.acknowledge_event(env.envelope_id, expected_revision=2)
+
+    # Record terminal submission outcome -> now acknowledge succeeds
+    store.record_submission(attempt.attempt_id, outcome={"status": "SUBMITTED"})
+    result = store.acknowledge_event(env.envelope_id, expected_revision=3)
+    assert result.status == "ACKNOWLEDGED"
+    assert result.cursor == "evt_ack_test"
+    assert result.revision == 4
+
+
+def test_pm_02_quarantine_latches_halt(tmp_path: Path) -> None:
+    """F-04: Unmatched fills and overfills latch halted=1 in state_metadata."""
+    # 1. Unmatched fill latches halt
+    store1 = _make_store(tmp_path / "halt_unmatched")
+    with pytest.raises(UnmatchedFillError):
+        store1.apply_fill(_make_fill("fill_unmatched"), expected_revision=0)
+    snap1 = store1.restore()
+    assert snap1.halted
+
+    # 2. Overfill latches halt
+    store2 = _make_store(tmp_path / "halt_overfill")
+    order = OmsOrder(
+        internal_order_id="ord_ov",
+        client_order_id="cl_ov",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.01"),
+        limit_price=Decimal("500000000"),
+        created_at=_T0,
+        updated_at=_T0,
+    )
+    env = store2.prepare_event({"event_id": "evt_ov"}, expected_revision=0)
+    store2.commit_decision(env.envelope_id, 0, {}, [order], {})
+    overfill = _make_fill("fill_over", order_id="ord_ov", qty=Decimal("0.05"))
+    with pytest.raises(OverfillInvariantError):
+        store2.apply_fill(overfill, expected_revision=1)
+    snap2 = store2.restore()
+    assert snap2.halted
+
+
+def test_pm_02_migrate_readonly(tmp_path: Path) -> None:
+    """F-01, F-05: migrate_readonly safely migrates historical DB without mutating source."""
+    import hashlib
+
+    # Create source database
+    src_db = tmp_path / "historical_source.db"
+    tx_id = "tx_hist_1"
+    fill_id = "fill_hist_1"
+    ts_utc = "2025-01-01T00:00:00Z"
+    postings_json = "[]"
+    prev_hash = "0" * 64
+    payload = f"{tx_id}:{fill_id}:{ts_utc}:{postings_json}:{prev_hash}"
+    entry_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    with sqlite3.connect(src_db) as conn:
+        conn.execute(
+            """
+            CREATE TABLE oms_orders (
+                internal_order_id TEXT PRIMARY KEY,
+                client_order_id TEXT,
+                venue_order_id TEXT,
+                pair TEXT,
+                side TEXT,
+                desired_qty TEXT,
+                filled_qty TEXT,
+                limit_price TEXT,
+                state TEXT,
+                version INTEGER,
+                payload_json TEXT,
+                sha256 TEXT,
+                updated_at_utc TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO oms_orders VALUES (
+                'hist_ord_1', 'cl_hist_1', 'v_1', 'btc_idr', 'BUY',
+                '0.1', '0.1', '500000000', 'FILLED', 1, '{}', 'hash1', '2025-01-01T00:00:00Z'
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE ledger_transactions (
+                transaction_id TEXT PRIMARY KEY,
+                fill_id TEXT,
+                timestamp_utc TEXT,
+                pair TEXT,
+                base_qty_delta TEXT,
+                postings_json TEXT,
+                prev_hash TEXT,
+                entry_hash TEXT
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO ledger_transactions VALUES (
+                ?, ?, ?, ?, '0.1', ?, ?, ?
+            )
+            """,
+            (tx_id, fill_id, ts_utc, "btc_idr", postings_json, prev_hash, entry_hash),
+        )
+        conn.commit()
+
+    # Capture source DB hash before migration
+    src_hash_before = hashlib.sha256(src_db.read_bytes()).hexdigest()
+
+    # Target store
+    store = _make_store(tmp_path / "target_store")
+    report = store.migrate_readonly([src_db], target_namespace="prod_paper")
+
+    # Assert report fields matching CONTRACTS.md line 90
+    assert report.target_namespace == "prod_paper"
+    assert report.migrated_orders == 1
+    assert report.migrated_transactions == 1
+    assert report.verified is True
+    assert report.status == "MIGRATED"
+    assert not report.blocking_reasons
+    assert str(src_db) in report.source_hashes
+
+    # Assert source DB remained completely immutable
+    src_hash_after = hashlib.sha256(src_db.read_bytes()).hexdigest()
+    assert src_hash_before == src_hash_after
+
+    # Assert target store has the migrated order
+    snap = store.restore()
+    assert "hist_ord_1" in snap.orders

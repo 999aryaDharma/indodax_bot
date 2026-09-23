@@ -11,13 +11,14 @@ Consolidates:
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
 import sqlite3
 import threading
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -148,9 +149,13 @@ class RecoveryReport:
 @dataclass(frozen=True)
 class MigrationReport:
     target_namespace: str
+    target_revision: int
     migrated_orders: int
     migrated_transactions: int
+    source_hashes: dict[str, str]
+    verified: bool
     status: str
+    blocking_reasons: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -199,13 +204,18 @@ class ExecutionStateStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextlib.contextmanager
+    def _connect(self) -> Generator[sqlite3.Connection, None, None]:
         conn = sqlite3.connect(str(self.db_path), timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL;")
         conn.execute("PRAGMA synchronous=FULL;")
         conn.execute("PRAGMA foreign_keys=ON;")
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _init_db(self) -> None:
         with self._lock, self._connect() as conn:
@@ -693,6 +703,27 @@ class ExecutionStateStore:
             if env_row is None:
                 raise ExecutionStateError(f"ENVELOPE_NOT_FOUND:{envelope_id}")
 
+            # Verify outbox submissions have terminal durable outcomes (F-02, CONTRACTS.md line 69)
+            cur = conn.execute(
+                "SELECT outbox_id, status FROM events_outbox WHERE envelope_id=?",
+                (envelope_id,),
+            )
+            outbox_rows = cur.fetchall()
+            unfinished = [
+                r["outbox_id"]
+                for r in outbox_rows
+                if r["status"] in ("PENDING", "ATTEMPTING")
+            ]
+            if unfinished:
+                raise ExecutionStateError(
+                    f"UNFINISHED_OUTBOX_SUBMISSIONS: envelope '{envelope_id}' "
+                    f"has unfinished submissions: {unfinished}"
+                )
+
+            # UNKNOWN outcome latches halt for new exposure (CONTRACTS.md line 69)
+            has_unknown = any(r["status"] == "UNKNOWN" for r in outbox_rows)
+            halt_sql = ", halted=1" if has_unknown else ""
+
             now_str = _now_utc().isoformat()
             next_rev = expected_revision + 1
             cursor = env_row["event_id"]
@@ -707,9 +738,9 @@ class ExecutionStateStore:
             )
 
             conn.execute(
-                """
+                f"""
                 UPDATE state_metadata
-                SET revision=?, feed_cursor=?, updated_at_utc=?
+                SET revision=?, feed_cursor=?, updated_at_utc=?{halt_sql}
                 WHERE namespace=?
                 """,
                 (next_rev, cursor, now_str, self.namespace),
@@ -744,7 +775,13 @@ class ExecutionStateStore:
             existing_fill = cur.fetchone()
             if existing_fill is not None:
                 if existing_fill["fill_hash"] != fill_hash:
-                    # Conflicting duplicate: fail closed immediately
+                    # Conflicting duplicate: fail closed immediately and latch halted
+                    now_str = _now_utc().isoformat()
+                    conn.execute(
+                        "UPDATE state_metadata SET halted=1, updated_at_utc=? WHERE namespace=?",
+                        (now_str, self.namespace),
+                    )
+                    conn.commit()
                     raise ConflictingFillError(
                         f"CONFLICTING_DUPLICATE_FILL: fill '{fill.fill_id}' "
                         "resubmitted with changed attributes"
@@ -784,6 +821,10 @@ class ExecutionStateStore:
                         now_str,
                     ),
                 )
+                conn.execute(
+                    "UPDATE state_metadata SET halted=1, updated_at_utc=? WHERE namespace=?",
+                    (now_str, self.namespace),
+                )
                 conn.commit()
                 raise UnmatchedFillError(
                     f"UNMATCHED_FILL: order '{fill.order_id}' not found in OMS"
@@ -803,6 +844,10 @@ class ExecutionStateStore:
                     VALUES (?, ?, ?, ?)
                     """,
                     (fill.fill_id, "OVERFILL", json.dumps(fill.model_dump(mode="json")), now_str),
+                )
+                conn.execute(
+                    "UPDATE state_metadata SET halted=1, updated_at_utc=? WHERE namespace=?",
+                    (now_str, self.namespace),
                 )
                 conn.commit()
                 raise OverfillInvariantError(
@@ -1120,12 +1165,18 @@ class ExecutionStateStore:
         """Migrate historical orders and ledger entries into target namespace fail-closed."""
         migrated_orders = 0
         migrated_transactions = 0
+        source_hashes: dict[str, str] = {}
+        blocking_reasons: list[str] = []
 
         for path in source_paths:
             if not path.exists():
                 continue
+            # Provenance: compute sha256 of source database file
+            source_hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+
             # Open source read-only
-            src_conn = sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True)
+            norm_uri = f"file:///{path.resolve().as_posix()}?mode=ro"
+            src_conn = sqlite3.connect(norm_uri, uri=True)
             src_conn.row_factory = sqlite3.Row
             try:
                 # Check for oms_orders
@@ -1136,6 +1187,7 @@ class ExecutionStateStore:
                     orders_cur = src_conn.execute("SELECT * FROM oms_orders")
                     with self._lock, self._connect() as conn:
                         for row in orders_cur.fetchall():
+                            r = dict(row)
                             conn.execute(
                                 """
                                 INSERT OR IGNORE INTO oms_orders (
@@ -1145,23 +1197,22 @@ class ExecutionStateStore:
                                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                                 """,
                                 (
-                                    row["internal_order_id"],
-                                    row.get("client_order_id", row["internal_order_id"]),
-                                    row.get("venue_order_id"),
-                                    row.get("pair", "btc_idr"),
-                                    row.get("side", "BUY"),
-                                    str(row.get("desired_qty", "0")),
-                                    str(row.get("filled_qty", "0")),
-                                    str(row.get("limit_price")) if row.get("limit_price") else None,
-                                    row.get("state", "NEW"),
-                                    row.get("version", 1),
-                                    row.get("payload", "{}"),
-                                    row.get("sha256", _sha256_digest(row["internal_order_id"])),
-                                    row.get("updated_at_utc", _now_utc().isoformat()),
+                                    r["internal_order_id"],
+                                    r.get("client_order_id", r["internal_order_id"]),
+                                    r.get("venue_order_id"),
+                                    r.get("pair", "btc_idr"),
+                                    r.get("side", "BUY"),
+                                    str(r.get("desired_qty", "0")),
+                                    str(r.get("filled_qty", "0")),
+                                    str(r.get("limit_price")) if r.get("limit_price") else None,
+                                    r.get("state", "NEW"),
+                                    r.get("version", 1),
+                                    r.get("payload_json", r.get("payload", "{}")),
+                                    r.get("sha256", _sha256_digest(r["internal_order_id"])),
+                                    r.get("updated_at_utc", _now_utc().isoformat()),
                                 ),
                             )
                             migrated_orders += 1
-                        conn.commit()
 
                 # Check for ledger_transactions
                 cur = src_conn.execute(
@@ -1172,6 +1223,7 @@ class ExecutionStateStore:
                     tx_cur = src_conn.execute("SELECT * FROM ledger_transactions")
                     with self._lock, self._connect() as conn:
                         for row in tx_cur.fetchall():
+                            r = dict(row)
                             conn.execute(
                                 """
                                 INSERT OR IGNORE INTO ledger_transactions (
@@ -1180,24 +1232,31 @@ class ExecutionStateStore:
                                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                 """,
                                 (
-                                    row["transaction_id"],
-                                    row.get("fill_id"),
-                                    row["timestamp_utc"],
-                                    row.get("pair"),
-                                    row["base_qty_delta"],
-                                    row["postings_json"],
-                                    row["prev_hash"],
-                                    row["entry_hash"],
+                                    r["transaction_id"],
+                                    r.get("fill_id"),
+                                    r["timestamp_utc"],
+                                    r.get("pair"),
+                                    r["base_qty_delta"],
+                                    r["postings_json"],
+                                    r["prev_hash"],
+                                    r["entry_hash"],
                                 ),
                             )
                             migrated_transactions += 1
-                        conn.commit()
+            except Exception as exc:
+                blocking_reasons.append(f"Migration failed for {path}: {exc}")
             finally:
                 src_conn.close()
 
+        target_rev = self.restore().revision
+        is_verified = len(blocking_reasons) == 0
         return MigrationReport(
             target_namespace=target_namespace,
+            target_revision=target_rev,
             migrated_orders=migrated_orders,
             migrated_transactions=migrated_transactions,
-            status="MIGRATED",
+            source_hashes=source_hashes,
+            verified=is_verified,
+            status="MIGRATED" if is_verified else "BLOCKED",
+            blocking_reasons=blocking_reasons,
         )
