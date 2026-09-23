@@ -57,7 +57,7 @@ No mandatory dependent sprint.
 
 ## Current Context
 
-No web API or frontend exists in the tracked source tree. Reuse current backend services; design is governed by DESIGN.md.
+The UI shell and planned Production API/read models are defined; operational Production pages remain to be implemented after API/UI dependency sprints pass review.
 
 ## In Scope
 

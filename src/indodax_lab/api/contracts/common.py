@@ -5,13 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from indodax_lab.api.capabilities import Capability
 
 T = TypeVar("T")
+ResponseStatus = Literal["AVAILABLE", "PARTIAL", "UNAVAILABLE", "EMPTY"]
 
 
 def _reject_non_finite_decimals(value: Any) -> None:
@@ -43,6 +44,12 @@ class ApiError(BaseModel):
     retryable: bool
     details: dict[str, Any] | None = None
 
+    @field_validator("details", mode="before")
+    @classmethod
+    def reject_non_finite_decimal_details(cls, value: Any) -> Any:
+        _reject_non_finite_decimals(value)
+        return value
+
 
 class ApiEnvelope(BaseModel, Generic[T]):
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -50,7 +57,7 @@ class ApiEnvelope(BaseModel, Generic[T]):
     request_id: str = Field(min_length=1)
     as_of: datetime
     source_revision: str = Field(min_length=1)
-    status: str = Field(min_length=1)
+    status: ResponseStatus
     data: T
     provenance: Provenance
 
@@ -90,4 +97,11 @@ class IdempotencyKey(BaseModel):
         return value
 
 
-__all__ = ["ApiEnvelope", "ApiError", "IdempotencyKey", "Provenance", "RequestContext"]
+__all__ = [
+    "ApiEnvelope",
+    "ApiError",
+    "IdempotencyKey",
+    "Provenance",
+    "RequestContext",
+    "ResponseStatus",
+]

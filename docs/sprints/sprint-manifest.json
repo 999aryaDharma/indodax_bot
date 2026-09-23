@@ -10972,11 +10972,11 @@
       "legacy_tasks": [],
       "dependencies": [],
       "goal": "Define stable typed contracts for safe Production and later Research API consumers.",
-      "contract": "ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.",
+      "contract": "ApiEnvelope carries request_id, aware UTC as_of, source_revision, typed status (AVAILABLE, PARTIAL, UNAVAILABLE, EMPTY), data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.",
       "checks": [
         "Naive UTC timestamps reject and aware timestamps round-trip",
         "Non-finite Decimal rejects and finite Decimal serializes as a string",
-        "Unknown capability and malformed envelopes reject predictably"
+        "Unknown capability, unsupported envelope status and malformed envelopes reject predictably"
       ],
       "files": [
         "src/indodax_lab/api/__init__.py",
@@ -10996,7 +10996,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "Shared API contracts are implemented in this workspace and awaiting independent review; read models/routes are out of scope.",
       "unlocks": [
         "API-01",
         "API-03"
@@ -11032,7 +11032,7 @@
         {
           "criterion": "API-00-AC2",
           "test_case": "test_api_00_2",
-          "behavior": "Unknown capability and malformed envelopes reject predictably",
+          "behavior": "Unknown capability, unsupported envelope status and malformed envelopes reject predictably",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -11079,7 +11079,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "API-00 contracts and UI-00 shell are implemented in this workspace; production read models remain pending dependency review.",
       "unlocks": [
         "API-02"
       ],
@@ -11159,7 +11159,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "Shared API contracts and UI shell exist; server capability enforcement and audit context remain unimplemented.",
       "unlocks": [
         "API-02",
         "UI-01"
@@ -11240,7 +11240,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "Shared contracts and frontend shell exist; read models and server capability policy remain dependency work.",
       "unlocks": [
         "UI-02"
       ],
@@ -11293,11 +11293,11 @@
       "legacy_tasks": [],
       "dependencies": [],
       "goal": "Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.",
-      "contract": "React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.",
+      "contract": "React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.",
       "checks": [
         "Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens",
         "Kumo controls use graphite product tokens rather than default branded colors",
-        "Typed client preserves Decimal strings and distinguishes unavailable/error/empty states"
+        "Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states"
       ],
       "files": [
         "frontend/package.json",
@@ -11324,7 +11324,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "UI-00 shell and typed API client are implemented in this workspace; production API routes are not yet available. Desktop visual inspection completed; smartphone layout is implemented and awaits independent review.",
+      "current_context": "Shell and typed API client are implemented; desktop and smartphone layouts were visually inspected; independent review is pending.",
       "unlocks": [
         "UI-01"
       ],
@@ -11358,7 +11358,7 @@
         {
           "criterion": "UI-00-AC2",
           "test_case": "test_ui_00_2",
-          "behavior": "Typed client preserves Decimal strings and distinguishes unavailable/error/empty states",
+          "behavior": "Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -11404,7 +11404,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "UI-00 shell exists; context-aware navigation and server-derived capability boundaries remain this sprint's scope.",
       "unlocks": [
         "UI-02"
       ],
@@ -11487,7 +11487,7 @@
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "current_context": "UI shell exists; read-only operational pages depend on accepted API read models/routes and context/capability work.",
       "unlocks": [],
       "requirements": [
         "FR-23"

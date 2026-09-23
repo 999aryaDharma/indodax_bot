@@ -56,6 +56,25 @@ describe("Production overview client", () => {
     await expect(getProductionOverview()).resolves.toMatchObject({ status: "UNAVAILABLE", data: { unknown_orders: null } });
   });
 
+  it("rejects malformed successful snapshots and accepts explicit empty state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: "READY" }), { status: 200 })));
+    await expect(getProductionOverview()).rejects.toMatchObject({ code: "INVALID_RESPONSE", retryable: false });
+
+    const empty: ApiEnvelope<ProductionOverview> = {
+      request_id: "request-empty",
+      as_of: "2026-09-23T00:00:00Z",
+      source_revision: "empty-r1",
+      status: "EMPTY",
+      data: { ...overview, execution_mode: null, release_id: null, market: "UNAVAILABLE", venue: "UNAVAILABLE", reconciliation: "UNAVAILABLE", unknown_orders: null, risk: "UNAVAILABLE" },
+      provenance: { source: "production-main", revision: "empty-r1" },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...empty, as_of: "2026-09-23T00:00:00" }), { status: 200 })));
+    await expect(getProductionOverview()).rejects.toMatchObject({ code: "INVALID_RESPONSE", retryable: false });
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(empty), { status: 200 })));
+    await expect(getProductionOverview()).resolves.toMatchObject({ status: "EMPTY" });
+  });
+
   it("keeps API errors stable and marks network failures retryable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: {
       code: "CAPABILITY_REQUIRED", message: "Read capability required", retryable: false,

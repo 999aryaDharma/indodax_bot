@@ -299,7 +299,7 @@ Height:
 Possible contents:
 
 ```text
-BTC/IDR      UTC 13:42:21
+BTC/IDR      WITA (UTC+8) 21:42:21
 
 MODE
 SHADOW
@@ -315,6 +315,8 @@ arya
 ```
 
 Depending on the page, pair context may disappear when irrelevant.
+
+Operational timestamps should be presented in the operator's configured display zone. The current operator display zone is `Asia/Makassar` (WITA, UTC+8); API and persisted timestamps remain timezone-aware UTC, and the UI converts only for display.
 
 The context bar may also show:
 

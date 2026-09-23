@@ -57,7 +57,7 @@ UI-02
 
 ## Current Context
 
-No web API or frontend exists in the tracked source tree. Reuse current backend services; design is governed by DESIGN.md.
+The shared UI-00 shell is implemented and awaiting review. Context-aware navigation and server-derived capability boundaries are this sprint's scope.
 
 ## In Scope
 

@@ -4,7 +4,7 @@
 
 **Goal:** Define stable typed contracts for safe Production and later Research API consumers.
 
-**Architecture:** ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
+**Architecture:** ApiEnvelope carries request_id, aware UTC as_of, source_revision, typed status (AVAILABLE, PARTIAL, UNAVAILABLE, EMPTY), data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
 
 **Tech Stack:** Python 3.11+, existing Pydantic/Decimal services and FastAPI where scoped.
 
@@ -57,13 +57,13 @@ API-01, API-03
 
 ## Current Context
 
-No web API or frontend exists in the tracked source tree. Reuse current backend services; design is governed by DESIGN.md.
+The shared API contracts are implemented in this workspace and awaiting independent review. This sprint adds contracts only; Production read models and routes remain later work.
 
 ## In Scope
 
 Define stable typed contracts for safe Production and later Research API consumers.
 
-Contract: ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
+Contract: ApiEnvelope carries request_id, aware UTC as_of, source_revision, typed status (AVAILABLE, PARTIAL, UNAVAILABLE, EMPTY), data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
 
 ## Out of Scope
 
@@ -79,7 +79,7 @@ FR-23 in the admitted read-only scope.
 
 - Naive UTC timestamps reject and aware timestamps round-trip
 - Non-finite Decimal rejects and finite Decimal serializes as a string
-- Unknown capability and malformed envelopes reject predictably
+- Unknown capability, unsupported envelope status and malformed envelopes reject predictably
 
 ## Domain Rules / Invariants
 
@@ -87,7 +87,7 @@ Backend domain services own financial and operational truth. Unknown is distinct
 
 ## Architecture / Design Contract
 
-ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
+ApiEnvelope carries request_id, aware UTC as_of, source_revision, typed status (AVAILABLE, PARTIAL, UNAVAILABLE, EMPTY), data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
 
 Production, Research and System identities stay namespaced. ASUS Research WebSocket feed state is never Production market authority; browser update transports, if admitted later, are distinct read-only observability channels and never exchange sockets.
 
@@ -100,7 +100,7 @@ Production, Research and System identities stay namespaced. ASUS Research WebSoc
 
 ## Interfaces & Contracts
 
-ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
+ApiEnvelope carries request_id, aware UTC as_of, source_revision, typed status (AVAILABLE, PARTIAL, UNAVAILABLE, EMPTY), data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.
 
 ## Data / Persistence Impact
 
@@ -122,13 +122,13 @@ Inspect assigned paths and dependencies; write focused behavior tests; implement
 
 - Naive UTC timestamps reject and aware timestamps round-trip
 - Non-finite Decimal rejects and finite Decimal serializes as a string
-- Unknown capability and malformed envelopes reject predictably
+- Unknown capability, unsupported envelope status and malformed envelopes reject predictably
 
 ## Failure / Edge Cases
 
 - Naive UTC timestamps reject and aware timestamps round-trip
 - Non-finite Decimal rejects and finite Decimal serializes as a string
-- Unknown capability and malformed envelopes reject predictably
+- Unknown capability, unsupported envelope status and malformed envelopes reject predictably
 - Missing service, stale snapshot, permission denial and malformed input fail closed.
 
 ## Security / Privacy / Safety
@@ -159,7 +159,7 @@ Revert sprint-owned files; no runtime data or host state changes need rollback.
 
 - **API-00-AC0**: Naive UTC timestamps reject and aware timestamps round-trip (test_api_00_0).
 - **API-00-AC1**: Non-finite Decimal rejects and finite Decimal serializes as a string (test_api_00_1).
-- **API-00-AC2**: Unknown capability and malformed envelopes reject predictably (test_api_00_2).
+- **API-00-AC2**: Unknown capability, unsupported envelope status and malformed envelopes reject predictably (test_api_00_2).
 
 ## Definition of Done
 
@@ -169,7 +169,7 @@ All acceptance criteria are demonstrated; exact SHA and commands/results are rec
 
 - [ ] Naive UTC timestamps reject and aware timestamps round-trip
 - [ ] Non-finite Decimal rejects and finite Decimal serializes as a string
-- [ ] Unknown capability and malformed envelopes reject predictably
+- [ ] Unknown capability, unsupported envelope status and malformed envelopes reject predictably
 - [ ] Verify no unrelated paths or authority boundaries changed.
 
 ## Commit Guidance

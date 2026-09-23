@@ -4,7 +4,7 @@
 
 **Goal:** Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.
 
-**Architecture:** React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.
+**Architecture:** React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.
 
 **Tech Stack:** React, TypeScript, Vite, Kumo UI 2.14.0, locally hosted Geist Sans/Mono.
 
@@ -56,13 +56,13 @@ UI-01
 
 ## Current Context
 
-No web API or frontend exists in the tracked source tree. Reuse current backend services; design is governed by DESIGN.md.
+UI-00 shell and typed API client are implemented in this workspace and awaiting independent review. Production API routes are not available yet.
 
 ## In Scope
 
 Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.
 
-Contract: React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.
+Contract: React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.
 
 ## Out of Scope
 
@@ -78,7 +78,7 @@ FR-23 in the admitted read-only scope.
 
 - Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens
 - Kumo controls use graphite product tokens rather than default branded colors
-- Typed client preserves Decimal strings and distinguishes unavailable/error/empty states
+- Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states
 
 ## Domain Rules / Invariants
 
@@ -88,7 +88,7 @@ Backend domain services own financial and operational truth. Unknown is distinct
 
 Keep API namespaces and health-source labels explicit. The browser consumes the control-plane API; it never connects to Indodax WebSocket or treats ASUS Research Runtime as Production authority. Event streaming is outside this sprint.
 
-React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.
+React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.
 
 ## Planned Files / Artifacts
 
@@ -106,7 +106,7 @@ React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local 
 
 ## Interfaces & Contracts
 
-React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.
+React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client validates full envelope shape and timezone-aware timestamps, preserves Decimal strings, request IDs and stable errors, and clears prior snapshots after a failed refresh; no secret persistence.
 
 ## Data / Persistence Impact
 
@@ -128,13 +128,13 @@ Inspect assigned paths and dependencies; write focused behavior tests; implement
 
 - Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens
 - Kumo controls use graphite product tokens rather than default branded colors
-- Typed client preserves Decimal strings and distinguishes unavailable/error/empty states
+- Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states
 
 ## Failure / Edge Cases
 
 - Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens
 - Kumo controls use graphite product tokens rather than default branded colors
-- Typed client preserves Decimal strings and distinguishes unavailable/error/empty states
+- Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states
 - Missing service, stale snapshot, permission denial and malformed input fail closed.
 
 ## Security / Privacy / Safety
@@ -165,7 +165,7 @@ Revert sprint-owned files; no runtime data or host state changes need rollback.
 
 - **UI-00-AC0**: Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens (test_ui_00_0).
 - **UI-00-AC1**: Kumo controls use graphite product tokens rather than default branded colors (test_ui_00_1).
-- **UI-00-AC2**: Typed client preserves Decimal strings and distinguishes unavailable/error/empty states (test_ui_00_2).
+- **UI-00-AC2**: Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states (test_ui_00_2).
 
 ## Definition of Done
 
@@ -175,7 +175,7 @@ All acceptance criteria are demonstrated; exact SHA and commands/results are rec
 
 - [ ] Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens
 - [ ] Kumo controls use graphite product tokens rather than default branded colors
-- [ ] Typed client preserves Decimal strings and distinguishes unavailable/error/empty states
+- [ ] Typed client validates complete response envelopes, preserves Decimal strings and distinguishes unavailable/error/empty states
 - [ ] Verify no unrelated paths or authority boundaries changed.
 
 ## Commit Guidance

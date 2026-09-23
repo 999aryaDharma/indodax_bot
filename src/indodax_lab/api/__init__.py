@@ -7,6 +7,7 @@ from indodax_lab.api.contracts.common import (
     IdempotencyKey,
     Provenance,
     RequestContext,
+    ResponseStatus,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "IdempotencyKey",
     "Provenance",
     "RequestContext",
+    "ResponseStatus",
 ]

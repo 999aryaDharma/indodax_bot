@@ -4,7 +4,7 @@ export type ApiEnvelope<T> = {
   request_id: string;
   as_of: string;
   source_revision: string;
-  status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | string;
+  status: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "EMPTY";
   data: T;
   provenance: Provenance;
 };
@@ -16,7 +16,7 @@ export type ApiError = {
   details?: Record<string, unknown> | null;
 };
 
-export type ServiceState = "HEALTHY" | "WARNING" | "CRITICAL" | "UNKNOWN" | "UNAVAILABLE";
+export type ServiceState = "HEALTHY" | "WARNING" | "CRITICAL" | "UNKNOWN" | "UNAVAILABLE" | "MISMATCH" | "STALE";
 
 export type ProductionOverview = {
   execution_mode: string | null;

@@ -83,6 +83,17 @@ def test_api_00_2_rejects_unknown_capabilities_and_malformed_envelopes() -> None
                 "unexpected": True,
             }
         )
+    with pytest.raises(ValidationError):
+        ApiEnvelope.model_validate(
+            {
+                "request_id": "req-1",
+                "as_of": "2026-09-23T00:00:00Z",
+                "source_revision": "rev-1",
+                "status": "READY",
+                "data": {},
+                "provenance": {"source": "oms", "revision": "rev-1"},
+            }
+        )
 
     context = RequestContext(
         request_id="req-2", actor=None, capabilities={Capability.PRODUCTION_READ}
@@ -102,4 +113,11 @@ def test_api_00_2_rejects_unknown_capabilities_and_malformed_envelopes() -> None
         "retryable": True,
         "details": None,
     }
+    with pytest.raises(ValidationError):
+        ApiError(
+            code="SOURCE_UNAVAILABLE",
+            message="Source unavailable",
+            retryable=True,
+            details={"measurement": [Decimal("NaN")]},
+        )
     assert IdempotencyKey(value=" key-1 ").value == "key-1"

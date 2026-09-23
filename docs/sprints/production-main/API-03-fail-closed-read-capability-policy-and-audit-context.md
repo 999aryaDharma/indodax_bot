@@ -57,7 +57,7 @@ API-02, UI-01
 
 ## Current Context
 
-No web API or frontend exists in the tracked source tree. Reuse current backend services; design is governed by DESIGN.md.
+Shared API contracts and UI shell are present in this workspace; production server capability enforcement and audit context remain unimplemented.
 
 ## In Scope
 
