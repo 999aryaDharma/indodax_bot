@@ -2113,9 +2113,9 @@
       "spec": "docs/specs/07-feature-engineering.md",
       "path": "docs/sprints/features/FEAT-03-as-of-market-context.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex (FEAT-03 review remediation)",
+      "independent_reviewer": "Codex independent reviewer agent /root/feat01_independent_review (PASS on exact code SHA ba0cd66301fd89f8397e7152287c5c75c9f84ef1)",
       "recommended_branch": "feat/feat-03-as-of-market-context",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -2136,10 +2136,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/FEAT-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "ba0cd66301fd89f8397e7152287c5c75c9f84ef1",
+        "code_target": "ba0cd66301fd89f8397e7152287c5c75c9f84ef1",
+        "review": "Independent PASS against exact code SHA ba0cd66301fd89f8397e7152287c5c75c9f84ef1. Original Important cross-pair leak fixed with same-pair default and explicit BTC benchmark join mode. Reviewer verified all call sites, unmatched/mixed-pair behavior, and BTC builder integration; 15 focused availability tests and 1 benchmark integration test passed. Owner full suite: 1007 passed, 2 environment-specific skips, 3 warnings. Minor advisory: duplicate decision pair-column labels produce a generic pandas ValueError but fail closed."
       },
       "acceptance_test_mapping": [
         {
@@ -2171,7 +2172,7 @@
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "Implemented and independently reviewed on exact code SHA ba0cd66301fd89f8397e7152287c5c75c9f84ef1; see FEAT-03 handoff. Original Task 15 WIP provenance remains qualified.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

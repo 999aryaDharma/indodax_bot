@@ -44,7 +44,7 @@ Combined suite verification (40 passed, 2 skipped across all capabilities) passe
 - Quality verdict: PASS (zero network, strictly immutable schemas, no forward-looking lookahead, strict causality).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: CHANGES_REQUESTED at code SHA `63f96d273f3aea81544f6b609848a142316bc2d7`; re-review of the fix below is pending.
+- Independent review: PASS on exact code SHA `ba0cd66301fd89f8397e7152287c5c75c9f84ef1` by `/root/feat01_independent_review`; no Critical or Important findings remain.
 
 ## Review round 1 remediation (2026-09-23)
 
@@ -56,7 +56,8 @@ Combined suite verification (40 passed, 2 skipped across all capabilities) passe
 - Focused GREEN: `python -m pytest tests/unit/lab/features/test_availability.py -q -p no:cacheprovider` — 18 passed; `python -m pytest tests/unit/lab/features tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider` — 55 passed; BTC benchmark materialization — 1 passed.
 - Full suite: `python -m pytest -q -p no:cacheprovider` — 1007 passed, 2 environment-specific skips, 3 existing sklearn warnings (exit 0).
 - Lint: focused Ruff rules found only a pre-existing E712 finding in `context.py:137`; full-file lint also reports baseline issues outside this diff. No baseline lint debt was modified.
-- Re-review status: PENDING; do not mark DONE until an independent reviewer records PASS against exact code SHA above.
+- Re-review: PASS against exact code SHA above. Reviewer verified all call sites, mixed-pair isolation, unmatched-pair null behavior, explicit BTC-only benchmark mode, and builder integration. Focused exact-archive tests: 15 passed, 3 deselected; BTC benchmark materialization: 1 passed.
+- Minor advisory: duplicate `pair` labels in decisions currently fail closed with a generic pandas `ValueError`; explicit domain validation can be added if this malformed input is a supported boundary. It does not permit cross-pair data leakage.
 
 ## Deviations and known risks
 - Deviations: None.

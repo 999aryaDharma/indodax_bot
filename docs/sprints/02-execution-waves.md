@@ -64,7 +64,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 8
 
 - FEAT-02 — Golden technical and liquidity transforms [DONE; CORE]
-- FEAT-03 — As-of market context [REVIEW; CORE]
+- FEAT-03 — As-of market context [DONE; CORE]
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
 
