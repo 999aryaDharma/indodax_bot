@@ -487,3 +487,40 @@ def test_pm_04_3(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="UNSUPPORTED_ORDER_SEMANTICS"):
         router.submit_order(fok_order)
     assert mock_venue.submit_order.call_count == 0
+
+
+@pytest.mark.parametrize(
+    ("status", "executed_qty", "expected_state"),
+    [
+        ("NEW", Decimal("0"), OmsOrderState.ACKNOWLEDGED),
+        ("PARTIALLY_FILLED", Decimal("0.4"), OmsOrderState.PARTIALLY_FILLED),
+    ],
+)
+def test_pm_04_resolves_v2_active_statuses(
+    status: str,
+    executed_qty: Decimal,
+    expected_state: OmsOrderState,
+) -> None:
+    order = _make_order("int_v2", "cl_v2", state=OmsOrderState.UNKNOWN).model_copy(
+        update={"venue_order_id": "v_v2"}
+    )
+    oms_store = MagicMock()
+    venue = MagicMock()
+    venue.get_order.return_value = VenueOrder(
+        order_id="v_v2",
+        client_order_id="cl_v2",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        order_type="limit",
+        status=status,
+        price=Decimal("500000000"),
+        original_qty=Decimal("1"),
+        executed_qty=executed_qty,
+        remaining_qty=Decimal("1") - executed_qty,
+        submitted_at=_T0,
+    )
+
+    resolved = OrderRouter(oms_store=oms_store, venue=venue).resolve_unknown_order(order)
+
+    assert resolved.state == expected_state
+    assert resolved.filled_qty == executed_qty

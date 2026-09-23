@@ -355,7 +355,7 @@ class OrderRouter:
                 at=now_utc,
                 reason="VENUE_EXPLICIT_REJECT",
             )
-        elif status == "open":
+        elif status in ("open", "new", "partially_filled"):
             target_state = (
                 OmsOrderState.PARTIALLY_FILLED
                 if venue_order.executed_qty
