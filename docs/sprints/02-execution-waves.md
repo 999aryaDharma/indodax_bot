@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-PM-02. Verify external gates and shared-file ownership before claim.
+PM-03, PM-04. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -41,14 +41,14 @@ PM-02. Verify external gates and shared-file ownership before claim.
 ## Wave 4
 
 - DATA-04 — Snapshot quality decisions [DONE; CORE]
-- PM-02 — Atomic financial execution state and recovery [READY; CORE]
+- PM-02 — Atomic financial execution state and recovery [DONE; CORE]
 
 ## Wave 5
 
 - BAR-01 — Causal time and event bars [DONE; CORE]
 - UNIV-01 — Point-in-time investable universe [DONE; CORE]
-- PM-03 — Recovery mode and durable operator risk governance [PLANNED; CORE]
-- PM-04 — Venue parser cancellation and supported order semantics [PLANNED; CORE]
+- PM-03 — Recovery mode and durable operator risk governance [READY; CORE]
+- PM-04 — Venue parser cancellation and supported order semantics [READY; CORE]
 
 ## Wave 6
 

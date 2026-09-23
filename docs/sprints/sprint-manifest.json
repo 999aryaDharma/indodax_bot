@@ -9415,9 +9415,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-02-atomic-financial-execution-state-and-recovery.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "Antigravity Independent Reviewer (subagent 913ea7ee)",
       "recommended_branch": "feat/pm-02-atomic-financial-execution-state-and-recovery",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9441,42 +9441,49 @@
         "docs/implementation/RUNTIME-PARITY.md",
         "docs/specs/20-testing-strategy.md"
       ],
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "ed7dcdc",
+        "code_target": "ed7dcdc",
+        "path": "docs/sprints/handoffs/PM-02-HANDOFF.md",
+        "review": "Independent review PASS Round 2 on ed7dcdc (commit 6996ca7); F-01 (read-only migration dict rows), F-02 (acknowledge outbox completion check), F-03 (deterministic connect closing), F-04 (quarantine halt latching), F-05 (migration report contract); full-suite gate PASS (981 passed, 0 failed)"
+      },
       "acceptance_test_mapping": [
         {
           "criterion": "PM-02-AC0",
           "test_case": "test_pm_02_0",
           "behavior": "Crash at each boundary yields either zero or one complete effect after restart",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-02-AC1",
           "test_case": "test_pm_02_1",
           "behavior": "Duplicate replay cannot double OMS quantity or fees",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-02-AC2",
           "test_case": "test_pm_02_2",
           "behavior": "Conflicting duplicate/overfill/unmatched fill halts without partial posting",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-02-AC3",
           "test_case": "test_pm_02_3",
           "behavior": "Late fill after cancellation updates cumulative evidence once",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-02-AC4",
           "test_case": "test_pm_02_4",
           "behavior": "Corrupt snapshot/journal linkage blocks restore",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-02-AC5",
           "test_case": "test_pm_02_bootstrap_recovery",
           "behavior": "No-intent event crash and partial two-order submission recover once without cursor loss or blind resubmission",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         }
       ],
       "risk_level": "high",
@@ -9512,7 +9519,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-03-recovery-mode-and-durable-operator-risk-governance.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/pm-03-recovery-mode-and-durable-operator-risk-governance",
@@ -9599,7 +9606,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-04-venue-parser-cancellation-and-supported-order-semantics.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/pm-04-venue-parser-cancellation-and-supported-order-semantics",
