@@ -2,7 +2,7 @@
 
 ## Revalidation addendum — 2026-09-23
 
-Current implementation target: code SHA `5dc3bbfba9e61575dabce0ad61055e28ef230e24` on branch `feat/feat-02-finalization`. This supersedes the earlier code SHA below for review and acceptance evidence; the historical evidence is retained as provenance.
+Current implementation target: code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634bf` on branch `feat/feat-02-finalization`. This supersedes the earlier code SHA below for review and acceptance evidence; the historical evidence is retained as provenance.
 
 - The imported WIP is now committed in the current repository history. Both canonical feature registries are version `1.1.0` and pin EMA initialization, Wilder SMA seeding, StochRSI zero-range behavior, and rolling `ddof`; the report's feature-set version matches.
 - `technical.py` propagates those policies through registry-callable transforms. Golden values remain hand-literal; tests cover warmup, flat/zero-volume finiteness and future-bar causality.
@@ -10,10 +10,14 @@ Current implementation target: code SHA `5dc3bbfba9e61575dabce0ad61055e28ef230e2
 - `python -m pytest tests/unit/lab/features -q -p no:cacheprovider` → 38 passed, exit 0.
 - `python -m pytest tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider` → 14 passed, exit 0.
 - `python -m ruff check --ignore E501 src/indodax_lab/features/technical.py tests/unit/lab/features/test_technical.py tests/unit/lab/features/test_registry.py` → passed, exit 0. The exception is explicit because touched legacy files contain pre-existing long lines; the narrow check found no other lint issues.
+- Reviewer identified an Important mismatch on prior code SHA `5dc3bbf`: the raw-bar pass-through report claimed a registry identity/version it did not use. Fixed in `52dddc1` by emitting null feature-set provenance for that path; the canonical feature builder continues to emit the actual registry ID/version.
+- Regression: `python -m pytest tests/unit/lab/cli/test_run_backtest_report.py -q -p no:cacheprovider` → 1 passed, exit 0. It failed against `5dc3bbf` because the report claimed `tabular_bar_5m_v1@1.1.0`.
+- Final focused run on `52dddc1`: feature unit tests 38 passed, report-provenance test 1 passed, feature-materialization integration 14 passed; all exit 0.
+- `python -m ruff check tests/unit/lab/cli/test_run_backtest_report.py` and the narrow feature lint command above → passed, exit 0.
 - `git diff --check` on the six implementation files → passed, exit 0.
-- Independent review of exact code SHA `5dc3bbfba9e61575dabce0ad61055e28ef230e24` is pending. Do not transition FEAT-02 to DONE before reviewer PASS and coordinator manifest/projection update.
+- Independent review of exact code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634bf` is pending. Do not transition FEAT-02 to DONE before reviewer PASS and coordinator manifest/projection update.
 
-Current implementation paths: `configs/features/tabular_bar_v1.yaml`, `configs/features/tabular_bar_5m_v1.yaml`, `src/indodax_lab/features/technical.py`, `src/indodax_lab/cli/run_backtest.py`, `tests/unit/lab/features/test_registry.py`, and `tests/unit/lab/features/test_technical.py`.
+Current implementation paths: `configs/features/tabular_bar_v1.yaml`, `configs/features/tabular_bar_5m_v1.yaml`, `src/indodax_lab/features/technical.py`, `src/indodax_lab/cli/run_backtest.py`, `tests/unit/lab/features/test_registry.py`, `tests/unit/lab/features/test_technical.py`, and `tests/unit/lab/cli/test_run_backtest_report.py`.
 
 Status: REVIEW
 
