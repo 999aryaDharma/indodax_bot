@@ -16,14 +16,15 @@ export type ApiError = {
   details?: Record<string, unknown> | null;
 };
 
-export type ServiceState = "HEALTHY" | "WARNING" | "CRITICAL" | "UNKNOWN" | "UNAVAILABLE" | "MISMATCH" | "STALE";
+export type ServiceState = "HEALTHY" | "WARNING" | "CRITICAL" | "UNKNOWN";
+export type ResourceStatus = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "UNKNOWN";
 
 export type ProductionOverview = {
-  execution_mode: string | null;
+  mode: string | null;
   release_id: string | null;
-  market: ServiceState;
-  venue: ServiceState;
-  reconciliation: ServiceState;
-  unknown_orders: number | null;
-  risk: ServiceState;
+  market_health: ServiceState;
+  venue_health: ServiceState;
+  reconciliation_status: ResourceStatus;
+  unknown_orders_count: number | null;
+  risk_status: "HALTED" | "UNKNOWN";
 };

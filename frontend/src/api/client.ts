@@ -22,7 +22,8 @@ export function overviewDataForDisplay(
     : undefined;
 }
 
-const serviceStates = new Set(["HEALTHY", "WARNING", "CRITICAL", "UNKNOWN", "UNAVAILABLE", "MISMATCH", "STALE"]);
+const serviceStates = new Set(["HEALTHY", "WARNING", "CRITICAL", "UNKNOWN"]);
+const resourceStatuses = new Set(["AVAILABLE", "PARTIAL", "UNAVAILABLE", "UNKNOWN"]);
 const envelopeStatuses = new Set(["AVAILABLE", "PARTIAL", "UNAVAILABLE", "EMPTY"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -44,10 +45,12 @@ function parseOverviewEnvelope(body: unknown): ApiEnvelope<ProductionOverview> {
     && nonEmptyString(body.source_revision)
     && typeof body.status === "string" && envelopeStatuses.has(body.status)
     && nonEmptyString(body.provenance.source) && nonEmptyString(body.provenance.revision)
-    && (data.execution_mode === null || typeof data.execution_mode === "string")
+    && (data.mode === null || typeof data.mode === "string")
     && (data.release_id === null || typeof data.release_id === "string")
-    && [data.market, data.venue, data.reconciliation, data.risk].every((value) => typeof value === "string" && serviceStates.has(value))
-    && (data.unknown_orders === null || (Number.isSafeInteger(data.unknown_orders) && Number(data.unknown_orders) >= 0));
+    && [data.market_health, data.venue_health].every((value) => typeof value === "string" && serviceStates.has(value))
+    && typeof data.reconciliation_status === "string" && resourceStatuses.has(data.reconciliation_status)
+    && (data.unknown_orders_count === null || (Number.isSafeInteger(data.unknown_orders_count) && Number(data.unknown_orders_count) >= 0))
+    && (data.risk_status === "HALTED" || data.risk_status === "UNKNOWN");
   if (!valid) {
     throw new ControlPlaneError("INVALID_RESPONSE", "Production API returned a malformed snapshot.", false, null);
   }

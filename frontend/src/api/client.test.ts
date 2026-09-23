@@ -3,13 +3,13 @@ import { ControlPlaneError, getProductionOverview, overviewDataForDisplay } from
 import type { ApiEnvelope, ProductionOverview } from "./types";
 
 const overview: ProductionOverview = {
-  execution_mode: "SHADOW",
+  mode: "SHADOW",
   release_id: null,
-  market: "HEALTHY",
-  venue: "HEALTHY",
-  reconciliation: "HEALTHY",
-  unknown_orders: 0,
-  risk: "HEALTHY",
+  market_health: "HEALTHY",
+  venue_health: "HEALTHY",
+  reconciliation_status: "AVAILABLE",
+  unknown_orders_count: 0,
+  risk_status: "UNKNOWN",
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -60,12 +60,12 @@ describe("Production overview client", () => {
       as_of: "2026-09-23T00:00:00Z",
       source_revision: "unavailable",
       status: "UNAVAILABLE",
-      data: { ...overview, execution_mode: null, release_id: null, market: "UNAVAILABLE", venue: "UNAVAILABLE", reconciliation: "UNAVAILABLE", unknown_orders: null, risk: "UNAVAILABLE" },
+      data: { ...overview, mode: null, release_id: null, market_health: "UNKNOWN", venue_health: "UNKNOWN", reconciliation_status: "UNAVAILABLE", unknown_orders_count: null, risk_status: "UNKNOWN" },
       provenance: { source: "production-main", revision: "unavailable" },
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 })));
 
-    await expect(getProductionOverview()).resolves.toMatchObject({ status: "UNAVAILABLE", data: { unknown_orders: null } });
+    await expect(getProductionOverview()).resolves.toMatchObject({ status: "UNAVAILABLE", data: { unknown_orders_count: null } });
   });
 
   it("rejects malformed successful snapshots and accepts explicit empty state", async () => {
@@ -77,7 +77,7 @@ describe("Production overview client", () => {
       as_of: "2026-09-23T00:00:00Z",
       source_revision: "empty-r1",
       status: "EMPTY",
-      data: { ...overview, execution_mode: null, release_id: null, market: "UNAVAILABLE", venue: "UNAVAILABLE", reconciliation: "UNAVAILABLE", unknown_orders: null, risk: "UNAVAILABLE" },
+      data: { ...overview, mode: null, release_id: null, market_health: "UNKNOWN", venue_health: "UNKNOWN", reconciliation_status: "UNAVAILABLE", unknown_orders_count: null, risk_status: "UNKNOWN" },
       provenance: { source: "production-main", revision: "empty-r1" },
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...empty, as_of: "2026-09-23T00:00:00" }), { status: 200 })));
