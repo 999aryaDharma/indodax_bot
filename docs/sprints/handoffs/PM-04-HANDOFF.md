@@ -6,10 +6,10 @@ Status: REVIEW
 - Sprint ID: PM-04 — Venue parser cancellation and supported order semantics
 - Implementation agent: Antigravity
 - Independent reviewer: pending for corrected code SHA; the PASS at `84105fa` applies only to `692157d`
-- Branch / worktree: `docs/architecture-runtime-plan`
+- Branch / worktree: `fix/pm-04-v2-recovery` / `C:\Users\User\AppData\Local\Temp\indodax-pm04-v2-recovery`
 - Base SHA: `5229f4f`
-- Code target: `fix(pm-04): preserve cancel uncertainty and venue fills`
-- Code SHA: `a3f5653` (original implementation `692157d`; follow-up audit fix)
+- Code target: `fix(pm-04): resolve v2 active statuses`
+- Code SHA: `8635cc73ac0d63fe63c5365c44976c2ff69c599c` (includes prior fix `a3f5653`; original implementation `692157d`)
 
 ## Implementation Summary
 
@@ -28,6 +28,9 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
 4. **Supported Order and TIF Pre-Transport Validation (`src/indodax_lab/execution/indodax_trading.py` & `src/indodax_lab/execution/order_router.py`)**:
    - Pre-transport Check (PM-04-FR3 / AC3): `IndodaxTradingVenue.submit_order()` and `OrderRouter.submit_order()` (when configured for production venue via `enforce_production_semantics`) reject unsupported order semantics (e.g. non-limit orders like `market`, or non-GTC time-in-force like `IOC` / `FOK`, or missing/non-positive limit price) before making any HTTP request or mutating OMS state, raising `ValueError` matching `UNSUPPORTED_ORDER_SEMANTICS` and `ORDER_LIMIT_PRICE_REQUIRED`. Zero HTTP requests are dispatched to the exchange.
 
+5. **Trade API v2 recovery statuses (`src/indodax_lab/execution/order_router.py`)**:
+   - `resolve_unknown_order()` now accepts `NEW` and `PARTIALLY_FILLED` as active venue states and maps the latter with exact observed `executed_qty` into OMS `PARTIALLY_FILLED`.
+
 ## Files and contracts
 - Planned files:
   - `src/indodax_lab/execution/indodax_readonly.py` (Quantity conservation invariant and type assertions in `VenueOrder.__post_init__`)
@@ -45,15 +48,16 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
 
 Focused suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py -q -p no:cacheprovider` — 4 passed in 1.94s, exit 0.
 Full suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest -q -p no:cacheprovider` — 990 passed, 2 skipped, 3 warnings in 65.65s, exit 0. Skips: Linux `/proc` VmHWM smoke and Windows symlink privilege; neither is hidden as PASS.
+Follow-up targeted regression on `8635cc7`: `... -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_resolves_v2_active_statuses -q -p no:cacheprovider` — 2 passed, exit 0. Focused suite: 6 passed, exit 0. Full suite on `8635cc7`: `... -m pytest -q -p no:cacheprovider` — 992 passed, 2 skipped, 3 warnings in 94.22s, exit 0. Same platform-limited skips as above.
 Lint check: `ruff check` passed cleanly (exit 0).
 Diff check: `git diff --check` passed cleanly (exit 0).
 
 ## Review
-- Independent Reviewer: PENDING for `a3f5653`; prior reviewer PASS at `84105fa` covers `692157d` only
+- Independent Reviewer: PENDING for `8635cc73ac0d63fe63c5365c44976c2ff69c599c`; prior verdicts cover earlier code SHAs only
 - Verdict: Round 1 PASS on `692157d` superseded by later audit findings; corrected SHA awaits independent review
 - Spec compliance: 100% verified across AC0–AC3
 - Quality & safety: PASS (strict Decimal quantity conservation, robust cancel uncertainty latches, exact race fill preservation, pre-transport semantics validation)
-- Findings: later audit reproduced three Important defects in cancellation state, recovery fill quantity, and non-finite quantity handling. Scoped fixes at `a3f5653` passed regression tests; independent re-review remains pending.
+- Findings: later audits reproduced four Important defects in cancellation state, recovery fill quantity, non-finite quantity handling, and v2 active-status recovery. Scoped fixes at `a3f5653` and `8635cc7` pass regression/full-suite tests; independent re-review remains pending.
 
 ## Deviations and known risks
 - Deviations: None.

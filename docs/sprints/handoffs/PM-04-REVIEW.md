@@ -2,6 +2,11 @@
 
 Status: HISTORICAL PASS on Round 1 for `692157d`; superseded by the follow-up audit below. PM-04 is REVIEW pending an independent verdict on the corrected SHA. Maximum five rounds; history preserved below.
 
+## Follow-up review — 2026-09-23
+
+- Important: `resolve_unknown_order()` did not recognize Trade API v2 active statuses `NEW` or `PARTIALLY_FILLED`; recovery raised `UnresolvedOrderStateError` despite authoritative active venue state. Regression tests reproduced both cases.
+- Fix maps both statuses through the active-order recovery path, preserving observed executed quantity and resolving to `ACKNOWLEDGED` or `PARTIALLY_FILLED`. This change awaits independent review on its committed SHA.
+
 ## Follow-up audit — 2026-09-23
 
 - Important: `order_router.py` treated a cancel acknowledgement followed by venue status `OPEN` as `CANCELLED`. A real open order could therefore be mistaken for a terminal order. A new regression test failed with `CANCELLED` where `UNKNOWN` was required.
