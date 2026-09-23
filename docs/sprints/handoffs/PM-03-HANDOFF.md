@@ -9,6 +9,7 @@ Status: REVIEW
 - Branch / worktree: `docs/architecture-runtime-plan`
 - Base SHA: `256163b`
 - Code target: `feat(pm-03): recovery mode and durable operator risk governance`
+- Code SHA: `b998fd7`
 
 ## Implementation Summary
 
@@ -45,11 +46,11 @@ Implemented institutional recovery authority, durable mode store boot invariants
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| PM-03-AC0 (GREEN) | `test_pm_03_0` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_0` | Exit 0 (Passed, all modes restart into RECOVERY; requested mode separate) | Pending commit |
-| PM-03-AC1 (GREEN) | `test_pm_03_1` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_1` | Exit 0 (Passed, corrupt/missing risk state prevents active mode; journal hash tamper halts) | Pending commit |
-| PM-03-AC2 (GREEN) | `test_pm_03_2` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_2` | Exit 0 (Passed, persistence failure rolls back in-memory mode, writes stay disabled) | Pending commit |
-| PM-03-AC3 (GREEN) | `test_pm_03_3` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_3` | Exit 0 (Passed, reset with absent/stale evidence rejects; CLI clear rejects without evidence) | Pending commit |
-| PM-03-AC4 (GREEN) | `test_pm_03_4` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_4` | Exit 0 (Passed, reused or expired approval/reset token rejects) | Pending commit |
+| PM-03-AC0 (GREEN) | `test_pm_03_0` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_0` | Exit 0 (Passed, all modes restart into RECOVERY; requested mode separate) | `b998fd7` |
+| PM-03-AC1 (GREEN) | `test_pm_03_1` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_1` | Exit 0 (Passed, corrupt/missing risk state prevents active mode; journal hash tamper halts) | `b998fd7` |
+| PM-03-AC2 (GREEN) | `test_pm_03_2` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_2` | Exit 0 (Passed, persistence failure rolls back in-memory mode, writes stay disabled) | `b998fd7` |
+| PM-03-AC3 (GREEN) | `test_pm_03_3` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_3` | Exit 0 (Passed, reset with absent/stale evidence rejects; CLI clear rejects without evidence) | `b998fd7` |
+| PM-03-AC4 (GREEN) | `test_pm_03_4` | `pytest tests/integration/lab/test_control_recovery_authority.py::test_pm_03_4` | Exit 0 (Passed, reused or expired approval/reset token rejects) | `b998fd7` |
 
 Integration suite: 5 passed in 0.84s.
 Full test suite: 986 passed, 2 skipped, 0 failed in 32.21s.
