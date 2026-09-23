@@ -81,6 +81,10 @@ class VenueOrder:
             or not isinstance(self.remaining_qty, Decimal)
         ):
             raise VenueProtocolError("VENUE_ORDER_QUANTITIES_MUST_BE_DECIMAL")
+        if not all(
+            qty.is_finite() for qty in (self.original_qty, self.executed_qty, self.remaining_qty)
+        ):
+            raise VenueProtocolError("VENUE_ORDER_QUANTITIES_MUST_BE_FINITE")
         if self.original_qty <= Decimal("0"):
             raise VenueProtocolError("VENUE_ORDER_ORIGINAL_QTY_MUST_BE_POSITIVE")
         if self.executed_qty < Decimal("0") or self.remaining_qty < Decimal("0"):

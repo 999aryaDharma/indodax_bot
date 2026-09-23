@@ -165,6 +165,21 @@ def test_pm_04_0() -> None:
             submitted_at=_T0,
         )
 
+    with pytest.raises(VenueProtocolError, match="VENUE_ORDER_QUANTITIES_MUST_BE_FINITE"):
+        VenueOrder(
+            order_id="bad_nan",
+            client_order_id="cl_bad_nan",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            order_type="limit",
+            status="OPEN",
+            price=Decimal("500000000"),
+            original_qty=Decimal("NaN"),
+            executed_qty=Decimal("0"),
+            remaining_qty=Decimal("0"),
+            submitted_at=_T0,
+        )
+
 
 # =========================================================================
 # AC1: Cancel acknowledgement plus inconclusive lookup stays UNKNOWN
@@ -273,6 +288,25 @@ def test_pm_04_1(tmp_path: Path) -> None:
     assert current_stored is not None
     assert current_stored.state == OmsOrderState.UNKNOWN
 
+    # A conclusive cancelled lookup must carry any fill discovered during recovery.
+    mock_venue_unknown.get_order.return_value = VenueOrder(
+        order_id="v_ord_01",
+        client_order_id="cl_ord_01",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        order_type="limit",
+        status="CANCELLED",
+        price=Decimal("500000000"),
+        original_qty=Decimal("1.0"),
+        executed_qty=Decimal("0.4"),
+        remaining_qty=Decimal("0.6"),
+        submitted_at=_T0,
+    )
+    recovered = router_with_weird.resolve_unknown_order(routed_order)
+    assert recovered.state == OmsOrderState.CANCELLED
+    assert recovered.filled_qty == Decimal("0.4")
+    assert oms_store.load_order(routed_order.internal_order_id).filled_qty == Decimal("0.4")
+
 
 # =========================================================================
 # AC2: Fill/cancel race never invents zero fill
@@ -368,6 +402,37 @@ def test_pm_04_2(tmp_path: Path) -> None:
     filled_order = router.cancel_order(ack_order_2)
     assert filled_order.state == OmsOrderState.FILLED
     assert filled_order.filled_qty == Decimal("1.0")
+
+    # Cancel ACK followed by an open venue order is not a confirmed cancellation.
+    initial_order_3 = _make_order("int_race_3", "cl_race_3")
+    oms_store.create_order(initial_order_3, event_id="evt_c3")
+    sub_order_3 = OmsStateMachine.transition(initial_order_3, OmsOrderState.SUBMITTING, at=_T0)
+    oms_store.apply_transition(initial_order_3, sub_order_3, event_id="evt_s3")
+    ack_order_3 = OmsStateMachine.transition(
+        sub_order_3, OmsOrderState.ACKNOWLEDGED, at=_T0, venue_order_id="v_race_3"
+    )
+    oms_store.apply_transition(sub_order_3, ack_order_3, event_id="evt_a3")
+    mock_venue.cancel_order.return_value = VenueOrder(
+        order_id="v_race_3",
+        client_order_id="cl_race_3",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        order_type="limit",
+        status="OPEN",
+        price=Decimal("500000000"),
+        original_qty=Decimal("1.0"),
+        executed_qty=Decimal("0.4"),
+        remaining_qty=Decimal("0.6"),
+        submitted_at=_T0,
+    )
+    unresolved = router.cancel_order(ack_order_3)
+    assert unresolved.state == OmsOrderState.UNKNOWN
+    assert unresolved.filled_qty == Decimal("0.4")
+    assert oms_store.load_order(ack_order_3.internal_order_id).state == OmsOrderState.UNKNOWN
+    mock_venue.get_order.return_value = mock_venue.cancel_order.return_value
+    resolved_open = router.resolve_unknown_order(unresolved)
+    assert resolved_open.state == OmsOrderState.PARTIALLY_FILLED
+    assert resolved_open.filled_qty == Decimal("0.4")
 
 
 # =========================================================================

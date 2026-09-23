@@ -251,6 +251,20 @@ class OrderRouter:
             return unknown_order
 
         fill_price = venue_order.price or order.limit_price or order.average_fill_price
+        if venue_order.status.upper() not in {"CANCELLED", "CANCELED", "FILLED", "FINISHED"}:
+            new_fill = venue_order.executed_qty > pending_order.filled_qty
+            unknown_order = OmsStateMachine.transition(
+                pending_order,
+                OmsOrderState.UNKNOWN,
+                at=step_time,
+                filled_qty=venue_order.executed_qty if new_fill else None,
+                average_fill_price=fill_price if new_fill else None,
+                reason=f"CANCEL_STATE_INCONCLUSIVE:{venue_order.status}",
+            )
+            self.oms_store.apply_transition(
+                pending_order, unknown_order, event_id=self._generate_event_id("cancel_unknown")
+            )
+            return unknown_order
         # Check if fill occurred during cancel race:
         is_filled = (
             venue_order.status.upper() in {"FILLED", "FINISHED"}
@@ -342,12 +356,23 @@ class OrderRouter:
                 reason="VENUE_EXPLICIT_REJECT",
             )
         elif status == "open":
-            target_state = OmsOrderState.ACKNOWLEDGED
+            target_state = (
+                OmsOrderState.PARTIALLY_FILLED
+                if venue_order.executed_qty
+                else OmsOrderState.ACKNOWLEDGED
+            )
+            fill_price = venue_order.price or order.limit_price or order.average_fill_price
+            if target_state == OmsOrderState.PARTIALLY_FILLED and (
+                fill_price is None or fill_price <= Decimal("0")
+            ):
+                raise ValueError(f"FILL_PRICE_REQUIRED_FOR_RESOLVE:{order.internal_order_id}")
             resolved = OmsStateMachine.transition(
                 order,
                 target_state,
                 at=now_utc,
                 venue_order_id=venue_order.order_id,
+                filled_qty=venue_order.executed_qty,
+                average_fill_price=fill_price if venue_order.executed_qty else None,
                 reason="RESOLVED_OPEN_ON_VENUE",
             )
         elif status == "filled":
@@ -366,11 +391,18 @@ class OrderRouter:
             )
         elif status in ("cancelled", "canceled"):
             target_state = OmsOrderState.CANCELLED
+            fill_price = venue_order.price or order.limit_price or order.average_fill_price
+            if venue_order.executed_qty > order.filled_qty and (
+                fill_price is None or fill_price <= Decimal("0")
+            ):
+                raise ValueError(f"FILL_PRICE_REQUIRED_FOR_RESOLVE:{order.internal_order_id}")
             resolved = OmsStateMachine.transition(
                 order,
                 target_state,
                 at=now_utc,
                 venue_order_id=venue_order.order_id,
+                filled_qty=venue_order.executed_qty,
+                average_fill_price=fill_price if venue_order.executed_qty else None,
                 reason="RESOLVED_CANCELLED_ON_VENUE",
             )
         else:
