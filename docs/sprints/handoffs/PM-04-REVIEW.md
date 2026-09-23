@@ -1,6 +1,13 @@
 # PM-04 independent review
 
-Status: PASS on Round 1; reviewed content SHA `692157dcede9490e3ad0bf670c17a770dd473dac` (`692157d`). Maximum five rounds; history preserved below.
+Status: HISTORICAL PASS on Round 1 for `692157d`; superseded by the follow-up audit below. PM-04 is REVIEW pending an independent verdict on the corrected SHA. Maximum five rounds; history preserved below.
+
+## Follow-up audit — 2026-09-23
+
+- Important: `order_router.py` treated a cancel acknowledgement followed by venue status `OPEN` as `CANCELLED`. A real open order could therefore be mistaken for a terminal order. A new regression test failed with `CANCELLED` where `UNKNOWN` was required.
+- Important: `resolve_unknown_order()` resolved a venue `CANCELLED` order with `executed_qty=0.4` while retaining OMS `filled_qty=0`. A new regression test reproduced the loss of fill quantity.
+- Important: `VenueOrder` accepted a non-finite Decimal into comparison and leaked `decimal.InvalidOperation` instead of the documented `VenueProtocolError`. A new regression test reproduced it.
+- Scoped fixes and regression tests were committed at `a3f5653` after `692157d`. Round 1 PASS does not approve these new bytes. An independent reviewer must assess `a3f5653` before DONE.
 
 ## Identity
 

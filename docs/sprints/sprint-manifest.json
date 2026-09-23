@@ -9613,9 +9613,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-04-venue-parser-cancellation-and-supported-order-semantics.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "REVIEW",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "PENDING for corrected PM-04 SHA",
       "recommended_branch": "feat/pm-04-venue-parser-cancellation-and-supported-order-semantics",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9637,30 +9637,37 @@
         "docs/implementation/RUNTIME-PARITY.md",
         "docs/specs/20-testing-strategy.md"
       ],
+      "evidence": {
+        "kind": "review_pending",
+        "source_commit": "a3f5653",
+        "code_target": "a3f5653",
+        "path": "docs/sprints/handoffs/PM-04-HANDOFF.md",
+        "review": "Review PASS on 692157d was superseded by audit findings: OPEN after cancel was marked CANCELLED, UNKNOWN recovery lost venue fills, and non-finite quantity raised InvalidOperation. Corrections at a3f5653 require independent spec and quality review."
+      },
       "acceptance_test_mapping": [
         {
           "criterion": "PM-04-AC0",
           "test_case": "test_pm_04_0",
           "behavior": "Original equals executed plus remaining in declared units",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-04-AC1",
           "test_case": "test_pm_04_1",
           "behavior": "Cancel acknowledgement plus inconclusive lookup stays UNKNOWN",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-04-AC2",
           "test_case": "test_pm_04_2",
           "behavior": "Fill/cancel race never invents zero fill",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-04-AC3",
           "test_case": "test_pm_04_3",
           "behavior": "Unsupported order/TIF produces no HTTP call",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         }
       ],
       "risk_level": "high",

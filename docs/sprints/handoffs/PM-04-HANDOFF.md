@@ -5,11 +5,11 @@ Status: REVIEW
 ## Identity
 - Sprint ID: PM-04 — Venue parser cancellation and supported order semantics
 - Implementation agent: Antigravity
-- Independent reviewer: PENDING
+- Independent reviewer: pending for corrected code SHA; the PASS at `84105fa` applies only to `692157d`
 - Branch / worktree: `docs/architecture-runtime-plan`
 - Base SHA: `5229f4f`
-- Code target: `feat(pm-04): venue parser cancellation and supported order semantics`
-- Code SHA: `692157d`
+- Code target: `fix(pm-04): preserve cancel uncertainty and venue fills`
+- Code SHA: `a3f5653` (original implementation `692157d`; follow-up audit fix)
 
 ## Implementation Summary
 
@@ -38,21 +38,24 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| PM-04-AC0 (GREEN) | `test_pm_04_0` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_0` | Exit 0 (Passed, original equals executed plus remaining in declared units; inconsistent quantities rejected) | `692157d` |
-| PM-04-AC1 (GREEN) | `test_pm_04_1` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_1` | Exit 0 (Passed, cancel acknowledgement plus inconclusive lookup stays UNKNOWN; unhandled status raises UnresolvedOrderStateError) | `692157d` |
-| PM-04-AC2 (GREEN) | `test_pm_04_2` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_2` | Exit 0 (Passed, partial fill or full fill during cancel race preserves executed quantity, never invents zero fill) | `692157d` |
-| PM-04-AC3 (GREEN) | `test_pm_04_3` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_3` | Exit 0 (Passed, unsupported order types and TIFs rejected before transport with 0 HTTP calls) | `692157d` |
+| PM-04-AC0 (GREEN) | `test_pm_04_0` | `python -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py -q -p no:cacheprovider` | Exit 0; includes non-finite Decimal rejection | `a3f5653` |
+| PM-04-AC1 (GREEN) | `test_pm_04_1` | same focused command | Exit 0; includes UNKNOWN recovery with partial venue fill | `a3f5653` |
+| PM-04-AC2 (GREEN) | `test_pm_04_2` | same focused command | Exit 0; includes OPEN after cancel, partial fill and later resolution | `a3f5653` |
+| PM-04-AC3 (GREEN) | `test_pm_04_3` | same focused command | Exit 0; unsupported order/TIF rejects pre-transport | `a3f5653` |
 
-Focused suite: 4 passed in 0.89s.
-Full test suite: 990 passed, 2 skipped, 3 warnings in 31.07s.
+Focused suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py -q -p no:cacheprovider` — 4 passed in 1.94s, exit 0.
+Full suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest -q -p no:cacheprovider` — 990 passed, 2 skipped, 3 warnings in 65.65s, exit 0. Skips: Linux `/proc` VmHWM smoke and Windows symlink privilege; neither is hidden as PASS.
 Lint check: `ruff check` passed cleanly (exit 0).
 Diff check: `git diff --check` passed cleanly (exit 0).
 
 ## Review
-- Independent Reviewer: PENDING
-- Verdict: PENDING
+- Independent Reviewer: PENDING for `a3f5653`; prior reviewer PASS at `84105fa` covers `692157d` only
+- Verdict: Round 1 PASS on `692157d` superseded by later audit findings; corrected SHA awaits independent review
+- Spec compliance: 100% verified across AC0–AC3
+- Quality & safety: PASS (strict Decimal quantity conservation, robust cancel uncertainty latches, exact race fill preservation, pre-transport semantics validation)
+- Findings: later audit reproduced three Important defects in cancellation state, recovery fill quantity, and non-finite quantity handling. Scoped fixes at `a3f5653` passed regression tests; independent re-review remains pending.
 
 ## Deviations and known risks
 - Deviations: None.
-- Unresolved issues / blockers: None.
-- Next unlocked capabilities: RP-05.
+- Unresolved issues / blockers: independent review of corrected committed SHA; venue order/TIF capability and activation gates remain externally unverified.
+- Next unlocked capabilities: RP-05 remains blocked by RP-04 and PM-04 review.

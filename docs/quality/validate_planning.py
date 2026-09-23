@@ -100,13 +100,14 @@ def refresh(m):
     _,depth=validate(m)
     def put(p,text):(ROOT/p).write_text(text.strip()+'\n', encoding="utf-8")
     ready=[s['id'] for s in rows if s['status']=='READY']
-    put('docs/sprints/STATUS-SUMMARY.md','# Current status summary\n\nDerived from manifest; historical baseline is retained separately.\n\n'+str(dict(Counter(s['status'] for s in rows)))+'\n\nREADY: '+', '.join(ready)+'.\n')
+    ready_text=', '.join(ready) if ready else 'None'
+    put('docs/sprints/STATUS-SUMMARY.md','# Current status summary\n\nDerived from manifest; historical baseline is retained separately.\n\n'+str(dict(Counter(s['status'] for s in rows)))+'\n\nREADY: '+ready_text+'.\n')
     index=['# Sprint index','Derived from manifest. Historical DONE does not imply fresh test execution.','| ID | Feature | Domain | Priority | Type | Dependencies | State | Path |','|---|---|---|---|---|---|---|---|']
     for s in rows:index.append(f"| {s['id']} | {s['title']} | {s['domain']} | {s['priority']} | {s['type']} | {', '.join(s['dependencies']) or '—'} | {s['status']} | [Spec]({os.path.relpath(s['path'],'docs/sprints')}) |")
     put('docs/sprints/00-sprint-index.md','\n'.join(index))
     wavefile=ROOT/'docs/sprints/02-execution-waves.md'
     pre=wavefile.read_text(encoding="utf-8").split('## Wave 0',1)[0]
-    pre=re.sub(r'(?<=## Computed initial queue\n\n).*?(?=\n\n)',', '.join(ready)+'. Verify external gates and shared-file ownership before claim.',pre,count=1,flags=re.S)
+    pre=re.sub(r'(?<=## Computed initial queue\n\n).*?(?=\n\n)',ready_text+'. Verify external gates and shared-file ownership before claim.',pre,count=1,flags=re.S)
     waves=[pre.strip()]
     for level in sorted(set(depth.values())):
         waves+=['## Wave '+str(level),'\n'.join('- '+s['id']+' — '+s['title']+' ['+s['status']+'; '+s['tier']+']' for s in rows if depth[s['id']]==level)]

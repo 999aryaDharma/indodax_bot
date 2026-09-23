@@ -30,11 +30,11 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: READY
+Status: REVIEW
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: PENDING for corrected SHA
 
 Recommended Branch: `feat/pm-04-venue-parser-cancellation-and-supported-order-semantics`
 
