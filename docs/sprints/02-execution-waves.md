@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-RW1-01. Verify external gates and shared-file ownership before claim.
+PM-02. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -35,13 +35,13 @@ RW1-01. Verify external gates and shared-file ownership before claim.
 - BASE-06 — Baseline trust checkpoint [DONE; CORE]
 - DATA-03 — Auditable candle backfill [DONE; CORE]
 - DATA-05 — Reliable forward market collection [DONE; CORE]
-- LED-01 — Balanced research postings [REVIEW; CORE]
+- LED-01 — Balanced research postings [DONE; CORE]
 - PM-01 — Authoritative fail-closed pre-write gate [DONE; CORE]
 
 ## Wave 4
 
 - DATA-04 — Snapshot quality decisions [DONE; CORE]
-- PM-02 — Atomic financial execution state and recovery [PLANNED; CORE]
+- PM-02 — Atomic financial execution state and recovery [READY; CORE]
 
 ## Wave 5
 
@@ -59,7 +59,7 @@ RW1-01. Verify external gates and shared-file ownership before claim.
 
 - FEAT-01 — Versioned feature registry [REVIEW; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
-- RW1-01 — Reusable immutable dataset registry [READY; CORE]
+- RW1-01 — Reusable immutable dataset registry [DONE; CORE]
 
 ## Wave 8
 

@@ -5680,9 +5680,9 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/LED-01-balanced-research-postings.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "Antigravity Independent Reviewer (subagent 0326e570 Round 2 PASS)",
       "recommended_branch": "feat/led-01-balanced-research-postings",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -5703,10 +5703,11 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
+        "source_commit": "4933dcb",
+        "code_target": "4933dcb",
         "path": "docs/sprints/handoffs/LED-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "Independent review PASS Round 2 on 4933dcb; F-01 (ruff clean exit 0), F-02 (decimal division order fixed), F-03 (dead _total_net_pnl removed), F-04 (negative boundary tests added); full-suite gate PASS (972 passed, 0 failed)"
       },
       "acceptance_test_mapping": [
         {
@@ -8791,9 +8792,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW1-01-reusable-immutable-dataset-registry.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex /root & Antigravity (Round 2 remediation)",
+      "independent_reviewer": "Antigravity Independent Reviewer (subagent 1f7c3297 Round 2 PASS)",
       "recommended_branch": "feat/rw1-01-reusable-immutable-dataset-registry",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -8849,7 +8850,14 @@
         }
       ],
       "risk_level": "high",
-      "complexity": "L"
+      "complexity": "L",
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "9060726",
+        "code_target": "9060726",
+        "path": "docs/sprints/handoffs/RW1-01-HANDOFF.md",
+        "review": "Independent review PASS Round 2 on 9060726; all F1-F6 resolved (full identity fidelity, extend partition accumulation, persist rollback, CLI subcommands); full-suite gate PASS (972 passed, 0 failed)"
+      }
     },
     {
       "id": "RW2-01",
@@ -9407,7 +9415,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-02-atomic-financial-execution-state-and-recovery.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/pm-02-atomic-financial-execution-state-and-recovery",

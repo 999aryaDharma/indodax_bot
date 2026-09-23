@@ -62,7 +62,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SHADOW-02 | Shared capital reconciliation | shadow | P0 | safety | SHADOW-01, SIM-02 | REVIEW | [Spec](shadow\SHADOW-02-shared-capital-reconciliation.md) |
 | SHADOW-03 | Champion replacement gate | shadow | P0 | safety | SHADOW-02, EVAL-03 | REVIEW | [Spec](shadow\SHADOW-03-champion-replacement-gate.md) |
 | COST-01 | Time-valid exchange cost schedules | simulation | P0 | data | DATA-01 | REVIEW | [Spec](simulation\COST-01-time-valid-exchange-cost-schedules.md) |
-| LED-01 | Balanced research postings | simulation | P0 | safety | COST-01, BASE-04 | REVIEW | [Spec](simulation\LED-01-balanced-research-postings.md) |
+| LED-01 | Balanced research postings | simulation | P0 | safety | COST-01, BASE-04 | DONE | [Spec](simulation\LED-01-balanced-research-postings.md) |
 | SIM-01 | Conservative execution simulator | simulation | P0 | feature | COST-01, BAR-01 | REVIEW | [Spec](simulation\SIM-01-conservative-execution-simulator.md) |
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | REVIEW | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |
 | SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | REVIEW | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
@@ -97,14 +97,14 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | DOC-01 | Frozen architecture audit and delivery program | planning | P0 | planning | — | DONE | [Spec](planning\DOC-01-frozen-architecture-audit-and-delivery-program.md) |
 | RP-01 | Shared SignalIntent ownership with compatibility | runtime-parity | P0 | integration | DOC-01, BASE-01 | DONE | [Spec](runtime-parity\RP-01-shared-signalintent-ownership-with-compatibility.md) |
 | RW0-01 | Immutable Workbench domain manifests | research-workbench | P0 | integration | RP-01, DATA-01 | DONE | [Spec](research-workbench\RW0-01-immutable-workbench-domain-manifests.md) |
-| RW1-01 | Reusable immutable dataset registry | research-workbench | P1 | integration | RW0-01, DATA-06 | READY | [Spec](research-workbench\RW1-01-reusable-immutable-dataset-registry.md) |
+| RW1-01 | Reusable immutable dataset registry | research-workbench | P1 | integration | RW0-01, DATA-06 | DONE | [Spec](research-workbench\RW1-01-reusable-immutable-dataset-registry.md) |
 | RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | PLANNED | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
 | RW2-02 | Model registry and offline training services | research-workbench | P1 | integration | RW0-01, ML-04, JOB-01 | PLANNED | [Spec](research-workbench\RW2-02-model-registry-and-offline-training-services.md) |
 | RW2-03 | Typed declarative pipeline composer | research-workbench | P1 | integration | RW2-01, RW2-02 | PLANNED | [Spec](research-workbench\RW2-03-typed-declarative-pipeline-composer.md) |
 | RP-02 | Shared candidate feature and exit evaluation | runtime-parity | P0 | integration | RW2-03, FEAT-02 | PLANNED | [Spec](runtime-parity\RP-02-shared-candidate-feature-and-exit-evaluation.md) |
 | RP-03 | Shared portfolio sizing and risk semantics | runtime-parity | P0 | integration | RW0-01, SIM-02 | PLANNED | [Spec](runtime-parity\RP-03-shared-portfolio-sizing-and-risk-semantics.md) |
 | PM-01 | Authoritative fail-closed pre-write gate | production-main | P0 | integration | RW0-01 | DONE | [Spec](production-main\PM-01-authoritative-fail-closed-pre-write-gate.md) |
-| PM-02 | Atomic financial execution state and recovery | production-main | P0 | integration | RW0-01, LED-01 | PLANNED | [Spec](production-main\PM-02-atomic-financial-execution-state-and-recovery.md) |
+| PM-02 | Atomic financial execution state and recovery | production-main | P0 | integration | RW0-01, LED-01 | READY | [Spec](production-main\PM-02-atomic-financial-execution-state-and-recovery.md) |
 | PM-03 | Recovery mode and durable operator risk governance | production-main | P0 | integration | PM-01, PM-02 | PLANNED | [Spec](production-main\PM-03-recovery-mode-and-durable-operator-risk-governance.md) |
 | PM-04 | Venue parser cancellation and supported order semantics | production-main | P0 | integration | PM-01, PM-02 | PLANNED | [Spec](production-main\PM-04-venue-parser-cancellation-and-supported-order-semantics.md) |
 | RP-04 | Canonical feed and environment runtime adapters | runtime-parity | P0 | integration | RP-02, RP-03, PM-02 | PLANNED | [Spec](runtime-parity\RP-04-canonical-feed-and-environment-runtime-adapters.md) |

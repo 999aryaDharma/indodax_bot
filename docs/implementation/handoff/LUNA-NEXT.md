@@ -1,27 +1,32 @@
-# LUNA-NEXT — RW1-01 pending DONE, then PM-02 when LED-01 DONE
+# LUNA-NEXT — PM-02 Execution
 
 ## TASK ID
 
-RW1-01
+PM-02 — Atomic financial execution state and recovery
 
 ## STATUS
 
-PM-01: DONE (SHA 99c3a0c, independent review PASS Round 2 by subagent a96d3a20)
-RW1-01: REVIEW — code SHA 8a8cc29, awaiting independent review PASS before DONE
+- RW0-01: DONE (SHA `627c53f`)
+- RP-01: DONE (SHA `5d9629e`)
+- PM-01: DONE (SHA `99c3a0c`)
+- RW1-01: DONE (SHA `9060726`, independent review PASS Round 2 by subagent 1f7c3297)
+- LED-01: DONE (SHA `4933dcb`, independent review PASS Round 2 by subagent 0326e570)
+- PM-02: READY (P0, Production Main) — CLAIMED FOR IMPLEMENTATION NOW
 
-## NEXT AFTER RW1-01 DONE
+## DAG IMPACT
 
-DAG has no new READY tasks until LED-01 (REVIEW) becomes DONE:
-- LED-01 DONE → PM-02 becomes READY
-- PM-02 DONE → PM-03 and PM-04 become READY
+PM-02 depends on:
+- RW0-01 (DONE)
+- LED-01 (DONE)
 
-## BLOCKER
+When PM-02 is completed and DONE, it unlocks:
+- PM-03 — Recovery mode and durable operator risk governance
+- PM-04 — Venue parser cancellation and supported order semantics
+- RP-04 — Production and paper runtime parity runner
 
-All remaining PLANNED tasks are blocked by REVIEW tasks (LED-01, SIM-02, STRAT-01, ML-04,
-JOB-01, FEAT-02, EVAL-01, etc.) that have unassigned or pending independent reviewers.
-Independent review is required before any can be marked DONE.
+## ACTIVE WORK
 
-## COORDINATOR NOTE
+Implementing PM-02 per CONTRACTS.md (lines 54-75) and `docs/sprints/production-main/PM-02-atomic-financial-execution-state-and-recovery.md`:
+- `ExecutionStateStore` in `src/indodax_lab/execution/state_store.py`
+- Integration tests in `tests/integration/lab/test_execution_transaction_recovery.py`
 
-Once RW1-01 independent review returns PASS, update sprint-manifest.json RW1-01 → DONE,
-run `python docs/quality/validate_planning.py --refresh --self-test`, and update this file.
