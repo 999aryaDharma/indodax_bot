@@ -30,6 +30,10 @@ class UnknownCostScheduleError(ValueError):
     """Raised when looking up fees for an uncovered timestamp or market."""
 
 
+class UnverifiedCostScheduleError(ValueError):
+    """Raised when a matching cost interval lacks authoritative evidence."""
+
+
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:
     if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
         raise ValueError(f"UTC_TIMEZONE_AWARE_REQUIRED:{field_name}")
@@ -187,7 +191,9 @@ def lookup_cost(
                 interval.valid_to is None or fee_basis_ts < interval.valid_to
             ):
                 if not interval.evidence_verified:
-                    raise ValueError(f"UNVERIFIED_COST_SCHEDULE:{interval.schedule_id}")
+                    raise UnverifiedCostScheduleError(
+                        f"UNVERIFIED_COST_SCHEDULE:{interval.schedule_id}"
+                    )
                 total_rate = (
                     interval.service_fee_rate + interval.tax_rate + interval.exchange_fee_rate
                 )
@@ -221,6 +227,7 @@ __all__ = [
     "OrderRole",
     "OrderSide",
     "UnknownCostScheduleError",
+    "UnverifiedCostScheduleError",
     "load_cost_schedule_table",
     "lookup_cost",
 ]

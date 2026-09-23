@@ -177,6 +177,7 @@ def _make_schedule_table() -> CostScheduleTable:
                 min_notional=Decimal("10000"),
                 precision=0,
                 sources=("indodax",),
+                evidence_verified=True,
             )
         )
     return CostScheduleTable(
@@ -343,6 +344,36 @@ def test_label_01_contract_3() -> None:
     assert label.exclusion_reason == "COST_SCHEDULE_UNAVAILABLE"
 
 
+def test_unverified_cost_schedule_excludes_label() -> None:
+    verified = _make_schedule_table()
+    unverified = CostScheduleTable(
+        schedule_set_id="cs-unverified",
+        version="1.0.0",
+        intervals=tuple(
+            interval.model_copy(update={"evidence_verified": False})
+            for interval in verified.intervals
+        ),
+    )
+    config = NetReturnConfig(
+        label_set_id="net_return",
+        version="1.0.0",
+        horizon=timedelta(hours=2),
+        cost_schedule_table=unverified,
+    )
+
+    label = build_net_return_label(
+        sample_id="sample-cost-unverified",
+        pair=PAIR,
+        decision_ts=BASE_TIME + timedelta(hours=1),
+        bars=_make_market_bars(count=5),
+        config=config,
+    )
+
+    assert label.status == "EXCLUDED"
+    assert label.net_return is None
+    assert label.exclusion_reason == "COST_SCHEDULE_UNAVAILABLE"
+
+
 # ---------------------------------------------------------------------------
 # TASK E: Cost-aware label materialization contract tests
 # ---------------------------------------------------------------------------
@@ -366,6 +397,7 @@ def test_label_changes_when_cost_changes() -> None:
                 min_notional=Decimal("10000"),
                 precision=0,
                 sources=("indodax",),
+                evidence_verified=True,
             )
             for side in (OrderSide.BUY, OrderSide.SELL)
         ]

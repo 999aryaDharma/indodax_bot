@@ -84,7 +84,8 @@ class ReplayBacktestEngine:
                 self.rejections.append((intent.intent_id, "MAKER_LIMIT_REQUIRED"))
                 return None, None
             schedule = lookup_cost(self.cost_schedule_table, market=self.simulator.market,
-                side=intent.side, role=intent.role_preference, event_ts=timestamp)
+                side=intent.side, role=intent.role_preference,
+                fee_basis_ts=(intent.decision_ts if intent.limit_price is not None else timestamp))
             positions = {pair: p.model_copy(deep=True) for pair, p in self.ledger.positions.items()}
             # Pending risk occupies position count and exposure, not just cash.
             for waiting in pending_intents:

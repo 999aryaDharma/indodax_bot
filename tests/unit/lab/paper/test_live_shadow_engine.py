@@ -17,7 +17,7 @@ import tempfile
 import pandas as pd
 import pytest
 
-from indodax_lab.backtest.costs import OrderRole, OrderSide
+from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide
 from indodax_lab.backtest.orders import Fill
 
 from indodax_lab.paper.live_shadow_engine import (
@@ -71,6 +71,14 @@ def temp_engine():
             fixed_risk_pct=0.015,
             max_cash_per_trade_pct=0.25,
             min_order_idr=Decimal("10000.00"),
+        )
+        engine.cost_table = CostScheduleTable(
+            schedule_set_id="paper-test-fixture",
+            version="1",
+            intervals=tuple(
+                interval.model_copy(update={"evidence_verified": True})
+                for interval in engine.cost_table.intervals
+            ),
         )
         yield engine
 

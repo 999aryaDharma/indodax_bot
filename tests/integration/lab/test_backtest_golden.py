@@ -39,6 +39,7 @@ def test_schedule_table() -> CostScheduleTable:
             min_notional=Decimal("10000"),
             precision=0,
             sources=("PMK 68",),
+            evidence_verified=True,
         ),
         CostScheduleInterval(
             schedule_id="idr_sell_taker",
@@ -53,6 +54,7 @@ def test_schedule_table() -> CostScheduleTable:
             min_notional=Decimal("10000"),
             precision=0,
             sources=("PMK 68",),
+            evidence_verified=True,
         ),
     )
     return CostScheduleTable(

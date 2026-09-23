@@ -113,7 +113,7 @@ class ConservativeExecutionSimulator:
             market=self.market,
             side=intent.side,
             role=exec_role,
-            event_ts=fill_time,
+            fee_basis_ts=(intent.decision_ts if intent.limit_price is not None else fill_time),
         )
 
         # SIM-01-AC2: Insufficient depth dan min-size checks

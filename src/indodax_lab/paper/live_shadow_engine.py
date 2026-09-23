@@ -477,7 +477,7 @@ class LiveShadowEngine:
                     market="spot_idr",
                     side=OrderSide.SELL,
                     role=OrderRole.TAKER,
-                    event_ts=now_utc,
+                    fee_basis_ts=now_utc,
                 )
                 sell_fee = gross_proceeds * exit_cost.total_rate
                 net_credit = gross_proceeds - sell_fee
@@ -739,7 +739,7 @@ class LiveShadowEngine:
                 market="spot_idr",
                 side=OrderSide.BUY,
                 role=OrderRole.TAKER,
-                event_ts=now_utc,
+                fee_basis_ts=now_utc,
             )
             risk_result = self.risk_manager.assess_order(
                 risk_intent,
