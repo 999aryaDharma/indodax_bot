@@ -5,7 +5,9 @@ Status: HISTORICAL PASS on Round 1 for `692157d`; superseded by the follow-up au
 ## Follow-up review — 2026-09-23
 
 - Important: `resolve_unknown_order()` did not recognize Trade API v2 active statuses `NEW` or `PARTIALLY_FILLED`; recovery raised `UnresolvedOrderStateError` despite authoritative active venue state. Regression tests reproduced both cases.
-- Fix maps both statuses through the active-order recovery path, preserving observed executed quantity and resolving to `ACKNOWLEDGED` or `PARTIALLY_FILLED`. This change awaits independent review on its committed SHA.
+- Important: recovery and cancel paths treated an order's limit `price` as fill VWAP. Fix leaves orders `UNKNOWN` until authoritative trade history supplies fills, then reconciles terminal venue status using the recorded VWAP.
+- Important: a cancel response could say `FILLED` while `executed_qty < desired_qty`, and OMS would promote the order to its full desired quantity. Fix rejects this inconsistent status/quantity pair and leaves the order `UNKNOWN`.
+- The v2 statuses now map safely; unseen fills require history ingestion before OMS records them. Current code target `97746dd61e285b6711519c73e6b153d599bcfbb5` awaits independent review.
 
 ## Follow-up audit — 2026-09-23
 

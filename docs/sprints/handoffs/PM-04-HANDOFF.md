@@ -8,8 +8,8 @@ Status: REVIEW
 - Independent reviewer: pending for corrected code SHA; the PASS at `84105fa` applies only to `692157d`
 - Branch / worktree: `fix/pm-04-v2-recovery` / `C:\Users\User\AppData\Local\Temp\indodax-pm04-v2-recovery`
 - Base SHA: `5229f4f`
-- Code target: `fix(pm-04): resolve v2 active statuses`
-- Code SHA: `8635cc73ac0d63fe63c5365c44976c2ff69c599c` (includes prior fix `a3f5653`; original implementation `692157d`)
+- Code target: `fix(pm-04): reject inconsistent fill state`
+- Code SHA: `97746dd61e285b6711519c73e6b153d599bcfbb5` (includes prior fixes `a3f5653`, `8635cc7`, and `46e51ef`; original implementation `692157d`)
 
 ## Implementation Summary
 
@@ -29,7 +29,8 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
    - Pre-transport Check (PM-04-FR3 / AC3): `IndodaxTradingVenue.submit_order()` and `OrderRouter.submit_order()` (when configured for production venue via `enforce_production_semantics`) reject unsupported order semantics (e.g. non-limit orders like `market`, or non-GTC time-in-force like `IOC` / `FOK`, or missing/non-positive limit price) before making any HTTP request or mutating OMS state, raising `ValueError` matching `UNSUPPORTED_ORDER_SEMANTICS` and `ORDER_LIMIT_PRICE_REQUIRED`. Zero HTTP requests are dispatched to the exchange.
 
 5. **Trade API v2 recovery statuses (`src/indodax_lab/execution/order_router.py`)**:
-   - `resolve_unknown_order()` now accepts `NEW` and `PARTIALLY_FILLED` as active venue states and maps the latter with exact observed `executed_qty` into OMS `PARTIALLY_FILLED`.
+   - `resolve_unknown_order()` recognizes `NEW` and `PARTIALLY_FILLED`; unseen execution quantities are not adopted until authoritative trade history is ingested. Existing OMS VWAP is preserved rather than using the order limit price.
+   - Cancel/recovery reports with `FILLED`/`FINISHED` but incomplete or regressing executed quantity remain `UNKNOWN` instead of fabricating a full fill.
 
 ## Files and contracts
 - Planned files:
@@ -48,16 +49,16 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
 
 Focused suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py -q -p no:cacheprovider` — 4 passed in 1.94s, exit 0.
 Full suite on `a3f5653`: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest -q -p no:cacheprovider` — 990 passed, 2 skipped, 3 warnings in 65.65s, exit 0. Skips: Linux `/proc` VmHWM smoke and Windows symlink privilege; neither is hidden as PASS.
-Follow-up targeted regression on `8635cc7`: `... -m pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_resolves_v2_active_statuses -q -p no:cacheprovider` — 2 passed, exit 0. Focused suite: 6 passed, exit 0. Full suite on `8635cc7`: `... -m pytest -q -p no:cacheprovider` — 992 passed, 2 skipped, 3 warnings in 94.22s, exit 0. Same platform-limited skips as above.
+Follow-up targeted regressions on `97746dd`: 16 PM-04 execution/recovery tests passed; focused PM-04 suite: 6 passed. Full suite: 993 passed, 2 skipped, 3 warnings in 76.83s, exit 0. Same platform-limited skips as above. Lint and `git diff --check` passed.
 Lint check: `ruff check` passed cleanly (exit 0).
 Diff check: `git diff --check` passed cleanly (exit 0).
 
 ## Review
-- Independent Reviewer: PENDING for `8635cc73ac0d63fe63c5365c44976c2ff69c599c`; prior verdicts cover earlier code SHAs only
+- Independent Reviewer: PENDING for `97746dd61e285b6711519c73e6b153d599bcfbb5`; prior verdicts cover earlier code SHAs only
 - Verdict: Round 1 PASS on `692157d` superseded by later audit findings; corrected SHA awaits independent review
 - Spec compliance: 100% verified across AC0–AC3
 - Quality & safety: PASS (strict Decimal quantity conservation, robust cancel uncertainty latches, exact race fill preservation, pre-transport semantics validation)
-- Findings: later audits reproduced four Important defects in cancellation state, recovery fill quantity, non-finite quantity handling, and v2 active-status recovery. Scoped fixes at `a3f5653` and `8635cc7` pass regression/full-suite tests; independent re-review remains pending.
+- Findings: follow-up reviews also found that order limit price was misused as fill VWAP and `FILLED` status could contradict executed quantity. Fixes at `46e51ef` and `97746dd` keep uncertain fills unresolved and require exact fill-history reconciliation; independent re-review remains pending.
 
 ## Deviations and known risks
 - Deviations: None.
