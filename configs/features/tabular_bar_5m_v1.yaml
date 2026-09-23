@@ -1,5 +1,5 @@
 feature_set_id: tabular_bar_5m
-version: 1.0.0
+version: 1.1.0
 decision_interval: 5m
 features:
   # Return family — 5m equivalents of 1h feature set
@@ -94,7 +94,7 @@ features:
     source_columns: [close]
     formula: ema(close,20)/ema(close,50)-1
     implementation: indodax_lab.features.technical:ema_ratio
-    params: {fast: 20, slow: 50}
+    params: {fast: 20, slow: 50, seed: first_observation, adjust: false, min_periods: 0}
     lookback_bars: 50
     availability: closed_bar
     lag_bars: 0
@@ -108,7 +108,7 @@ features:
     source_columns: [close, high, low]
     formula: (ema(close,20) - ema(close,20)[t-5]) / atr(high,low,close,14)
     implementation: indodax_lab.features.technical:ema_slope_atr
-    params: {ema_period: 20, slope_bars: 5, atr_period: 14}
+    params: {ema_period: 20, slope_bars: 5, atr_period: 14, ema_seed: first_observation, ema_adjust: false, ema_min_periods: 0, atr_seed: sma}
     lookback_bars: 25
     availability: closed_bar
     lag_bars: 0
@@ -137,7 +137,7 @@ features:
     source_columns: [close]
     formula: (rsi(close,14) - 50) / 50
     implementation: indodax_lab.features.technical:rsi_centered
-    params: {period: 14}
+    params: {period: 14, seed: sma}
     lookback_bars: 15
     availability: closed_bar
     lag_bars: 0
@@ -151,7 +151,7 @@ features:
     source_columns: [close]
     formula: stochrsi(close,14,3,3).k
     implementation: indodax_lab.features.technical:stochrsi_component
-    params: {period: 14, smooth_k: 3, smooth_d: 3, component: k}
+    params: {period: 14, smooth_k: 3, smooth_d: 3, component: k, seed: sma, zero_range_policy: 'null'}
     lookback_bars: 32
     availability: closed_bar
     lag_bars: 0
@@ -165,7 +165,7 @@ features:
     source_columns: [close, high, low]
     formula: macd_hist(close,12,26,9) / atr(high,low,close,14)
     implementation: indodax_lab.features.technical:macd_hist_atr
-    params: {fast: 12, slow: 26, signal: 9, atr_period: 14}
+    params: {fast: 12, slow: 26, signal: 9, atr_period: 14, ema_seed: first_observation, ema_adjust: false, ema_min_periods: 0, atr_seed: sma}
     lookback_bars: 35
     availability: closed_bar
     lag_bars: 0
@@ -180,7 +180,7 @@ features:
     source_columns: [high, low, close]
     formula: atr(high,low,close,14) / close
     implementation: indodax_lab.features.technical:atr_pct
-    params: {period: 14}
+    params: {period: 14, seed: sma}
     lookback_bars: 14
     availability: closed_bar
     lag_bars: 0
@@ -194,7 +194,7 @@ features:
     source_columns: [close]
     formula: std(log_ret_1, 288)
     implementation: indodax_lab.features.technical:realized_volatility
-    params: {period: 288}
+    params: {period: 288, ddof: 0}
     lookback_bars: 289
     availability: closed_bar
     lag_bars: 0
@@ -209,7 +209,7 @@ features:
     source_columns: [close]
     formula: (close - mean(close, 20)) / std(close, 20)
     implementation: indodax_lab.features.technical:bollinger_component
-    params: {period: 20, stddev: 2.0, component: bb_z}
+    params: {period: 20, stddev: 2.0, component: bb_z, ddof: 0}
     lookback_bars: 20
     availability: closed_bar
     lag_bars: 0
@@ -224,7 +224,7 @@ features:
     source_columns: [base_volume]
     formula: zscore(log1p(base_volume), 20)
     implementation: indodax_lab.features.technical:volume_zscore
-    params: {period: 20}
+    params: {period: 20, ddof: 0}
     lookback_bars: 20
     availability: closed_bar
     lag_bars: 0

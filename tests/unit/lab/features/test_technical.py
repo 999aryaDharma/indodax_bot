@@ -9,22 +9,93 @@ import pandas as pd
 import pytest
 
 from indodax_lab.features.liquidity import amihud, quote_turnover, zero_volume_ratio
+from indodax_lab.features.registry import load_feature_registry
 from indodax_lab.features.technical import (
     adx_di,
+    atr,
     atr_pct,
     bollinger_features,
     donchian_position,
     ema_ratio,
     ema_slope_atr,
     macd_hist_atr,
+    rsi,
     rsi_centered,
     stochrsi,
     volume_zscore,
     vwap_deviation,
+    wilder_average,
 )
 
-
 FIXTURE = Path(__file__).parents[3] / "fixtures" / "features" / "golden_ohlcv.csv"
+REGISTRY_CONFIG = Path(__file__).parents[4] / "configs" / "features" / "tabular_bar_v1.yaml"
+
+
+def test_wilder_average_uses_sma_seed_and_exact_warmup_boundary() -> None:
+    values = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0])
+
+    actual = wilder_average(values, period=3)
+
+    assert actual.iloc[:2].isna().all()
+    assert actual.iloc[2] == pytest.approx(2.0)
+    assert actual.iloc[3] == pytest.approx(8.0 / 3.0)
+    assert actual.iloc[4] == pytest.approx(31.0 / 9.0)
+
+
+def test_rsi_first_valid_and_later_values_use_wilder_sma_seed() -> None:
+    close = pd.Series([10.0, 12.0, 11.0, 14.0])
+
+    actual = rsi(close, period=2, seed="sma")
+
+    assert actual.iloc[:2].isna().all()
+    assert actual.iloc[2] == pytest.approx(200.0 / 3.0)
+    assert actual.iloc[3] == pytest.approx(800.0 / 9.0)
+
+
+def test_atr_first_valid_and_later_values_use_wilder_sma_seed() -> None:
+    high = pd.Series([11.0, 14.0, 17.0, 22.0])
+    low = pd.Series([9.0, 10.0, 11.0, 16.0])
+    close = pd.Series([10.0, 12.0, 14.0, 20.0])
+
+    actual = atr(high, low, close, period=3, seed="sma")
+
+    assert actual.iloc[:2].isna().all()
+    assert actual.iloc[2] == pytest.approx(4.0)
+    assert actual.iloc[3] == pytest.approx(16.0 / 3.0)
+
+
+def test_ema_explicit_first_observation_seed_and_min_periods() -> None:
+    close = pd.Series([2.0, 4.0, 8.0])
+
+    actual = ema_ratio(
+        close,
+        fast=2,
+        slow=3,
+        seed="first_observation",
+        adjust=False,
+        min_periods=1,
+    )
+
+    assert actual.iloc[0] == pytest.approx(0.0)
+    assert actual.iloc[1] == pytest.approx(1.0 / 9.0)
+    assert actual.iloc[2] == pytest.approx(17.0 / 99.0)
+
+
+def test_registry_freezes_indicator_initialization_and_rolling_policies() -> None:
+    registry = load_feature_registry(REGISTRY_CONFIG).registry
+    features = {feature.name: feature for feature in registry.features}
+
+    assert registry.version == "1.1.0"
+    assert features["ema_ratio_20_50_1h"].params == {
+        "fast": 20,
+        "slow": 50,
+        "seed": "first_observation",
+        "adjust": False,
+        "min_periods": 0,
+    }
+    assert features["rsi_centered_14_1h"].params["seed"] == "sma"
+    assert features["stochrsi_k_14_1h"].params["zero_range_policy"] == "null"
+    assert features["bb_z_20_1h"].params["ddof"] == 0
 
 
 def _ohlcv() -> pd.DataFrame:
@@ -60,16 +131,16 @@ def test_normalized_indicators_match_explicit_golden_values() -> None:
     }
     expected = {
         "ema_ratio": 0.0398445922836319,
-        "ema_slope": 0.862591964023765,
-        "rsi_centered": 0.813888558810225,
+        "ema_slope": 0.862780377793843,
+        "rsi_centered": 0.8130460851721694,
         "stochrsi_k": 1.0,
         "stochrsi_d": 1.0,
-        "macd_hist_atr": 0.191319609895783,
-        "adx": 0.528311473180984,
-        "di_spread": 0.171204404357557,
+        "macd_hist_atr": 0.19136139935185725,
+        "adx": 0.534466656866446,
+        "di_spread": 0.17167351238059245,
         "bb_z": 2.25458431148546,
         "bb_width": 0.10241400049518,
-        "atr_pct": 0.0253990839524304,
+        "atr_pct": 0.025393537306624376,
         "donchian_pos": 0.895793355290317,
         "volume_z": 1.86207715601609,
         "vwap_dev": 0.0580494331388117,
@@ -121,7 +192,7 @@ def test_price_rescaling_does_not_change_cross_asset_normalized_indicators() -> 
 
 
 def test_feat_02_valid_contract() -> None:
-    """FEAT-02-AC0: Indikator continuous dan volume transforms menghasilkan nilai serta warmup yang dapat diaudit."""
+    """FEAT-02-AC0: Indicator outputs and warmup are auditable."""
     bars = _ohlcv()
     close = bars["close"]
     high = bars["high"]

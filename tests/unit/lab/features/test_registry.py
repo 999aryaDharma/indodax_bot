@@ -84,7 +84,7 @@ def test_canonical_registry_contains_exact_wave1_names_and_metadata() -> None:
     loaded = load_feature_registry(CANONICAL_CONFIG)
 
     assert loaded.registry.feature_set_id == "tabular_bar"
-    assert loaded.registry.version == "1.0.0"
+    assert loaded.registry.version == "1.1.0"
     assert loaded.registry.decision_interval == "1h"
     assert {feature.name for feature in loaded.registry.features} == EXPECTED_WAVE1_FEATURES
     assert loaded.source_id.startswith("sha256:")
@@ -257,7 +257,7 @@ def test_5m_registry_loads_with_correct_interval_and_feature_count() -> None:
     loaded = load_feature_registry(CANONICAL_5M_CONFIG)
 
     assert loaded.registry.feature_set_id == "tabular_bar_5m"
-    assert loaded.registry.version == "1.0.0"
+    assert loaded.registry.version == "1.1.0"
     assert loaded.registry.decision_interval == "5m"
     assert {feature.name for feature in loaded.registry.features} == EXPECTED_5M_FEATURES
     assert loaded.source_id.startswith("sha256:")
