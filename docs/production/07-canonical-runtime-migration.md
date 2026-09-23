@@ -2,6 +2,18 @@
 
 Status: ACTIVE MIGRATION CONTRACT
 
+## Shared public-market migration — 2026-09-23
+
+[Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md) is the detailed implementation design for public WebSocket ownership, ASUS hardware/resource qualification and shared features/inference. [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) records the topology/identity amendment. Implementation phases there refine the market/shadow portion of the migration below; they do not replace the sprint manifest as status/DAG authority.
+
+At audited `dev` `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`, `run_shadow_bot.py` still calls `LiveShadowEngine.fetch_live_market_data` for REST tickers/history, `compute_features` for Pandas recomputation and pair-specific model/rule branches. Separately, `PublicMarketCollector` already supports public trade/book WebSocket collection, durable channel offsets and book recovery. Integrate these existing owners rather than build another exchange adapter.
+
+Sequence: characterize/approve contracts → durable canonical envelope/journal → multi-channel WebSocket owner → bounded fan-out/gateway → shared causal features → verified shared serving/triggers → isolated candidate-driven tournament → separate Portfolio Shadow → service/restore cutover → ASUS capacity/thermal/24h+ qualification and legacy decommission. Each phase specifies affected paths, tests, failure behavior, observability and rollback in the detailed design.
+
+Legacy polling and its artifacts remain readable until behavioral parity or intentional source/semantic differences are recorded. Source/feature/model changes create new runtime/candidate versions and evidence namespaces. Do not merge old forward history into newly qualified runtime evidence. REST remains centralized for bootstrap/history/metadata/repair/sanity/fallback, never normal per-strategy acquisition.
+
+Service drift at that SHA: `lab-shadow.service` names absent `indodax_lab.cli.shadow`; `lab-collector.service` names absent `indodax_lab.cli.collector`; actual collector CLI is `indodax_lab.cli.collect_market_stream`. Host config uses `asus_zenbook` and does not describe an integrated local feed. These are implementation gaps; no deploy/config mutation is performed by this document update.
+
 ## Canonical authority
 
 Semua development production baru berada di `src/indodax_lab/`.
@@ -74,7 +86,7 @@ Sebuah legacy module hanya boleh dihapus ketika:
 7. top-level entrypoint;
 8. delete legacy only after repository-wide reference audit.
 
-## Current state
+## Historical hardening snapshot
 
 Pada hardening 2026-09-21:
 
@@ -87,3 +99,5 @@ Pada hardening 2026-09-21:
   operational evidence tetap menjadi blocker.
 
 Migration status tidak mengubah project menjadi live-ready.
+
+The dated snapshot above is provenance, not a current absence claim for later execution modules. Use the [current implementation audit](../implementation/CURRENT-STATE.md) and exact code SHA for Production Main parser/adapter/ledger status. This market-runtime design does not certify private execution readiness.

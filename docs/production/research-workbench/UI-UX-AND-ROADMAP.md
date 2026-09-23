@@ -209,6 +209,8 @@ Research can be denser and more interactive than Production but must preserve pr
 - scheduler;
 - cohort/leaderboard metrics.
 
+Runtime detail and dependencies: [Shared Market Runtime](SHARED-MARKET-RUNTIME.md#q-incremental-migration-plan). ASUS shares one canonical WebSocket acquisition, bounded local delivery, feature calculations, model instances and deterministic predictions across lightweight agents. Agent wallets/risk remain isolated. Capacity is admitted from measured ASUS qualification; model registration does not load or activate it.
+
 ### RW6 — portfolio shadow
 - selected candidate composition;
 - shared virtual portfolio;

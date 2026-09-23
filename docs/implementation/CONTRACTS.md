@@ -2,6 +2,8 @@
 
 Classification: TARGET ARCHITECTURE / PLANNED. No interface in this document is claimed implemented unless the current-state audit says so. Implements frozen v1.0 and ADR-005/006/007. Task files name the owning implementation; consumers cannot independently redefine these types.
 
+The [ADR-008 amendment](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) and [Shared Market Runtime](../production/research-workbench/SHARED-MARKET-RUNTIME.md) refine feed ownership, event provenance, shared features/predictions and ASUS admission. These are extensions of the contracts below, not a second registry or execution kernel. Owning RW0/RP/RW2 tasks must version schema additions and register their implementation dependencies before code work.
+
 ## Identity and storage (RW0-01)
 
 `ArtifactRef(kind: str, id: str, version: str, sha256: str, schema_version: str)` identifies verified bytes; SHA-256 is lowercase 64-hex. IDs/versions are nonempty opaque strings, never filesystem paths. Storage resolves IDs within configured roots and rejects traversal, symlinks escaping roots and mismatched bytes. No user-supplied import path or executable expression.
@@ -38,6 +40,10 @@ Seed registrations are manifests for BTC-C07 and ALT-C02, with pair-specific ver
 RP-01 moves only existing `SignalIntent` ownership; its current fields/defaults remain byte compatible. RP-03 separately versions semantic changes where needed.
 
 `CanonicalMarketEvent(event_id, feed_id, sequence, pair, event_time, available_at, observation, quality_ref)` has immutable content-derived event ID and monotonically ordered feed sequence. UTC availability cannot exceed evaluation time. Duplicate ID/same bytes is replay; duplicate ID/different bytes is corruption. One gateway owns collection per stream; agents cannot poll independently.
+
+`sequence` is the durable local feed position, never an Indodax channel offset or trade sequence. The versioned envelope adds venue/type/schema, receive time, nullable actual venue time, source connection/channel/epoch/offset/sequence, source identity/hash and quality/source references as defined in [event contracts](../production/research-workbench/SHARED-MARKET-RUNTIME.md#g-event-feature-and-prediction-contracts). Missing venue timestamp remains null; receive-derived `event_time` is explicitly flagged. Original admitted envelopes are immutable on replay; receipt diagnostics do not mutate event identity or availability.
+
+RuntimePlan and candidate-bound immutable policy references also resolve required market inputs, feature schema, model artifacts, trigger policy and shadow-mode eligibility. Triggers include candle-close/event/periodic/feature-change semantics with declared deadline and missed-trigger behavior. AgentManifest/PortfolioShadowManifest retain their existing distinct ownership. Shared FeatureSnapshot/PredictionResult identities bind exact source/feature/model/preprocessing/runtime bytes and are reused only across compatible eligible consumers. Registry state never grants loading, ASUS admission or production-write authority.
 
 `RuntimeState` contains runtime-plan digest, optional candidate digest (required in forward shadow/production), portfolio snapshot/revision, feature/exit state, risk snapshot/revision, market cursor and runtime policy digests. It has no API credentials or concrete live client.
 

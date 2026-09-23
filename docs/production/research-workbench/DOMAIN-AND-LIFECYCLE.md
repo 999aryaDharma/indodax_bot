@@ -157,6 +157,12 @@ Minimum agent state:
 
 The agent does not own the shared market feed.
 
+Runtime integration follows [Shared Market Runtime](SHARED-MARKET-RUNTIME.md) and [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md). Candidate/RuntimePlan resolve immutable market-input, feature-schema, model-artifact, trigger and shadow-mode eligibility policies through existing manifest ownership. Registered model state does not imply loaded, ASUS-qualified, or production-authorized.
+
+Agents share immutable observations, feature snapshots and eligible deterministic predictions. Each tournament agent retains its own namespace, virtual wallet, ledger, positions, risk state and durable consumer cursor. Portfolio Shadow uses a distinct manifest/namespace with one intentionally shared cash pool and allocation policy. Neither mode may reuse the other's financial state or count deferred/replayed decisions as uninterrupted live evidence.
+
+Triggers are versioned deployment inputs; evaluation timing is reproducible. Admission and pause/defer incidents are evidence outside immutable candidate identity. Changing a candidate's declared trigger semantics, features or model creates a new RuntimePlan/candidate version; it is not a hot edit.
+
 ## 6. Tournament cohorts
 
 Compare like with like.

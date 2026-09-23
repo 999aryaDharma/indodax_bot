@@ -38,11 +38,16 @@ Branch protection adalah GitHub repository setting; file repo saja tidak menegak
 Minimum credible topology:
 
 - primary production node: dedicated execution authority, SSD-backed, wired networking preferred;
-- independent watchdog/observer: ASUS candidate setelah benchmark;
+- ASUS Research Runtime / Shadow Edge: public feed, shared features/inference dan paper state; tidak memiliki account/order-write credential pada composition shadow;
+- independent production watchdog/backup: failure domain dan resource harus dikualifikasi; workload di ASUS yang sama bukan independent HA;
 - Lenovo/research workstation: tidak punya order-write permission;
 - backup target pada failure domain berbeda dari production disk.
 
 Battery ASUS mengurangi satu failure mode saja; tidak menghapus disk, NIC, ISP, kernel, process atau venue failure.
+
+Host roles mengikuti [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) dan [Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md). Lenovo memiliki training; ASUS tidak menerima training jobs atau sweep. Public WebSocket token bukan private exchange key dan tidak memberi otoritas order. Token tetap tidak dicetak ke log; target injection memakai environment/file dengan permission minimum.
+
+ASUS memakai satu runtime bersama dan, ketika diperlukan, satu inference subprocess dengan batas memory/deadline. Kandidat tidak menerima socket/HTTP client, arbitrary Python import, Docker socket atau kredensial. Candidate/manifes/model diverifikasi sebelum load; native/ONNX/quantized serving hanya setelah loader dan CPU parity qualification. Registered/LIVE model label tidak memberi izin deployment atau real-money execution.
 
 ## Supervision
 

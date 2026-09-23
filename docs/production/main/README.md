@@ -148,9 +148,11 @@ No candidate mutates itself. Retraining or parameter changes create a **new cand
 - telemetry.
 
 **ASUS X441U**
-- watchdog/observer/backup target after benchmark;
+- Research Workbench runtime/shadow edge under [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md): public collection, shared features and selected CPU inference, isolated tournament and separate portfolio shadow;
+- training remains on Lenovo; Production Main runs under a separate execution authority;
+- optional observer/backup duties need independent resource/failure-domain qualification; co-resident workload is not independent HA;
 - no shared SQLite WAL;
-- not an unsupervised second writer.
+- no Production Main order-write credentials or second writer. See the [ASUS runtime design](../research-workbench/SHARED-MARKET-RUNTIME.md).
 
 HA starts with one authoritative writer + observer. Automatic failover requires lease/epoch/fencing design and measured drills.
 

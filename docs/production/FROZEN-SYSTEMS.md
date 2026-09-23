@@ -6,6 +6,8 @@
 
 This document freezes the two-system architecture of the Indodax systematic trading platform.
 
+**2026-09-23 planning amendment:** [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) makes ASUS the Research Workbench runtime/shadow edge and specifies the shared WebSocket substrate. Its explicit host-role override supersedes the older observer-only description. The two-system authority boundary and G0–G7 remain frozen. See [Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md) for implementation status, contracts and qualification.
+
 ## Canonical systems
 
 ### 1. Production Main
@@ -48,6 +50,8 @@ frozen / safety-first
 ```
 
 No research component may directly write a real venue order.
+
+The two systems occupy three logical compute planes: Lenovo Research Compute (training, historical work and packaging), ASUS Research Runtime (shared public collection, features, qualified inference and shadow), and a separate future Production Main execution node. ASUS never trains models and never owns Production Main order-write authority. Sharing feed/feature/model/prediction work does not share candidate wallets or production credentials.
 
 ## Source-of-truth precedence
 

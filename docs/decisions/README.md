@@ -13,3 +13,5 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [ADR-005 Shared runtime kernel](ADR-005-shared-runtime-kernel.md)
 - [ADR-006 Immutable Workbench identity](ADR-006-immutable-workbench-identity.md)
 - [ADR-007 Execution transaction boundary](ADR-007-execution-transaction-boundary.md)
+- [ADR-008 Shared market runtime and ASUS Research Edge](ADR-008-shared-market-runtime-and-asus-edge.md)
+- [CR-20260923 Shared market runtime impact and scope](CR-20260923-shared-market-runtime.md)

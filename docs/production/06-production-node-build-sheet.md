@@ -12,8 +12,12 @@ Lenovo menjalankan backfill, feature/materialization, model training, experiment
 ### Production execution node
 Dedicated x86_64 Linux host, SSD-backed dan wired network preferred. Satu host memiliki satu execution authority. Host ini menjalankan frozen candidate saja, tanpa training.
 
-### Watchdog
-ASUS X441U dapat dipakai sebagai independent observer setelah benchmark. Tugasnya heartbeat, stale-data check, backup freshness dan alert forwarding. ASUS tidak menjadi second order writer.
+### ASUS Research Runtime / Shadow Edge
+ASUS X441U/X441UV (`asus-server`) menjalankan public collection, shared features, qualified CPU inference, Tournament/Portfolio Shadow, evidence dan monitoring. Training tetap di Lenovo. ASUS tidak menjadi Production Main execution authority atau second order writer. Perubahan host role dicatat dalam [ADR-008](../decisions/ADR-008-shared-market-runtime-and-asus-edge.md).
+
+Baseline dari pemilik: Ubuntu Server 22.04.5 LTS x86_64; i3-6006U 2 core/4 thread ~2 GHz; RAM 4 GB; swap ~3.7 GB; tanpa compute GPU. Root/LVM ~98 GB dan usage ~51% adalah observasi historis untuk diukur ulang. Ethernet diprioritaskan atas Wi-Fi; Tailscale untuk administration/immutable transfer. Host berbagi CPU/RAM/disk/network dengan layanan lain. Swap adalah kapasitas darurat dan aktivitas swap memicu overload handling.
+
+Detail input hardware, batas resource, benchmark rule/ML/DL dan thermal-soak ada di [Shared Market Runtime](research-workbench/SHARED-MARKET-RUNTIME.md#m-resource-governance-and-asus-qualification). Nilai CPU/RAM/model/queue limits harus berasal dari qualification, bukan spesifikasi laptop. ASUS menyimpan runtime artifacts dan recent evidence, bukan historical data lake. Optional watchdog/backup Production Main memerlukan failure-domain/resource qualification tersendiri.
 
 ## OS baseline
 
@@ -68,6 +72,8 @@ Untuk shadow dan bounded single-process micro-live, SQLite dengan WAL + FULL syn
 Jika OMS, ledger dan reconciler menjadi multi-process writers atau dipisah lintas host, migrasikan durable state ke transactional server database seperti PostgreSQL sebelum menambah concurrency. Jangan menggunakan shared SQLite sebagai pseudo-cluster.
 
 ## Planned services
+
+Daftar berikut khusus future Production Main, bukan daftar service ASUS. ASUS target memakai satu `lab-shadow.service` terintegrasi (feed + features + shadow, satu optional inference child); `lab-collector.service` adalah mode collection-only yang mutual-exclusive untuk feed/root sama; `lab-worker.service` tetap Lenovo-only. Pada audited `dev`, modul `cli.shadow` dan `cli.collector` yang dirujuk unit lama belum ada, sedangkan `cli.collect_market_stream` ada. [Kontrak entrypoint/cutover](research-workbench/SHARED-MARKET-RUNTIME.md#concrete-entrypoints-and-cutover) menetapkan perbaikannya sebagai pekerjaan implementasi. Dokumentasi ini tidak mengaktifkan service tersebut.
 
 ~~~text
 indodax-market.service

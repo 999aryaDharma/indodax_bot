@@ -8,6 +8,8 @@ Research Workbench is the canonical research operating system for strategy disco
 
 It is intentionally flexible. It must never become a shortcut around Production Main safety gates.
 
+The [Shared Market Runtime design](SHARED-MARKET-RUNTIME.md) and [ADR-008](../../decisions/ADR-008-shared-market-runtime-and-asus-edge.md) extend this frozen boundary with explicit Lenovo/ASUS host roles, WebSocket recovery, shared features/inference and capacity qualification. They describe planned integration; the current REST shadow path and standalone WebSocket collector remain separate at the audited `dev` SHA.
+
 ## 1. Core principle
 
 **Research is maximally customizable. Production is minimally customizable.**
@@ -159,6 +161,17 @@ Indodax
 ```
 
 This improves rate-limit behavior and guarantees that tournament agents see the same event.
+
+WebSocket is the target continuous public source. One centrally owned subscription set covers admitted candidate inputs; REST supplies bootstrap/history/metadata/recovery and bounded sanity checks. In-process bounded fan-out delivers durable validated events to recorder, feature runtime and shadow consumers. The same feature snapshot, loaded model instance and deterministic prediction are reused across eligible consumers. Slow consumers pause/resynchronize with recorded coverage gaps; queues never grow without limit.
+
+## 7.1 Compute planes and ASUS constraints
+
+- Lenovo owns historical data processing, feature research, backtests, walk-forward, ML/DL/RL training, tuning, candidate packaging and runtime artifact optimization.
+- ASUS `asus-server` is an always-on Research Runtime / Shadow Edge. Owner-reported baseline: X441U/X441UV, Ubuntu Server 22.04.5 x86_64, i3-6006U 2 cores/4 threads, 4 GB RAM, approximately 3.7 GB swap, no compute GPU. Swap is overload/emergency capacity. Root/LVM approximately 98 GB and historical usage approximately 51% must be remeasured.
+- ASUS hosts lightweight collection, shared feature computation, shadow evaluation, qualified CPU inference, evidence, local SQLite state and monitoring. It has bounded active models/windows/queues and shares resources with existing services. Training and parameter sweeps are prohibited.
+- Production Main remains a separate execution authority and frozen release chain. ASUS does not authorize real orders. A larger runtime host is a deployment/qualification change, not a different candidate contract.
+
+Qualification covers idle and realistic shared-host conditions, 30-minute and several-hour load tests, and a 24h+ soak. The [design](SHARED-MARKET-RUNTIME.md#m-resource-governance-and-asus-qualification) defines the workload matrix and metrics; no strategy/model capacity is promised from CPU/RAM specifications.
 
 ## 8. Research/production firewall
 
