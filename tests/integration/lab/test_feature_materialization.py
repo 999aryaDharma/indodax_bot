@@ -327,3 +327,34 @@ def test_build_features_cli_never_overwrites_existing_artifact(tmp_path: Path) -
 
     assert output.read_bytes() == previous_artifact
     assert not (tmp_path / "out_features_manifest.json").exists()
+
+
+def test_build_features_cli_rolls_back_output_when_manifest_publish_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "registry.yaml"
+    bars_path = tmp_path / "bars.parquet"
+    output = tmp_path / "out_features.parquet"
+    _create_registry_yaml(config, lookback=3)
+    _make_bars(5).to_parquet(bars_path, index=False)
+
+    def fail_manifest(*args, **kwargs) -> None:
+        raise OSError("injected manifest publication failure")
+
+    monkeypatch.setattr("indodax_lab.cli.build_features.publish_immutable_bytes", fail_manifest)
+    stdout = StringIO()
+    with pytest.raises(OSError, match="injected manifest publication failure"):
+        build_features_main(
+            [
+                "--config", str(config),
+                "--bars", str(bars_path),
+                "--dataset-snapshot-id", SNAPSHOT_ID,
+                "--output", str(output),
+            ],
+            stdout=stdout,
+        )
+
+    assert not output.exists()
+    assert not (tmp_path / "out_features_manifest.json").exists()
+    assert not list(tmp_path.glob(".*.partial"))
+    assert stdout.getvalue() == ""
