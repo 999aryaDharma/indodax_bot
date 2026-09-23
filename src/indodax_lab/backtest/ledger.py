@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from threading import RLock
-from typing import Any, Mapping
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -105,7 +106,6 @@ class ResearchLedger:
         self._positions: dict[str, Position] = {}
         self._processed_fill_ids: set[str] = set()
         self._total_fees_paid = Decimal("0")
-        self._total_net_pnl = Decimal("0")
         self._total_realized_gross_pnl = Decimal("0")
 
         if self._cash > Decimal("0"):
@@ -229,7 +229,6 @@ class ResearchLedger:
         pos = current.model_copy(deep=True) if current else Position(pair=fill.pair)
         next_cash = self._cash
         next_fees = self._total_fees_paid
-        next_net_pnl = self._total_net_pnl
         next_gross_pnl = self._total_realized_gross_pnl
         gross = fill.gross
         fee = fill.fees
@@ -278,22 +277,19 @@ class ResearchLedger:
             if next_cash < 0:
                 raise ValueError("INSUFFICIENT_CASH_INCLUDING_FEES")
 
-            # Exact cost basis allocation
+            # Exact cost basis allocation: multiply before divide to minimize decimal precision loss
             if fill.qty == pos.base_qty:
                 allocated_basis = pos.cost_basis
                 pos.base_qty = Decimal("0")
                 pos.cost_basis = Decimal("0")
             else:
-                allocated_basis = (fill.qty / pos.base_qty) * pos.cost_basis
+                allocated_basis = (fill.qty * pos.cost_basis) / pos.base_qty
                 pos.base_qty -= fill.qty
                 pos.cost_basis -= allocated_basis
 
             gross_pnl = gross - allocated_basis
-            # net_pnl = net_sell_credit - allocated_basis = gross_pnl - fee
-            net_pnl = net_credit - allocated_basis
 
             next_fees += fee
-            next_net_pnl += net_pnl
             next_gross_pnl += gross_pnl
 
             p_cash = Posting(
@@ -338,7 +334,6 @@ class ResearchLedger:
         self._cash = next_cash
         self._positions[fill.pair] = pos
         self._total_fees_paid = next_fees
-        self._total_net_pnl = next_net_pnl
         self._total_realized_gross_pnl = next_gross_pnl
         self.transactions.append(tx)
         self._processed_fill_ids.add(fill.fill_id)
@@ -366,7 +361,7 @@ class ResearchLedger:
             }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ResearchLedger":
+    def from_dict(cls, data: Mapping[str, Any]) -> ResearchLedger:
         """Restore and verify a previously serialized ledger fail-closed."""
         if data.get("schema_version") != 1:
             raise ValueError("LEDGER_STATE_SCHEMA_UNSUPPORTED")

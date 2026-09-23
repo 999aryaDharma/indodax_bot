@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pytest
 
 from indodax_lab.backtest.costs import OrderRole, OrderSide
-from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.ledger import (
-    AccountType,
     DuplicateFillError,
     InsufficientQuantityError,
-    Posting,
     ResearchLedger,
 )
-
+from indodax_lab.backtest.orders import Fill
 
 BASE_TS = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
 
@@ -369,3 +367,84 @@ def test_ledger_state_tamper_fails_closed() -> None:
 
     with pytest.raises(ValueError, match="LEDGER_STATE_CASH_MISMATCH"):
         ResearchLedger.from_dict(state)
+
+
+def test_fill_negative_boundary_validation() -> None:
+    """F-04: Negative boundary validation tests on Fill schema."""
+    from pydantic import ValidationError
+
+    # 1. Negative quantity
+    with pytest.raises(ValidationError):
+        Fill(
+            fill_id="f1",
+            order_id="o1",
+            event_id="e1",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("-0.001"),
+            price=Decimal("500000000"),
+            fees=Decimal("100"),
+            timestamp=BASE_TS,
+        )
+
+    # 2. Zero quantity
+    with pytest.raises(ValidationError):
+        Fill(
+            fill_id="f2",
+            order_id="o2",
+            event_id="e2",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0"),
+            price=Decimal("500000000"),
+            fees=Decimal("100"),
+            timestamp=BASE_TS,
+        )
+
+    # 3. Negative price
+    with pytest.raises(ValidationError):
+        Fill(
+            fill_id="f3",
+            order_id="o3",
+            event_id="e3",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0.001"),
+            price=Decimal("-500000000"),
+            fees=Decimal("100"),
+            timestamp=BASE_TS,
+        )
+
+    # 4. Negative fees
+    with pytest.raises(ValidationError):
+        Fill(
+            fill_id="f4",
+            order_id="o4",
+            event_id="e4",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0.001"),
+            price=Decimal("500000000"),
+            fees=Decimal("-100"),
+            timestamp=BASE_TS,
+        )
+
+    # 5. Naive datetime
+    naive_ts = datetime(2024, 1, 1, 10, 0, 0)
+    with pytest.raises(ValidationError):
+        Fill(
+            fill_id="f5",
+            order_id="o5",
+            event_id="e5",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("0.001"),
+            price=Decimal("500000000"),
+            fees=Decimal("100"),
+            timestamp=naive_ts,
+        )

@@ -4,23 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-import pytest
 
 from indodax_lab.backtest.costs import (
-    CostScheduleTable,
     OrderRole,
     OrderSide,
     load_cost_schedule_table,
     lookup_cost,
 )
-from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.ledger import (
-    AccountType,
-    DuplicateFillError,
-    InsufficientQuantityError,
     ResearchLedger,
 )
-
+from indodax_lab.backtest.orders import Fill
 
 BASE_TS = datetime(2024, 6, 1, 0, 0, 0, tzinfo=UTC)
 

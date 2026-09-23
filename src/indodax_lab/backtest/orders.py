@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Mapping
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from indodax_lab.backtest.costs import OrderRole, OrderSide
 
