@@ -22,7 +22,7 @@ Lookup fee memilih schedule historis yang tepat atau memblokir klaim promosi.
 
 ## Why This Sprint Exists
 
-Tanpa kapabilitas ini, kontrak `COST-01` belum dapat dibuktikan dan downstream tidak boleh mengasumsikan hasilnya tersedia. Nilai spesifiknya: market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+Tanpa kapabilitas ini, kontrak `COST-01` belum dapat dibuktikan dan downstream tidak boleh mengasumsikan hasilnya tersedia. Nilai spesifiknya: market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with reviewed sources; [valid_from,valid_to). Unverified intervals must fail closed. See [CR-COST-01](../../decisions/CR-COST-01-provenance-and-fee-time-basis.md).
 
 Direct consumers: LED-01, SIM-01
 
@@ -74,10 +74,11 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 1. **COST-01-FR1:** Overlap schedule key sama ditolak.
 2. **COST-01-FR2:** Boundary end memilih interval berikutnya.
 3. **COST-01-FR3:** Periode unknown tidak memakai fee hari ini.
+4. **COST-01-FR4:** Schedule dengan bukti sumber belum diverifikasi gagal tertutup.
 
 ## Domain Rules / Invariants
 
-market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with reviewed sources; [valid_from,valid_to). For limit orders `fee_basis_ts` is the order-created timestamp; for market orders it is the execution timestamp. An interval without verified evidence is blocked, not a successful zero/default cost.
 
 Decimal valued double-entry journal; separate asset units from IDR valuation; exact fees, partial fills and market rules.
 
@@ -87,7 +88,7 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 Layer owner: `src/indodax_lab/backtest`. Konsumsi hanya public contracts dependency yang tercantum. Side effect berada pada boundary adapter/repository; pure calculation tidak melakukan HTTP.
 
-market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with reviewed sources; [valid_from,valid_to).
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 
@@ -103,7 +104,7 @@ Path baru adalah panduan, bukan bukti file sudah ada. Periksa file ekuivalen seb
 
 Detailed domain fields and behavior are specified in `docs/specs/08-costs-ledger-and-execution.md`; exact table schemas use the Required Reading dataset contract.
 
-market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with reviewed sources; [valid_from,valid_to).
 
 Input harus membawa identity dan versi yang disebut di atas. Output memisahkan hasil valid, abstain/excluded/blocked yang sah, dan error teknis. Nilai unknown tidak boleh dikonversi ke nol. Pin enum/field/unit pada contract test; API baru tidak boleh hanya ditulis sebagai contoh tanpa implementation/test.
 
@@ -144,6 +145,7 @@ Positive contract: **COST-01-AC0**, `test_cost_01_valid_contract` — Lookup fee
 | COST-01-AC1 | `test_cost_01_contract_1` | Overlap schedule key sama ditolak |
 | COST-01-AC2 | `test_cost_01_contract_2` | Boundary end memilih interval berikutnya |
 | COST-01-AC3 | `test_cost_01_contract_3` | Periode unknown tidak memakai fee hari ini |
+| COST-01-AC4 | `test_unverified_canonical_schedule_is_not_resolved` | Interval tanpa verifikasi tidak menghasilkan lookup sukses |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -195,6 +197,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **COST-01-AC1** Overlap schedule key sama ditolak. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **COST-01-AC2** Boundary end memilih interval berikutnya. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **COST-01-AC3** Periode unknown tidak memakai fee hari ini. Evidence: mapped test, exact command/exit and target SHA.
+- [ ] **COST-01-AC4** Interval tanpa bukti terverifikasi ditolak. Evidence: canonical config lookup raises `UNVERIFIED_COST_SCHEDULE`.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
@@ -236,7 +239,7 @@ Read sprint-manifest.json and verify dependencies DONE; check external gates bef
 If status is historical DONE, do not rebuild: only reopen under a documented defect/change request.
 Inspect actual files and any scoped WIP before creating equivalents.
 Goal: Lookup fee memilih schedule historis yang tepat atau memblokir klaim promosi.
-Contract: market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+Contract: market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with reviewed sources; [valid_from,valid_to). Limit orders use order creation time; unverified schedule evidence fails closed.
 Use behavior-driven RED -> GREEN for each AC, then affected integration/regression verification.
 Never implement downstream capabilities, loosen gates, use real trading keys or modify live DBs.
 Commit scoped changes, record exact SHA/commands/AC evidence in handoff, self-review.

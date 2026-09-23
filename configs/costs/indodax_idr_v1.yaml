@@ -5,6 +5,7 @@ intervals:
   # Period 1: Pre-PMK 68 (2021-01-01 to 2022-05-01)
   # ============================================================================
   - schedule_id: indodax_idr_pre_pmk68_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -19,6 +20,7 @@ intervals:
       - 'Indodax Historical Fee Schedule 2021'
 
   - schedule_id: indodax_idr_pre_pmk68_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -33,6 +35,7 @@ intervals:
       - 'Indodax Historical Fee Schedule 2021'
 
   - schedule_id: indodax_idr_pre_pmk68_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -47,6 +50,7 @@ intervals:
       - 'Indodax Historical Fee Schedule 2021'
 
   - schedule_id: indodax_idr_pre_pmk68_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -64,6 +68,7 @@ intervals:
   # Period 2: PMK 68 Tax Era (2022-05-01 to 2024-01-01)
   # ============================================================================
   - schedule_id: indodax_idr_pmk68_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -79,6 +84,7 @@ intervals:
       - 'Indodax Announcement May 2022'
 
   - schedule_id: indodax_idr_pmk68_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -94,6 +100,7 @@ intervals:
       - 'Indodax Announcement May 2022'
 
   - schedule_id: indodax_idr_pmk68_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -109,6 +116,7 @@ intervals:
       - 'Indodax Announcement May 2022'
 
   - schedule_id: indodax_idr_pmk68_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -128,6 +136,7 @@ intervals:
   # Matches paper trader parameters: buy 0.2111%, sell 0.4211%
   # ============================================================================
   - schedule_id: indodax_idr_cfx_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -143,6 +152,7 @@ intervals:
       - 'Indodax CFX Fee Schedule 2024'
 
   - schedule_id: indodax_idr_cfx_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -158,6 +168,7 @@ intervals:
       - 'Indodax CFX Fee Schedule 2024'
 
   - schedule_id: indodax_idr_cfx_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -173,6 +184,7 @@ intervals:
       - 'Indodax CFX Fee Schedule 2024'
 
   - schedule_id: indodax_idr_cfx_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
