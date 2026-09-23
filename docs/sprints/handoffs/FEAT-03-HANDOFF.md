@@ -44,7 +44,19 @@ Combined suite verification (40 passed, 2 skipped across all capabilities) passe
 - Quality verdict: PASS (zero network, strictly immutable schemas, no forward-looking lookahead, strict causality).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: CHANGES_REQUESTED at code SHA `63f96d273f3aea81544f6b609848a142316bc2d7`; re-review of the fix below is pending.
+
+## Review round 1 remediation (2026-09-23)
+
+- Continuation owner: Codex; kept in the user-requested active worktree on branch `feat/feat-02-finalization`, based on `3bf1ac7`. Original implementation branch remains `feat/feat-03-as-of-market-context`.
+- Finding: Important pair-isolation leak. A single-pair source (for example BTC) was broadcast to unrelated or mixed decision pairs when the source did not contain every decision pair.
+- Fix commit / exact code SHA: `ba0cd66301fd89f8397e7152287c5c75c9f84ef1` (`fix(feat-03): isolate pair context joins`).
+- API contract: `asof_join_features` defaults to `join_mode="same_pair"`, filters every decision row by pair, and rejects ambiguous pair-column presence. BTC-only broadcast requires `join_mode="btc_benchmark"` and validates that source contains only `btc_idr`; feature builder opts in explicitly.
+- Regression RED: `python -m pytest tests/unit/lab/features/test_availability.py -q -p no:cacheprovider -k 'never_broadcasts or mixed_decision or requires_explicit_mode or feat_03_contract_3'` — 4 failed as expected on the missing mode / cross-pair broadcast.
+- Focused GREEN: `python -m pytest tests/unit/lab/features/test_availability.py -q -p no:cacheprovider` — 18 passed; `python -m pytest tests/unit/lab/features tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider` — 55 passed; BTC benchmark materialization — 1 passed.
+- Full suite: `python -m pytest -q -p no:cacheprovider` — 1007 passed, 2 environment-specific skips, 3 existing sklearn warnings (exit 0).
+- Lint: focused Ruff rules found only a pre-existing E712 finding in `context.py:137`; full-file lint also reports baseline issues outside this diff. No baseline lint debt was modified.
+- Re-review status: PENDING; do not mark DONE until an independent reviewer records PASS against exact code SHA above.
 
 ## Deviations and known risks
 - Deviations: None.
