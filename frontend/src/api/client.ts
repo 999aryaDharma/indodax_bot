@@ -14,6 +14,14 @@ export class ControlPlaneError extends Error {
   }
 }
 
+export function overviewDataForDisplay(
+  snapshot: ApiEnvelope<ProductionOverview>,
+): ProductionOverview | undefined {
+  return snapshot.status === "AVAILABLE" || snapshot.status === "PARTIAL"
+    ? snapshot.data
+    : undefined;
+}
+
 const serviceStates = new Set(["HEALTHY", "WARNING", "CRITICAL", "UNKNOWN", "UNAVAILABLE", "MISMATCH", "STALE"]);
 const envelopeStatuses = new Set(["AVAILABLE", "PARTIAL", "UNAVAILABLE", "EMPTY"]);
 

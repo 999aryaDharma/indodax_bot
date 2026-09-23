@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ControlPlaneError, getProductionOverview } from "./client";
+import { ControlPlaneError, getProductionOverview, overviewDataForDisplay } from "./client";
 import type { ApiEnvelope, ProductionOverview } from "./types";
 
 const overview: ProductionOverview = {
@@ -15,6 +15,18 @@ const overview: ProductionOverview = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Production overview client", () => {
+  it("does not display operational values from EMPTY snapshots", () => {
+    const empty: ApiEnvelope<ProductionOverview> = {
+      request_id: "request-empty",
+      as_of: "2026-09-23T00:00:00Z",
+      source_revision: "empty-r1",
+      status: "EMPTY",
+      data: overview,
+      provenance: { source: "production-main", revision: "empty-r1" },
+    };
+    expect(overviewDataForDisplay(empty)).toBeUndefined();
+  });
+
   it("sends a request ID and preserves backend string values", async () => {
     const data = { ...overview, equity: "102.43000000" };
     const response: ApiEnvelope<typeof data> = {
