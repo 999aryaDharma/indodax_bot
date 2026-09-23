@@ -1,5 +1,20 @@
 # FEAT-02 handoff
 
+## Revalidation addendum — 2026-09-23
+
+Current implementation target: code SHA `5dc3bbfba9e61575dabce0ad61055e28ef230e24` on branch `feat/feat-02-finalization`. This supersedes the earlier code SHA below for review and acceptance evidence; the historical evidence is retained as provenance.
+
+- The imported WIP is now committed in the current repository history. Both canonical feature registries are version `1.1.0` and pin EMA initialization, Wilder SMA seeding, StochRSI zero-range behavior, and rolling `ddof`; the report's feature-set version matches.
+- `technical.py` propagates those policies through registry-callable transforms. Golden values remain hand-literal; tests cover warmup, flat/zero-volume finiteness and future-bar causality.
+- Environment: `C:\Users\User\miniconda3\envs\ML\python.exe` on Windows.
+- `python -m pytest tests/unit/lab/features -q -p no:cacheprovider` → 38 passed, exit 0.
+- `python -m pytest tests/integration/lab/test_feature_materialization.py -q -p no:cacheprovider` → 14 passed, exit 0.
+- `python -m ruff check --ignore E501 src/indodax_lab/features/technical.py tests/unit/lab/features/test_technical.py tests/unit/lab/features/test_registry.py` → passed, exit 0. The exception is explicit because touched legacy files contain pre-existing long lines; the narrow check found no other lint issues.
+- `git diff --check` on the six implementation files → passed, exit 0.
+- Independent review of exact code SHA `5dc3bbfba9e61575dabce0ad61055e28ef230e24` is pending. Do not transition FEAT-02 to DONE before reviewer PASS and coordinator manifest/projection update.
+
+Current implementation paths: `configs/features/tabular_bar_v1.yaml`, `configs/features/tabular_bar_5m_v1.yaml`, `src/indodax_lab/features/technical.py`, `src/indodax_lab/cli/run_backtest.py`, `tests/unit/lab/features/test_registry.py`, and `tests/unit/lab/features/test_technical.py`.
+
 Status: REVIEW
 
 ## Identity
