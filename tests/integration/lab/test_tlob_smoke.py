@@ -60,6 +60,7 @@ def _generate_synthetic_lob_series(n_steps: int = 50) -> list[BookSnapshot]:
             BookSnapshot(
                 timestamp=t,
                 pair="BTC_IDR",
+                session_id="synthetic-session",
                 bids=bids,
                 asks=asks,
                 sequence_id=i,

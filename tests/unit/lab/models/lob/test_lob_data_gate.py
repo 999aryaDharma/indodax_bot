@@ -68,6 +68,7 @@ def test_lob_01_valid_contract() -> None:
         BookSnapshot(
             timestamp=t0 + timedelta(seconds=i),
             pair="BTC_IDR",
+            session_id="session-a",
             bids=[BookLevel(price=Decimal("1000000000"), volume=Decimal("1.5"))],
             asks=[BookLevel(price=Decimal("1000500000"), volume=Decimal("2.0"))],
             sequence_id=i,
@@ -119,6 +120,7 @@ def test_lob_01_contract_2() -> None:
         BookSnapshot(
             timestamp=t0 + timedelta(seconds=i),
             pair="BTC_IDR",
+            session_id="session-a",
             bids=[BookLevel(price=Decimal("1000000000"), volume=Decimal("1.0"))],
             asks=[BookLevel(price=Decimal("1000500000"), volume=Decimal("1.0"))],
         )
@@ -131,6 +133,7 @@ def test_lob_01_contract_2() -> None:
         BookSnapshot(
             timestamp=gap_t + timedelta(seconds=i),
             pair="BTC_IDR",
+            session_id="session-a",
             bids=[BookLevel(price=Decimal("1000000000"), volume=Decimal("1.0"))],
             asks=[BookLevel(price=Decimal("1000500000"), volume=Decimal("1.0"))],
         )
@@ -202,3 +205,110 @@ def test_lob_01_contract_3() -> None:
 
     with pytest.raises(InsufficientCoverageGateError, match="COVERAGE_DAYS_INSUFFICIENT"):
         gate.evaluate_coverage(quarantine_sessions)
+
+
+def test_coverage_requires_minimum_events_on_each_day_and_pair() -> None:
+    gate = LOBDatasetEligibilityGate(min_coverage_days=2, min_events_per_day=10)
+    start = datetime(2025, 1, 1, tzinfo=UTC)
+    sessions = [
+        LOBSessionMetadata(
+            session_id=f"{pair}-{day}",
+            pair=pair,
+            start_ts=start + timedelta(days=day),
+            end_ts=start + timedelta(days=day, hours=1),
+            event_count=20 if day == 0 else 0,
+            status=SessionStatus.PASS,
+        )
+        for pair in ("BTC_IDR", "ETH_IDR")
+        for day in range(2)
+    ]
+
+    with pytest.raises(InsufficientCoverageGateError, match="INSUFFICIENT_EVENTS_PER_PAIR_DAY"):
+        gate.evaluate_coverage(sessions)
+
+    mixed_coverage = [
+        LOBSessionMetadata(
+            session_id=f"{pair}-{day}",
+            pair=pair,
+            start_ts=start + timedelta(days=day),
+            end_ts=start + timedelta(days=day, hours=1),
+            event_count=10,
+            status=SessionStatus.PASS,
+        )
+        for pair, day in (("BTC_IDR", 0), ("ETH_IDR", 1), ("ETH_IDR", 2), ("ETH_IDR", 3))
+    ]
+    with pytest.raises(InsufficientCoverageGateError, match="COVERAGE_DAYS_INSUFFICIENT"):
+        gate.evaluate_coverage(mixed_coverage)
+
+
+def test_windows_split_at_pair_session_and_sequence_boundaries() -> None:
+    gate = LOBDatasetEligibilityGate(max_gap_seconds=10)
+    start = datetime(2025, 1, 1, tzinfo=UTC)
+    snapshots = [
+        BookSnapshot(
+            timestamp=start + timedelta(seconds=i),
+            pair="BTC_IDR",
+            session_id="a",
+            bids=[BookLevel(price="99", volume="1")],
+            asks=[BookLevel(price="101", volume="1")],
+            sequence_id=i,
+        )
+        for i in range(3)
+    ] + [
+        BookSnapshot(
+            timestamp=start + timedelta(seconds=3 + i),
+            pair="ETH_IDR",
+            session_id="a",
+            bids=[BookLevel(price="99", volume="1")],
+            asks=[BookLevel(price="101", volume="1")],
+            sequence_id=3 + i,
+        )
+        for i in range(3)
+    ] + [
+        BookSnapshot(
+            timestamp=start + timedelta(seconds=6 + i),
+            pair="BTC_IDR",
+            session_id="b",
+            bids=[BookLevel(price="99", volume="1")],
+            asks=[BookLevel(price="101", volume="1")],
+            sequence_id=6 + i,
+        )
+        for i in range(3)
+    ]
+
+    windows = gate.segment_continuous_windows(snapshots, window_len=3)
+    assert len(windows) == 3
+    assert all(len({(s.pair, s.session_id) for s in window}) == 1 for window in windows)
+
+    bad_sequence = [
+        snapshots[0],
+        snapshots[1].model_copy(update={"sequence_id": 2}),
+        snapshots[2].model_copy(update={"sequence_id": 1}),
+    ]
+    with pytest.raises(ValueError, match="NON_MONOTONIC_SEQUENCE_ID"):
+        gate.segment_continuous_windows(bad_sequence, window_len=2)
+
+
+@pytest.mark.parametrize(
+    "bids,asks",
+    [
+        ([], [BookLevel(price="101", volume="1")]),
+        ([BookLevel(price="102", volume="1")], [BookLevel(price="101", volume="1")]),
+        (
+            [BookLevel(price="99", volume="1"), BookLevel(price="100", volume="1")],
+            [BookLevel(price="101", volume="1")],
+        ),
+    ],
+)
+def test_book_snapshot_rejects_invalid_depth(bids, asks) -> None:
+    with pytest.raises(
+        ValueError,
+        match="(NON_EMPTY_BOOK_REQUIRED|CROSSED_BOOK_FORBIDDEN|BIDS_MUST_BE_DESCENDING)",
+    ):
+        BookSnapshot(
+            timestamp=datetime(2025, 1, 1, tzinfo=UTC),
+            pair="BTC_IDR",
+            session_id="session-a",
+            bids=bids,
+            asks=asks,
+        )

@@ -9,12 +9,12 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +70,7 @@ class BookSnapshot(BaseModel):
 
     timestamp: datetime
     pair: str
+    session_id: str
     bids: list[BookLevel]
     asks: list[BookLevel]
     sequence_id: int | None = None
@@ -80,6 +81,24 @@ class BookSnapshot(BaseModel):
         if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
             raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED")
         return dt
+
+    @model_validator(mode="after")
+    def validate_book(self) -> BookSnapshot:
+        if not self.bids or not self.asks:
+            raise ValueError("NON_EMPTY_BOOK_REQUIRED")
+        if any(
+            a.price <= b.price for a, b in zip(self.bids, self.bids[1:], strict=False)
+        ):
+            raise ValueError("BIDS_MUST_BE_DESCENDING")
+        if any(
+            a.price >= b.price for a, b in zip(self.asks, self.asks[1:], strict=False)
+        ):
+            raise ValueError("ASKS_MUST_BE_ASCENDING")
+        if self.bids[0].price >= self.asks[0].price:
+            raise ValueError("CROSSED_BOOK_FORBIDDEN")
+        if not self.pair or not self.session_id:
+            raise ValueError("PAIR_AND_SESSION_ID_REQUIRED")
+        return self
 
 
 class LOBSessionMetadata(BaseModel):
@@ -101,6 +120,16 @@ class LOBSessionMetadata(BaseModel):
         if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
             raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED")
         return dt
+
+    @model_validator(mode="after")
+    def validate_session(self) -> LOBSessionMetadata:
+        if self.start_ts > self.end_ts:
+            raise ValueError("SESSION_START_AFTER_END")
+        if self.event_count < 0:
+            raise ValueError("NEGATIVE_EVENT_COUNT")
+        if not self.session_id or not self.pair:
+            raise ValueError("PAIR_AND_SESSION_ID_REQUIRED")
+        return self
 
 
 class LOBEligibilityReport(BaseModel):
@@ -161,22 +190,38 @@ class LOBDatasetEligibilityGate:
         """Evaluate whether sessions satisfy the >=90 day PASS coverage gate."""
         pass_sessions = [s for s in sessions if s.status == SessionStatus.PASS]
 
-        # Extract distinct calendar dates from PASS sessions
-        distinct_dates = {s.start_ts.date() for s in pass_sessions}
-        num_days = len(distinct_dates)
-
-        if num_days < self.min_coverage_days:
+        # Each pair must independently satisfy both coverage and the daily event floor.
+        events_by_pair_day: dict[tuple[str, date], int] = {}
+        for session in pass_sessions:
+            key = (session.pair, session.start_ts.date())
+            events_by_pair_day[key] = events_by_pair_day.get(key, 0) + session.event_count
+        pairs = {pair for pair, _ in events_by_pair_day}
+        days_by_pair = {
+            pair: {
+                day
+                for (session_pair, day), count in events_by_pair_day.items()
+                if session_pair == pair and count >= self.min_events_per_day
+            }
+            for pair in pairs
+        }
+        underfilled = any(
+            count < self.min_events_per_day for count in events_by_pair_day.values()
+        )
+        num_days = min((len(days) for days in days_by_pair.values()), default=0)
+        if not pairs:
+            raise InsufficientCoverageGateError("COVERAGE_DAYS_INSUFFICIENT: No PASS sessions")
+        if underfilled:
             raise InsufficientCoverageGateError(
-                f"COVERAGE_DAYS_INSUFFICIENT: Required >= {self.min_coverage_days} distinct PASS days, "
-                f"got {num_days} days. High row count cannot substitute for calendar coverage."
+                "INSUFFICIENT_EVENTS_PER_PAIR_DAY: Every PASS pair/day must meet "
+                "the configured event floor"
+            )
+        if any(len(days) < self.min_coverage_days for days in days_by_pair.values()):
+            raise InsufficientCoverageGateError(
+                f"COVERAGE_DAYS_INSUFFICIENT: Each pair requires >= "
+                f"{self.min_coverage_days} distinct PASS days"
             )
 
-        total_events = sum(s.event_count for s in pass_sessions)
-        min_required_events = self.min_coverage_days * self.min_events_per_day
-        if total_events < min_required_events:
-            raise InsufficientCoverageGateError(
-                f"INSUFFICIENT_EFFECTIVE_EVENTS: Required >= {min_required_events} events, got {total_events}"
-            )
+        total_events = sum(events_by_pair_day.values())
 
         # Regimes aggregation
         regime_counts: dict[str, int] = {}
@@ -199,9 +244,23 @@ class LOBDatasetEligibilityGate:
         """Validate that snapshots form a strictly contiguous time series without gaps."""
         gap_thresh = max_gap_seconds if max_gap_seconds is not None else self.max_gap_seconds
         for i in range(1, len(snapshots)):
+            previous, current = snapshots[i - 1], snapshots[i]
+            same_stream = (current.pair, current.session_id) == (
+                previous.pair,
+                previous.session_id,
+            )
+            if not same_stream:
+                raise ValueError("LOB_WINDOW_CROSSES_PAIR_OR_SESSION")
             delta = (snapshots[i].timestamp - snapshots[i - 1].timestamp).total_seconds()
             if delta < 0:
                 raise ValueError("NON_CHRONOLOGICAL_SNAPSHOTS_DETECTED")
+            if (
+                same_stream
+                and previous.sequence_id is not None
+                and current.sequence_id is not None
+                and current.sequence_id <= previous.sequence_id
+            ):
+                raise ValueError("NON_MONOTONIC_SEQUENCE_ID")
             if delta > gap_thresh:
                 raise SessionGapBrokenWindowError(
                     f"LOB_WINDOW_GAP_DETECTED: Gap of {delta:.1f}s between index {i-1} and {i} "
@@ -225,13 +284,26 @@ class LOBDatasetEligibilityGate:
         current_run: list[BookSnapshot] = [snapshots[0]]
 
         for i in range(1, len(snapshots)):
-            delta = (snapshots[i].timestamp - snapshots[i - 1].timestamp).total_seconds()
-            if delta > gap_thresh:
-                # Gap detected: finalize current run and start new one
+            previous, current = snapshots[i - 1], snapshots[i]
+            delta = (current.timestamp - previous.timestamp).total_seconds()
+            if delta < 0:
+                raise ValueError("NON_CHRONOLOGICAL_SNAPSHOTS_DETECTED")
+            boundary_changed = (current.pair, current.session_id) != (
+                previous.pair,
+                previous.session_id,
+            )
+            if (
+                not boundary_changed
+                and previous.sequence_id is not None
+                and current.sequence_id is not None
+                and current.sequence_id <= previous.sequence_id
+            ):
+                raise ValueError("NON_MONOTONIC_SEQUENCE_ID")
+            if delta > gap_thresh or boundary_changed:
                 contiguous_runs.append(current_run)
-                current_run = [snapshots[i]]
+                current_run = [current]
             else:
-                current_run.append(snapshots[i])
+                current_run.append(current)
         contiguous_runs.append(current_run)
 
         # From each contiguous run, slice rolling windows of size window_len
