@@ -447,6 +447,7 @@ def test_build_features_cli_persists_parquet_and_companion_manifest(tmp_path: Pa
     manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest_data["manifest_version"] == "1.0.0"
     assert manifest_data["dataset_snapshot_id"] == IDENTITY
+    assert manifest_data["feature_registry_source_id"] == load_feature_registry(config).source_id
     assert manifest_data["total_rows"] == 5
     assert manifest_data["eligible_rows"] == 2
     assert "output_sha256" in manifest_data

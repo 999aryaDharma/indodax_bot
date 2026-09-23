@@ -5,13 +5,24 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
+import uuid
+from collections.abc import Sequence
 from io import StringIO
 from pathlib import Path
-from typing import Sequence
 
 import pandas as pd
 
+from indodax_lab.data.publication import (
+    best_effort_remove_entry,
+    ensure_directory_tree,
+    fsync_directory,
+    publish_existing_partial,
+    publish_immutable_bytes,
+    remove_entry,
+    rollback_or_raise_indeterminate,
+)
 from indodax_lab.features.builder import build_feature_frame
 from indodax_lab.features.registry import load_feature_registry
 
@@ -56,6 +67,44 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _publish_output(features_df: pd.DataFrame, path: Path) -> tuple[str, bool]:
+    ensure_directory_tree(path.parent)
+    partial_path = path.parent / f".{uuid.uuid4().hex}.partial"
+    published_new = False
+    try:
+        if path.suffix.lower() in (".parquet", ".pq"):
+            with partial_path.open("xb") as sink:
+                features_df.to_parquet(sink, index=False)
+                sink.flush()
+                os.fsync(sink.fileno())
+        else:
+            with partial_path.open("x", encoding="utf-8", newline="") as sink:
+                features_df.to_csv(sink, index=False)
+                sink.flush()
+                os.fsync(sink.fileno())
+
+        checksum = _sha256_file(partial_path)
+        published_new = publish_existing_partial(
+            partial_path,
+            path,
+            same_content=lambda existing: _sha256_file(existing) == checksum,
+            conflict_message=f"immutable feature output already differs: {path}",
+            fsync_directory_fn=fsync_directory,
+        )
+        try:
+            remove_entry(partial_path, fsync_directory_fn=fsync_directory)
+        except OSError:
+            if published_new:
+                rollback_or_raise_indeterminate(
+                    path, "feature output partial cleanup", fsync_directory_fn=fsync_directory
+                )
+            raise
+        return checksum, published_new
+    except Exception:
+        best_effort_remove_entry(partial_path, fsync_directory_fn=fsync_directory)
+        raise
+
+
 def main(argv: Sequence[str] | None = None, stdout: StringIO | None = None) -> int:
     out = stdout if stdout is not None else sys.stdout
     args = parse_args(argv)
@@ -91,27 +140,31 @@ def main(argv: Sequence[str] | None = None, stdout: StringIO | None = None) -> i
         out.write(f"rows={rows} eligible={eligible} dry_run=true\n")
         return 0
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    if args.output.suffix.lower() in (".parquet", ".pq"):
-        features_df.to_parquet(args.output, index=False)
-    else:
-        features_df.to_csv(args.output, index=False)
+    output_sha256, output_published_new = _publish_output(features_df, args.output)
 
     manifest_info = {
         "manifest_version": "1.0.0",
         "dataset_snapshot_id": args.dataset_snapshot_id,
         "feature_set_id": loaded_registry.registry.feature_set_id,
         "feature_set_version": loaded_registry.registry.version,
+        "feature_registry_source_id": loaded_registry.source_id,
         "decision_interval": loaded_registry.registry.decision_interval,
         "output_file": args.output.name,
-        "output_sha256": _sha256_file(args.output),
+        "output_sha256": output_sha256,
         "total_rows": rows,
         "eligible_rows": eligible,
         "feature_count": len(loaded_registry.registry.features),
         "features": [f.name for f in loaded_registry.registry.features],
     }
     manifest_path = args.output.parent / f"{args.output.stem}_manifest.json"
-    manifest_path.write_text(json.dumps(manifest_info, indent=2), encoding="utf-8")
+    try:
+        publish_immutable_bytes(
+            manifest_path, json.dumps(manifest_info, indent=2).encode("utf-8")
+        )
+    except Exception:
+        if output_published_new:
+            rollback_or_raise_indeterminate(args.output, "feature manifest publication")
+        raise
 
     out.write(f"rows={rows} eligible={eligible} output={args.output} manifest={manifest_path}\n")
     return 0

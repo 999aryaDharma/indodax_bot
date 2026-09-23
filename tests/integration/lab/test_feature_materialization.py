@@ -6,14 +6,15 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from io import StringIO
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from indodax_lab.features.builder import build_feature_frame
 from indodax_lab.cli.build_features import main as build_features_main
+from indodax_lab.data.manifest import ImmutableContentConflictError
+from indodax_lab.features.builder import build_feature_frame
 from indodax_lab.features.registry import load_feature_registry
-
 
 BASE = datetime(2024, 1, 1, tzinfo=UTC)
 SNAPSHOT_ID = "sha256:" + "a" * 64
@@ -303,3 +304,26 @@ def test_optional_infinite_source_does_not_become_eligible():
     result = build_feature_frame(bars, registry=registry, dataset_snapshot_id=SNAPSHOT_ID)
     assert not result.loc[3, "eligible"]
     assert "INVALID_SOURCE_VALUE" in result.loc[3, "reason_codes"]
+
+
+def test_build_features_cli_never_overwrites_existing_artifact(tmp_path: Path) -> None:
+    config = tmp_path / "registry.yaml"
+    bars_path = tmp_path / "bars.parquet"
+    output = tmp_path / "out_features.parquet"
+    _create_registry_yaml(config, lookback=3)
+    _make_bars(5).to_parquet(bars_path, index=False)
+    previous_artifact = b"previous immutable artifact"
+    output.write_bytes(previous_artifact)
+
+    with pytest.raises(ImmutableContentConflictError):
+        build_features_main(
+            [
+                "--config", str(config),
+                "--bars", str(bars_path),
+                "--dataset-snapshot-id", SNAPSHOT_ID,
+                "--output", str(output),
+            ]
+        )
+
+    assert output.read_bytes() == previous_artifact
+    assert not (tmp_path / "out_features_manifest.json").exists()
