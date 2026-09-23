@@ -158,8 +158,9 @@ def _build_report(
         "strategy_parameters_hash": params_hash,
         # Dataset provenance
         "dataset_registry_id": "lab-data-5m:btc_idr:bronze",
-        "feature_set_id": "tabular_bar_5m_v1",
-        "feature_set_version": "1.1.0",
+        # This replay uses raw-bar pass-through fields, not the feature registry.
+        "feature_set_id": None,
+        "feature_set_version": None,
         "cost_schedule_id": "indodax_idr",
         "cost_schedule_version": "1.0.0",
         "cost_config_path": cost_config_path,
