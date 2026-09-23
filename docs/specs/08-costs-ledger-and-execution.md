@@ -23,7 +23,7 @@ No real-money execution, no silent evaluator policy changes, and no direct mutat
 
 ### COST-01 — Time-valid exchange cost schedules
 
-market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to). Intervals are not eligible for lookup unless their source evidence is explicitly reviewed and verified. For limit orders use the order-created timestamp as the fee basis; for market orders use the execution timestamp.
 
 Acceptance boundary:
 - Overlap schedule key sama ditolak.
@@ -119,7 +119,7 @@ Every acceptance boundary above must map to named tests in its sprint handoff. I
 
 ## Execution and accounting contracts
 
-`lookup_cost(market, side, role, event_ts)` returns schedule ID and separated fee/tax/CFX components, precision, minimum notional and source evidence; missing interval gives UnknownCostSchedule. Reject negative/nonfinite rates and ambiguous overlapping schedule keys. Dated Rp25k minimum is inherited illustration only; active/historical values must be sourced during COST-01. Begin with IDR ledger; quote-separated USDT experimentation needs explicit FX valuation before IDR aggregation.
+`lookup_cost(market, side, role, fee_basis_ts)` returns schedule ID and separated fee/tax/CFX components, precision, minimum notional and source evidence; missing interval gives UnknownCostSchedule and a matching unverified interval fails with `UNVERIFIED_COST_SCHEDULE`. Reject negative/nonfinite rates and ambiguous overlapping schedule keys. Dated Rp25k minimum is inherited illustration only; active/historical values must be sourced during COST-01. Begin with IDR ledger; quote-separated USDT experimentation needs explicit FX valuation before IDR aggregation. See [CR-COST-01](../decisions/CR-COST-01-provenance-and-fee-time-basis.md).
 
 `SignalIntent(decision_ts, pair, side=LONG|FLAT, strength, stop_loss?, take_profit?, strategy_id, strategy_version)` cannot specify its own fill. `simulate_execution(intent, market_event, execution_policy, cost_schedule)` returns zero or more fills plus reject/unfilled quantities. Reject stale/unknown-depth orders under the configured conservative fidelity tier; do not assume a missing book has zero spread. Quantize quantities down to permitted precision; never round up beyond risk size. Partial fills allocate exact gross cost basis; cancellation cannot consume unfilled quantity.
 

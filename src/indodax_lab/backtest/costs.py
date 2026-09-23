@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
@@ -53,6 +53,7 @@ class CostScheduleInterval(BaseModel):
     min_notional: Decimal
     precision: int = 0
     sources: tuple[str, ...]
+    evidence_verified: bool = False
 
     @field_validator("valid_from", mode="after")
     @classmethod
@@ -66,7 +67,9 @@ class CostScheduleInterval(BaseModel):
             return _ensure_utc(value, "valid_to")
         return None
 
-    @field_validator("service_fee_rate", "tax_rate", "exchange_fee_rate", "min_notional", mode="before")
+    @field_validator(
+        "service_fee_rate", "tax_rate", "exchange_fee_rate", "min_notional", mode="before"
+    )
     @classmethod
     def parse_decimal_rate(cls, value: Any) -> Decimal:
         dec = Decimal(str(value))
@@ -114,10 +117,14 @@ class CostScheduleTable(BaseModel):
                 nxt = sorted_group[i + 1]
                 # If cur is open-ended (valid_to is None), any subsequent interval overlaps
                 if cur.valid_to is None:
-                    raise ValueError(f"OVERLAPPING_COST_SCHEDULE:{key}:{cur.schedule_id}:{nxt.schedule_id}")
+                    raise ValueError(
+                        f"OVERLAPPING_COST_SCHEDULE:{key}:{cur.schedule_id}:{nxt.schedule_id}"
+                    )
                 # If nxt starts before cur ends, intervals overlap
                 if nxt.valid_from < cur.valid_to:
-                    raise ValueError(f"OVERLAPPING_COST_SCHEDULE:{key}:{cur.schedule_id}:{nxt.schedule_id}")
+                    raise ValueError(
+                        f"OVERLAPPING_COST_SCHEDULE:{key}:{cur.schedule_id}:{nxt.schedule_id}"
+                    )
         return self
 
 
@@ -139,6 +146,7 @@ class CostScheduleResolution(BaseModel):
     min_notional: Decimal
     precision: int
     sources: tuple[str, ...]
+    evidence_verified: bool
 
 
 def load_cost_schedule_table(path: Path) -> CostScheduleTable:
@@ -156,10 +164,14 @@ def lookup_cost(
     market: str,
     side: OrderSide | str,
     role: OrderRole | str,
-    event_ts: datetime,
+    fee_basis_ts: datetime,
 ) -> CostScheduleResolution:
-    """Resolve the active cost schedule for (market, side, role) at event_ts."""
-    _ensure_utc(event_ts, "event_ts")
+    """Resolve costs at the time the venue binds fees to the order.
+
+    Use order creation time for limit orders and execution time for market
+    orders. An unverified matching interval is never returned as a success.
+    """
+    _ensure_utc(fee_basis_ts, "fee_basis_ts")
 
     clean_side = OrderSide(str(side).lower())
     clean_role = OrderRole(str(role).lower())
@@ -170,10 +182,12 @@ def lookup_cost(
             and interval.side is clean_side
             and interval.role is clean_role
         ):
-            # [valid_from, valid_to): valid_from <= event_ts < valid_to
-            if interval.valid_from <= event_ts and (
-                interval.valid_to is None or event_ts < interval.valid_to
+            # [valid_from, valid_to): valid_from <= fee_basis_ts < valid_to
+            if interval.valid_from <= fee_basis_ts and (
+                interval.valid_to is None or fee_basis_ts < interval.valid_to
             ):
+                if not interval.evidence_verified:
+                    raise ValueError(f"UNVERIFIED_COST_SCHEDULE:{interval.schedule_id}")
                 total_rate = (
                     interval.service_fee_rate + interval.tax_rate + interval.exchange_fee_rate
                 )
@@ -191,11 +205,12 @@ def lookup_cost(
                     min_notional=interval.min_notional,
                     precision=interval.precision,
                     sources=interval.sources,
+                    evidence_verified=interval.evidence_verified,
                 )
 
     raise UnknownCostScheduleError(
         f"UNKNOWN_COST_SCHEDULE: no cost schedule for market={market}, side={clean_side}, "
-        f"role={clean_role} at event_ts={event_ts.isoformat()}"
+        f"role={clean_role} at fee_basis_ts={fee_basis_ts.isoformat()}"
     )
 
 

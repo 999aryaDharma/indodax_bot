@@ -5,6 +5,7 @@ intervals:
   # Promotion on periods whose historical source evidence is not independently verified remains blocked.
 
   - schedule_id: indodax_idr_pre_pmk68_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -18,6 +19,7 @@ intervals:
     sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -31,6 +33,7 @@ intervals:
     sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -44,6 +47,7 @@ intervals:
     sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pre_pmk68_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -57,6 +61,7 @@ intervals:
     sources: ['Indodax Historical Fee Schedule 2021 — legacy evidence, reverify before promotion']
 
   - schedule_id: indodax_idr_pmk68_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -70,6 +75,7 @@ intervals:
     sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -83,6 +89,7 @@ intervals:
     sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -96,6 +103,7 @@ intervals:
     sources: ['PMK 68/PMK.03/2022', 'Indodax Announcement May 2022 — legacy evidence']
 
   - schedule_id: indodax_idr_pmk68_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -111,6 +119,7 @@ intervals:
   # CFX introduced at 2024-10-31 23:59:59 WIB; boundary normalized to 2024-11-01 00:00 WIB.
   # CFX IDR was 0.0222% before the January 2025 VAT adjustment.
   - schedule_id: indodax_idr_cfx2024_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -124,6 +133,7 @@ intervals:
     sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
 
   - schedule_id: indodax_idr_cfx2024_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -137,6 +147,7 @@ intervals:
     sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
 
   - schedule_id: indodax_idr_cfx2024_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -150,6 +161,7 @@ intervals:
     sources: ['Indodax: Penerapan Fee CFX, 2024-10-31', 'PMK 68/PMK.03/2022']
 
   - schedule_id: indodax_idr_cfx2024_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -164,6 +176,7 @@ intervals:
 
   # 1 Jan 2025 WIB: buy VAT component 0.12%; IDR CFX component 0.0224%.
   - schedule_id: indodax_idr_2025h1_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -177,6 +190,7 @@ intervals:
     sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
 
   - schedule_id: indodax_idr_2025h1_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -190,6 +204,7 @@ intervals:
     sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
 
   - schedule_id: indodax_idr_2025h1_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -203,6 +218,7 @@ intervals:
     sources: ['Indodax: Penyesuaian PPN 12%, 2024-12-30']
 
   - schedule_id: indodax_idr_2025h1_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -218,6 +234,7 @@ intervals:
   # PMK 50/2025 effective 1 Aug 2025 00:00 WIB: no buy VAT; domestic sell PPh 22 = 0.21%.
   # CFX reverted/was listed at 0.0222% on IDR until the March 2026 reduction.
   - schedule_id: indodax_idr_pmk50_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -231,6 +248,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
 
   - schedule_id: indodax_idr_pmk50_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -244,6 +262,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
 
   - schedule_id: indodax_idr_pmk50_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -257,6 +276,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penyesuaian Biaya Pajak PMK 50/2025']
 
   - schedule_id: indodax_idr_pmk50_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -271,6 +291,7 @@ intervals:
 
   # 1 Mar 2026 00:00 WIB: CFX IDR reduced from 0.0222% to 0.0111%.
   - schedule_id: indodax_idr_2026_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -284,6 +305,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -297,6 +319,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -310,6 +333,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
@@ -327,6 +351,7 @@ intervals:
   # The actual policy start date is not inferred backwards; earlier historical minimum remains
   # governed by the preceding evidence interval until a dated official source is captured.
   - schedule_id: indodax_idr_2026_current_buy_maker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: maker
@@ -340,6 +365,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_current_buy_taker
+    evidence_verified: false
     market: spot_idr
     side: buy
     role: taker
@@ -353,6 +379,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_current_sell_maker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: maker
@@ -366,6 +393,7 @@ intervals:
     sources: ['PMK 50/2025', 'Indodax Help Center current Pro minimum observed 2026-09-21', 'Indodax: Penurunan Biaya CFX, 2026-02-27']
 
   - schedule_id: indodax_idr_2026_current_sell_taker
+    evidence_verified: false
     market: spot_idr
     side: sell
     role: taker
