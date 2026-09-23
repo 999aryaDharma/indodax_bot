@@ -98,4 +98,13 @@ describe("Production overview client", () => {
     await expect(request).rejects.toBeInstanceOf(ControlPlaneError);
     await expect(request).rejects.toMatchObject({ code: "API_UNAVAILABLE", retryable: true });
   });
+
+  it("preserves the FastAPI capability denial detail shape", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: {
+      code: "PRODUCTION_READ_FORBIDDEN", request_id: "request-denied",
+    } }), { status: 403 })));
+    await expect(getProductionOverview()).rejects.toMatchObject({
+      code: "PRODUCTION_READ_FORBIDDEN", retryable: false, requestId: expect.any(String),
+    });
+  });
 });

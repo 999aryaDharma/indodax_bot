@@ -3,7 +3,7 @@ import { Pulse, ArrowClockwise, Circle, Compass, Gauge, ListBullets, ShieldCheck
 import { Button } from "@cloudflare/kumo";
 import { ControlPlaneError, getProductionOverview, overviewDataForDisplay } from "../api/client";
 import type { ApiEnvelope, ProductionOverview } from "../api/types";
-import { canReadProduction, capabilityState, routeForLabel, routeForPath, routes } from "./context";
+import { canReadProduction, capabilityState, mobileRoutes, routeForPath, routes } from "./context";
 import { formatAge, formatWitaClock, formatWitaTimestamp } from "./time";
 
 type ViewState = "loading" | "ready" | "unavailable" | "error" | "empty" | "denied";
@@ -77,6 +77,10 @@ function ContextPage({ context, label }: { context: string; label: string }) {
 }
 
 const byGroup = (group: string) => routes.filter((route) => route.group === group);
+const mobileLabels: Record<string, string> = {
+  "System Overview": "Overview", Operations: "Ops", Reconciliation: "Recon",
+  "Market Data": "Market", Infrastructure: "Infra",
+};
 
 export function App() {
   const [path, setPath] = useState(() => routeForPath(window.location.pathname).path);
@@ -122,11 +126,7 @@ export function App() {
     else setState("unavailable");
   }, [path]);
 
-  const quickRoutes = active.group === "Research"
-    ? ["Workbench", "Experiments", "Candidates", "Tournament"]
-    : active.group === "System"
-      ? ["Market Data", "Infrastructure", "Logs", "Audit"]
-      : ["System Overview", "Portfolio", "Orders", "Risk"];
+  const quickRoutes = mobileRoutes(active.context);
 
   return <div className="app-shell">
     <aside className="sidebar">
@@ -141,9 +141,9 @@ export function App() {
       <div className="operator"><span className="operator-avatar">OP</span><span>Operator<small>Read-only session</small></span><span className="operator-state" aria-hidden="true" /></div>
     </aside>
     <nav className="mobile-nav" aria-label={`${active.context} quick navigation`}>
-      {quickRoutes.map((label) => {
-        const route = routeForLabel(label); const Icon = icons[label] ?? Gauge;
-        return <button type="button" key={label} className={active.label === label ? "active" : ""} onClick={() => navigate(route.path)} aria-current={active.label === label ? "page" : undefined}><Icon size={18} /><span>{label === "System Overview" ? "Overview" : label}</span></button>;
+      {quickRoutes.map(({ label, path: target }) => {
+        const Icon = icons[label] ?? Gauge;
+        return <button type="button" key={label} className={active.label === label ? "active" : ""} onClick={() => navigate(target)} aria-current={active.label === label ? "page" : undefined}><Icon size={18} /><span>{mobileLabels[label] ?? label}</span></button>;
       })}
     </nav>
     <div className="main-column">

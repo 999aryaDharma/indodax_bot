@@ -113,6 +113,20 @@ def test_api_01_0_missing_authority_never_becomes_healthy_or_zero():
     assert snapshot.portfolio.evidence.status == "UNAVAILABLE"
     assert snapshot.portfolio.balances == ()
     assert snapshot.portfolio.quote_available is None
+
+
+def test_api_01_7_account_freshness_uses_observation_time_after_provider_read():
+    source_time = _NOW + timedelta(milliseconds=500)
+    provider = FakeVenueAccountProvider(account_snapshot(source_time))
+    read_service = service(venue_account_source=provider)
+    clock_times = iter((_NOW, _NOW + timedelta(seconds=1)))
+    read_service.clock = lambda: next(clock_times)
+
+    snapshot = read_service.snapshot(request_id="req-fresh-after-fetch")
+
+    assert snapshot.portfolio.evidence.status == "AVAILABLE"
+    assert snapshot.portfolio.evidence.freshness == "FRESH"
+    assert snapshot.portfolio.evidence.as_of == _NOW + timedelta(seconds=1)
     assert snapshot.overview.unknown_orders_count == 1
     assert snapshot.orders.data[0].state == "UNKNOWN"
     assert snapshot.fills.evidence.status == "UNAVAILABLE"

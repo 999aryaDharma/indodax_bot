@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -50,6 +52,29 @@ def client(principal=None, **kwargs):
     if principal is not None:
         app.state.principal_resolver = lambda request: principal
     return TestClient(app)
+
+
+class FakePagedExecutionStore:
+    namespace = "production_main"
+    db_path = Path("D:/var/lib/indodax/production.sqlite3")
+
+    def restore(self):
+        return SimpleNamespace(
+            namespace=self.namespace,
+            revision=9,
+            positions={},
+            orders={
+                f"ord-{index:05d}": {
+                    "venue_order_id": f"venue-{index}",
+                    "pair": "btc_idr",
+                    "side": "buy",
+                    "desired_qty": Decimal("1"),
+                    "filled_qty": Decimal("0"),
+                    "state": "OPEN",
+                }
+                for index in range(505)
+            },
+        )
 
 
 def test_api_02_0_portfolio_route_requires_capability_and_returns_live_account_evidence():
@@ -158,3 +183,29 @@ def test_api_02_5_overview_and_mode_routes_preserve_their_resource_status():
     assert mode.status_code == 200
     assert mode.json()["status"] == "AVAILABLE"
     assert mode.json()["data"]["effective_mode"] == "SHADOW"
+
+
+def test_api_02_6_orders_page_reaches_records_past_the_first_500_and_keeps_total():
+    operator = Principal(
+        subject="operator-1",
+        actor_class=ActorClass.OPERATOR,
+        capabilities=frozenset({Capability.PRODUCTION_READ}),
+    )
+    app = create_app(
+        production_namespace="production_main",
+        production_state_root="D:/var/lib/indodax",
+        venue_account_source=FakeReadOnlyIndodaxClient(),
+        execution_store=FakePagedExecutionStore(),
+        principal_resolver=lambda _request: operator,
+    )
+
+    response = TestClient(app).get("/api/v1/production/orders/page?offset=500&limit=5")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data"]["total"] == 505
+    assert body["data"]["offset"] == 500
+    assert body["data"]["limit"] == 5
+    assert [item["internal_order_id"] for item in body["data"]["data"]] == [
+        "ord-00500", "ord-00501", "ord-00502", "ord-00503", "ord-00504",
+    ]

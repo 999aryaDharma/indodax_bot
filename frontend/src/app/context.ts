@@ -25,12 +25,16 @@ export function routeForLabel(label: string): AppRoute {
   return routes.find((route) => route.label === label) ?? routes[0];
 }
 
+export function mobileRoutes(context: AppContext): AppRoute[] {
+  return routes.filter((route) => route.context === context);
+}
+
 export function canReadProduction(route: AppRoute): boolean {
   return route.path === "/production/overview";
 }
 
 export function capabilityState(code: string | null): "allowed" | "denied" | "unknown" {
-  if (code === "CAPABILITY_REQUIRED" || code === "IDENTITY_REQUIRED" || code === "FORBIDDEN") return "denied";
+  if (code === "CAPABILITY_REQUIRED" || code === "IDENTITY_REQUIRED" || code === "FORBIDDEN" || code === "PRODUCTION_READ_FORBIDDEN") return "denied";
   if (code !== null) return "unknown";
   return "allowed";
 }

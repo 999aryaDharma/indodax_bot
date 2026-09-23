@@ -104,16 +104,29 @@ class ProductionReadService:
             return None
         return parsed.astimezone(UTC)
 
-    def snapshot(self, *, request_id: str) -> ProductionReadSnapshot:
+    def snapshot(
+        self,
+        *,
+        request_id: str,
+        orders_offset: int = 0,
+        orders_limit: int | None = None,
+    ) -> ProductionReadSnapshot:
         if not request_id or not request_id.strip():
             raise ValueError("REQUEST_ID_REQUIRED")
+        if orders_offset < 0:
+            raise ValueError("ORDERS_OFFSET_MUST_BE_NON_NEGATIVE")
+        if orders_limit is not None and orders_limit < 1:
+            raise ValueError("ORDERS_LIMIT_MUST_BE_POSITIVE")
+        selected_order_limit = self.max_orders if orders_limit is None else orders_limit
         as_of = self.clock()
         if as_of.tzinfo is None or as_of.utcoffset() is None:
             raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED:as_of")
         as_of = as_of.astimezone(UTC)
 
         mode = self._mode_view(as_of)
-        positions, orders, unknown_orders = self._execution_views(as_of)
+        positions, orders, unknown_orders = self._execution_views(
+            as_of, orders_offset=orders_offset, orders_limit=selected_order_limit
+        )
         portfolio = self._venue_portfolio(as_of)
         risk = self._risk_view(as_of)
         reconciliation = ReconciliationView(
@@ -226,7 +239,7 @@ class ProductionReadService:
             )
 
     def _execution_views(
-        self, as_of: datetime
+        self, as_of: datetime, *, orders_offset: int, orders_limit: int
     ) -> tuple[PositionsView, OrdersView, int | None]:
         source = "production.execution_state"
         if self.execution_store is None:
@@ -280,7 +293,9 @@ class ProductionReadService:
                     filled_qty=values["filled_qty"],
                     state=values["state"],
                 )
-                for order_id, values in sorted(snapshot.orders.items())[: self.max_orders]
+                for order_id, values in sorted(snapshot.orders.items())[
+                    orders_offset : orders_offset + orders_limit
+                ]
             )
             unknown_orders = sum(
                 values.get("state") == "UNKNOWN" for values in snapshot.orders.values()
@@ -363,7 +378,11 @@ class ProductionReadService:
             revision = hashlib.sha256(
                 json.dumps(revision_source, sort_keys=True, separators=(",", ":")).encode()
             ).hexdigest()
-            age = as_of - source_time
+            observed_at = self.clock()
+            if observed_at.tzinfo is None or observed_at.utcoffset() is None:
+                raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED:portfolio_observation")
+            observed_at = observed_at.astimezone(UTC)
+            age = observed_at - source_time
             if age < timedelta(0):
                 raise ValueError("VENUE_ACCOUNT_TIMESTAMP_IN_FUTURE")
             if age > self.max_account_snapshot_age:
@@ -371,7 +390,7 @@ class ProductionReadService:
                     evidence=self._evidence(
                         status="UNAVAILABLE",
                         source=source,
-                        as_of=as_of,
+                        as_of=observed_at,
                         revision=revision,
                         source_updated_at=source_time,
                         freshness="STALE",
@@ -386,7 +405,7 @@ class ProductionReadService:
                 evidence=self._evidence(
                     status="AVAILABLE",
                     source=source,
-                    as_of=as_of,
+                    as_of=observed_at,
                     revision=revision,
                     source_updated_at=source_time,
                     freshness="FRESH",

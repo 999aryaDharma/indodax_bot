@@ -17,8 +17,19 @@ Service = Annotated[ProductionReadService, Depends(get_production_service)]
 Policy = Annotated[PolicyContext, Depends(require_production_read)]
 
 
-def _response(request: Request, service: ProductionReadService, field: str) -> dict[str, Any]:
-    snapshot = service.snapshot(request_id=ensure_request_id(request))
+def _response(
+    request: Request,
+    service: ProductionReadService,
+    field: str,
+    *,
+    orders_offset: int = 0,
+    orders_limit: int | None = None,
+) -> dict[str, Any]:
+    snapshot = service.snapshot(
+        request_id=ensure_request_id(request),
+        orders_offset=orders_offset,
+        orders_limit=orders_limit,
+    )
     data = getattr(snapshot, field)
     status = snapshot.status if field == "overview" else data.evidence.status
     envelope = ApiEnvelope(
@@ -80,12 +91,20 @@ for _field in (
 
 
 def _page(request: Request, service: ProductionReadService, field: str, offset: int, limit: int):
-    response = _response(request, service, field)
-    rows = response["data"]["data"]
-    response["data"]["data"] = rows[offset : offset + limit]
-    response["data"]["total"] = len(rows)
-    response["data"]["offset"] = offset
-    response["data"]["limit"] = limit
+    response = _response(
+        request,
+        service,
+        field,
+        orders_offset=offset if field == "orders" else 0,
+        orders_limit=limit if field == "orders" else None,
+    )
+    data = response["data"]
+    if field != "orders":
+        rows = data["data"]
+        data["data"] = rows[offset : offset + limit]
+        data["total"] = len(rows)
+    data["offset"] = offset
+    data["limit"] = limit
     return response
 
 

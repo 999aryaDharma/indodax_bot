@@ -78,7 +78,9 @@ export async function getProductionOverview(signal?: AbortSignal): Promise<ApiEn
 
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = isRecord(body) && isRecord(body.error) ? body.error as ApiError : null;
+    const error = isRecord(body)
+      ? (isRecord(body.error) ? body.error : isRecord(body.detail) ? body.detail : null) as ApiError | null
+      : null;
     throw new ControlPlaneError(
       typeof error?.code === "string" ? error.code : "REQUEST_FAILED",
       typeof error?.message === "string" ? error.message : `Request failed (${response.status}).`,
