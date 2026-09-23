@@ -8,7 +8,6 @@ import pytest
 
 from indodax_lab.features.registry import load_feature_registry
 
-
 ROOT = Path(__file__).parents[4]
 CANONICAL_CONFIG = ROOT / "configs" / "features" / "tabular_bar_v1.yaml"
 
@@ -126,9 +125,7 @@ def test_registry_rejects_duplicate_names_bfill_and_insufficient_lookback(
         load_feature_registry(bfill)
 
     too_short = tmp_path / "too-short.yaml"
-    too_short.write_text(
-        _registry_yaml(feature_block=_ema_feature(lookback=49)), encoding="utf-8"
-    )
+    too_short.write_text(_registry_yaml(feature_block=_ema_feature(lookback=49)), encoding="utf-8")
     with pytest.raises(ValueError, match="INSUFFICIENT_FEATURE_LOOKBACK"):
         load_feature_registry(too_short)
 
@@ -151,7 +148,9 @@ def test_registry_requires_version_bump_when_content_changes(tmp_path: Path) -> 
     path.write_text(_registry_yaml(feature_block=_ema_feature()), encoding="utf-8")
     previous = load_feature_registry(path)
     path.write_text(
-        _registry_yaml(feature_block=_ema_feature().replace("unitless_ratio", "train_robust_scale")),
+        _registry_yaml(
+            feature_block=_ema_feature().replace("unitless_ratio", "train_robust_scale")
+        ),
         encoding="utf-8",
     )
 
@@ -170,8 +169,21 @@ def test_registry_requires_version_bump_when_content_changes(tmp_path: Path) -> 
 
 
 def test_feat_01_valid_contract() -> None:
-    """FEAT-01-AC0: Definisi fitur Wave 1 dapat dimuat dengan identitas versi dan metadata lengkap."""
+    """FEAT-01-AC0: Registry Wave 1 memuat metadata dan identitas versi."""
     test_canonical_registry_contains_exact_wave1_names_and_metadata()
+
+
+def test_registry_feature_params_cannot_mutate_after_hashing() -> None:
+    loaded = load_feature_registry(CANONICAL_CONFIG)
+    feature = loaded.registry.feature("ema_ratio_20_50_1h")
+    source_id = loaded.source_id
+
+    with pytest.raises(TypeError):
+        feature.params["fast"] = 999
+
+    assert feature.params["fast"] == 20
+    assert loaded.source_id == source_id
+    assert loaded.registry.model_dump(mode="json")["features"][0]["params"]
 
 
 def test_feat_01_contract_1(tmp_path: Path) -> None:
@@ -199,9 +211,7 @@ def test_feat_01_contract_1(tmp_path: Path) -> None:
 def test_feat_01_contract_2(tmp_path: Path) -> None:
     """FEAT-01-AC2: Lookback kurang dari kebutuhan rumus ditolak."""
     too_short = tmp_path / "too-short.yaml"
-    too_short.write_text(
-        _registry_yaml(feature_block=_ema_feature(lookback=49)), encoding="utf-8"
-    )
+    too_short.write_text(_registry_yaml(feature_block=_ema_feature(lookback=49)), encoding="utf-8")
     with pytest.raises(ValueError, match="INSUFFICIENT_FEATURE_LOOKBACK"):
         load_feature_registry(too_short)
 
@@ -254,7 +264,7 @@ def test_5m_registry_loads_with_correct_interval_and_feature_count() -> None:
 
 
 def test_5m_registry_context_features_use_asof_policy() -> None:
-    """1h BTC context features in a 5m registry must use asof_closed_bar to avoid identity mixing."""
+    """1h BTC context features in a 5m registry require as-of policy."""
     loaded = load_feature_registry(CANONICAL_5M_CONFIG)
 
     context_features = [f for f in loaded.registry.features if f.family == "context"]

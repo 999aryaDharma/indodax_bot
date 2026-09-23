@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Self
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from indodax_lab.data.checksums import sha256_bytes
-
 
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 _IMPLEMENTATION = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*:[a-zA-Z_][a-zA-Z0-9_]*$")
@@ -45,7 +53,7 @@ class FeatureDefinition(BaseModel):
     source_columns: tuple[str, ...]
     formula: str = Field(min_length=1)
     implementation: str = Field(pattern=_IMPLEMENTATION.pattern)
-    params: dict[str, int | float | str | bool]
+    params: Mapping[str, int | float | str | bool]
     lookback_bars: int = Field(gt=0)
     availability: FeatureAvailability
     lag_bars: int = Field(ge=0)
@@ -53,6 +61,19 @@ class FeatureDefinition(BaseModel):
     missing_policy: MissingPolicy
     normalization: str = Field(min_length=1)
     monotonicity: str = Field(min_length=1)
+
+    @field_validator("params")
+    @classmethod
+    def freeze_params(
+        cls, value: Mapping[str, int | float | str | bool]
+    ) -> Mapping[str, int | float | str | bool]:
+        return MappingProxyType(dict(value))
+
+    @field_serializer("params")
+    def serialize_params(
+        self, value: Mapping[str, int | float | str | bool]
+    ) -> dict[str, int | float | str | bool]:
+        return dict(value)
 
     @field_validator("source_columns")
     @classmethod
@@ -215,7 +236,9 @@ def _minimum_lookback(feature: FeatureDefinition) -> int:
     if function in {"realized_volatility", "downside_volatility", "amihud"}:
         return _integer_param(feature, "period") + 1
     integer_params = [
-        value for value in feature.params.values() if isinstance(value, int) and not isinstance(value, bool)
+        value
+        for value in feature.params.values()
+        if isinstance(value, int) and not isinstance(value, bool)
     ]
     return max(integer_params, default=1)
 
