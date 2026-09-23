@@ -3,16 +3,16 @@
 ## Implementation
 
 - Sprint: API-00
-- Commit: `7315cc173b6da257fcdd95cc3a4f69661e17a64a`
-- Scope: shared envelope, error, provenance, Decimal serialization, and capability vocabulary contracts.
+- Commit: `438edbfda7b590167c355466362410c8a6bc868d`
+- Scope: shared envelope, closed response-status vocabulary, error/provenance contracts, finite Decimal serialization in both data and error details, and capability vocabulary.
 - Production API routes, auth provider, database changes, exchange access, and host changes are not part of this sprint.
 
 ## Verification
 
-- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 3 tests.
+- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 3 tests, including nested non-finite Decimal rejection and unsupported status rejection.
 - `rtk ruff check src/indodax_lab/api tests/unit/lab/api/test_common_contracts.py` — PASS.
 - `python docs/quality/validate_planning.py --refresh --self-test` — PASS, 126 nodes, 226 edges, 0 cycles; seven invalid mutations rejected.
-- Independent review: PENDING for the exact implementation commit above.
+- Independent review: FAIL on prior commit `7315cc1`; fixes for all Important findings are in `438edbf` and re-review is pending.
 
 ## Gates
 
