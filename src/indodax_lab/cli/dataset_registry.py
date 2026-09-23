@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from indodax_lab.data.dataset_registry import (
     DatasetNotFoundError,
     DatasetQualityError,
     DatasetRegistry,
+    DatasetRequest,
 )
 
 # ---------------------------------------------------------------------------
@@ -97,6 +99,111 @@ def cmd_find(args: argparse.Namespace) -> int:
         return 2
 
 
+def _make_provider(
+    partitions_json: Path | None, mock_bars: int
+) -> Callable[[DatasetRequest], list[dict[str, Any]]]:
+    def provider(req: DatasetRequest) -> list[dict[str, Any]]:
+        if partitions_json and partitions_json.exists():
+            return json.loads(partitions_json.read_text(encoding="utf-8"))
+        content = f"{mock_bars}:{req.start.isoformat()}:{req.end.isoformat()}".encode()
+        return [
+            {
+                "row_count": mock_bars,
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "start_ts": req.start.isoformat(),
+                "end_ts": req.end.isoformat(),
+                "bytes": content,
+            }
+        ]
+
+    return provider
+
+
+def cmd_create(args: argparse.Namespace) -> int:
+    """Create a new dataset version."""
+    partitions_json = Path(args.partitions_json) if getattr(args, "partitions_json", None) else None
+    mock_bars = int(getattr(args, "mock_bars", 100))
+    provider = _make_provider(partitions_json, mock_bars)
+
+    catalog = Path(args.catalog) if getattr(args, "catalog", None) else None
+    registry = DatasetRegistry(root=Path(args.root), catalog_path=catalog, fetch_provider=provider)
+
+    req = DatasetRequest(
+        venue=args.venue,
+        pair=args.pair,
+        timeframe=args.timeframe,
+        start=_parse_utc(args.start),
+        end=_parse_utc(args.end),
+        source_id=getattr(args, "source_id", "raw_provider"),
+        source_version=getattr(args, "source_version", "v1"),
+        version=getattr(args, "version", "v1"),
+    )
+    manifest = registry.create(req)
+    ref = manifest.to_artifact_ref()
+    result = {
+        "status": "CREATED",
+        "dataset_id": manifest.dataset_id,
+        "bar_count": manifest.bar_count,
+        "actual_start": manifest.actual_start.isoformat(),
+        "actual_end": manifest.actual_end.isoformat(),
+        "ref": {
+            "kind": ref.kind,
+            "id": ref.id,
+            "version": ref.version,
+            "sha256": ref.sha256,
+        },
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_extend(args: argparse.Namespace) -> int:
+    """Extend a registered dataset with additional intervals."""
+    from indodax_lab.contracts.identity import ArtifactRef
+
+    partitions_json = Path(args.partitions_json) if getattr(args, "partitions_json", None) else None
+    mock_bars = int(getattr(args, "mock_bars", 50))
+    provider = _make_provider(partitions_json, mock_bars)
+
+    catalog = Path(args.catalog) if getattr(args, "catalog", None) else None
+    registry = DatasetRegistry(root=Path(args.root), catalog_path=catalog, fetch_provider=provider)
+
+    parent_ref = ArtifactRef(
+        kind=getattr(args, "parent_kind", "dataset"),
+        id=args.parent_id,
+        version=getattr(args, "parent_version", "v1"),
+        sha256=args.parent_sha256,
+    )
+
+    req = DatasetRequest(
+        venue=args.venue,
+        pair=args.pair,
+        timeframe=args.timeframe,
+        start=_parse_utc(args.start),
+        end=_parse_utc(args.end),
+        source_id=getattr(args, "source_id", "raw_provider"),
+        source_version=getattr(args, "source_version", "v1"),
+        version=getattr(args, "version", "v1"),
+    )
+    manifest = registry.extend(parent_ref, req)
+    ref = manifest.to_artifact_ref()
+    result = {
+        "status": "EXTENDED",
+        "dataset_id": manifest.dataset_id,
+        "bar_count": manifest.bar_count,
+        "actual_start": manifest.actual_start.isoformat(),
+        "actual_end": manifest.actual_end.isoformat(),
+        "ref": {
+            "kind": ref.kind,
+            "id": ref.id,
+            "version": ref.version,
+            "sha256": ref.sha256,
+        },
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     """Validate partition integrity of a registered dataset ref."""
     registry = _registry_from_args(args)
@@ -145,6 +252,40 @@ def _build_parser() -> argparse.ArgumentParser:
     p_find.add_argument("--start", required=True, help="Start datetime (ISO-8601 UTC)")
     p_find.add_argument("--end", required=True, help="End datetime (ISO-8601 UTC)")
 
+    # --- create ---
+    p_create = sub.add_parser("create", help="Create a new dataset version")
+    p_create.add_argument("--root", required=True, type=str, help="Registry root directory")
+    p_create.add_argument("--catalog", type=str, default=None, help="Catalog JSON path")
+    p_create.add_argument("--venue", required=True, help="Venue (e.g. indodax)")
+    p_create.add_argument("--pair", required=True, help="Pair (e.g. btcidr)")
+    p_create.add_argument("--timeframe", required=True, help="Timeframe (e.g. 1h)")
+    p_create.add_argument("--start", required=True, help="Start datetime (ISO-8601 UTC)")
+    p_create.add_argument("--end", required=True, help="End datetime (ISO-8601 UTC)")
+    p_create.add_argument("--source-id", type=str, default="raw_provider", help="Source ID")
+    p_create.add_argument("--source-version", type=str, default="v1", help="Source version")
+    p_create.add_argument("--version", type=str, default="v1", help="Dataset version")
+    p_create.add_argument("--partitions-json", type=Path, default=None, help="Partitions JSON path")
+    p_create.add_argument("--mock-bars", type=int, default=100, help="Mock bars count if no JSON")
+
+    # --- extend ---
+    p_extend = sub.add_parser("extend", help="Extend a registered dataset with intervals")
+    p_extend.add_argument("--root", required=True, type=str, help="Registry root directory")
+    p_extend.add_argument("--catalog", type=str, default=None, help="Catalog JSON path")
+    p_extend.add_argument("--parent-kind", type=str, default="dataset", help="Parent ref kind")
+    p_extend.add_argument("--parent-id", required=True, help="Parent dataset ID")
+    p_extend.add_argument("--parent-version", type=str, default="v1", help="Parent dataset version")
+    p_extend.add_argument("--parent-sha256", required=True, help="Parent SHA256 digest")
+    p_extend.add_argument("--venue", required=True, help="Venue (e.g. indodax)")
+    p_extend.add_argument("--pair", required=True, help="Pair (e.g. btcidr)")
+    p_extend.add_argument("--timeframe", required=True, help="Timeframe (e.g. 1h)")
+    p_extend.add_argument("--start", required=True, help="Start datetime (ISO-8601 UTC)")
+    p_extend.add_argument("--end", required=True, help="End datetime (ISO-8601 UTC)")
+    p_extend.add_argument("--source-id", type=str, default="raw_provider", help="Source ID")
+    p_extend.add_argument("--source-version", type=str, default="v1", help="Source version")
+    p_extend.add_argument("--version", type=str, default="v1", help="Dataset version")
+    p_extend.add_argument("--partitions-json", type=Path, default=None, help="Partitions JSON path")
+    p_extend.add_argument("--mock-bars", type=int, default=50, help="Mock bars count if no JSON")
+
     # --- validate ---
     p_val = sub.add_parser("validate", help="Validate partition integrity")
     p_val.add_argument("--root", required=True, type=str, help="Registry root directory")
@@ -168,6 +309,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "find":
         return cmd_find(args)
+    if args.command == "create":
+        return cmd_create(args)
+    if args.command == "extend":
+        return cmd_extend(args)
     if args.command == "validate":
         return cmd_validate(args)
     if args.command == "legacy":

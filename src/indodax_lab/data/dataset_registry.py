@@ -65,14 +65,6 @@ class DatasetPartitionHashError(DatasetQualityError):
 # ---------------------------------------------------------------------------
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _canonical_bytes(value: Any) -> bytes:
     return json.dumps(
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -88,10 +80,6 @@ def _fsync_directory(path: Path) -> None:
         os.fsync(fd)
     finally:
         os.close(fd)
-
-
-def _artifact_sha256(ref: ArtifactRef) -> str:
-    return ref.sha256
 
 
 def _ref_key(ref: ArtifactRef) -> str:
@@ -174,7 +162,11 @@ class _Catalog:
                     )
                 return  # Idempotent: same entry already registered
             self._entries[ref_key] = entry
-            self._persist(fsync_fn=fsync_fn)
+            try:
+                self._persist(fsync_fn=fsync_fn)
+            except Exception:
+                self._entries.pop(ref_key, None)
+                raise
 
     def get(self, ref_key: str) -> dict[str, Any] | None:
         with self._lock:
@@ -326,6 +318,13 @@ class DatasetRegistry:
 
         AC0: If a covering dataset exists, returns it without fetching.
         """
+        if start.tzinfo is None or end.tzinfo is None:
+            raise ValueError(
+                "NAIVE_DATETIME_FORBIDDEN: start and end must be timezone-aware (UTC)"
+            )
+        start_utc = start.astimezone(UTC)
+        end_utc = end.astimezone(UTC)
+
         entries = self._catalog.all_entries()
         matching = [
             e for e in entries
@@ -333,7 +332,7 @@ class DatasetRegistry:
                 e.get("venue") == venue.lower()
                 and e.get("pair") == pair.lower()
                 and e.get("timeframe") == timeframe.lower()
-                and self._covers(e, start, end)
+                and self._covers(e, start_utc, end_utc)
             )
         ]
         if not matching:
@@ -408,23 +407,42 @@ class DatasetRegistry:
                 "DATASET_COVERAGE_MISS: No provider available for uncovered intervals"
             )
 
-        # Fetch only uncovered intervals (AC1)
-        new_partitions: list[dict[str, Any]] = []
-        for interval_start, interval_end in uncovered:
+        pre_partitions: list[dict[str, Any]] = []
+        post_partitions: list[dict[str, Any]] = []
+
+        if request.start < parent_start:
             sub_request = DatasetRequest(
                 venue=request.venue,
                 pair=request.pair,
                 timeframe=request.timeframe,
-                start=interval_start,
-                end=interval_end,
+                start=request.start,
+                end=parent_start,
                 source_id=request.source_id,
                 source_version=request.source_version,
                 version=request.version,
             )
-            fetched = self._fetch_provider(sub_request)
-            new_partitions.extend(fetched)
+            pre_partitions = self._fetch_provider(sub_request)
 
-        return self._publish_dataset(request, new_partitions, parent_ref=parent_ref)
+        if request.end > parent_end:
+            sub_request = DatasetRequest(
+                venue=request.venue,
+                pair=request.pair,
+                timeframe=request.timeframe,
+                start=parent_end,
+                end=request.end,
+                source_id=request.source_id,
+                source_version=request.source_version,
+                version=request.version,
+            )
+            post_partitions = self._fetch_provider(sub_request)
+
+        return self._publish_dataset(
+            request,
+            raw_partitions=post_partitions,
+            pre_partitions=pre_partitions,
+            parent_ref=parent_ref,
+            parent_manifest=parent,
+        )
 
     def get(self, ref: ArtifactRef) -> DatasetManifest:
         """Retrieve a registered DatasetManifest by ArtifactRef."""
@@ -499,6 +517,10 @@ class DatasetRegistry:
         try:
             actual_start = datetime.fromisoformat(actual_start_str)
             actual_end = datetime.fromisoformat(actual_end_str)
+            if actual_start.tzinfo is None:
+                actual_start = actual_start.replace(tzinfo=UTC)
+            if actual_end.tzinfo is None:
+                actual_end = actual_end.replace(tzinfo=UTC)
             return actual_start <= start and actual_end >= end
         except (ValueError, TypeError):
             return False
@@ -508,43 +530,45 @@ class DatasetRegistry:
     ) -> bool:
         return manifest.actual_start <= start and manifest.actual_end >= end
 
-    def _publish_dataset(
+    def _process_partitions(
         self,
-        request: DatasetRequest,
         raw_partitions: list[dict[str, Any]],
-        *,
-        parent_ref: ArtifactRef | None,
-    ) -> DatasetManifest:
-        """Build manifest, validate, and atomically publish to catalog (AC4)."""
-        dataset_id = f"ds_{request.venue}_{request.pair}_{request.timeframe}"
-        dataset_id += f"_{uuid.uuid4().hex[:12]}"
-
-        # Derive partition ArtifactRefs from raw partition records
-        partition_refs: list[ArtifactRef] = []
-        partition_byte_hashes: list[str] = []
+        dataset_id: str,
+        version: str,
+        start_index: int = 0,
+    ) -> tuple[
+        list[ArtifactRef],
+        list[str],
+        int,
+        int,
+        datetime | None,
+        datetime | None,
+        list[tuple[datetime, datetime]],
+    ]:
+        refs: list[ArtifactRef] = []
+        hashes: list[str] = []
         bar_count = 0
+        duplicate_count = 0
         actual_start: datetime | None = None
         actual_end: datetime | None = None
-        missing_intervals: list[tuple[datetime, datetime]] = []
-        duplicate_count = 0
+        gaps: list[tuple[datetime, datetime]] = []
 
         for i, rec in enumerate(raw_partitions):
+            idx = start_index + i
             sha = rec.get("sha256", "")
             if not sha or len(sha) != 64:
-                # Derive from content bytes if available
                 content = rec.get("bytes") or _canonical_bytes(rec)
                 sha = hashlib.sha256(content).hexdigest()
             part_ref = ArtifactRef(
                 kind="candle_partition",
-                id=f"part_{dataset_id}_{i}",
-                version=request.version,
+                id=f"part_{dataset_id}_{idx}",
+                version=version,
                 sha256=sha,
             )
-            partition_refs.append(part_ref)
-            partition_byte_hashes.append(sha)
-
-            rows = int(rec.get("row_count", 0))
-            bar_count += rows
+            refs.append(part_ref)
+            hashes.append(sha)
+            bar_count += int(rec.get("row_count", 0))
+            duplicate_count += int(rec.get("duplicate_count", 0))
 
             rec_start_str = rec.get("start_ts") or rec.get("start")
             rec_end_str = rec.get("end_ts") or rec.get("end")
@@ -562,7 +586,7 @@ class DatasetRegistry:
                         actual_end = rec_end
                 except (ValueError, TypeError):
                     pass
-            duplicate_count += int(rec.get("duplicate_count", 0))
+
             for gap in rec.get("gaps", []):
                 try:
                     gs = datetime.fromisoformat(str(gap[0]))
@@ -571,14 +595,94 @@ class DatasetRegistry:
                         gs = gs.replace(tzinfo=UTC)
                     if ge.tzinfo is None:
                         ge = ge.replace(tzinfo=UTC)
-                    missing_intervals.append((gs, ge))
+                    gaps.append((gs, ge))
                 except (ValueError, TypeError, IndexError):
                     pass
 
-        if actual_start is None:
-            actual_start = request.start
-        if actual_end is None:
-            actual_end = request.end
+        return refs, hashes, bar_count, duplicate_count, actual_start, actual_end, gaps
+
+    def _publish_dataset(
+        self,
+        request: DatasetRequest,
+        raw_partitions: list[dict[str, Any]],
+        *,
+        parent_ref: ArtifactRef | None = None,
+        parent_manifest: DatasetManifest | None = None,
+        pre_partitions: list[dict[str, Any]] | None = None,
+    ) -> DatasetManifest:
+        """Build manifest, validate, and atomically publish to catalog (AC4)."""
+        dataset_id = f"ds_{request.venue}_{request.pair}_{request.timeframe}"
+        dataset_id += f"_{uuid.uuid4().hex[:12]}"
+
+        if parent_manifest is not None:
+            # Extending parent: accumulate pre + parent + post partitions
+            pre = pre_partitions or []
+            (
+                pre_refs,
+                pre_hashes,
+                pre_bars,
+                pre_dups,
+                pre_start,
+                pre_end,
+                pre_gaps,
+            ) = self._process_partitions(pre, dataset_id, request.version, 0)
+
+            post_offset = len(pre_refs) + len(parent_manifest.partition_refs)
+            (
+                post_refs,
+                post_hashes,
+                post_bars,
+                post_dups,
+                post_start,
+                post_end,
+                post_gaps,
+            ) = self._process_partitions(
+                raw_partitions, dataset_id, request.version, post_offset
+            )
+
+            partition_refs = tuple(
+                pre_refs + list(parent_manifest.partition_refs) + post_refs
+            )
+            partition_byte_hashes = tuple(
+                pre_hashes + list(parent_manifest.partition_byte_hashes) + post_hashes
+            )
+            bar_count = pre_bars + parent_manifest.bar_count + post_bars
+            duplicate_count = pre_dups + parent_manifest.duplicate_count + post_dups
+            missing_intervals = tuple(
+                pre_gaps + list(parent_manifest.missing_intervals) + post_gaps
+            )
+
+            starts = [
+                s
+                for s in (pre_start, parent_manifest.actual_start)
+                if s is not None
+            ]
+            actual_start = min(starts) if starts else request.start
+            ends = [
+                e
+                for e in (post_end, parent_manifest.actual_end)
+                if e is not None
+            ]
+            actual_end = max(ends) if ends else request.end
+            source_id = request.source_id or parent_manifest.source_id
+            source_version = request.source_version or parent_manifest.source_version
+        else:
+            (
+                p_refs,
+                p_hashes,
+                bar_count,
+                duplicate_count,
+                p_start,
+                p_end,
+                p_gaps,
+            ) = self._process_partitions(raw_partitions, dataset_id, request.version, 0)
+            partition_refs = tuple(p_refs)
+            partition_byte_hashes = tuple(p_hashes)
+            missing_intervals = tuple(p_gaps)
+            actual_start = p_start if p_start is not None else request.start
+            actual_end = p_end if p_end is not None else request.end
+            source_id = request.source_id
+            source_version = request.source_version
 
         now_utc = datetime.now(UTC)
         quality_report = RegistryQualityReport(
@@ -602,12 +706,12 @@ class DatasetRegistry:
             actual_start=actual_start,
             actual_end=actual_end,
             bar_count=bar_count,
-            source_id=request.source_id,
-            source_version=request.source_version,
-            partition_refs=tuple(partition_refs),
-            partition_byte_hashes=tuple(partition_byte_hashes),
+            source_id=source_id,
+            source_version=source_version,
+            partition_refs=partition_refs,
+            partition_byte_hashes=partition_byte_hashes,
             quality_report_ref=quality_ref,
-            missing_intervals=tuple(missing_intervals),
+            missing_intervals=missing_intervals,
             duplicate_count=duplicate_count,
             parent_dataset_ref=parent_ref,
             created_at_utc=now_utc,
@@ -626,13 +730,18 @@ class DatasetRegistry:
                 "sha256": ref.sha256,
             },
             "dataset_id": dataset_id,
-            "venue": request.venue,
-            "pair": request.pair,
-            "timeframe": request.timeframe,
-            "actual_start": actual_start.isoformat(),
-            "actual_end": actual_end.isoformat(),
-            "bar_count": bar_count,
-            "duplicate_count": duplicate_count,
+            "version": manifest.version,
+            "venue": manifest.venue,
+            "pair": manifest.pair,
+            "timeframe": manifest.timeframe,
+            "source_id": manifest.source_id,
+            "source_version": manifest.source_version,
+            "requested_start": manifest.requested_start.isoformat(),
+            "requested_end": manifest.requested_end.isoformat(),
+            "actual_start": manifest.actual_start.isoformat(),
+            "actual_end": manifest.actual_end.isoformat(),
+            "bar_count": manifest.bar_count,
+            "duplicate_count": manifest.duplicate_count,
             "partition_refs": [
                 {
                     "kind": pr.kind,
@@ -640,20 +749,35 @@ class DatasetRegistry:
                     "version": pr.version,
                     "sha256": pr.sha256,
                 }
-                for pr in partition_refs
+                for pr in manifest.partition_refs
             ],
-            "partition_byte_hashes": partition_byte_hashes,
+            "partition_byte_hashes": list(manifest.partition_byte_hashes),
             "quality_report_ref": {
-                "kind": quality_ref.kind,
-                "id": quality_ref.id,
-                "version": quality_ref.version,
-                "sha256": quality_ref.sha256,
+                "kind": manifest.quality_report_ref.kind,
+                "id": manifest.quality_report_ref.id,
+                "version": manifest.quality_report_ref.version,
+                "sha256": manifest.quality_report_ref.sha256,
             },
             "missing_intervals": [
-                [s.isoformat(), e.isoformat()] for s, e in missing_intervals
+                [s.isoformat(), e.isoformat()] for s, e in manifest.missing_intervals
             ],
-            "parent_ref_key": _ref_key(parent_ref) if parent_ref is not None else None,
-            "schema_version": "v1",
+            "parent_dataset_ref": (
+                {
+                    "kind": manifest.parent_dataset_ref.kind,
+                    "id": manifest.parent_dataset_ref.id,
+                    "version": manifest.parent_dataset_ref.version,
+                    "sha256": manifest.parent_dataset_ref.sha256,
+                }
+                if manifest.parent_dataset_ref is not None
+                else None
+            ),
+            "parent_ref_key": (
+                _ref_key(manifest.parent_dataset_ref)
+                if manifest.parent_dataset_ref is not None
+                else None
+            ),
+            "created_at_utc": manifest.created_at_utc.isoformat(),
+            "schema_version": manifest.schema_version,
         }
 
         # AC4: Atomically register in catalog — crash before this leaves no visible dataset
@@ -662,10 +786,13 @@ class DatasetRegistry:
         return manifest
 
     def _entry_to_manifest(self, entry: dict[str, Any]) -> DatasetManifest:
-        """Reconstruct a DatasetManifest from a catalog entry."""
+        """Reconstruct a DatasetManifest from a catalog entry with full fidelity."""
 
-        def _parse_dt(s: str) -> datetime:
-            dt = datetime.fromisoformat(s)
+        def _parse_dt(val: Any) -> datetime:
+            if isinstance(val, datetime):
+                dt = val
+            else:
+                dt = datetime.fromisoformat(str(val))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=UTC)
             return dt.astimezone(UTC)
@@ -687,27 +814,34 @@ class DatasetRegistry:
             sha256=qr["sha256"],
         )
         parent_ref: ArtifactRef | None = None
-        if entry.get("parent_ref_key"):
-            # Parent ref stored separately; not reconstructed unless needed
-            pass
+        if entry.get("parent_dataset_ref"):
+            pr = entry["parent_dataset_ref"]
+            parent_ref = ArtifactRef(
+                kind=pr["kind"],
+                id=pr["id"],
+                version=pr["version"],
+                sha256=pr["sha256"],
+            )
+        elif entry.get("parent_ref_key"):
+            parts = str(entry["parent_ref_key"]).split(":")
+            if len(parts) == 4:
+                parent_ref = ArtifactRef(
+                    kind=parts[0],
+                    id=parts[1],
+                    version=parts[2],
+                    sha256=parts[3],
+                )
 
-        missing: list[tuple[datetime, datetime]] = []
-        for interval in entry.get("missing_intervals", []):
-            try:
-                missing.append((_parse_dt(interval[0]), _parse_dt(interval[1])))
-            except (ValueError, TypeError, IndexError):
-                pass
-
-        # Derive dataset_id from entry to reconstruct created_at_utc
-        # Use a stable sentinel for reconstruction (the manifest is read-only)
-        created_at_utc_str = entry.get(
-            "created_at_utc", entry.get("actual_start", "1970-01-01T00:00:00+00:00")
+        missing = tuple(
+            (_parse_dt(interval[0]), _parse_dt(interval[1]))
+            for interval in entry.get("missing_intervals", [])
+            if len(interval) == 2
         )
 
         return DatasetManifest(
             dataset_id=entry["dataset_id"],
             version=entry.get("version", "v1"),
-            venue=entry.get("venue", ""),
+            venue=entry.get("venue", "indodax"),
             pair=entry.get("pair", ""),
             timeframe=entry.get("timeframe", ""),
             requested_start=_parse_dt(entry.get("requested_start", entry["actual_start"])),
@@ -720,9 +854,14 @@ class DatasetRegistry:
             partition_refs=partition_refs,
             partition_byte_hashes=tuple(entry.get("partition_byte_hashes", [])),
             quality_report_ref=quality_ref,
-            missing_intervals=tuple(missing),
+            missing_intervals=missing,
             duplicate_count=int(entry.get("duplicate_count", 0)),
             parent_dataset_ref=parent_ref,
-            created_at_utc=_parse_dt(created_at_utc_str),
+            created_at_utc=_parse_dt(
+                entry.get(
+                    "created_at_utc",
+                    entry.get("actual_start", "1970-01-01T00:00:00+00:00"),
+                )
+            ),
             schema_version=entry.get("schema_version", "v1"),
         )

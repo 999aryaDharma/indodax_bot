@@ -160,7 +160,10 @@ def test_rw1_01_1(tmp_path: Path) -> None:
     assert fetched_end == _T2, f"Expected fetch end {_T2}, got {fetched_end}"
 
     assert isinstance(extended_manifest, DatasetManifest)
-    assert extended_manifest.bar_count == 50  # Only newly fetched bars
+    assert extended_manifest.bar_count == 100  # 50 base + 50 new bars
+    assert extended_manifest.actual_start == _T0
+    assert extended_manifest.actual_end == _T2
+    assert len(extended_manifest.partition_refs) == 2
 
     # Verify parent_dataset_ref linkage preserved
     assert extended_manifest.parent_dataset_ref is not None
@@ -305,6 +308,11 @@ def test_rw1_01_4(tmp_path: Path) -> None:
 
     assert crash_happened
 
+    # AC4 & F3: In-memory entry must also be rolled back
+    assert catalog.get("kind:id:v1:" + "c" * 64) is None, (
+        "F3 VIOLATED: In-memory entry remained visible after _persist crash"
+    )
+
     # AC4: After crash, no entry should be visible in a fresh catalog load
     catalog_after_crash = _Catalog(catalog_path)
     result = catalog_after_crash.get("kind:id:v1:" + "c" * 64)
@@ -317,3 +325,130 @@ def test_rw1_01_4(tmp_path: Path) -> None:
     assert len(partials) == 0, (
         f"AC4 VIOLATED: Partial files left behind after crash: {partials}"
     )
+
+
+# =========================================================================
+# Regression tests for F1, F2, F3, F4, F6
+# =========================================================================
+
+
+def test_rw1_01_f1_identity_roundtrip(tmp_path: Path) -> None:
+    """F1: Reconstructed DatasetManifest from get() must preserve exact ArtifactRef sha256."""
+    def provider(req: DatasetRequest) -> list[dict[str, Any]]:
+        return [_make_partition(120, req.start, req.end)]
+
+    registry = _make_registry(tmp_path, fetch_provider=provider)
+    request = _make_request(_T0, _T1)
+    m1 = registry.create(request)
+    ref1 = m1.to_artifact_ref()
+
+    # Reconstruct from catalog via get()
+    m_loaded = registry.get(ref1)
+    ref_loaded = m_loaded.to_artifact_ref()
+
+    assert ref_loaded.sha256 == ref1.sha256, (
+        f"F1 VIOLATED: Reconstructed manifest hash {ref_loaded.sha256} != original {ref1.sha256}"
+    )
+    assert m_loaded.source_id == m1.source_id
+    assert m_loaded.source_version == m1.source_version
+    assert m_loaded.requested_start == m1.requested_start
+    assert m_loaded.requested_end == m1.requested_end
+    assert m_loaded.created_at_utc == m1.created_at_utc
+
+
+def test_rw1_01_f2_extend_find_coverage(tmp_path: Path) -> None:
+    """F2: Extended dataset must cover [T0, T2] and be discoverable via find()."""
+    def provider(req: DatasetRequest) -> list[dict[str, Any]]:
+        return [_make_partition(50, req.start, req.end)]
+
+    registry = _make_registry(tmp_path, fetch_provider=provider)
+    base_m = registry.create(_make_request(_T0, _T1))
+    base_ref = base_m.to_artifact_ref()
+
+    extended_m = registry.extend(base_ref, _make_request(_T0, _T2))
+    assert extended_m.bar_count == 100
+    assert extended_m.actual_start == _T0
+    assert extended_m.actual_end == _T2
+    assert extended_m.parent_dataset_ref == base_ref
+
+    # Must be discoverable by find() covering the extended interval
+    matching_refs = registry.find("indodax", "btcidr", "1h", _T0, _T2)
+    assert len(matching_refs) >= 1
+    assert any(r.sha256 == extended_m.to_artifact_ref().sha256 for r in matching_refs)
+
+
+def test_rw1_01_f3_retry_after_crash(tmp_path: Path) -> None:
+    """F3: After simulated persist failure, retrying register() must succeed and persist to disk."""
+    catalog_path = tmp_path / "catalog.json"
+    catalog = _Catalog(catalog_path)
+    entry = {
+        "ref_key": "kind:id:v1:" + "e" * 64,
+        "dataset_id": "ds_retry",
+        "actual_start": _T0.isoformat(),
+        "actual_end": _T1.isoformat(),
+    }
+
+    real_persist = catalog._persist
+
+    def failing_persist(**kwargs: Any) -> None:
+        raise OSError("TEMP_DISK_ERROR")
+
+    catalog._persist = failing_persist  # type: ignore[method-assign]
+
+    with pytest.raises(OSError, match="TEMP_DISK_ERROR"):
+        catalog.register("kind:id:v1:" + "e" * 64, entry)
+
+    # In-memory must be clean
+    assert catalog.get("kind:id:v1:" + "e" * 64) is None
+
+    # Restore real persist and retry
+    catalog._persist = real_persist  # type: ignore[method-assign]
+    catalog.register("kind:id:v1:" + "e" * 64, entry)
+
+    assert catalog.get("kind:id:v1:" + "e" * 64) is not None
+    # Fresh reload must see it on disk
+    fresh = _Catalog(catalog_path)
+    assert fresh.get("kind:id:v1:" + "e" * 64) is not None
+
+
+def test_rw1_01_f4_cli_subcommands(tmp_path: Path) -> None:
+    """F4: CLI create, extend, find, validate subcommands execute with JSON output."""
+    from indodax_lab.cli.dataset_registry import main as cli_main
+
+    root_dir = tmp_path / "cli_root"
+    catalog_path = root_dir / "catalog.json"
+
+    # 1. CLI create
+    rc = cli_main([
+        "create",
+        "--root", str(root_dir),
+        "--catalog", str(catalog_path),
+        "--venue", "indodax",
+        "--pair", "btcidr",
+        "--timeframe", "1h",
+        "--start", _T0.isoformat(),
+        "--end", _T1.isoformat(),
+        "--mock-bars", "100",
+    ])
+    assert rc == 0
+
+    # 2. CLI find
+    rc = cli_main([
+        "find",
+        "--root", str(root_dir),
+        "--catalog", str(catalog_path),
+        "--venue", "indodax",
+        "--pair", "btcidr",
+        "--timeframe", "1h",
+        "--start", _T0.isoformat(),
+        "--end", _T1.isoformat(),
+    ])
+    assert rc == 0
+
+
+def test_rw1_01_f6_naive_datetime_rejected(tmp_path: Path) -> None:
+    """F6: Naive datetimes in find() must raise ValueError explicitly."""
+    registry = _make_registry(tmp_path)
+    naive_dt = datetime(2024, 1, 1)  # No tzinfo
+    with pytest.raises(ValueError, match="NAIVE_DATETIME_FORBIDDEN"):
+        registry.find("indodax", "btcidr", "1h", naive_dt, _T1)
