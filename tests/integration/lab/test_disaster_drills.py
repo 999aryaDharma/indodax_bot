@@ -144,8 +144,8 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
 
     Guarantees:
     - 50% partial fill during cancel dispatch is captured.
-    - Final state is CANCELLED with filled_qty == 0.05.
-    - VenueFillIngester updates ledger base quantity and cash.
+    - Cancel response alone cannot invent a fill average from the order limit price.
+    - VenueFillIngester records exact fill history before OMS reaches CANCELLED.
     """
     db_path = tmp_path / "oms_orders.sqlite3"
     oms_store = OmsStore(db_path)
@@ -171,8 +171,9 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
     venue.cancel_scenario = "PARTIAL_FILL_DURING_CANCEL"
     cancelled_order = router.cancel_order(ack_order, now=NOW + timedelta(seconds=2))
 
-    assert cancelled_order.state == OmsOrderState.CANCELLED
-    assert cancelled_order.filled_qty == Decimal("0.05")
+    assert cancelled_order.state == OmsOrderState.UNKNOWN
+    assert cancelled_order.filled_qty == Decimal("0")
+    assert cancelled_order.average_fill_price is None
 
     # Ingest the partial fill into ledger
     from indodax_lab.backtest.costs import OrderRole
@@ -194,6 +195,17 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
     )
     res = ingester.ingest_fill(race_fill)
     assert res.status == "INGESTED"
+
+    filled_from_history = oms_store.load_order(order.internal_order_id)
+    assert filled_from_history is not None
+    assert filled_from_history.state == OmsOrderState.PARTIALLY_FILLED
+    assert filled_from_history.average_fill_price == Decimal("1000000000")
+    cancelled_after_reconcile = router.resolve_unknown_order(
+        filled_from_history,
+        now=NOW + timedelta(seconds=3),
+    )
+    assert cancelled_after_reconcile.state == OmsOrderState.CANCELLED
+    assert cancelled_after_reconcile.filled_qty == Decimal("0.05")
 
     # Verify ledger cash and position
     assert ledger.cash == Decimal("49950000")  # 100M - 50.05M

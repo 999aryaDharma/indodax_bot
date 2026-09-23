@@ -10,6 +10,7 @@ import pytest
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.execution.fake_venue import DeterministicFakeVenue
+from indodax_lab.execution.indodax_readonly import VenueOrder
 from indodax_lab.execution.indodax_trading import IndodaxTradingVenue
 from indodax_lab.execution.oms import OmsOrderState, OmsStateMachine
 from indodax_lab.execution.oms_store import OmsStore
@@ -124,13 +125,15 @@ def test_order_router_cancel_fill_race_partial_fill(temp_router) -> None:
     venue.cancel_scenario = "PARTIAL_FILL_DURING_CANCEL"
 
     cancelled = router.cancel_order(ack_order, now=NOW)
-    assert cancelled.state == OmsOrderState.CANCELLED
-    assert cancelled.filled_qty == Decimal("0.5")
+    assert cancelled.state == OmsOrderState.UNKNOWN
+    assert cancelled.filled_qty == Decimal("0")
+    assert cancelled.average_fill_price is None
 
     persisted = store.load_order("int_4")
     assert persisted is not None
-    assert persisted.state == OmsOrderState.CANCELLED
-    assert persisted.filled_qty == Decimal("0.5")
+    assert persisted.state == OmsOrderState.UNKNOWN
+    assert persisted.filled_qty == Decimal("0")
+    assert persisted.average_fill_price is None
 
 
 def test_order_router_cancel_fill_race_full_fill(temp_router) -> None:
@@ -151,8 +154,51 @@ def test_order_router_cancel_fill_race_full_fill(temp_router) -> None:
     venue.cancel_scenario = "FULL_FILL_DURING_CANCEL"
 
     filled = router.cancel_order(ack_order, now=NOW)
-    assert filled.state == OmsOrderState.FILLED
-    assert filled.filled_qty == Decimal("1.0")
+    assert filled.state == OmsOrderState.UNKNOWN
+    assert filled.filled_qty == Decimal("0")
+    assert filled.average_fill_price is None
+
+
+def test_order_router_cancel_rejects_filled_status_with_partial_quantity(temp_router) -> None:
+    router, store, venue = temp_router
+    order = OmsStateMachine.create(
+        internal_order_id="int_inconsistent_fill",
+        client_order_id="cl_inconsistent_fill",
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("1.0"),
+        limit_price=Decimal("1000000000"),
+        created_at=NOW,
+    )
+    store.create_order(order, event_id="evt_init_inconsistent")
+    ack_order = router.submit_order(order, now=NOW)
+    partial_order = OmsStateMachine.transition(
+        ack_order,
+        OmsOrderState.PARTIALLY_FILLED,
+        at=NOW,
+        filled_qty=Decimal("0.4"),
+        average_fill_price=Decimal("999000000"),
+    )
+    store.apply_transition(ack_order, partial_order, event_id="evt_partial_inconsistent")
+    venue.cancel_order = lambda **_: VenueOrder(
+        order_id=partial_order.venue_order_id or "venue_inconsistent",
+        client_order_id=partial_order.client_order_id,
+        pair=partial_order.pair,
+        side=partial_order.side,
+        order_type="limit",
+        status="FILLED",
+        price=partial_order.limit_price,
+        original_qty=Decimal("1.0"),
+        executed_qty=Decimal("0.4"),
+        remaining_qty=Decimal("0.6"),
+        submitted_at=NOW,
+    )
+
+    unresolved = router.cancel_order(partial_order, now=NOW)
+
+    assert unresolved.state == OmsOrderState.UNKNOWN
+    assert unresolved.filled_qty == Decimal("0.4")
+    assert unresolved.average_fill_price == Decimal("999000000")
 
 
 def test_indodax_trading_venue_security_boundary_no_withdrawals() -> None:

@@ -9,9 +9,11 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.execution.oms import OmsOrderState, OmsStateMachine, OmsStore
-from indodax_lab.execution.order_router import OrderRouter
+from indodax_lab.execution.order_router import OrderRouter, UnresolvedOrderStateError
 from indodax_lab.execution.venue import TradingVenue
 
 NOW = datetime(2026, 9, 21, 10, 0, tzinfo=UTC)
@@ -61,7 +63,7 @@ def test_resolve_unknown_order_inconclusive_leaves_unknown(tmp_path: Path) -> No
     assert resolved.internal_order_id == unknown_order.internal_order_id
 
 
-def test_resolve_unknown_order_definitive_fill_transitions_to_filled(tmp_path: Path) -> None:
+def test_resolve_unknown_order_requires_fill_history_for_definitive_fill(tmp_path: Path) -> None:
     from indodax_lab.execution.indodax_readonly import VenueOrder
 
     venue = MagicMock(spec=TradingVenue)
@@ -110,7 +112,10 @@ def test_resolve_unknown_order_definitive_fill_transitions_to_filled(tmp_path: P
     )
     store.apply_transition(sub_order, unknown_order, event_id="evt_unk_2")
 
-    resolved = router.resolve_unknown_order(unknown_order, now=NOW)
-    assert resolved.state == OmsOrderState.FILLED
-    assert resolved.filled_qty == Decimal("0.05")
-    assert resolved.average_fill_price == Decimal("1000000000")
+    with pytest.raises(UnresolvedOrderStateError, match="FILL_HISTORY_REQUIRED"):
+        router.resolve_unknown_order(unknown_order, now=NOW)
+    persisted = store.load_order(unknown_order.internal_order_id)
+    assert persisted is not None
+    assert persisted.state == OmsOrderState.UNKNOWN
+    assert persisted.filled_qty == Decimal("0")
+    assert persisted.average_fill_price is None

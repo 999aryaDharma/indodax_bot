@@ -266,7 +266,29 @@ class OrderRouter:
             )
             return unknown_order
 
-        if venue_order.status.upper() not in {"CANCELLED", "CANCELED", "FILLED", "FINISHED"}:
+        venue_status = venue_order.status.upper()
+        if (
+            venue_order.executed_qty < pending_order.filled_qty
+            or (
+                venue_status in {"FILLED", "FINISHED"}
+                and venue_order.executed_qty != order.desired_qty
+            )
+        ):
+            unknown_order = OmsStateMachine.transition(
+                pending_order,
+                OmsOrderState.UNKNOWN,
+                at=step_time,
+                venue_order_id=venue_order.order_id,
+                reason="CANCEL_STATE_INCONSISTENT_WITH_FILL_QUANTITY",
+            )
+            self.oms_store.apply_transition(
+                pending_order,
+                unknown_order,
+                event_id=self._generate_event_id("cancel_inconsistent_fill_state"),
+            )
+            return unknown_order
+
+        if venue_status not in {"CANCELLED", "CANCELED", "FILLED", "FINISHED"}:
             unknown_order = OmsStateMachine.transition(
                 pending_order,
                 OmsOrderState.UNKNOWN,
@@ -280,7 +302,7 @@ class OrderRouter:
             return unknown_order
         # Check if fill occurred during cancel race:
         is_filled = (
-            venue_order.status.upper() in {"FILLED", "FINISHED"}
+            venue_status in {"FILLED", "FINISHED"}
             or venue_order.executed_qty == order.desired_qty
         )
         if is_filled:
