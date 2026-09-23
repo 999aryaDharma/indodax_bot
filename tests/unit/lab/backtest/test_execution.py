@@ -35,6 +35,7 @@ def sample_cost_table() -> CostScheduleTable:
             min_notional=Decimal("10000"),
             precision=0,
             sources=("PMK 68",),
+            evidence_verified=True,
         ),
         CostScheduleInterval(
             schedule_id="indodax_2024_buy_maker",
@@ -49,6 +50,7 @@ def sample_cost_table() -> CostScheduleTable:
             min_notional=Decimal("10000"),
             precision=0,
             sources=("PMK 68",),
+            evidence_verified=True,
         ),
         CostScheduleInterval(
             schedule_id="indodax_2024_sell",
@@ -63,6 +65,7 @@ def sample_cost_table() -> CostScheduleTable:
             min_notional=Decimal("10000"),
             precision=0,
             sources=("PMK 68",),
+            evidence_verified=True,
         ),
     )
     return CostScheduleTable(
@@ -114,6 +117,63 @@ def test_sim_01_valid_contract(sample_cost_table: CostScheduleTable) -> None:
     # Total rate = 0.002111 + 0.001100 + 0.000200 = 0.003411
     # Expected fee = 500_000 * 0.003411 = 1705.5 -> 1706 IDR (quantized to precision 0)
     assert result.fill.fees == Decimal("1706")
+
+
+def test_limit_fill_uses_order_creation_fee_after_boundary() -> None:
+    """A resting limit order keeps the schedule active when it was created."""
+    boundary = BASE_TS + timedelta(hours=1)
+    intervals = tuple(
+        CostScheduleInterval(
+            schedule_id=schedule_id,
+            market="spot_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.MAKER,
+            valid_from=valid_from,
+            valid_to=valid_to,
+            service_fee_rate=rate,
+            tax_rate=Decimal("0"),
+            exchange_fee_rate=Decimal("0"),
+            min_notional=Decimal("1"),
+            precision=0,
+            sources=("COST-01 boundary fixture",),
+            evidence_verified=True,
+        )
+        for schedule_id, valid_from, valid_to, rate in (
+            ("before", boundary - timedelta(days=1), boundary, Decimal("0.001")),
+            ("after", boundary, None, Decimal("0.002")),
+        )
+    )
+    simulator = ConservativeExecutionSimulator(
+        CostScheduleTable(schedule_set_id="fee-boundary", version="1", intervals=intervals)
+    )
+    intent = SignalIntent(
+        intent_id="resting-limit",
+        decision_ts=boundary - timedelta(minutes=1),
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.001"),
+        limit_price=Decimal("500000000"),
+        role_preference=OrderRole.MAKER,
+    )
+    bar = MarketBar(
+        pair="btc_idr",
+        open_time=boundary,
+        close_time=boundary + timedelta(hours=1),
+        available_at=boundary + timedelta(hours=1),
+        open=Decimal("500000000"),
+        high=Decimal("501000000"),
+        low=Decimal("499000000"),
+        close=Decimal("500000000"),
+        base_volume=Decimal("1"),
+        quote_volume=Decimal("500000000"),
+    )
+
+    result = simulator.simulate_execution(intent, bar)
+
+    assert result.status == ExecutionStatus.FILLED
+    assert result.fill is not None
+    assert result.fill.timestamp == bar.available_at
+    assert result.fill.fees == Decimal("500")
 
 
 def test_sim_01_contract_1(sample_cost_table: CostScheduleTable) -> None:

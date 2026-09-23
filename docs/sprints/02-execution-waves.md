@@ -48,7 +48,7 @@ None. Verify external gates and shared-file ownership before claim.
 - BAR-01 — Causal time and event bars [DONE; CORE]
 - UNIV-01 — Point-in-time investable universe [DONE; CORE]
 - PM-03 — Recovery mode and durable operator risk governance [DONE; CORE]
-- PM-04 — Venue parser cancellation and supported order semantics [REVIEW; CORE]
+- PM-04 — Venue parser cancellation and supported order semantics [DONE; CORE]
 
 ## Wave 6
 
@@ -57,7 +57,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 ## Wave 7
 
-- FEAT-01 — Versioned feature registry [REVIEW; CORE]
+- FEAT-01 — Versioned feature registry [DONE; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
 - RW1-01 — Reusable immutable dataset registry [DONE; CORE]
 

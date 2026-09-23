@@ -29,7 +29,8 @@ def costs():
     return CostScheduleTable(schedule_set_id="fixture", version="1", intervals=tuple(
         CostScheduleInterval(schedule_id=f"{side}-{role}", market="spot_idr", side=side,
             role=role, valid_from=TS, service_fee_rate="0.01", tax_rate="0",
-            exchange_fee_rate="0", min_notional="1", precision=2, sources=("fake",))
+            exchange_fee_rate="0", min_notional="1", precision=2, sources=("fake",),
+            evidence_verified=True)
         for side in ("buy", "sell") for role in ("taker", "maker")))
 
 

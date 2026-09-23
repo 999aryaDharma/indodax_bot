@@ -14,6 +14,7 @@ from indodax_lab.backtest.costs import (
     OrderRole,
     OrderSide,
     UnknownCostScheduleError,
+    UnverifiedCostScheduleError,
     lookup_cost,
 )
 
@@ -185,16 +186,16 @@ def build_net_return_label(
             market=pair,
             side=OrderSide.BUY,
             role=OrderRole.TAKER,
-            event_ts=entry_ts,
+            fee_basis_ts=entry_ts,
         )
         sell_sched = lookup_cost(
             table=config.cost_schedule_table,
             market=pair,
             side=OrderSide.SELL,
             role=OrderRole.TAKER,
-            event_ts=target_exit_ts,
+            fee_basis_ts=target_exit_ts,
         )
-    except UnknownCostScheduleError:
+    except (UnknownCostScheduleError, UnverifiedCostScheduleError):
         return NetReturnLabel(
             sample_id=sample_id,
             label_set_id=config.label_set_id,

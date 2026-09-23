@@ -112,6 +112,7 @@ def test_cost_schedule_integration(tmp_path) -> None:
         "    min_notional: '10000'\n"
         "    precision: 0\n"
         "    sources: ['PMK 68']\n"
+        "    evidence_verified: true\n"
         "  - schedule_id: indodax_idr_2024_current_sell\n"
         "    market: spot_idr\n"
         "    side: sell\n"
@@ -124,6 +125,7 @@ def test_cost_schedule_integration(tmp_path) -> None:
         "    min_notional: '10000'\n"
         "    precision: 0\n"
         "    sources: ['PMK 68']\n"
+        "    evidence_verified: true\n"
     )
     cfg_file = tmp_path / "costs.yaml"
     cfg_file.write_text(yaml_content, encoding="utf-8")
@@ -137,7 +139,7 @@ def test_cost_schedule_integration(tmp_path) -> None:
         market="spot_idr",
         side=OrderSide.BUY,
         role=OrderRole.TAKER,
-        event_ts=BASE_TS,
+        fee_basis_ts=BASE_TS,
     )
     buy_qty = Decimal("0.001")
     buy_price = Decimal("600000000")
@@ -170,7 +172,7 @@ def test_cost_schedule_integration(tmp_path) -> None:
         market="spot_idr",
         side=OrderSide.SELL,
         role=OrderRole.TAKER,
-        event_ts=BASE_TS + timedelta(days=1),
+        fee_basis_ts=BASE_TS + timedelta(days=1),
     )
     sell_qty = Decimal("0.001")
     sell_price = Decimal("650000000")
