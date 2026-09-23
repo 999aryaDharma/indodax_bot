@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -36,6 +37,8 @@ def asof_join_features(
     source: pd.DataFrame,
     interval: str,
     value_columns: Sequence[str],
+    *,
+    join_mode: Literal["same_pair", "btc_benchmark"] = "same_pair",
 ) -> pd.DataFrame:
     """As-of join higher timeframe or benchmark features strictly available at decision time.
 
@@ -54,11 +57,14 @@ def asof_join_features(
 
     source_has_pair = "pair" in valid_source.columns
     decisions_has_pair = "pair" in res.columns
-
-    by_pair = False
-    if source_has_pair and decisions_has_pair:
-        if valid_source["pair"].nunique() > 1 or set(decisions["pair"]).issubset(set(valid_source["pair"])):
-            by_pair = True
+    if join_mode not in {"same_pair", "btc_benchmark"}:
+        raise ValueError(f"UNSUPPORTED_PAIR_JOIN_MODE:{join_mode}")
+    if join_mode == "same_pair" and source_has_pair != decisions_has_pair:
+        raise ValueError("PAIR_JOIN_MODE_REQUIRED")
+    if join_mode == "btc_benchmark" and (
+        not source_has_pair or not valid_source["pair"].eq("btc_idr").all()
+    ):
+        raise ValueError("BTC_BENCHMARK_PAIR_REQUIRED")
 
     for col in value_columns:
         res[col] = np.nan
@@ -67,7 +73,7 @@ def asof_join_features(
     for idx, row in res.iterrows():
         d_ts = row["decision_ts"]
         candidates = valid_source[valid_source["available_at"] <= d_ts]
-        if by_pair:
+        if join_mode == "same_pair" and source_has_pair:
             candidates = candidates[candidates["pair"] == row["pair"]]
 
         if not candidates.empty:

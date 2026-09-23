@@ -160,7 +160,7 @@ def build_feature_frame(
                     if func_name == "btc_log_return":
                         btc["benchmark"] = btc.groupby(btc_segments)["benchmark"].transform(lambda s: func(s, **feat.params))
                     aligned = asof_join_features(pd.DataFrame({"decision_ts": p_bars["close_time"]}), btc,
-                        reg.decision_interval, ["benchmark"])
+                        reg.decision_interval, ["benchmark"], join_mode="btc_benchmark")
                     benchmark_values = aligned["benchmark"]
                     kwargs["close" if func_name == "btc_log_return" else "btc_close"] = benchmark_values
                     row_ready = pd.concat([row_ready, aligned["benchmark_available_at"]], axis=1).max(axis=1)

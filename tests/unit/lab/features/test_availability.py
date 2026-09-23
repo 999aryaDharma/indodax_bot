@@ -316,13 +316,45 @@ def test_feat_03_contract_3() -> None:
             }
         ]
     )
-    joined = asof_join_features(decisions, btc_series, interval="1h", value_columns=("btc_ret",))
+    joined = asof_join_features(
+        decisions, btc_series, interval="1h", value_columns=("btc_ret",), join_mode="btc_benchmark"
+    )
 
     # T0 and T1 must be NaN (strictly missing, never backfilled from T2)
     assert pd.isna(joined.loc[0, "btc_ret"])
     assert pd.isna(joined.loc[1, "btc_ret"])
     # T2 is available
     assert joined.loc[2, "btc_ret"] == 0.02
+
+
+def test_asof_join_never_broadcasts_single_pair_source_to_other_pairs() -> None:
+    decisions = pd.DataFrame({"pair": ["eth_idr"], "decision_ts": [BASE + timedelta(hours=2)]})
+    source = _bars(1).assign(pair="btc_idr", close=123.0)
+
+    joined = asof_join_features(decisions, source, "1h", ["close"])
+
+    assert pd.isna(joined.loc[0, "close"])
+
+
+def test_asof_join_filters_each_pair_in_mixed_decision_batch() -> None:
+    decisions = pd.DataFrame({
+        "pair": ["eth_idr", "btc_idr"],
+        "decision_ts": [BASE + timedelta(hours=2)] * 2,
+    })
+    source = _bars(1).assign(pair="btc_idr", close=123.0)
+
+    joined = asof_join_features(decisions, source, "1h", ["close"])
+
+    assert pd.isna(joined.loc[0, "close"])
+    assert joined.loc[1, "close"] == 123.0
+
+
+def test_asof_join_requires_explicit_mode_when_only_one_side_has_pair() -> None:
+    decisions = pd.DataFrame({"decision_ts": [BASE + timedelta(hours=2)]})
+    source = _bars(1).assign(pair="btc_idr", close=123.0)
+
+    with pytest.raises(ValueError, match="PAIR_JOIN_MODE_REQUIRED"):
+        asof_join_features(decisions, source, "1h", ["close"])
 
 
 def test_warmup_rows_stay_null_with_reason_and_never_backfill(tmp_path: Path) -> None:
