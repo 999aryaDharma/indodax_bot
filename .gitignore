@@ -16,6 +16,7 @@ build/
 .venv/
 venv/
 env/
+node_modules/
 
 # === Logs & Runtime State ===
 logs/*.log

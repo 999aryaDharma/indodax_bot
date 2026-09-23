@@ -13,7 +13,7 @@ Read in order:
 5. [Research roadmap](research-workbench/ROADMAP.md), [parity roadmap](runtime-parity/ROADMAP.md), [production roadmap](production-main/ROADMAP.md).
 6. [ASTRA status](handoff/ASTRA-STATUS.md) and [one next LUNA task](handoff/LUNA-NEXT.md).
 7. [Control-plane program plan](../superpowers/plans/2026-09-22-control-plane-program-plan.md), then the [Production API](../superpowers/plans/2026-09-22-production-api-plan.md), [Research Workbench API](../superpowers/plans/2026-09-22-research-workbench-api-plan.md), and [Unified Dashboard](../superpowers/plans/2026-09-22-unified-dashboard-plan.md) child plans when implementing API or UI work.
-8. [Control-plane roadmap crosswalk](CONTROL-PLANE-ROADMAP.md) before claiming any API or dashboard task. It explains which proposed units still require manifest admission.
+8. [Production control-plane change request](CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md) and [control-plane roadmap](CONTROL-PLANE-ROADMAP.md) before claiming any API or dashboard task. The manifest and canonical sprint files determine current admission and READY status.
 
 Delivery status/DAG is owned only by [the sprint manifest](../sprints/sprint-manifest.json). Roadmaps group tasks; they do not own status. Detailed task files live in `docs/sprints/`; old tasks are cross-referenced, not duplicated as new implementations. Read the [manifest recovery record](MANIFEST-RECOVERY.md) before interpreting status changes. REVIEW is not missing code and is not independent PASS.
 

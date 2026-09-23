@@ -6,7 +6,7 @@
 
 **Architecture:** Use a modular monolith first: one FastAPI application and one React/TypeScript/Vite frontend shell, with explicit `production` and `research` route namespaces. Backend services remain authoritative; API routers expose service-derived read models and guarded commands. Production write authority remains unavailable until the frozen production gates and PM/RP dependencies are complete.
 
-**Tech Stack:** Existing Python/Pydantic/Decimal/SQLite domain code; FastAPI and Uvicorn for the API; pinned React/TypeScript/Vite for the dashboard; Server-Sent Events for status streams; pytest and ruff for backend validation.
+**Tech Stack:** Existing Python/Pydantic/Decimal/SQLite domain code; FastAPI and Uvicorn for the API; pinned React/TypeScript/Vite with Cloudflare Kumo UI and locally hosted Vercel Geist Sans/Mono for the dashboard; Server-Sent Events for status streams; pytest and ruff for backend validation.
 
 **Spec:** `docs/production/FROZEN-SYSTEMS.md`, `docs/production/main/*`, `docs/production/research-workbench/*`, `docs/implementation/RUNTIME-PARITY.md`, `docs/implementation/SYSTEM-DEPENDENCY-MAP.md`, and the three child plans in this directory.
 
@@ -14,21 +14,21 @@
 
 ### Production Main — existing domain primitives
 
-- Implemented or present: execution modes, durable mode store, manual approval store, authority gate implementation pending independent review, unified pipeline, OMS state machine, order router, Indodax read-only adapter, write-capable adapter, fill normalization/ingestion, durable ledger store, reconciliation engine, risk engine, portfolio constructor, release candidate packaging, backup/restore and service lifecycle utilities.
-- Partial or blocked: PM-01 independent review; PM-02 atomic financial state; PM-03 recovery/operator governance; PM-04 venue parser/cancellation semantics; PM-05 candidate-bound release provenance; PM-06 CI/security/release evidence; RP-02 through RP-05 runtime parity.
+- Implemented or present: execution modes, durable mode store, manual approval store, reviewed authority gate, unified pipeline, OMS state machine, order router, Indodax read-only adapter, write-capable adapter, fill normalization/ingestion, durable ledger store, reconciliation engine, risk engine, portfolio constructor, release candidate packaging, backup/restore and service lifecycle utilities.
+- PM-01 through PM-04 are DONE in the current manifest. PM-05 candidate-bound release provenance and PM-06 CI/security/release evidence remain PLANNED; RP-02 through RP-05 runtime parity remain incomplete.
 - Missing: production API, stable API read models, authentication/authorization boundary, dashboard frontend, API audit projection, browser integration tests, and a production deployment contract.
 - Safety status: the presence of `IndodaxTradingVenue` is not production qualification and does not authorize credentials, live writes, or activation.
 
 ### Research Workbench — existing domain primitives
 
-- Implemented or present: RW0 immutable workbench contracts, RW1 dataset registry implementation awaiting independent review, backtest/data/model/feature modules, paper/shadow engine, release-candidate packaging, and many historical research task artifacts.
-- Partial or blocked: RW1 review; component/pipeline registry services; experiment orchestration; candidate packaging integration; tournament agents; Portfolio Shadow; QuantOps MCP.
+- Implemented or present: RW0 immutable workbench contracts and RW1 dataset registry are DONE in the current manifest; backtest/data/model/feature modules, paper/shadow engine, release-candidate packaging, and historical research task artifacts exist.
+- Later component/pipeline registry services, experiment orchestration, candidate packaging integration, tournament agents, Portfolio Shadow and QuantOps MCP remain in planned research sprints.
 - Missing: research API, research read models, declarative pipeline editing API, dashboard Workbench, tournament views, and backend-to-UI provenance mapping.
 
 ### Shared dashboard reality
 
 - `DESIGN.md` and `dashboard.pen` are design inputs, not backend contracts.
-- No web API or frontend implementation exists in the current source tree.
+- API-00 shared contracts and UI-00 Kumo/Geist shell are implemented in the current workspace and awaiting independent review; production read models/routes and operational pages remain outstanding.
 - The dashboard must not read SQLite files directly or invent status. It consumes versioned Pydantic API schemas backed by domain services.
 
 ## Non-negotiable boundaries
@@ -45,21 +45,12 @@
 ## Dependency order
 
 ```text
-PM/RP prerequisite reviews
-        ↓
-Shared API schemas and error contract
-        ↓
-Production read models       Research read models
-        ↓                              ↓
-Production API boundary      Research API boundary
-        ↓                              ↓
-Unified dashboard shell and capability context
-        ↓
-Production views + Workbench views
-        ↓
-Guarded command endpoints and UI actions
-        ↓
-Integration/security/recovery qualification
+API-00 shared contracts
+  ├── API-01 Production read models ─┐
+  ├── API-03 fail-closed capability ├── API-02 Production read routes ── UI-02 Production views
+  └── UI-00 Kumo/Geist shell ─ UI-01 capability context ─────────────────┘
+
+Research APIs/UI remain a separate later dependency branch.
 ```
 
 Do not start dashboard pages before the relevant read models and API schemas exist. Do not expose Research mutation endpoints before their underlying registry/orchestration services exist.
@@ -72,13 +63,13 @@ Do not start dashboard pages before the relevant read models and API schemas exi
 
 ## Delivery waves
 
-### Wave A — contracts and read-only API
+### Wave A — shared contracts, Production read models and frontend foundation
 
-Complete the first task of each child plan in dependency order. Deliver typed schemas, service-derived snapshots, health endpoints, and read-only routes. This wave is safe for paper/shadow environments and is the first implementer target.
+API-00 and UI-00 can proceed in parallel on disjoint paths. After their independent PASS, API-01, API-03 and UI-01 can proceed according to the manifest DAG. Finish API-02 after API-01/API-03, then UI-02. This is the first paper/shadow-only implementer wave.
 
 ### Wave B — dashboard shell and operational read views
 
-Build the browser shell, environment switcher, authentication placeholder, route guards, Production Overview, Research navigation, and read-only status streams. Use fixture-backed API tests until services are ready.
+Complete UI-00/UI-01/UI-02 according to the manifest DAG. Use the design system Kumo components plus Geist Sans/Mono while matching `DESIGN.md`; use fixture-backed client checks only where the backend route is not yet available.
 
 ### Wave C — research service integration
 
@@ -94,7 +85,7 @@ Run security, duplicate-command, stale-revision, restart, authorization, and for
 
 ## First implementer task
 
-The first coding task is `API-00` in the Production API child plan: create the shared API envelope, error, provenance, capability, and health schemas without adding a web framework route or changing domain behavior. It is small, reviewable, and unblocks both API branches.
+The first coding tasks are `API-00` and `UI-00` in the Production API and Unified Dashboard child plans. They have disjoint paths and no dependencies; each requires its own independent PASS before downstream nodes unlock.
 
 ## Cheap-model execution rules
 

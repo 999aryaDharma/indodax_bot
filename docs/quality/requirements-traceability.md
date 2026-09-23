@@ -23,7 +23,7 @@ AC behavior-test mappings and evidence references are in manifest/sprint handoff
 | FR-17 | planning | DOC-01 | Sprint handoff / historical evidence |
 | FR-20 | runtime-parity | RP-01, RP-02, RP-03, RP-04, RP-05 | Sprint handoff / historical evidence |
 | FR-19, FR-21, FR-22 | research-workbench | RW0-01, RW1-01, RW2-01, RW2-02, RW2-03, RW3-01, RW4-01, RW5-01, RW5-02, RW6-01, RW7-01, RW7-02, RW8-01, RW8-02, RW9-01 | Sprint handoff / historical evidence |
-| FR-23 | production-main | PM-01, PM-02, PM-03, PM-04, PM-05, PM-06 | Sprint handoff / historical evidence |
+| FR-23 | production-main | PM-01, PM-02, PM-03, PM-04, PM-05, PM-06, API-00, API-01, API-03, API-02, UI-00, UI-01, UI-02 | Sprint handoff / historical evidence |
 
 | Non-functional requirement | Required evidence surfaces |
 |---|---|

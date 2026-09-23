@@ -59,7 +59,7 @@ Purpose: Atomic financial execution state and recovery. Gap: One authoritative t
 
 ## Unlocks
 
-PM-03, PM-04, RP-04
+PM-03, PM-04, RP-04, API-01
 
 ## Required Reading
 

@@ -59,7 +59,7 @@ Purpose: Recovery mode and durable operator risk governance. Gap: Every boot ent
 
 ## Unlocks
 
-PM-05
+PM-05, API-01
 
 ## Required Reading
 

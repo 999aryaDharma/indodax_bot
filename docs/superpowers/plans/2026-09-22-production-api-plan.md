@@ -95,6 +95,8 @@ Rules:
 
 ### API-02 — FastAPI application and read-only Production routes
 
+**Dependencies:** API-01 and API-03 DONE and independently reviewed.
+
 **Files:** Create `src/indodax_lab/api/app.py`, `src/indodax_lab/api/dependencies.py`, `src/indodax_lab/api/routers/production.py`; test `tests/integration/lab/api/test_production_routes.py`.
 
 Endpoints:
@@ -106,19 +108,21 @@ Endpoints:
 
 ### API-03 — Capability policy and audit middleware
 
+**Dependencies:** API-00 DONE.
+
 **Files:** Modify `src/indodax_lab/api/dependencies.py`; create `src/indodax_lab/api/auth.py`, `src/indodax_lab/api/audit.py`; test `tests/unit/lab/api/test_capability_policy.py` and `tests/integration/lab/api/test_api_audit.py`.
 
 Required behavior:
 
 - Development mode uses explicit local operator identity supplied by test dependency injection, never an implicit production user.
 - Every request receives a request ID.
-- Every command attempt records actor, capability, resource, decision, reason code, source revision, and timestamp.
+- Every request/command attempt records actor or explicit anonymous identity, capability, resource, decision, reason code, source revision, request ID, and timestamp. Missing Production identity fails closed; do not add an implicit local Production operator.
 - Missing capability returns `403`; stale/unhealthy authority returns `409` or `423` with stable error code.
 - Research capability cannot satisfy production capability checks.
 
 ### API-04 — Guarded mode, kill-switch, approval, and reconciliation commands
 
-**Dependencies:** PM-01, PM-03, PM-04 DONE and independently reviewed.
+**Dependencies:** PM-01, PM-02, PM-03 and PM-04 DONE and independently reviewed; API-02 DONE. API-04 is outside the read-only MVP.
 
 **Files:** Modify `src/indodax_lab/api/routers/production.py`; create `src/indodax_lab/api/contracts/commands.py`; test `tests/integration/lab/api/test_production_commands.py`.
 

@@ -59,7 +59,7 @@ Purpose: Venue parser cancellation and supported order semantics. Gap: Verify ac
 
 ## Unlocks
 
-RP-05
+RP-05, API-01
 
 ## Required Reading
 

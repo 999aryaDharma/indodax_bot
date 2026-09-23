@@ -14,6 +14,8 @@ None. Verify external gates and shared-file ownership before claim.
 
 - BASE-01 — Offline verification harness [DONE; CORE]
 - DOC-01 — Frozen architecture audit and delivery program [DONE; CORE]
+- API-00 — Shared API envelope, error, provenance and capability contracts [IN_PROGRESS; CORE]
+- UI-00 — Kumo and Geist shell foundation with typed API client [IN_PROGRESS; CORE]
 
 ## Wave 1
 
@@ -22,6 +24,7 @@ None. Verify external gates and shared-file ownership before claim.
 - BASE-04 — Exact paper accounting migration [DONE; CORE]
 - DATA-01 — Canonical market contracts [DONE; CORE]
 - RP-01 — Shared SignalIntent ownership with compatibility [DONE; CORE]
+- API-03 — Fail-closed read capability policy and audit context [PLANNED; CORE]
 
 ## Wave 2
 
@@ -29,6 +32,7 @@ None. Verify external gates and shared-file ownership before claim.
 - DATA-02 — Durable immutable publication [DONE; CORE]
 - COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
 - RW0-01 — Immutable Workbench domain manifests [DONE; CORE]
+- UI-01 — Production and Research context navigation with capability boundary [PLANNED; CORE]
 
 ## Wave 3
 
@@ -54,12 +58,14 @@ None. Verify external gates and shared-file ownership before claim.
 
 - DATA-06 — Provider-derived reproducible snapshot [DONE; CORE]
 - SIM-01 — Conservative execution simulator [REVIEW; CORE]
+- API-01 — Production service-derived read models [PLANNED; CORE]
 
 ## Wave 7
 
 - FEAT-01 — Versioned feature registry [DONE; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
 - RW1-01 — Reusable immutable dataset registry [DONE; CORE]
+- API-02 — Read-only Production API application and routes [PLANNED; CORE]
 
 ## Wave 8
 
@@ -67,6 +73,7 @@ None. Verify external gates and shared-file ownership before claim.
 - FEAT-03 — As-of market context [DONE; CORE]
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
+- UI-02 — Read-only Production operational pages [PLANNED; CORE]
 
 ## Wave 9
 

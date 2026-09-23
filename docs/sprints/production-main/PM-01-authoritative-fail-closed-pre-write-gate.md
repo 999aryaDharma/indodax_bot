@@ -58,7 +58,7 @@ Purpose: Authoritative fail-closed pre-write gate. Gap: All real writes need tru
 
 ## Unlocks
 
-PM-03, PM-04
+PM-03, PM-04, API-01
 
 ## Required Reading
 

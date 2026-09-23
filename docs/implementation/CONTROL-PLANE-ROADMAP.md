@@ -1,185 +1,42 @@
-# API, Production Main, Research Workbench, and Unified Dashboard Roadmap
+# Production API and Unified Dashboard Roadmap
 
-Classification: TARGET PLANNING. The sprint manifest remains the only status/DAG authority. The units below are a required decomposition proposal; they become claimable only after a coordinated change request adds them to `docs/sprints/sprint-manifest.json` and creates the matching sprint files.
+Classification: TARGET PLANNING. `docs/sprints/sprint-manifest.json` is the sole status and dependency authority. API/UI units become claimable only when admitted by [CR-2026-09-23](CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md) and represented by canonical sprint specs.
 
-## Why this decomposition exists
+## Current implementation boundary
 
-The existing roadmap has strong domain and safety tasks but does not provide enough executable units for the API and dashboard program. `RW8-01` and `RW8-02` currently cover Research Workbench dashboard work; they do not cover the shared API contracts, Production Main read models, production command boundary, shared frontend shell, Production screens, or cross-context security tests.
+Production Main domain primitives PM-01 through PM-04 are DONE and independently reviewed in the manifest. PM-05 and PM-06 remain PLANNED. Research Workbench RW0-01 and RW1-01 are DONE; later registry/orchestration and dashboard work remains PLANNED. CR-2026-09-23 admits API-00..03/API-02 and UI-00..02; their current status is shown only in the sprint manifest and generated projections. Existing `DESIGN.md` and `dashboard.pen` are design inputs, not backend authority.
 
-The target is one control-plane product with two authority domains:
+No API or dashboard exists yet. The target is a read-only Production API and desktop/smartphone dashboard on paper/shadow-safe defaults. The UI cannot own authoritative state. ASUS X441U is Research Runtime/shadow edge, never the Production Main execution host.
 
-```text
-One frontend shell
-├── Production context → production services, production namespace, guarded controls
-└── Research context   → research services, research namespace, evidence workflows
-```
+## Canonical MVP sprint DAG
 
-The contexts share navigation, request transport, status components, audit presentation, and visual language. They do not share credentials, persistence namespaces, write capabilities, or authority decisions.
-
-## Current status of the feature families
-
-| Family | Current reality | Official sprint authority | Next condition |
+| Sprint | Dependencies | Deliverable | Unlocks |
 |---|---|---|---|
-| Production domain | Core Python primitives exist; PM-01 review pending; PM-02–PM-06 planned | PM-01–PM-06 | Finish P0 safety tasks before guarded write controls |
-| Research domain | RW0 done; RW1 review pending; registries/orchestration still incomplete | RW0–RW9 | Finish service dependencies before mutation API |
-| Shared API contracts | Not implemented | No manifest node yet | Add `API-00` change-request node |
-| Production API | Not implemented | No manifest node yet | Add `API-01`/`API-02` nodes |
-| Research API | Not implemented | No manifest node yet | Add `API-03`/`API-04` nodes |
-| Unified frontend shell | No web frontend in source tree; `DESIGN.md` is design input | RW8-01/02 are research-only | Add UI shell and production view nodes |
-| Dashboard qualification | No browser/API boundary suite | No manifest node | Add security/isolation qualification node |
+| API-00 | — | Shared response/error/provenance/capability contracts | API-01, API-03 |
+| API-01 | API-00, PM-01, PM-02, PM-03, PM-04 | Service-derived Production read models | API-02 |
+| API-03 | API-00 | Fail-closed read capability policy and audit context | API-02, UI-01 |
+| API-02 | API-01, API-03 | FastAPI read-only Production route boundary | UI-00, UI-02 |
+| UI-00 | — | React/Vite shell foundation, Kumo components, Geist fonts, typed API client using the frozen documented route contract | UI-01 |
+| UI-01 | UI-00, API-03 | Context navigation and capability presentation boundary | UI-02 |
+| UI-02 | UI-01, API-02 | Production operations, portfolio, orders, reconciliation, risk, releases and audit views | UI-03, UI-08 |
 
-## Proposed sprint decomposition
+API-00 and UI-00 may run in parallel because UI-00 consumes the stable endpoint/type contract already frozen in the Production API plan, not API-00 source code. After API-00 is independently reviewed and DONE, API-01 and API-03 may run in parallel. Each sprint has one owner and disjoint scoped files. Review exact parallel SHAs after both implementation packets are complete; neither sprint is marked DONE before findings are resolved.
 
-These are planning IDs, not current `READY` tasks.
+Release evidence remains explicitly unavailable until the relevant source exists. API/UI must not imply PM-05 release verification, readiness-gate passage, or production authorization. The MVP has no command endpoints, order submission, withdrawals, automatic repairs, or model replacement.
 
-### API-00 — Shared API contracts and capability vocabulary
+## Visual implementation contract
 
-**Dependencies:** `RW0-01`.
+Use `@cloudflare/kumo` 2.14.0 React components for shared controls and tables; use locally bundled Vercel Geist Sans and Geist Mono WOFF2 assets under their SIL Open Font License. Keep Kumo's accessible interaction behavior while overriding visual tokens to match `DESIGN.md`: graphite canvas/surfaces, restrained semantic colors, compact density, 4–8px radii, borders before shadows, and tabular financial numbers. Do not adopt Cloudflare branding or Kumo defaults wholesale. Build only desktop and smartphone responsive layouts in this phase.
 
-**Deliverable:** Pydantic API envelope, stable errors, provenance, request context, idempotency key, decimal/UTC serialization, and capability names shared by both domains.
+## Later dependencies outside this MVP
 
-**Required tests:** malformed UTC, non-finite Decimal, unknown capability, stable error JSON, request ID propagation, and round-trip serialization.
+- Production commands: API-04 depends on the required PM safety/governance tasks and API-02; UI-03 depends on API-04 and UI-02.
+- Production event stream: API-05 depends on API-01/API-02; UI-07 consumes it.
+- Research API: RW-API-00..06 keep their Research domain dependencies (RW0/RW1/RW2/RW3/RW4/RW5/RW6/RW9 and PM-05 where required). They do not gate the Production MVP.
+- Research UI: UI-04/UI-05/UI-06 depend on the corresponding RW APIs and research services.
+- Cross-context/browser qualification: API-06 and UI-08 follow their API, UI and PM/RP security dependencies.
+- Docker, remote host setup and deployment require a separately approved Production host, runtime contract, and operational gates. Never deploy Production Main to ASUS.
 
-**Files:** `src/indodax_lab/api/contracts/common.py`, `src/indodax_lab/api/capabilities.py`, `tests/unit/lab/api/test_common_contracts.py`.
+## Admission rule
 
-**Unlocks:** `API-01`, `API-03`, shared frontend client.
-
-### API-01 — Production read models
-
-**Dependencies:** `API-00`, existing mode/OMS/ledger/reconciliation/risk/release services. PM-01 review is required before exposing authority-dependent status.
-
-**Deliverable:** Service-derived `ProductionOverview`, mode, portfolio, positions, orders, fills, ledger summary, reconciliation, risk, release, and audit read models.
-
-**Invariants:** No direct router-to-SQL; unavailable data remains unavailable; unknown metrics never become zero; every view carries `as_of`, source revision, and provenance.
-
-**Files:** `src/indodax_lab/api/services/production_read.py`, `src/indodax_lab/api/contracts/production.py`, `tests/unit/lab/api/test_production_read_models.py`.
-
-**Unlocks:** `API-02`, `UI-02`.
-
-### API-02 — Production API boundary and read routes
-
-**Dependencies:** `API-01`.
-
-**Deliverable:** FastAPI app/dependencies and `/api/v1/production/*` read routes for health, overview, portfolio, positions, orders, fills, reconciliation, risk, releases, audit, and events.
-
-**Forbidden:** Generic order submit, withdrawal, direct venue adapter resolution, model hot replacement, and direct ledger repair.
-
-**Required tests:** schema responses, decimal strings, secret redaction, route import firewall, pagination, outage behavior, and default environment with no writer instantiated.
-
-**Files:** `src/indodax_lab/api/app.py`, `src/indodax_lab/api/dependencies.py`, `src/indodax_lab/api/routers/production.py`, `tests/integration/lab/api/test_production_routes.py`.
-
-**Unlocks:** `API-05`, `UI-01`, `UI-02`.
-
-### API-03 — Research read models
-
-**Dependencies:** `API-00`, `RW1-01`, `RW2-01`, `RW2-02`, `RW2-03`.
-
-**Deliverable:** Dataset, strategy, model, pipeline, experiment, candidate, agent, tournament, Portfolio Shadow, artifact, and promotion-request read models.
-
-**Invariants:** Immutable versions expose identity/hash/parent; lifecycle status is explicit; ranking never becomes qualification; tournament and Portfolio Shadow are separate types.
-
-**Files:** `src/indodax_lab/api/services/research_read.py`, `src/indodax_lab/api/contracts/research.py`, `tests/unit/lab/api/test_research_read_models.py`.
-
-**Unlocks:** `API-04`, `UI-03`.
-
-### API-04 — Research API boundary and guarded mutations
-
-**Dependencies:** `API-03`, `RW3-01`, `RW4-01`, `RW5-01`, `RW5-02`, `RW6-01`, `RW9-01`.
-
-**Deliverable:** `/api/v1/research/*` routes for immutable registry reads, draft/clone operations, experiment lifecycle, candidate creation, agent registration, tournament controls, Portfolio Shadow, and promotion requests.
-
-**Forbidden:** `submit_real_order`, `withdraw`, `direct_promote_live`, `bypass_risk`, `bypass_production_gate`, and `hot_replace_production_model`.
-
-**Required tests:** completed experiment immutability, clone identity, dataset version immutability, agent isolation, Portfolio Shadow separation, forbidden capability rejection, and no import path to production writer.
-
-**Files:** `src/indodax_lab/api/routers/research.py`, `src/indodax_lab/api/research_policy.py`, `tests/integration/lab/api/test_research_routes.py`.
-
-**Unlocks:** `UI-01`, `UI-03`, `API-06`.
-
-### API-05 — Guarded Production commands
-
-**Dependencies:** `PM-01`, `PM-02`, `PM-03`, `PM-04`, `API-02` all independently reviewed.
-
-**Deliverable:** Explicit commands for legal mode transitions, kill-switch activation/reset, manual approval decision, and reconciliation run. Every command is authority-checked, audited, idempotent, and disabled in development/test for live writes.
-
-**Files:** `src/indodax_lab/api/contracts/commands.py`, `src/indodax_lab/api/routers/production_commands.py`, `tests/integration/lab/api/test_production_commands.py`.
-
-**Unlocks:** `UI-04`.
-
-### API-06 — Cross-context API security qualification
-
-**Dependencies:** `API-02`, `API-04`, `API-05`, `RP-05`, `PM-06`.
-
-**Deliverable:** One qualification suite proving that Research cannot reach Production authority, stale revisions reject, duplicate commands produce one effect, and browser retries do not duplicate effects.
-
-**Files:** `tests/qualification/api/test_control_plane_firewall.py`, `docs/sprints/handoffs/API-QUALIFICATION-HANDOFF.md`.
-
-### UI-01 — Shared dashboard shell and capability context
-
-**Dependencies:** `API-00`, `API-02`, `API-04`.
-
-**Deliverable:** React/TypeScript/Vite shell, typed client, `/production/*` and `/research/*` route namespaces, environment switcher, capability guard, global status strip, error/loading/blocked states.
-
-**Files:** `frontend/src/app/*`, `frontend/src/api/*`, `frontend/src/components/StatusStrip.tsx`, `frontend/src/app/CapabilityBoundary.tsx`.
-
-### UI-02 — Production operational dashboard
-
-**Dependencies:** `UI-01`, `API-02`.
-
-**Deliverable:** Production Overview, Portfolio, Positions, Orders, Reconciliation, Risk, Releases, Audit, and read-only Approval pages.
-
-**Required states:** healthy, stale market, RECOVERY, HALTED, reconciliation mismatch, unknown OMS, unavailable risk authority, unavailable release evidence.
-
-### UI-03 — Research Workbench dashboard
-
-**Dependencies:** `UI-01`, `API-04`, existing `RW8-01`/`RW8-02` scope.
-
-**Deliverable:** Dataset, Strategy, Model, Pipeline, Experiment, Backtest, Candidate, Tournament, Portfolio Shadow, and Promotion Request views.
-
-**Required behavior:** completed experiments cannot be edited; clone creates new identity; rank and qualification are separate; agent ledger isolation is visible.
-
-### UI-04 — Guarded command workflows
-
-**Dependencies:** `API-05`, `UI-02`.
-
-**Deliverable:** Mode transition, kill switch, approval decision, and reconciliation command flows with revision, actor, reason, expiry, idempotency, and backend result visible.
-
-**Forbidden:** generic order form, credential prompt, automatic balance correction, direct promotion, or live model replacement.
-
-### UI-05 — Browser and dashboard qualification
-
-**Dependencies:** `UI-02`, `UI-03`, `UI-04`, `API-06`.
-
-**Deliverable:** Browser tests for route isolation, Research/Production capability separation, stale command, duplicate click, completed experiment immutability, Tournament versus Portfolio Shadow semantics, SSE reconnect, and permission denial.
-
-## Proposed dependency graph
-
-```text
-RW0-01
-  ↓
-API-00 ───────────────┐
-  ↓                    │
-API-01 → API-02 ──────┼→ UI-01 → UI-02 → UI-04 → UI-05
-  ↓                    │     ↘ UI-03 ────────↗
-API-03 → API-04 ──────┘
-             ↓
-          API-06
-
-PM-01 → PM-02 → PM-03/PM-04 → PM-05 → PM-06
-                 └──────────────→ API-05
-```
-
-## Required manifest change before implementation
-
-The coordinator must add the proposed nodes to `docs/sprints/sprint-manifest.json`, create one canonical sprint file per node under an approved domain folder, update `00-sprint-index.md`, `01-dependency-graph.md`, `02-execution-waves.md`, `FEATURE-MAP.md`, and requirements traceability, then run `python docs/quality/validate_planning.py --self-test`.
-
-Until that change is complete:
-
-- these IDs are not `READY`;
-- no implementer may claim them through the sprint queue;
-- `RW8-01` and `RW8-02` remain the only official dashboard nodes;
-- the existing PM/RW/RP dependencies retain priority.
-
-## Cheap-model handoff rule
-
-Give the implementer exactly one ID, its sprint file, this roadmap, the required-reading list, and the affected source paths. The implementer must not choose a different API framework, add a database, split into microservices, or combine Production and Research routes. If the required dependency is not `DONE`, stop with `BLOCKED` and report the exact manifest status.
+Until canonical sprint specs are admitted to the manifest and all projections validate, these IDs are planning only. A sprint is claimable only when the manifest marks it READY and every declared dependency is DONE. Structural READY does not qualify data, a release, a host, or real-money activation.

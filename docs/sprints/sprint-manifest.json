@@ -9358,7 +9358,8 @@
       "current_context": "Pipeline conditionally checks reconciliation; manual execution defaults missing capital.",
       "unlocks": [
         "PM-03",
-        "PM-04"
+        "PM-04",
+        "API-01"
       ],
       "requirements": [
         "FR-23"
@@ -9456,7 +9457,8 @@
       "unlocks": [
         "PM-03",
         "PM-04",
-        "RP-04"
+        "RP-04",
+        "API-01"
       ],
       "requirements": [
         "FR-23"
@@ -9558,7 +9560,8 @@
       ],
       "current_context": "Optional mode/kill/throttle persistence and reset health defaults permit weak paths.",
       "unlocks": [
-        "PM-05"
+        "PM-05",
+        "API-01"
       ],
       "requirements": [
         "FR-23"
@@ -9652,7 +9655,8 @@
       ],
       "current_context": "Read/write parser reuse and inconclusive-cancel exception already present.",
       "unlocks": [
-        "RP-05"
+        "RP-05",
+        "API-01"
       ],
       "requirements": [
         "FR-23"
@@ -10960,6 +10964,571 @@
       ],
       "risk_level": "high",
       "complexity": "M"
+    },
+    {
+      "id": "API-00",
+      "title": "Shared API envelope, error, provenance and capability contracts",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [],
+      "goal": "Define stable typed contracts for safe Production and later Research API consumers.",
+      "contract": "ApiEnvelope carries request_id, aware UTC as_of, source_revision, status, data and provenance. ApiError uses stable code/message/retryable/details. Decimal serializes as a string. Capability vocabulary is typed and unknown names reject.",
+      "checks": [
+        "Naive UTC timestamps reject and aware timestamps round-trip",
+        "Non-finite Decimal rejects and finite Decimal serializes as a string",
+        "Unknown capability and malformed envelopes reject predictably"
+      ],
+      "files": [
+        "src/indodax_lab/api/__init__.py",
+        "src/indodax_lab/api/contracts/common.py",
+        "src/indodax_lab/api/capabilities.py",
+        "tests/unit/lab/api/test_common_contracts.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/CONTRACTS.md",
+      "path": "docs/sprints/production-main/API-00-shared-api-envelope-error-provenance-and-capability-contracts.md",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "implementation_owner": "/root/api00_backend",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer",
+      "recommended_branch": "feat/api-00-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [
+        "API-01",
+        "API-03"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/main/SOP-AND-GATES.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-production-api-plan.md",
+        "docs/superpowers/plans/2026-09-22-control-plane-program-plan.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-00-AC0",
+          "test_case": "test_api_00_0",
+          "behavior": "Naive UTC timestamps reject and aware timestamps round-trip",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-00-AC1",
+          "test_case": "test_api_00_1",
+          "behavior": "Non-finite Decimal rejects and finite Decimal serializes as a string",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-00-AC2",
+          "test_case": "test_api_00_2",
+          "behavior": "Unknown capability and malformed envelopes reject predictably",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "L",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "API-01",
+      "title": "Production service-derived read models",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "API-00",
+        "PM-01",
+        "PM-02",
+        "PM-03",
+        "PM-04"
+      ],
+      "goal": "Expose immutable Production read snapshots assembled from authoritative domain services.",
+      "contract": "ProductionReadService.snapshot returns typed overview/mode/portfolio/positions/orders/fills/reconciliation/risk/release/audit views with UTC as_of, source_revision and provenance. Missing/stale sources remain UNAVAILABLE or UNKNOWN, never numeric zero.",
+      "checks": [
+        "Unknown positions/risk/reconciliation stay explicit and never become zero",
+        "Read snapshots expose source revision and UTC as_of for every authority-backed resource",
+        "PM-05 release evidence remains UNAVAILABLE until authoritative verified evidence exists"
+      ],
+      "files": [
+        "src/indodax_lab/api/services/production_read.py",
+        "src/indodax_lab/api/contracts/production.py",
+        "tests/unit/lab/api/test_production_read_models.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/CONTRACTS.md",
+      "path": "docs/sprints/production-main/API-01-production-service-derived-read-models.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/api-01-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [
+        "API-02"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/main/SOP-AND-GATES.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-production-api-plan.md",
+        "docs/superpowers/plans/2026-09-22-control-plane-program-plan.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-01-AC0",
+          "test_case": "test_api_01_0",
+          "behavior": "Unknown positions/risk/reconciliation stay explicit and never become zero",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-01-AC1",
+          "test_case": "test_api_01_1",
+          "behavior": "Read snapshots expose source revision and UTC as_of for every authority-backed resource",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-01-AC2",
+          "test_case": "test_api_01_2",
+          "behavior": "PM-05 release evidence remains UNAVAILABLE until authoritative verified evidence exists",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "API-03",
+      "title": "Fail-closed read capability policy and audit context",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "API-00"
+      ],
+      "goal": "Require explicit request identity and production.read capability before serving sensitive operational data.",
+      "contract": "RequestContext binds request ID, principal, capability and timestamp. Missing/anonymous identity receives a stable denial; development/test actors are injected explicitly. This sprint grants no Production writes or Research mutations.",
+      "checks": [
+        "Missing principal/capability is denied without resolving production services",
+        "Research capability never satisfies production.read",
+        "Each allow/deny decision records request ID, actor class, capability and reason without secrets"
+      ],
+      "files": [
+        "src/indodax_lab/api/auth.py",
+        "src/indodax_lab/api/audit.py",
+        "src/indodax_lab/api/dependencies.py",
+        "tests/unit/lab/api/test_capability_policy.py",
+        "tests/integration/lab/api/test_api_audit.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/CONTRACTS.md",
+      "path": "docs/sprints/production-main/API-03-fail-closed-read-capability-policy-and-audit-context.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/api-03-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [
+        "API-02",
+        "UI-01"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/main/SOP-AND-GATES.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-production-api-plan.md",
+        "docs/superpowers/plans/2026-09-22-control-plane-program-plan.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-03-AC0",
+          "test_case": "test_api_03_0",
+          "behavior": "Missing principal/capability is denied without resolving production services",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-03-AC1",
+          "test_case": "test_api_03_1",
+          "behavior": "Research capability never satisfies production.read",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-03-AC2",
+          "test_case": "test_api_03_2",
+          "behavior": "Each allow/deny decision records request ID, actor class, capability and reason without secrets",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "API-02",
+      "title": "Read-only Production API application and routes",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "API-01",
+        "API-03"
+      ],
+      "goal": "Expose Production read models through a capability-protected HTTP API with no write authority.",
+      "contract": "FastAPI /api/v1/production endpoints delegate to ProductionReadService, require production.read, paginate stable lists and return common envelopes. App construction defaults to non-writing modes and never resolves IndodaxTradingVenue.",
+      "checks": [
+        "Every route requires read capability and serializes Decimal/UTC/provenance contracts",
+        "Router/import graph cannot resolve the write venue or any POST order/withdraw/repair route",
+        "Unavailable services return explicit safe state and outage responses"
+      ],
+      "files": [
+        "src/indodax_lab/api/app.py",
+        "src/indodax_lab/api/dependencies.py",
+        "src/indodax_lab/api/routers/production.py",
+        "tests/integration/lab/api/test_production_routes.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/CONTRACTS.md",
+      "path": "docs/sprints/production-main/API-02-read-only-production-api-application-and-routes.md",
+      "priority": "P0",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/api-02-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [
+        "UI-02"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/main/SOP-AND-GATES.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-production-api-plan.md",
+        "docs/superpowers/plans/2026-09-22-control-plane-program-plan.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-02-AC0",
+          "test_case": "test_api_02_0",
+          "behavior": "Every route requires read capability and serializes Decimal/UTC/provenance contracts",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-02-AC1",
+          "test_case": "test_api_02_1",
+          "behavior": "Router/import graph cannot resolve the write venue or any POST order/withdraw/repair route",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-02-AC2",
+          "test_case": "test_api_02_2",
+          "behavior": "Unavailable services return explicit safe state and outage responses",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "UI-00",
+      "title": "Kumo and Geist shell foundation with typed API client",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [],
+      "goal": "Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.",
+      "contract": "React/TypeScript/Vite uses @cloudflare/kumo 2.14.0 accessible components, local Vercel Geist Sans/Mono WOFF2 assets and DESIGN.md tokens. Client preserves Decimal strings, request IDs and stable errors; no secret persistence.",
+      "checks": [
+        "Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens",
+        "Kumo controls use graphite product tokens rather than default branded colors",
+        "Typed client preserves Decimal strings and distinguishes unavailable/error/empty states"
+      ],
+      "files": [
+        "frontend/package.json",
+        "frontend/package-lock.json",
+        "frontend/tsconfig.json",
+        "frontend/vite.config.ts",
+        "frontend/src/main.tsx",
+        "frontend/src/app/App.tsx",
+        "frontend/src/api/client.ts",
+        "frontend/src/api/types.ts",
+        "frontend/src/styles/tokens.css",
+        "frontend/src/assets/fonts/",
+        "frontend/src/api/client.test.ts"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "DESIGN.md",
+      "path": "docs/sprints/production-main/UI-00-kumo-and-geist-shell-foundation-with-typed-api-client.md",
+      "priority": "P1",
+      "status": "IN_PROGRESS",
+      "implementation_owner": "/root",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer",
+      "recommended_branch": "feat/ui-00-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "UI-00 shell and typed API client are implemented in this workspace; production API routes are not yet available. Desktop visual inspection completed; smartphone layout is implemented and awaits independent review.",
+      "unlocks": [
+        "UI-01"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-unified-dashboard-plan.md",
+        "DESIGN.md",
+        "dashboard.pen",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "UI-00-AC0",
+          "test_case": "test_ui_00_0",
+          "behavior": "Shell renders at desktop workstation and smartphone widths using DESIGN.md layout tokens",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-00-AC1",
+          "test_case": "test_ui_00_1",
+          "behavior": "Kumo controls use graphite product tokens rather than default branded colors",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-00-AC2",
+          "test_case": "test_ui_00_2",
+          "behavior": "Typed client preserves Decimal strings and distinguishes unavailable/error/empty states",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "L",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "UI-01",
+      "title": "Production and Research context navigation with capability boundary",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "UI-00",
+        "API-03"
+      ],
+      "goal": "Keep Production and Research route contexts distinct and reflect backend capability decisions safely.",
+      "contract": "Shared shell labels current context and capability. Route namespaces remain /production/* and /research/*; the UI guard is presentation only and never substitutes for API authorization.",
+      "checks": [
+        "Unknown/denied capability displays a blocked state and exposes no Production control affordance",
+        "Changing route context cannot reuse a Production capability in Research or vice versa",
+        "Navigation remains grouped and usable on desktop and smartphone"
+      ],
+      "files": [
+        "frontend/src/app/Shell.tsx",
+        "frontend/src/app/ContextSwitcher.tsx",
+        "frontend/src/app/CapabilityBoundary.tsx",
+        "frontend/src/components/StatusStrip.tsx",
+        "frontend/src/app/CapabilityBoundary.test.tsx"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "DESIGN.md",
+      "path": "docs/sprints/production-main/UI-01-production-and-research-context-navigation-with-capability-boundary.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ui-01-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [
+        "UI-02"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-unified-dashboard-plan.md",
+        "DESIGN.md",
+        "dashboard.pen",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "UI-01-AC0",
+          "test_case": "test_ui_01_0",
+          "behavior": "Unknown/denied capability displays a blocked state and exposes no Production control affordance",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-01-AC1",
+          "test_case": "test_ui_01_1",
+          "behavior": "Changing route context cannot reuse a Production capability in Research or vice versa",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-01-AC2",
+          "test_case": "test_ui_01_2",
+          "behavior": "Navigation remains grouped and usable on desktop and smartphone",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+    },
+    {
+      "id": "UI-02",
+      "title": "Read-only Production operational pages",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "UI-01",
+        "API-02"
+      ],
+      "goal": "Render operational truth, authoritative state and failure context through read-only Production pages.",
+      "contract": "Overview, Portfolio, Positions, Orders, Reconciliation, Risk, Releases and Audit pages consume typed API data only. No write, repair or promotion controls appear.",
+      "checks": [
+        "HALTED/RECOVERY/UNKNOWN/mismatch/stale/unavailable remain prominent and text-labeled",
+        "Tables align numeric values and expose provenance without rendering unknown metrics as zero",
+        "Pages remain legible at desktop and smartphone widths with semantic order preserved"
+      ],
+      "files": [
+        "frontend/src/features/production/OverviewPage.tsx",
+        "frontend/src/features/production/PortfolioPage.tsx",
+        "frontend/src/features/production/PositionsPage.tsx",
+        "frontend/src/features/production/OrdersPage.tsx",
+        "frontend/src/features/production/ReconciliationPage.tsx",
+        "frontend/src/features/production/RiskPage.tsx",
+        "frontend/src/features/production/ReleasesPage.tsx",
+        "frontend/src/features/production/AuditPage.tsx"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "DESIGN.md",
+      "path": "docs/sprints/production-main/UI-02-read-only-production-operational-pages.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ui-02-production-control-plane",
+      "external_gates": [
+        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+      ],
+      "current_context": "No web API/frontend implementation exists; domain services and frozen contracts are authoritative.",
+      "unlocks": [],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/implementation/CHANGE-REQUEST-PRODUCTION-CONTROL-PLANE.md",
+        "docs/implementation/CONTROL-PLANE-ROADMAP.md",
+        "docs/superpowers/plans/2026-09-22-unified-dashboard-plan.md",
+        "DESIGN.md",
+        "dashboard.pen",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "UI-02-AC0",
+          "test_case": "test_ui_02_0",
+          "behavior": "HALTED/RECOVERY/UNKNOWN/mismatch/stale/unavailable remain prominent and text-labeled",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-02-AC1",
+          "test_case": "test_ui_02_1",
+          "behavior": "Tables align numeric values and expose provenance without rendering unknown metrics as zero",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-02-AC2",
+          "test_case": "test_ui_02_2",
+          "behavior": "Pages remain legible at desktop and smartphone widths with semantic order preserved",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
     }
   ],
   "readiness_rule": "All dependencies DONE; external activation and review gates remain separate."

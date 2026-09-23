@@ -6,11 +6,13 @@
 
 **Architecture:** React/TypeScript/Vite frontend with route namespaces `/production/*` and `/research/*`. Shared navigation, authentication context, request client, status strip, audit drawer, and error presentation are reused. Production and Research pages use separate API clients and capability guards.
 
-**Tech Stack:** React, TypeScript, Vite, existing design input in `DESIGN.md`, API schemas from the Production and Research API plans, Playwright or the repository's approved browser test tool only if already available.
+**Tech Stack:** React, TypeScript, Vite, Cloudflare `@cloudflare/kumo` 2.14.0 components, locally hosted Vercel Geist Sans/Mono, existing design input in `DESIGN.md`, API schemas from the Production and Research API plans, Playwright or the repository's approved browser test tool only if already available.
 
-**Spec:** `DESIGN.md` as visual input, frozen Production Main/Research Workbench documents as behavior authority, and the three control-plane plans.
+**Spec:** `DESIGN.md` as the design-system and behavior input, `dashboard.pen` as the visual prototype reference for corresponding frames, frozen Production Main/Research Workbench documents as authority, and the three control-plane plans. UI implementers must inspect the relevant Pencil frames before building their pages and preserve the prototype's intended hierarchy while applying the DESIGN.md tokens.
 
 ## Route map
+
+Kumo supplies accessible React controls and interaction primitives. Apply the graphite colors, density, typography scale, radii, borders and spacing from `DESIGN.md` over Kumo defaults; do not reproduce Cloudflare product branding. Load Geist Sans/Mono as self-hosted WOFF2 assets with the upstream SIL Open Font License. Responsive targets in this phase are desktop and smartphone.
 
 ```text
 /                         redirect to /overview
@@ -43,7 +45,9 @@ The shared shell must always display current context (`PRODUCTION` or `RESEARCH`
 
 ### UI-00 — Frontend shell and typed API client
 
-**Files:** Create `frontend/package.json`, `frontend/tsconfig.json`, `frontend/vite.config.ts`, `frontend/src/main.tsx`, `frontend/src/app/router.tsx`, `frontend/src/api/client.ts`, `frontend/src/api/types.ts`; test `frontend/src/api/client.test.ts`.
+**Dependencies:** None. The route paths and response types are frozen in the Production API plan, so shell/client work can proceed in parallel with API-00.
+
+**Files:** Create `frontend/package.json`, `frontend/package-lock.json`, `frontend/tsconfig.json`, `frontend/vite.config.ts`, `frontend/src/main.tsx`, `frontend/src/app/App.tsx`, `frontend/src/api/client.ts`, `frontend/src/api/types.ts`, `frontend/src/styles/tokens.css`, `frontend/src/assets/fonts/`; test `frontend/src/api/client.test.ts`.
 
 Use one typed request client with:
 
@@ -53,6 +57,7 @@ Use one typed request client with:
 - stable error rendering from `ApiError`;
 - no token or secret persistence in local storage;
 - explicit environment base URL.
+- Kumo 2.14.0 components use product CSS tokens from `DESIGN.md`; Geist fonts are bundled locally, not fetched at runtime.
 
 ### UI-01 — Context navigation and capability guards
 
@@ -63,6 +68,8 @@ Production and Research remain visually distinct but share typography, spacing, 
 ### UI-02 — Production operational views
 
 **Dependencies:** API-01/API-02.
+
+The Production view sprint also depends on UI-01 so route namespace and capability presentation are already present.
 
 **Files:** Create `frontend/src/features/production/OverviewPage.tsx`, `PortfolioPage.tsx`, `OrdersPage.tsx`, `ReconciliationPage.tsx`, `RiskPage.tsx`, `ApprovalsPage.tsx`, `ReleasesPage.tsx`, `AuditPage.tsx`; tests under `frontend/src/features/production/*.test.tsx`.
 
