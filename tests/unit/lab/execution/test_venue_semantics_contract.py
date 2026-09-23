@@ -272,11 +272,11 @@ def test_pm_04_1(tmp_path: Path) -> None:
         pair="btc_idr",
         side=OrderSide.BUY,
         order_type="limit",
-        status="WEIRD_UNHANDLED_STATUS",
-        price=Decimal("500000000"),
-        original_qty=Decimal("1.0"),
-        executed_qty=Decimal("0.5"),
-        remaining_qty=Decimal("0.5"),
+            status="WEIRD_UNHANDLED_STATUS",
+            price=Decimal("500000000"),
+            original_qty=Decimal("1.0"),
+            executed_qty=Decimal("0"),
+            remaining_qty=Decimal("1.0"),
         submitted_at=_T0,
     )
     router_with_weird = OrderRouter(oms_store=oms_store, venue=mock_venue_unknown)
@@ -288,7 +288,7 @@ def test_pm_04_1(tmp_path: Path) -> None:
     assert current_stored is not None
     assert current_stored.state == OmsOrderState.UNKNOWN
 
-    # A conclusive cancelled lookup must carry any fill discovered during recovery.
+    # A cancelled lookup with unseen fills remains UNKNOWN until trade history supplies prices.
     mock_venue_unknown.get_order.return_value = VenueOrder(
         order_id="v_ord_01",
         client_order_id="cl_ord_01",
@@ -302,10 +302,9 @@ def test_pm_04_1(tmp_path: Path) -> None:
         remaining_qty=Decimal("0.6"),
         submitted_at=_T0,
     )
-    recovered = router_with_weird.resolve_unknown_order(routed_order)
-    assert recovered.state == OmsOrderState.CANCELLED
-    assert recovered.filled_qty == Decimal("0.4")
-    assert oms_store.load_order(routed_order.internal_order_id).filled_qty == Decimal("0.4")
+    with pytest.raises(UnresolvedOrderStateError, match="FILL_HISTORY_REQUIRED"):
+        router_with_weird.resolve_unknown_order(routed_order)
+    assert oms_store.load_order(routed_order.internal_order_id).state == OmsOrderState.UNKNOWN
 
 
 # =========================================================================
@@ -357,10 +356,25 @@ def test_pm_04_2(tmp_path: Path) -> None:
     mock_venue.cancel_order.return_value = partial_venue_order
 
     cancelled_order = router.cancel_order(ack_order)
-    assert cancelled_order.state == OmsOrderState.CANCELLED
-    # Critical invariant: must preserve 0.4 executed fill, NEVER invent 0.0 fill
-    assert cancelled_order.filled_qty == Decimal("0.4")
-    assert cancelled_order.average_fill_price == Decimal("500000000")
+    assert cancelled_order.state == OmsOrderState.UNKNOWN
+    assert cancelled_order.filled_qty == Decimal("0")
+    assert cancelled_order.average_fill_price is None
+
+    # Trade history, not the limit price, supplies the authoritative execution VWAP.
+    partial_fill = OmsStateMachine.transition(
+        cancelled_order,
+        OmsOrderState.PARTIALLY_FILLED,
+        at=cancelled_order.updated_at,
+        filled_qty=Decimal("0.4"),
+        average_fill_price=Decimal("499000000"),
+        reason="VENUE_FILL_INGESTED:test_fill",
+    )
+    oms_store.apply_transition(cancelled_order, partial_fill, event_id="evt_fill_race_1")
+    mock_venue.get_order.return_value = partial_venue_order
+    cancelled_with_fill = router.resolve_unknown_order(partial_fill)
+    assert cancelled_with_fill.state == OmsOrderState.CANCELLED
+    assert cancelled_with_fill.filled_qty == Decimal("0.4")
+    assert cancelled_with_fill.average_fill_price == Decimal("499000000")
 
     # 2. Full fill race: order desired_qty=1.0. Completely filled before cancel took effect.
     initial_order_2 = _make_order(
@@ -400,8 +414,9 @@ def test_pm_04_2(tmp_path: Path) -> None:
     mock_venue.cancel_order.return_value = full_fill_venue_order
 
     filled_order = router.cancel_order(ack_order_2)
-    assert filled_order.state == OmsOrderState.FILLED
-    assert filled_order.filled_qty == Decimal("1.0")
+    assert filled_order.state == OmsOrderState.UNKNOWN
+    assert filled_order.filled_qty == Decimal("0")
+    assert filled_order.average_fill_price is None
 
     # Cancel ACK followed by an open venue order is not a confirmed cancellation.
     initial_order_3 = _make_order("int_race_3", "cl_race_3")
@@ -427,12 +442,25 @@ def test_pm_04_2(tmp_path: Path) -> None:
     )
     unresolved = router.cancel_order(ack_order_3)
     assert unresolved.state == OmsOrderState.UNKNOWN
-    assert unresolved.filled_qty == Decimal("0.4")
+    assert unresolved.filled_qty == Decimal("0")
+    assert unresolved.average_fill_price is None
     assert oms_store.load_order(ack_order_3.internal_order_id).state == OmsOrderState.UNKNOWN
     mock_venue.get_order.return_value = mock_venue.cancel_order.return_value
-    resolved_open = router.resolve_unknown_order(unresolved)
+    with pytest.raises(UnresolvedOrderStateError, match="FILL_HISTORY_REQUIRED"):
+        router.resolve_unknown_order(unresolved)
+    partial_after_ingestion = OmsStateMachine.transition(
+        unresolved,
+        OmsOrderState.PARTIALLY_FILLED,
+        at=unresolved.updated_at,
+        filled_qty=Decimal("0.4"),
+        average_fill_price=Decimal("499000000"),
+        reason="VENUE_FILL_INGESTED:test_fill_open",
+    )
+    oms_store.apply_transition(unresolved, partial_after_ingestion, event_id="evt_fill_open")
+    resolved_open = router.resolve_unknown_order(partial_after_ingestion)
     assert resolved_open.state == OmsOrderState.PARTIALLY_FILLED
     assert resolved_open.filled_qty == Decimal("0.4")
+    assert resolved_open.average_fill_price == Decimal("499000000")
 
 
 # =========================================================================
@@ -493,13 +521,13 @@ def test_pm_04_3(tmp_path: Path) -> None:
     ("status", "executed_qty", "expected_state"),
     [
         ("NEW", Decimal("0"), OmsOrderState.ACKNOWLEDGED),
-        ("PARTIALLY_FILLED", Decimal("0.4"), OmsOrderState.PARTIALLY_FILLED),
+        ("PARTIALLY_FILLED", Decimal("0.4"), None),
     ],
 )
 def test_pm_04_resolves_v2_active_statuses(
     status: str,
     executed_qty: Decimal,
-    expected_state: OmsOrderState,
+    expected_state: OmsOrderState | None,
 ) -> None:
     order = _make_order("int_v2", "cl_v2", state=OmsOrderState.UNKNOWN).model_copy(
         update={"venue_order_id": "v_v2"}
@@ -520,7 +548,12 @@ def test_pm_04_resolves_v2_active_statuses(
         submitted_at=_T0,
     )
 
-    resolved = OrderRouter(oms_store=oms_store, venue=venue).resolve_unknown_order(order)
-
-    assert resolved.state == expected_state
-    assert resolved.filled_qty == executed_qty
+    router = OrderRouter(oms_store=oms_store, venue=venue)
+    if expected_state is None:
+        with pytest.raises(UnresolvedOrderStateError, match="FILL_HISTORY_REQUIRED"):
+            router.resolve_unknown_order(order)
+        oms_store.apply_transition.assert_not_called()
+    else:
+        resolved = router.resolve_unknown_order(order)
+        assert resolved.state == expected_state
+        assert resolved.filled_qty == executed_qty
