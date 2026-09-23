@@ -9,7 +9,7 @@ Status: REVIEW
 - Branch / worktree: `docs/architecture-runtime-plan`
 - Base SHA: `5229f4f`
 - Code target: `feat(pm-04): venue parser cancellation and supported order semantics`
-- Code SHA: PENDING
+- Code SHA: `692157d`
 
 ## Implementation Summary
 
@@ -38,10 +38,10 @@ Verified internal type mapping, supported LIMIT/TIF semantics, and cancel/partia
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| PM-04-AC0 (GREEN) | `test_pm_04_0` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_0` | Exit 0 (Passed, original equals executed plus remaining in declared units; inconsistent quantities rejected) | PENDING |
-| PM-04-AC1 (GREEN) | `test_pm_04_1` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_1` | Exit 0 (Passed, cancel acknowledgement plus inconclusive lookup stays UNKNOWN; unhandled status raises UnresolvedOrderStateError) | PENDING |
-| PM-04-AC2 (GREEN) | `test_pm_04_2` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_2` | Exit 0 (Passed, partial fill or full fill during cancel race preserves executed quantity, never invents zero fill) | PENDING |
-| PM-04-AC3 (GREEN) | `test_pm_04_3` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_3` | Exit 0 (Passed, unsupported order types and TIFs rejected before transport with 0 HTTP calls) | PENDING |
+| PM-04-AC0 (GREEN) | `test_pm_04_0` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_0` | Exit 0 (Passed, original equals executed plus remaining in declared units; inconsistent quantities rejected) | `692157d` |
+| PM-04-AC1 (GREEN) | `test_pm_04_1` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_1` | Exit 0 (Passed, cancel acknowledgement plus inconclusive lookup stays UNKNOWN; unhandled status raises UnresolvedOrderStateError) | `692157d` |
+| PM-04-AC2 (GREEN) | `test_pm_04_2` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_2` | Exit 0 (Passed, partial fill or full fill during cancel race preserves executed quantity, never invents zero fill) | `692157d` |
+| PM-04-AC3 (GREEN) | `test_pm_04_3` | `pytest tests/unit/lab/execution/test_venue_semantics_contract.py::test_pm_04_3` | Exit 0 (Passed, unsupported order types and TIFs rejected before transport with 0 HTTP calls) | `692157d` |
 
 Focused suite: 4 passed in 0.89s.
 Full test suite: 990 passed, 2 skipped, 3 warnings in 31.07s.
