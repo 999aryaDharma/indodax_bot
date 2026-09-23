@@ -77,7 +77,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 - EVAL-01 — Immutable experiment registry [REVIEW; CORE]
 - LABEL-01 — Execution-aligned net return labels [REVIEW; CORE]
-- LOB-01 — Forward book dataset eligibility [REVIEW; EXPERIMENTAL]
+- LOB-01 — Forward book dataset eligibility [DONE; EXPERIMENTAL]
 - STRAT-01 — Declarative strategy protocol [REVIEW; CORE]
 
 ## Wave 11

@@ -3455,9 +3455,9 @@
       "spec": "docs/specs/16-order-book-research.md",
       "path": "docs/sprints/microstructure/LOB-01-forward-book-dataset-eligibility.md",
       "priority": "P2",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex /root (LOB-01 review remediation)",
+      "independent_reviewer": "Codex independent reviewer agent /root/cost01_independent_review (PASS on exact code SHA 72c72ce09afe7a21c0d8c11872367c7d27f72783)",
       "recommended_branch": "feat/lob-01-forward-book-dataset-eligibility",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -3481,10 +3481,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/LOB-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "72c72ce09afe7a21c0d8c11872367c7d27f72783",
+        "code_target": "72c72ce09afe7a21c0d8c11872367c7d27f72783",
+        "review": "Independent PASS on exact code SHA 72c72ce09afe7a21c0d8c11872367c7d27f72783. Review verified per-pair/per-day PASS coverage, required book session identity, pair/session/time/sequence gap isolation, timestamp/sequence ordering, and valid non-empty uncrossed sorted depth. Focused reviewer suite 9 passed; owner focused LOB suite 17 passed; full suite 1014 passed, 2 platform-specific skips, 3 existing sklearn warnings. Real forward-data and Lenovo resource activation gates remain separate."
       },
       "acceptance_test_mapping": [
         {
@@ -3516,13 +3517,13 @@
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "Code and mapped tests independently reviewed on exact code SHA; real forward LOB data and Lenovo resource admission remain external activation gates.",
       "recovery": {
-        "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "source_spec_status": "REVIEW",
+        "source_sha": "72c72ce09afe7a21c0d8c11872367c7d27f72783",
+        "source_spec_status": "DONE",
         "intact_manifest_record": true,
-        "basis": "Implementation handoff exists; independent PASS not established in this recovery.",
-        "confidence": "reconstructed-not-approved"
+        "basis": "Scoped remediation passed independent review on the exact code SHA; real-data activation evidence remains distinct from implementation DONE.",
+        "confidence": "independently-reviewed"
       }
     },
     {

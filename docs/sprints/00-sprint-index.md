@@ -38,7 +38,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | DATA-06 | Provider-derived reproducible snapshot | market-data | P0 | quality | BASE-06, UNIV-01, BAR-01 | DONE | [Spec](market-data\DATA-06-provider-derived-reproducible-snapshot.md) |
 | L01-01 | DeepLOB baseline | microstructure | P2 | research | LOB-01, D01-01 | REVIEW | [Spec](microstructure\L01-01-deeplob-baseline.md) |
 | L02-01 | TLOB style challenger | microstructure | P2 | research | L01-01 | REVIEW | [Spec](microstructure\L02-01-tlob-style-challenger.md) |
-| LOB-01 | Forward book dataset eligibility | microstructure | P2 | data | DATA-06, FEAT-04 | REVIEW | [Spec](microstructure\LOB-01-forward-book-dataset-eligibility.md) |
+| LOB-01 | Forward book dataset eligibility | microstructure | P2 | data | DATA-06, FEAT-04 | DONE | [Spec](microstructure\LOB-01-forward-book-dataset-eligibility.md) |
 | M01-01 | Calibrated logistic baseline | models | P0 | research | ML-03 | REVIEW | [Spec](models\M01-01-calibrated-logistic-baseline.md) |
 | M02-01 | XGBoost challenger | models | P0 | research | ML-03, M01-01 | REVIEW | [Spec](models\M02-01-xgboost-challenger.md) |
 | M03-01 | Random forest regime gate | models | P1 | research | ML-04 | REVIEW | [Spec](models\M03-01-random-forest-regime-gate.md) |
