@@ -1,5 +1,46 @@
 # COST-01 handoff
 
+## Recovery audit addendum (2026-09-23)
+
+The provenance section below is retained as historical source evidence; its claims
+are not accepted as current verification. Current audited implementation is on
+`fix/feat-01-immutable-params` at code SHA
+`627a74c994f29ecffd6e8270a1c459d731c7acd8` (base cost remediation
+`a42b242b99c286911c5968ea2f59ce932387ebac`). COST-01 remains REVIEW.
+
+- Corrected handoff's invalid historical code SHA: original implementation is
+  `9c9504fc113e79488c73258f6cc93e04fdd56f46`; historical SHA was not used as fresh
+  test evidence.
+- `lookup_cost` uses `fee_basis_ts`; limit orders bind fees at decision/order-creation
+  time, market orders at execution time. Execution, replay sizing, labels, and
+  paper/shadow callers have been migrated. Unverified fee schedules block lookup;
+  labels exclude those samples.
+- Canonical config contains 28 intervals, all `evidence_verified: false`. Fee-source
+  evidence is still incomplete, so this config cannot support fee claims or
+  promotion. The reviewer independently verified fail-closed behavior on the exact
+  code SHA; the external evidence blocker still prevents a status transition.
+- TDD: resting-limit boundary test failed before caller migration (`event_ts`
+  unexpected keyword); passed after. Unverified-label exclusion test also passes.
+- Verification on this exact code SHA: `C:\Users\User\miniconda3\envs\ML\python.exe
+  -m pytest -q -p no:cacheprovider` → 998 passed, 2 skipped (Linux `/proc` resource
+  smoke and Windows symlink privilege), 3 sklearn `OptimizeWarning`s. Focused COST /
+  execution / label / paper suite → 48 passed. `rtk ruff check` on `costs.py` and
+  `test_cost_schedule.py` passed; broader touched legacy modules have pre-existing
+  lint debt. `git diff --check` passed.
+- Independent exact-SHA review: PASS for code/spec quality, no Critical or Important
+  findings, by `/root/cost01_independent_review`; targeted reviewer run 11 passed.
+  Reviewer did not rerun full suite; full-suite result above is owner evidence. See
+  `COST-01-REVIEW.md`.
+- External blocker: authoritative, complete fee matrix and effective boundaries
+  remain unverified. Do not mark DONE, do not use live fees, and do not enable live
+  trading. Public Indodax guidance directs members to the authenticated profile for
+  maker/taker buy/sell fee details ([fee menu](https://help.indodax.com/hc/en-us/articles/40043754266265-Where-can-I-find-the-Indodax-Trading-Fee-menu));
+  its public fee page documents the tax change and limit-order fee timing
+  ([transaction fees](https://help.indodax.com/hc/en-us/articles/4416646599705-Details-of-Transaction-Fees-on-INDODAX)),
+  and the public CFX rate change ([CFX update](https://blog.indodax.com/penurunan-biaya-cfx/)).
+  These public sources do not disclose the complete account-applicable trading-fee
+  matrix for all historical intervals; historical fixtures cannot fill that gap.
+
 Status: REVIEW
 
 ## Identity

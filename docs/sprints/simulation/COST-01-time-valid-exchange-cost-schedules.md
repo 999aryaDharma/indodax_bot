@@ -75,6 +75,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 2. **COST-01-FR2:** Boundary end memilih interval berikutnya.
 3. **COST-01-FR3:** Periode unknown tidak memakai fee hari ini.
 4. **COST-01-FR4:** Schedule dengan bukti sumber belum diverifikasi gagal tertutup.
+5. **COST-01-FR5:** Resting limit order memakai jadwal fee saat order dibuat, walau fill terjadi setelah batas perubahan.
 
 ## Domain Rules / Invariants
 
@@ -198,6 +199,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **COST-01-AC2** Boundary end memilih interval berikutnya. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **COST-01-AC3** Periode unknown tidak memakai fee hari ini. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **COST-01-AC4** Interval tanpa bukti terverifikasi ditolak. Evidence: canonical config lookup raises `UNVERIFIED_COST_SCHEDULE`.
+- [ ] **COST-01-AC5** Resting limit order memakai jadwal fee saat order dibuat, walau fill terjadi setelah batas perubahan. Evidence: boundary fixture resolves the creation-time interval.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

@@ -5570,8 +5570,10 @@
         "DATA-01"
       ],
       "goal": "Lookup fee memilih schedule historis yang tepat atau memblokir klaim promosi.",
-      "contract": "market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).",
+      "contract": "market, side, role, fee_basis_ts -> service/tax/exchange components and min notional with sources; limit orders use creation time, market orders execution time; [valid_from,valid_to). Unverified evidence blocks resolution.",
       "checks": [
+        "Independent expected fee values and canonical unverified schedules fail closed",
+        "Resting limit order retains fee schedule active at order creation",
         "Overlap schedule key sama ditolak",
         "Boundary end memilih interval berikutnya",
         "Periode unknown tidak memakai fee hari ini"
@@ -5579,7 +5581,14 @@
       "files": [
         "configs/costs/indodax_idr_v1.yaml",
         "src/indodax_lab/backtest/costs.py",
-        "tests/unit/lab/backtest/test_cost_schedule.py"
+        "src/indodax_lab/backtest/execution.py",
+        "src/indodax_lab/backtest/engine.py",
+        "src/indodax_lab/labels/returns.py",
+        "src/indodax_lab/paper/live_shadow_engine.py",
+        "tests/unit/lab/backtest/test_cost_schedule.py",
+        "tests/unit/lab/backtest/test_execution.py",
+        "tests/unit/lab/backtest/test_indodax_cost_boundaries.py",
+        "tests/unit/lab/labels/test_returns.py"
       ],
       "type": "data",
       "tier": "CORE",
@@ -5611,8 +5620,9 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/COST-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "627a74c994f29ecffd6e8270a1c459d731c7acd8",
+        "code_target": "627a74c994f29ecffd6e8270a1c459d731c7acd8",
+        "review": "PASS on exact code SHA for code/spec quality, no Critical/Important findings; reviewer did not rerun full suite. Canonical 28-interval authoritative fee evidence remains unverified, so status stays REVIEW."
       },
       "acceptance_test_mapping": [
         {
@@ -5637,6 +5647,18 @@
           "criterion": "COST-01-AC3",
           "test_case": "test_cost_01_contract_3",
           "behavior": "Periode unknown tidak memakai fee hari ini",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "COST-01-AC4",
+          "test_case": "test_unverified_canonical_schedule_is_not_resolved",
+          "behavior": "Interval tanpa bukti terverifikasi ditolak",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "COST-01-AC5",
+          "test_case": "test_limit_fill_uses_order_creation_fee_after_boundary",
+          "behavior": "Resting limit order memakai jadwal fee saat order dibuat, walau fill terjadi setelah batas perubahan",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
