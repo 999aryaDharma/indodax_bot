@@ -30,11 +30,11 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: Antigravity Independent Reviewer (subagent 7570be5b)
 
 Recommended Branch: `feat/pm-03-recovery-mode-and-durable-operator-risk-governance`
 

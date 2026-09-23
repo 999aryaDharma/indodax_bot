@@ -105,7 +105,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | RP-03 | Shared portfolio sizing and risk semantics | runtime-parity | P0 | integration | RW0-01, SIM-02 | PLANNED | [Spec](runtime-parity\RP-03-shared-portfolio-sizing-and-risk-semantics.md) |
 | PM-01 | Authoritative fail-closed pre-write gate | production-main | P0 | integration | RW0-01 | DONE | [Spec](production-main\PM-01-authoritative-fail-closed-pre-write-gate.md) |
 | PM-02 | Atomic financial execution state and recovery | production-main | P0 | integration | RW0-01, LED-01 | DONE | [Spec](production-main\PM-02-atomic-financial-execution-state-and-recovery.md) |
-| PM-03 | Recovery mode and durable operator risk governance | production-main | P0 | integration | PM-01, PM-02 | READY | [Spec](production-main\PM-03-recovery-mode-and-durable-operator-risk-governance.md) |
+| PM-03 | Recovery mode and durable operator risk governance | production-main | P0 | integration | PM-01, PM-02 | DONE | [Spec](production-main\PM-03-recovery-mode-and-durable-operator-risk-governance.md) |
 | PM-04 | Venue parser cancellation and supported order semantics | production-main | P0 | integration | PM-01, PM-02 | READY | [Spec](production-main\PM-04-venue-parser-cancellation-and-supported-order-semantics.md) |
 | RP-04 | Canonical feed and environment runtime adapters | runtime-parity | P0 | integration | RP-02, RP-03, PM-02 | PLANNED | [Spec](runtime-parity\RP-04-canonical-feed-and-environment-runtime-adapters.md) |
 | RP-05 | Runtime parity qualification fixtures | runtime-parity | P0 | integration | RP-04, PM-04 | PLANNED | [Spec](runtime-parity\RP-05-runtime-parity-qualification-fixtures.md) |

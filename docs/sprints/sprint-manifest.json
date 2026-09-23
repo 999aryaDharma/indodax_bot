@@ -9519,9 +9519,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-03-recovery-mode-and-durable-operator-risk-governance.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "Antigravity Independent Reviewer (subagent 7570be5b)",
       "recommended_branch": "feat/pm-03-recovery-mode-and-durable-operator-risk-governance",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9543,36 +9543,43 @@
         "docs/implementation/RUNTIME-PARITY.md",
         "docs/specs/20-testing-strategy.md"
       ],
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "b998fd7",
+        "code_target": "b998fd7",
+        "path": "docs/sprints/handoffs/PM-03-HANDOFF.md",
+        "review": "Independent review PASS on b998fd7 (commit 3119083); AC0 (restarts enter RECOVERY), AC1 (risk integrity/hash tamper halts), AC2 (persistence rollback keeps writes disabled), AC3 (fresh health evidence required, stale >300s rejects, CLI rejects without evidence), AC4 (single-use nonces and expiration rejection); full-suite gate PASS (986 passed, 0 failed)"
+      },
       "acceptance_test_mapping": [
         {
           "criterion": "PM-03-AC0",
           "test_case": "test_pm_03_0",
           "behavior": "All persisted modes restart into RECOVERY",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-03-AC1",
           "test_case": "test_pm_03_1",
           "behavior": "Corrupt/missing risk state prevents active mode",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-03-AC2",
           "test_case": "test_pm_03_2",
           "behavior": "Persistence failure leaves writes disabled",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-03-AC3",
           "test_case": "test_pm_03_3",
           "behavior": "Reset with absent/stale evidence rejects",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         },
         {
           "criterion": "PM-03-AC4",
           "test_case": "test_pm_03_4",
           "behavior": "Reused or expired approval/reset token rejects",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "OBSERVED_PASS"
         }
       ],
       "risk_level": "high",
