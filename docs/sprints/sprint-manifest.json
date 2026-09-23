@@ -2005,24 +2005,27 @@
         "Ubah future bar tidak mengubah fitur masa lalu"
       ],
       "files": [
+        "configs/features/tabular_bar_v1.yaml",
+        "configs/features/tabular_bar_5m_v1.yaml",
         "src/indodax_lab/features/technical.py",
-        "src/indodax_lab/features/liquidity.py",
-        "tests/fixtures/features/golden_ohlcv.csv",
-        "tests/unit/lab/features/test_technical.py"
+        "src/indodax_lab/cli/run_backtest.py",
+        "tests/unit/lab/features/test_registry.py",
+        "tests/unit/lab/features/test_technical.py",
+        "tests/unit/lab/cli/test_run_backtest_report.py"
       ],
       "type": "data",
       "tier": "CORE",
       "spec": "docs/specs/07-feature-engineering.md",
       "path": "docs/sprints/features/FEAT-02-golden-technical-and-liquidity-transforms.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex (FEAT-02 continuation)",
+      "independent_reviewer": "Codex independent reviewer agent /root/feat01_independent_review (PASS on exact code SHA 52dddc17e3d040e423692aa6a6b2551e0c8634bf)",
       "recommended_branch": "feat/feat-02-golden-technical-and-liquidity-transforms",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
-      "current_context": "Legacy Task 15 contains uncommitted WIP in original worktree; inspect registry/technical/liquidity and tests before reuse. No WIP has been imported into this docs branch; do not claim it verified.\n\n- Dependency FEAT-01 supplies: registry YAML -> feature definitions and source hash; exact contracted names after expansion.",
+      "current_context": "FEAT-02 continuation implemented and independently reviewed on code SHA 52dddc17e3d040e423692aa6a6b2551e0c8634bf; evidence in docs/sprints/handoffs/FEAT-02-HANDOFF.md.\n\n- Dependency FEAT-01 supplies: registry YAML -> feature definitions and source hash; exact contracted names after expansion.",
       "unlocks": [
         "FEAT-04",
         "RP-02"
@@ -2039,10 +2042,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/FEAT-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "52dddc17e3d040e423692aa6a6b2551e0c8634bf",
+        "code_target": "52dddc17e3d040e423692aa6a6b2551e0c8634bf",
+        "review": "Independent PASS on exact code SHA 52dddc17e3d040e423692aa6a6b2551e0c8634bf; no Critical or Important findings. Reviewer verified provenance regression, 11 technical tests, 3 registry/version checks, and canonical materialization. Owner exact-SHA verification: 38 feature tests, 1 provenance regression, 14 feature-materialization integration tests; lint and diff-check passed. Reviewer noted a stale handoff sentence, corrected in follow-up evidence."
       },
       "acceptance_test_mapping": [
         {
@@ -2074,7 +2078,7 @@
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "Implemented and independently reviewed on exact code SHA 52dddc17e3d040e423692aa6a6b2551e0c8634bf; see current FEAT-02 handoff.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

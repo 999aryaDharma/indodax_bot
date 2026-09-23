@@ -2,9 +2,13 @@
 
 ## Revalidation addendum — 2026-09-23
 
+Current sprint status: DONE (coordinator recorded the exact-SHA review evidence below).
+
 Current implementation target: code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634bf` on branch `feat/feat-02-finalization`. This supersedes the earlier code SHA below for review and acceptance evidence; the historical evidence is retained as provenance.
 
-- The imported WIP is now committed in the current repository history. Both canonical feature registries are version `1.1.0` and pin EMA initialization, Wilder SMA seeding, StochRSI zero-range behavior, and rolling `ddof`; the report's feature-set version matches.
+- Current implementation owner: Codex (continuation). Independent reviewer: `/root/feat01_independent_review`, PASS on the exact code SHA above.
+
+- The imported WIP is now committed in the current repository history. Both canonical feature registries are version `1.1.0` and pin EMA initialization, Wilder SMA seeding, StochRSI zero-range behavior, and rolling `ddof`. Feature materialization reports the registry identity; the raw-bar backtest pass-through reports null feature-set identity/version because it does not use the registry.
 - `technical.py` propagates those policies through registry-callable transforms. Golden values remain hand-literal; tests cover warmup, flat/zero-volume finiteness and future-bar causality.
 - Environment: `C:\Users\User\miniconda3\envs\ML\python.exe` on Windows.
 - `python -m pytest tests/unit/lab/features -q -p no:cacheprovider` → 38 passed, exit 0.
@@ -15,17 +19,18 @@ Current implementation target: code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634b
 - Final focused run on `52dddc1`: feature unit tests 38 passed, report-provenance test 1 passed, feature-materialization integration 14 passed; all exit 0.
 - `python -m ruff check tests/unit/lab/cli/test_run_backtest_report.py` and the narrow feature lint command above → passed, exit 0.
 - `git diff --check` on the six implementation files → passed, exit 0.
-- Independent review of exact code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634bf` is pending. Do not transition FEAT-02 to DONE before reviewer PASS and coordinator manifest/projection update.
+- Independent re-review: PASS on exact code SHA `52dddc17e3d040e423692aa6a6b2551e0c8634bf` by `/root/feat01_independent_review`, with no Critical or Important findings. Reviewer verified the provenance regression, 11 technical tests, 3 registry/version checks and canonical materialization. Full feature suites were owner-run, not reviewer-run. The reviewer noted the stale opening bullet; corrected in this addendum commit.
+- Coordinator recorded DONE in the authoritative manifest and regenerated status projections after the exact-SHA PASS.
 
 Current implementation paths: `configs/features/tabular_bar_v1.yaml`, `configs/features/tabular_bar_5m_v1.yaml`, `src/indodax_lab/features/technical.py`, `src/indodax_lab/cli/run_backtest.py`, `tests/unit/lab/features/test_registry.py`, `tests/unit/lab/features/test_technical.py`, and `tests/unit/lab/cli/test_run_backtest_report.py`.
 
-Status: REVIEW
+Historical status at the prior implementation handoff: REVIEW
 
 ## Identity
 - Sprint ID: FEAT-02 — Golden technical and liquidity transforms
-- Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
-- Branch / worktree: `feat/feat-02-golden-technical-and-liquidity-transforms`
+- Implementation agent: Antigravity (prior implementation)
+- Independent reviewer: UNASSIGNED at that time; superseded by the current review above
+- Branch / worktree: `feat/feat-02-golden-technical-and-liquidity-transforms` (prior implementation)
 - Base SHA: `47b55e8`
 - Code target: `feat(feat-02): golden technical and liquidity transforms`
 - Evidence SHA relation: `a978533`
@@ -61,7 +66,7 @@ Combined suite verification (19 tests) passed (1.40s).
 - Quality verdict: PASS (zero network, pure functions, causality preserved, zero infs on degenerate inputs).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: PENDING at that time; superseded by the PASS recorded above.
 
 ## Deviations and known risks
 - Deviations: None.
