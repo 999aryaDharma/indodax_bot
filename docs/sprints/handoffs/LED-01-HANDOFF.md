@@ -1,22 +1,31 @@
 # LED-01 handoff
 
-Status: REVIEW
+Status: REVIEW (Round 2 pending independent approval)
 
 ## Identity
 - Sprint ID: LED-01 — Balanced research postings
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
-- Branch / worktree: `feat/led-01-balanced-research-postings`
+- Independent reviewer: Antigravity Independent Reviewer (subagent `871561c9` Round 1 CHANGES_REQUESTED)
+- Branch / worktree: `docs/architecture-runtime-plan`
 - Base SHA: `61735bf`
 - Code target: `feat(led-01): balanced research postings`
-- Evidence SHA relation: `e93575e`
+- Code SHA (Round 1): `e93575e`
+- Remediation SHA (Round 2): `4933dcb`
+
+## Round 2 Remediation Summary
+
+Remediated all findings from Round 1 review (`docs/sprints/handoffs/LED-01-REVIEW.md`):
+- **F-01 (Important, FIXED)**: Fixed all 13 ruff lint errors across scoped files (UP035, UP037, F401, I001); `ruff check` exits 0.
+- **F-02 (Minor, FIXED)**: Reordered cost basis division: `(fill.qty * pos.cost_basis) / pos.base_qty` in `ledger.py:287`.
+- **F-03 (Minor, FIXED)**: Cleaned up dead `_total_net_pnl` attribute in `ledger.py` in favor of dynamic `total_net_pnl` property.
+- **F-04 (Minor, FIXED)**: Added negative boundary unit tests for `Fill` validation (negative/zero qty, price, fees, naive datetime) in `test_ledger.py`.
 
 ## Files and contracts
 - Planned files:
   - `src/indodax_lab/backtest/orders.py` (Fill and execution domain models)
   - `src/indodax_lab/backtest/ledger.py` (Balanced double-entry journal, positions, exact cost basis, equity)
   - `src/indodax_lab/backtest/__init__.py` (Subsystem exports)
-  - `tests/unit/lab/backtest/test_ledger.py` (Explicit AC0..AC3 test cases)
+  - `tests/unit/lab/backtest/test_ledger.py` (Explicit AC0..AC3 test cases + negative boundary tests)
   - `tests/property/lab/test_ledger_invariants.py` (Invariants, property tests, COST-01 integration)
 - Contract:
   - `Fill -> cash/asset/fee/PnL postings in one valuation currency; quantity tracked separately; Decimal`.
@@ -32,25 +41,22 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| LED-01-AC0 (RED) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
-| LED-01-AC0 (GREEN) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_valid_contract` | Exit 0 (Passed, validates exact cost basis & postings balance) | `e93575e` |
-| LED-01-AC1 (RED) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
-| LED-01-AC1 (GREEN) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_1` | Exit 0 (Passed, buy partial sell final sell keeps qty nonnegative) | `e93575e` |
-| LED-01-AC2 (RED) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
-| LED-01-AC2 (GREEN) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_2` | Exit 0 (Passed, higher fee cannot increase fixed-path PnL) | `e93575e` |
-| LED-01-AC3 (RED) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py` | Exit 1 (`NotImplementedError`) | `working tree` |
-| LED-01-AC3 (GREEN) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_3` | Exit 0 (Passed, duplicate fill ID does not duplicate postings) | `e93575e` |
-| LED-01-INV | `test_ledger_invariants.py` | `python -m pytest tests/property/lab/test_ledger_invariants.py` | Exit 0 (Passed, transaction balance, unit separation, COST-01 integration) | `e93575e` |
+| LED-01-AC0 (GREEN) | `test_led_01_valid_contract` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_valid_contract` | Exit 0 (Passed, validates exact cost basis & postings balance) | `4933dcb` |
+| LED-01-AC1 (GREEN) | `test_led_01_contract_1` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_1` | Exit 0 (Passed, buy partial sell final sell keeps qty nonnegative) | `4933dcb` |
+| LED-01-AC2 (GREEN) | `test_led_01_contract_2` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_2` | Exit 0 (Passed, higher fee cannot increase fixed-path PnL) | `4933dcb` |
+| LED-01-AC3 (GREEN) | `test_led_01_contract_3` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_led_01_contract_3` | Exit 0 (Passed, duplicate fill ID does not duplicate postings) | `4933dcb` |
+| LED-01-INV | `test_ledger_invariants.py` | `python -m pytest tests/property/lab/test_ledger_invariants.py` | Exit 0 (Passed, transaction balance, unit separation, COST-01 integration) | `4933dcb` |
+| LED-01-NEG | `test_fill_negative_boundary_validation` | `python -m pytest tests/unit/lab/backtest/test_ledger.py::test_fill_negative_boundary_validation` | Exit 0 (Passed, validates all 5 negative boundary conditions) | `4933dcb` |
 
-All 7 tests in `tests/unit/lab/backtest/test_ledger.py` and `tests/property/lab/test_ledger_invariants.py` passed (0.47s).
-Combined suite verification (26 tests across backtest, costs, features) passed (1.68s).
+All 10 tests in `tests/unit/lab/backtest/test_ledger.py` and `tests/property/lab/test_ledger_invariants.py` passed (0.51s).
+Ruff lint: all checks passed (exit 0).
+Full suite: 972 passed, 2 skipped, 0 failed in 34.47s.
 
 ## Review
 - Spec verdict: PASS (meets all functional requirements of LED-01 and specs/08-costs-ledger-and-execution.md).
-- Quality verdict: PASS (zero network, strictly immutable schemas, Decimal precision, exact double-entry balancing).
-- Findings: None.
-- Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Quality verdict: PASS (Ruff clean exit 0, exact decimal precision, negative boundaries tested).
+- Round 1 independent review: CHANGES_REQUESTED (subagent `871561c9`).
+- Round 2 independent review: PENDING (remediation committed at `4933dcb`).
 
 ## Deviations and known risks
 - Deviations: None.

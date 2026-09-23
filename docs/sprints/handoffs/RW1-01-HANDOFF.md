@@ -1,46 +1,33 @@
 # RW1-01 Handoff — Reusable Immutable Dataset Registry
 
-Status: REVIEW — awaiting independent reviewer verdict
+Status: REVIEW (Round 2 pending independent approval)
 
 ## Identity
 
 - Task: RW1-01
-- Implementation owner: Codex `/root` (LUNA execution)
-- Independent reviewer: PENDING
+- Implementation owner: Codex `/root` (LUNA execution) & Antigravity (Round 2 remediation)
+- Independent reviewer: Antigravity Independent Reviewer (subagent `e435a0c1` Round 1 CHANGES_REQUESTED)
 - Base SHA: `b0f023f`
-- Code SHA: `8a8cc29`
+- Code SHA (Round 1): `8a8cc29`
+- Remediation SHA (Round 2): `9060726`
 - Branch: `docs/architecture-runtime-plan`
 - Scope: Range-aware reusable dataset versions, atomic catalog publication, quality lineage
 
-## Implemented
+## Round 2 Remediation Summary
 
-- Created `src/indodax_lab/data/dataset_registry.py`:
-  - `DatasetRegistry.find(venue,pair,timeframe,start,end)`: returns `tuple[ArtifactRef,...]`; raises `DatasetCoverageError` when no covering dataset exists (AC0 — zero-fetch guarantee).
-  - `DatasetRegistry.create(request)`: checks existing coverage first (AC0), then fetches from provider and atomically publishes via `_Catalog.register()` with partial+rename+fsync pattern (AC4).
-  - `DatasetRegistry.extend(parent_ref, request)`: fetches only uncovered intervals before/after parent range, links `parent_dataset_ref` for lineage (AC1).
-  - `DatasetRegistry.get(ref)`: reconstruct `DatasetManifest` from catalog entry.
-  - `DatasetRegistry.validate(ref)`: raises `DatasetZeroBarsError` for zero-bar datasets (AC2), raises `DatasetPartitionHashError` for mismatched hashes (AC2).
-  - `_Catalog`: thread-safe (`threading.Lock`), durable (`partial + replace + fsync`) append-only JSON index. Idempotent register (same content = no-op). Conflicting registration (same ref_key, different content) raises `DatasetPublicationConflictError` (AC3). Crash during `_persist` leaves no partial file and no visible entry (AC4).
-  - `DatasetRequest`: validated UTC datetime request model.
-  - `RegistryQualityReport`: inline quality evidence bound to dataset.
-  - Exception hierarchy: `DatasetNotFoundError`, `DatasetCoverageError`, `DatasetPublicationConflictError`, `DatasetPublicationPartialError`, `DatasetQualityError`, `DatasetZeroBarsError`, `DatasetPartitionHashError`.
+Remediated all findings from Round 1 review (`docs/sprints/handoffs/RW1-01-REVIEW.md`):
+- **F1 (Critical, FIXED)**: `_publish_dataset` and `_entry_to_manifest` preserve all semantic fields (`source_id`, `source_version`, `version`, `requested_start`, `requested_end`, `parent_dataset_ref`, `created_at_utc`). `m_loaded.to_artifact_ref().sha256 == m_original.to_artifact_ref().sha256` guaranteed.
+- **F2 (Critical, FIXED)**: `extend()` accumulates parent partitions and uncovered intervals into a single combined manifest covering the full `[actual_start, actual_end]` range. Subsequent `find()` finds extended dataset.
+- **F3 (Important, FIXED)**: `_Catalog.register()` rolls back in-memory entry if `_persist()` raises, preventing corrupted state and enabling retry.
+- **F4 (Important, FIXED)**: Added `create` and `extend` subcommands with JSON output to `cli/dataset_registry.py`.
+- **F5 (Minor, FIXED)**: Removed dead `_sha256_file` and `_artifact_sha256` helper functions.
+- **F6 (Minor, FIXED)**: Enforced timezone-aware UTC datetime validation in `find()`.
 
-- Modified `src/indodax_lab/cli/dataset_registry.py`:
-  - Added `find` subcommand: structured JSON output for coverage lookup.
-  - Added `validate` subcommand: JSON output for partition integrity.
-  - Added `legacy` subcommand: backward-compatible root-inventory mode.
-  - Legacy `build_registry()` and `publish_no_clobber()` preserved.
+## Observed TDD evidence (Round 2)
 
-- Created `tests/integration/lab/test_dataset_registry_versions.py`:
-  - 5 acceptance tests using fake providers, in-memory state, temp paths.
-  - No real network, no real DB, no credentials.
-
-## Observed TDD evidence
-
-- RED: `python -m pytest tests/integration/lab/test_dataset_registry_versions.py -q` → collection error (ModuleNotFoundError: indodax_lab.data.dataset_registry).
-- GREEN focused: `python -m pytest tests/integration/lab/test_dataset_registry_versions.py -q` → 5 passed in 0.85s.
+- GREEN focused: `python -m pytest tests/integration/lab/test_dataset_registry_versions.py -v` → 10 passed in 0.73s (exit 0).
 - Ruff: `ruff check src/indodax_lab/data/dataset_registry.py src/indodax_lab/cli/dataset_registry.py tests/integration/lab/test_dataset_registry_versions.py` → All checks passed (exit 0).
-- Full suite gate: `python -m pytest -q` → 966 passed, 2 skipped (platform), 0 failed in 33.76s (exit 0).
+- Full suite gate: `python -m pytest -q` → 972 passed, 2 skipped (platform), 0 failed in 34.47s (exit 0).
 - Diff check: `git diff --check` → exit 0 (CRLF warnings only).
 
 ## Acceptance Criteria Mapping
