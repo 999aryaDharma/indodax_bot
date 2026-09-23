@@ -1,11 +1,11 @@
-# API-01 Handoff (draft; implementation uncommitted)
+# API-01 Handoff
 
 ## Identity
 
 - Sprint: API-01 — Production service-derived read models
 - Base SHA: `3bb7e0a89fb268c06de279f140e9004455a526b1`
-- Implementation SHA: pending coordinator commit; source changes are currently uncommitted in the shared workspace
-- Reviewer: pending independent review
+- Implementation SHA: `fc40bca766b918191f3748241bb84edd544a04dd`
+- Reviewer: `/root/prod_mvp_final_reviewer` — PASS, exact SHA reviewed
 - Environment: Windows, Python 3.12.13
 - Host/network: no ASUS/Indodax connection; no credentials loaded; tests use in-memory fake providers
 
@@ -31,6 +31,6 @@
 
 ## Review and gates
 
-- Independent review: pending; do not mark DONE until review passes the committed source SHA.
+- Independent review: PASS on exact committed SHA `fc40bca766b918191f3748241bb84edd544a04dd`; no Critical/Important findings.
 - Real Indodax account reads require the API-02 composition root to inject a Production-owned view-only provider and appropriately scoped credentials. That composition is outside API-01 and was not exercised here.
-- ASUS resource qualification, capacity, service isolation and deployment remain separate gates; this sprint did not connect to or change ASUS.
+- ASUS resource qualification, capacity, service isolation and deployment remain separate gates; this sprint did not connect to or change ASUS. API-02 must bind the Production authority marker and database root to the actual Production-owned provider/storage at composition.

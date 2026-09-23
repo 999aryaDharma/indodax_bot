@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: READY
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 

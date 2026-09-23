@@ -3,7 +3,7 @@
 ## Implementation
 
 - Sprint: API-03 — fail-closed Production read capability and audit context.
-- Source commit: pending coordinator commit; this worker did not commit.
+- Source commit: `fc40bca766b918191f3748241bb84edd544a04dd`.
 - Scope: explicit principal and actor-class contract, request-ID middleware, audited `production.read` policy, and guarded Production service resolution.
 - No authentication provider, Production writer, credential access, host change, or runtime deployment was added.
 
@@ -13,7 +13,9 @@
 - `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_capability_policy.py tests/integration/lab/api/test_api_audit.py tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 11 tests.
 - `C:\Users\User\miniconda3\envs\ML\python.exe -m ruff check src/indodax_lab/api/auth.py src/indodax_lab/api/audit.py src/indodax_lab/api/dependencies.py tests/unit/lab/api/test_capability_policy.py tests/integration/lab/api/test_api_audit.py` — PASS.
 - Trailing-whitespace check across the five implementation/test files and this handoff — PASS.
-- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest -q -p no:cacheprovider` — 1026 passed, 2 skipped, 2 failed. Both failures are in concurrent API-01 read-model work: `tests/unit/lab/api/test_production_read_models.py::test_api_01_0_missing_authority_never_becomes_healthy_or_zero` and `::test_api_01_2_non_production_namespace_and_unverified_release_fail_closed`; both assert `.status` on nested `evidence` models. They are outside API-03 ownership.
+- A concurrent full-suite run before API-01 finished reported 1026 passed, 2 skipped and 2 API-01 failures; API-01 corrected the model assertions. The current combined scoped API suite is recorded below and passed.
+- `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/api/test_production_read_models.py tests/unit/lab/api/test_capability_policy.py tests/integration/lab/api/test_api_audit.py tests/unit/lab/api/test_common_contracts.py -q -p no:cacheprovider` — PASS, 19 tests.
+- `C:\Users\User\miniconda3\envs\ML\python.exe -m ruff check src/indodax_lab/api tests/unit/lab/api tests/integration/lab/api` — PASS.
 
 ## Acceptance Evidence
 
@@ -25,6 +27,6 @@
 
 ## Review and Gates
 
-- Independent review: pending.
-- Source SHA: pending coordinator commit and exact-SHA review.
+- Independent review: PASS on exact committed SHA `fc40bca766b918191f3748241bb84edd544a04dd`, no Critical/Important findings.
+- Source SHA: `fc40bca766b918191f3748241bb84edd544a04dd`.
 - Runtime/deployment gates: unchanged; no host was inspected or modified.

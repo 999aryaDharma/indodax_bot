@@ -12,11 +12,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `/root/api01_read_models` | Independent Reviewer: `/root/prod_mvp_final_reviewer`
 
 Recommended Branch: feat/api-01-production-control-plane
 

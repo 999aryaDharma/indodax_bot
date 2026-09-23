@@ -11066,9 +11066,11 @@
         "PM-03",
         "PM-04"
       ],
-      "goal": "Expose immutable Production read snapshots assembled from authoritative domain services.",
-      "contract": "ProductionReadService.snapshot returns typed overview/mode/portfolio/positions/orders/fills/reconciliation/risk/release/audit views with UTC as_of, source_revision and provenance. Missing/stale sources remain UNAVAILABLE or UNKNOWN, never numeric zero.",
+      "goal": "Expose immutable live Production read snapshots, including real Indodax account balances and separately attributed managed positions/orders.",
+      "contract": "ProductionReadService.snapshot reads live Indodax account balances via an injected Production-owned read-only provider with server timestamp/freshness, and separately reads managed positions/orders only from the configured Production namespace and state root. Missing/stale sources remain UNAVAILABLE or UNKNOWN, never numeric zero.",
       "checks": [
+        "Indodax account balances carry venue server time and freshness; stale or absent account data never becomes zero",
+        "Research/shadow account providers and databases cannot satisfy Production reads",
         "Unknown positions/risk/reconciliation stay explicit and never become zero",
         "Read snapshots expose source revision and UTC as_of for every authority-backed resource",
         "PM-05 release evidence remains UNAVAILABLE until authoritative verified evidence exists"
@@ -11083,14 +11085,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-01-production-service-derived-read-models.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "/root/api01_read_models",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer",
       "recommended_branch": "feat/api-01-production-control-plane",
       "external_gates": [
-        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+        "API-02 must bind the account authority marker and Production state root to the actual Production-owned source; live ASUS/Indodax integration was not exercised in API-01."
       ],
-      "current_context": "API-00 contracts and UI-00 shell are implemented in this workspace; production read models remain pending dependency review.",
+      "current_context": "Implemented and independently reviewed at fc40bca766b918191f3748241bb84edd544a04dd. Read models require API-02 to inject the actual Production-owned account provider and exact Production state root.",
       "unlocks": [
         "API-02"
       ],
@@ -11114,26 +11116,31 @@
           "criterion": "API-01-AC0",
           "test_case": "test_api_01_0",
           "behavior": "Unknown positions/risk/reconciliation stay explicit and never become zero",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-01-AC1",
           "test_case": "test_api_01_1",
           "behavior": "Read snapshots expose source revision and UTC as_of for every authority-backed resource",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-01-AC2",
           "test_case": "test_api_01_2",
           "behavior": "PM-05 release evidence remains UNAVAILABLE until authoritative verified evidence exists",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "implementation_status_note": "Independent review PASS on exact source SHA fc40bca766b918191f3748241bb84edd544a04dd; no Critical/Important findings. Live ASUS/Indodax connectivity was not accessed.",
+      "evidence": {
+        "path": "docs/sprints/handoffs/API-01-HANDOFF.md",
+        "source_sha": "fc40bca766b918191f3748241bb84edd544a04dd",
+        "review": "PASS by /root/prod_mvp_final_reviewer on exact SHA"
+      },
       "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
     },
     {
@@ -11163,14 +11170,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-03-fail-closed-read-capability-policy-and-audit-context.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "/root/api03_security",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer",
       "recommended_branch": "feat/api-03-production-control-plane",
       "external_gates": [
-        "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
+        "Trusted authentication middleware must supply identity before API-02 is exposed; live host deployment was not performed."
       ],
-      "current_context": "Shared API contracts and UI shell exist; server capability enforcement and audit context remain unimplemented.",
+      "current_context": "Implemented and independently reviewed at fc40bca766b918191f3748241bb84edd544a04dd; policy fails closed until trusted identity middleware supplies a principal.",
       "unlocks": [
         "API-02",
         "UI-01"
@@ -11195,26 +11202,31 @@
           "criterion": "API-03-AC0",
           "test_case": "test_api_03_0",
           "behavior": "Missing principal/capability is denied without resolving production services",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-03-AC1",
           "test_case": "test_api_03_1",
           "behavior": "Research capability never satisfies production.read",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-03-AC2",
           "test_case": "test_api_03_2",
           "behavior": "Each allow/deny decision records request ID, actor class, capability and reason without secrets",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
+      "implementation_status_note": "Independent review PASS on exact source SHA fc40bca766b918191f3748241bb84edd544a04dd; no Critical/Important findings. No auth provider or host deployment was included.",
+      "evidence": {
+        "path": "docs/sprints/handoffs/API-03-HANDOFF.md",
+        "source_sha": "fc40bca766b918191f3748241bb84edd544a04dd",
+        "review": "PASS by /root/prod_mvp_final_reviewer on exact SHA"
+      },
       "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
     },
     {
@@ -11244,7 +11256,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-02-read-only-production-api-application-and-routes.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/api-02-production-control-plane",
@@ -11418,7 +11430,7 @@
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-01-production-and-research-context-navigation-with-capability-boundary.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/ui-01-production-control-plane",
