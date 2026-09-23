@@ -4,18 +4,18 @@ Status: REVIEW
 
 ## Identity
 - Sprint ID: FEAT-01 — Versioned feature registry
-- Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
-- Branch / worktree: `feat/feat-01-versioned-feature-registry`
-- Base SHA: `4bf3262315ff2f336f87e28ff824b8bbbf648de8`
-- Code SHA: `080401c78a73f54ed9447e967ce80393220ca643`
+- Implementation agent: Codex
+- Independent reviewer: `/root/feat01_independent_review` (pending exact-SHA review)
+- Branch / worktree: `fix/feat-01-immutable-params` / `C:\Users\User\AppData\Local\Temp\indodax-pm04-v2-recovery`
+- Base SHA: `ce322d7acaffef09cda2b2179b1fdbca943bfcda`
+- Code SHA: `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`
 - Evidence SHA relation: recorded in this handoff
 
 ## Files and contracts
 - Planned files:
-  - `configs/features/tabular_bar_v1.yaml` (newly created: exact 41 Wave 1 feature definitions)
-  - `src/indodax_lab/features/registry.py` (verified: frozen Pydantic contracts and validators)
-  - `tests/unit/lab/features/test_registry.py` (updated: explicit AC0..AC3 test cases)
+- `configs/features/tabular_bar_v1.yaml` (newly created: exact 41 Wave 1 feature definitions)
+- `src/indodax_lab/features/registry.py` (registry validators; params are now an immutable copied mapping and serialize as a dict)
+- `tests/unit/lab/features/test_registry.py` (AC0..AC3 plus regression for immutable hashed params and serialization)
 - Contract:
   - Registry YAML -> validated feature definitions and SHA-256 source hash.
   - Exactly 41 scalar Wave 1 features across 12 families (return, range, trend, momentum, trend_strength, volatility, bands, volume, liquidity, vwap, context, cross_section, regime, calendar, listing, quality).
@@ -33,17 +33,22 @@ Status: REVIEW
 | FEAT-01-AC2 | `test_feat_01_contract_2` | `python -m pytest tests/unit/lab/features/test_registry.py::test_feat_01_contract_2` | Exit 0 (Passed, rejects lookback < formula requirement) | working tree |
 | FEAT-01-AC3 | `test_feat_01_contract_3` | `python -m pytest tests/unit/lab/features/test_registry.py::test_feat_01_contract_3` | Exit 0 (Passed, rejects content change without version bump) | working tree |
 
-All 8 tests in `tests/unit/lab/features/test_registry.py` passed.
-Additionally, `tests/unit/lab/features/test_technical.py` passed (2 passed in 1.09s).
+The earlier uncommitted-working-tree results above are retained as provenance only. They are not used as current-SHA evidence.
+
+Fresh verification on `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`:
+- Focused: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest tests/unit/lab/features/test_registry.py tests/unit/lab/features/test_technical.py tests/unit/lab/features/test_availability.py -q -p no:cacheprovider` — 33 passed, exit 0.
+- Full: `C:\Users\User\miniconda3\envs\ML\python.exe -m pytest -q -p no:cacheprovider` — 994 passed, 2 platform-limited skips, 3 warnings, exit 0.
+- `ruff check src/indodax_lab/features/registry.py tests/unit/lab/features/test_registry.py` and `git diff --check` — exit 0.
+- The mutable-param regression was observed RED before the fix; test execution is owner evidence. Windows symlink and Linux `/proc` skips remain explicit.
 
 ## Review
 - Spec verdict: PASS (meets all functional requirements of FEAT-01 and dataset-feature-contracts §7.3).
-- Quality verdict: PASS (zero network, strictly immutable schemas, no bfill, Pydantic validation).
-- Findings: None.
-- Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Quality verdict: Implementer verification PASS; params are immutable after hashing and registry serialization remains supported.
+- Findings: Independent review of SHA `080401c` found Important mutable-param/hash-staleness issue; fixed in `0ed89f7`.
+- Self-review: completed by implementation owner (Codex).
+- Independent review: PENDING on exact code SHA `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`.
 
 ## Deviations and known risks
 - Deviations: None.
-- Unresolved issues / blockers: None for FEAT-01.
+- Unresolved issues / blockers: exact-SHA independent review remains pending.
 - Next unlocked capabilities: FEAT-02 (Golden technical and liquidity transforms), FEAT-03 (As-of market context).

@@ -1919,8 +1919,8 @@
       "path": "docs/sprints/features/FEAT-01-versioned-feature-registry.md",
       "priority": "P0",
       "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "Codex independent reviewer agent /root/feat01_independent_review (pending exact SHA)",
       "recommended_branch": "feat/feat-01-versioned-feature-registry",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -1942,10 +1942,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "review_pending",
         "path": "docs/sprints/handoffs/FEAT-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "0ed89f745f8153d7f11dc4cb8edec30bbb8063ab",
+        "code_target": "0ed89f745f8153d7f11dc4cb8edec30bbb8063ab",
+        "review": "Important mutable params/hash-staleness finding on 080401c is fixed. Fresh FEAT registry/technical/availability tests 33 passed; full suite 994 passed, 2 platform-limited skips, 3 warnings; lint and diff-check pass. Independent exact-SHA review is pending."
       },
       "acceptance_test_mapping": [
         {
