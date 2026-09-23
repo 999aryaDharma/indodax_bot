@@ -9,7 +9,7 @@ Status: REVIEW (Round 1 pending independent approval)
 - Branch / worktree: `docs/architecture-runtime-plan`
 - Base SHA: `4876551`
 - Code target: `feat(pm-02): atomic financial execution state and recovery`
-- Code SHA: (pending commit)
+- Code SHA: `cab8b7a`
 
 ## Files and contracts
 - Planned files:
@@ -31,12 +31,12 @@ Status: REVIEW (Round 1 pending independent approval)
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| PM-02-AC0 (GREEN) | `test_pm_02_0` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_0` | Exit 0 (Passed, crash boundary atomicity) | Pending |
-| PM-02-AC1 (GREEN) | `test_pm_02_1` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_1` | Exit 0 (Passed, duplicate fill idempotency) | Pending |
-| PM-02-AC2 (GREEN) | `test_pm_02_2` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_2` | Exit 0 (Passed, conflicting duplicate / overfill / unmatched fill halt) | Pending |
-| PM-02-AC3 (GREEN) | `test_pm_02_3` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_3` | Exit 0 (Passed, late fill on cancelled order) | Pending |
-| PM-02-AC4 (GREEN) | `test_pm_02_4` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_4` | Exit 0 (Passed, corrupt hash chain blocks restore) | Pending |
-| PM-02-AC5 (GREEN) | `test_pm_02_bootstrap_recovery` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_bootstrap_recovery` | Exit 0 (Passed, partial order submission recovery) | Pending |
+| PM-02-AC0 (GREEN) | `test_pm_02_0` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_0` | Exit 0 (Passed, crash boundary atomicity) | `cab8b7a` |
+| PM-02-AC1 (GREEN) | `test_pm_02_1` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_1` | Exit 0 (Passed, duplicate fill idempotency) | `cab8b7a` |
+| PM-02-AC2 (GREEN) | `test_pm_02_2` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_2` | Exit 0 (Passed, conflicting duplicate / overfill / unmatched fill halt) | `cab8b7a` |
+| PM-02-AC3 (GREEN) | `test_pm_02_3` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_3` | Exit 0 (Passed, late fill on cancelled order) | `cab8b7a` |
+| PM-02-AC4 (GREEN) | `test_pm_02_4` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_4` | Exit 0 (Passed, corrupt hash chain blocks restore) | `cab8b7a` |
+| PM-02-AC5 (GREEN) | `test_pm_02_bootstrap_recovery` | `pytest tests/integration/lab/test_execution_transaction_recovery.py::test_pm_02_bootstrap_recovery` | Exit 0 (Passed, partial order submission recovery) | `cab8b7a` |
 
 All 6 integration tests in `tests/integration/lab/test_execution_transaction_recovery.py` passed (1.48s).
 Ruff lint: all checks passed (`ruff check` exit 0).
