@@ -1,11 +1,11 @@
 # FEAT-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: FEAT-01 — Versioned feature registry
 - Implementation agent: Codex
-- Independent reviewer: `/root/feat01_independent_review` (pending exact-SHA review)
+- Independent reviewer: `/root/feat01_independent_review` (PASS on exact code SHA)
 - Branch / worktree: `fix/feat-01-immutable-params` / `C:\Users\User\AppData\Local\Temp\indodax-pm04-v2-recovery`
 - Base SHA: `ce322d7acaffef09cda2b2179b1fdbca943bfcda`
 - Code SHA: `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`
@@ -46,9 +46,10 @@ Fresh verification on `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`:
 - Quality verdict: Implementer verification PASS; params are immutable after hashing and registry serialization remains supported.
 - Findings: Independent review of SHA `080401c` found Important mutable-param/hash-staleness issue; fixed in `0ed89f7`.
 - Self-review: completed by implementation owner (Codex).
-- Independent review: PENDING on exact code SHA `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`.
+- Independent review: PASS on exact code SHA `0ed89f745f8153d7f11dc4cb8edec30bbb8063ab`; independent AC0, immutability regression, and 5m registry checks passed (3 passed). Broader reviewer run hit Windows `tmp_path` ACL errors; owner verification on that SHA is 33 focused passes and 994 full-suite passes.
+- Minor advisory: `model_copy(deep=True)` raises `TypeError` for the mapping proxy; reviewer found no repository callers. Revisit if deep-copying registry models becomes supported.
 
 ## Deviations and known risks
 - Deviations: None.
-- Unresolved issues / blockers: exact-SHA independent review remains pending.
+- Unresolved issues / blockers: none within FEAT-01 sprint scope. Minor advisory documented above.
 - Next unlocked capabilities: FEAT-02 (Golden technical and liquidity transforms), FEAT-03 (As-of market context).

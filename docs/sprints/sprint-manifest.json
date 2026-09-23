@@ -1918,9 +1918,9 @@
       "spec": "docs/specs/07-feature-engineering.md",
       "path": "docs/sprints/features/FEAT-01-versioned-feature-registry.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "Codex",
-      "independent_reviewer": "Codex independent reviewer agent /root/feat01_independent_review (pending exact SHA)",
+      "independent_reviewer": "Codex independent reviewer agent /root/feat01_independent_review (PASS on 0ed89f745f8153d7f11dc4cb8edec30bbb8063ab)",
       "recommended_branch": "feat/feat-01-versioned-feature-registry",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -1942,11 +1942,11 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "review_pending",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/FEAT-01-HANDOFF.md",
         "source_commit": "0ed89f745f8153d7f11dc4cb8edec30bbb8063ab",
         "code_target": "0ed89f745f8153d7f11dc4cb8edec30bbb8063ab",
-        "review": "Important mutable params/hash-staleness finding on 080401c is fixed. Fresh FEAT registry/technical/availability tests 33 passed; full suite 994 passed, 2 platform-limited skips, 3 warnings; lint and diff-check pass. Independent exact-SHA review is pending."
+        "review": "PASS on exact code target 0ed89f745f8153d7f11dc4cb8edec30bbb8063ab. Independent AC0, immutability regression, and 5m registry checks: 3 passed; broader reviewer run limited by Windows tmp_path ACL. Owner exact-SHA verification: 33 focused passed; full suite 994 passed, 2 platform-limited skips, 3 warnings; lint and diff-check pass. Minor advisory: model_copy(deep=True) incompatible with mappingproxy; no repo callers found."
       },
       "acceptance_test_mapping": [
         {

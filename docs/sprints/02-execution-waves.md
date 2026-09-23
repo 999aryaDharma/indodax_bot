@@ -57,7 +57,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 ## Wave 7
 
-- FEAT-01 — Versioned feature registry [REVIEW; CORE]
+- FEAT-01 — Versioned feature registry [DONE; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
 - RW1-01 — Reusable immutable dataset registry [DONE; CORE]
 
