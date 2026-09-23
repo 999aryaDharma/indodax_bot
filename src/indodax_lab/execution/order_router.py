@@ -38,10 +38,19 @@ class OrderRouter:
         venue: TradingVenue,
         *,
         require_permit: bool = False,
+        enforce_production_semantics: bool | None = None,
     ) -> None:
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
         self.oms_store = oms_store
         self.venue = venue
         self.require_permit = require_permit
+        if enforce_production_semantics is None:
+            self.enforce_production_semantics = (
+                require_permit or isinstance(venue, IndodaxTradingClient)
+            )
+        else:
+            self.enforce_production_semantics = enforce_production_semantics
         self._consumed_permit_ids: set[str] = set()
 
     def _generate_event_id(self, prefix: str) -> str:
@@ -82,6 +91,20 @@ class OrderRouter:
             if not permit.verify_order(order):
                 raise PermissionError("PERMIT_ORDER_DIGEST_MISMATCH")
             self._consumed_permit_ids.add(permit.permit_id)
+
+        # Supported order semantics pre-validation (PM-04-FR3)
+        if self.enforce_production_semantics:
+            if order.limit_price is None or order.limit_price <= Decimal("0"):
+                raise ValueError(
+                    f"UNSUPPORTED_ORDER_SEMANTICS:ORDER_LIMIT_PRICE_REQUIRED:"
+                    f"{order.client_order_id} - "
+                    "Production Indodax venue requires order_type=limit and positive limit_price"
+                )
+            if order.order_type.lower() != "limit" or str(order.time_in_force).upper() != "GTC":
+                raise ValueError(
+                    f"UNSUPPORTED_ORDER_SEMANTICS:{order.order_type}:{order.time_in_force} - "
+                    "Production Indodax venue requires order_type=limit and time_in_force=GTC"
+                )
 
         # 1. NEW -> SUBMITTING
         submitting_order = OmsStateMachine.transition(
@@ -229,7 +252,11 @@ class OrderRouter:
 
         fill_price = venue_order.price or order.limit_price or order.average_fill_price
         # Check if fill occurred during cancel race:
-        if venue_order.status == "filled" or venue_order.executed_qty == order.desired_qty:
+        is_filled = (
+            venue_order.status.upper() in {"FILLED", "FINISHED"}
+            or venue_order.executed_qty == order.desired_qty
+        )
+        if is_filled:
             if fill_price is None or fill_price <= Decimal("0"):
                 raise ValueError(f"FILL_PRICE_REQUIRED_FOR_CANCEL_RACE:{order.internal_order_id}")
             filled_order = OmsStateMachine.transition(

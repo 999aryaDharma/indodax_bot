@@ -74,6 +74,24 @@ class VenueOrder:
     finished_at: datetime | None = None
     cancel_reason: str | None = None
 
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.original_qty, Decimal)
+            or not isinstance(self.executed_qty, Decimal)
+            or not isinstance(self.remaining_qty, Decimal)
+        ):
+            raise VenueProtocolError("VENUE_ORDER_QUANTITIES_MUST_BE_DECIMAL")
+        if self.original_qty <= Decimal("0"):
+            raise VenueProtocolError("VENUE_ORDER_ORIGINAL_QTY_MUST_BE_POSITIVE")
+        if self.executed_qty < Decimal("0") or self.remaining_qty < Decimal("0"):
+            raise VenueProtocolError("VENUE_ORDER_QUANTITIES_CANNOT_BE_NEGATIVE")
+        if self.original_qty != self.executed_qty + self.remaining_qty:
+            raise VenueProtocolError(
+                f"VENUE_ORDER_QUANTITY_INCONSISTENT:{self.original_qty}!={self.executed_qty}+{self.remaining_qty}"
+            )
+        object.__setattr__(self, "status", str(self.status).upper())
+        object.__setattr__(self, "order_type", str(self.order_type).lower())
+
 
 @dataclass(frozen=True)
 class VenueFill:

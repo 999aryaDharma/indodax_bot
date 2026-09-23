@@ -72,7 +72,11 @@ class IndodaxTradingVenue(TradingVenue):
     def submit_order(self, order: OmsOrder) -> VenueOrder:
         """Submit a limit order to Indodax with strict transport uncertainty handling."""
         if order.limit_price is None or order.limit_price <= Decimal("0"):
-            raise ValueError(f"ORDER_LIMIT_PRICE_REQUIRED:{order.client_order_id}")
+            raise ValueError(
+                f"UNSUPPORTED_ORDER_SEMANTICS:ORDER_LIMIT_PRICE_REQUIRED:"
+                f"{order.client_order_id} - "
+                "Production Indodax venue requires order_type=limit and positive limit_price"
+            )
         if order.order_type.lower() != "limit" or str(order.time_in_force).upper() != "GTC":
             raise ValueError(
                 f"UNSUPPORTED_ORDER_SEMANTICS:{order.order_type}:{order.time_in_force} - "
