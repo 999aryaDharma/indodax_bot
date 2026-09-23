@@ -261,6 +261,12 @@ class LOBDatasetEligibilityGate:
                 and current.sequence_id <= previous.sequence_id
             ):
                 raise ValueError("NON_MONOTONIC_SEQUENCE_ID")
+            if (
+                previous.sequence_id is not None
+                and current.sequence_id is not None
+                and current.sequence_id != previous.sequence_id + 1
+            ):
+                raise SessionGapBrokenWindowError("LOB_SEQUENCE_GAP_DETECTED")
             if delta > gap_thresh:
                 raise SessionGapBrokenWindowError(
                     f"LOB_WINDOW_GAP_DETECTED: Gap of {delta:.1f}s between index {i-1} and {i} "
@@ -299,7 +305,13 @@ class LOBDatasetEligibilityGate:
                 and current.sequence_id <= previous.sequence_id
             ):
                 raise ValueError("NON_MONOTONIC_SEQUENCE_ID")
-            if delta > gap_thresh or boundary_changed:
+            sequence_gap = (
+                not boundary_changed
+                and previous.sequence_id is not None
+                and current.sequence_id is not None
+                and current.sequence_id != previous.sequence_id + 1
+            )
+            if delta > gap_thresh or boundary_changed or sequence_gap:
                 contiguous_runs.append(current_run)
                 current_run = [current]
             else:

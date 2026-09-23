@@ -288,6 +288,18 @@ def test_windows_split_at_pair_session_and_sequence_boundaries() -> None:
     with pytest.raises(ValueError, match="NON_MONOTONIC_SEQUENCE_ID"):
         gate.segment_continuous_windows(bad_sequence, window_len=2)
 
+    sequence_gap = [
+        snapshots[0].model_copy(update={"sequence_id": 1}),
+        snapshots[1].model_copy(update={"sequence_id": 2}),
+        snapshots[2].model_copy(update={"sequence_id": 4}),
+        snapshots[2].model_copy(
+            update={"timestamp": start + timedelta(seconds=3), "sequence_id": 5}
+        ),
+    ]
+    windows = gate.segment_continuous_windows(sequence_gap, window_len=2)
+    assert len(windows) == 2
+    assert [[s.sequence_id for s in window] for window in windows] == [[1, 2], [4, 5]]
+
 
 @pytest.mark.parametrize(
     "bids,asks",
