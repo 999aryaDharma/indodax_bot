@@ -9613,9 +9613,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/PM-04-venue-parser-cancellation-and-supported-order-semantics.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "Antigravity",
-      "independent_reviewer": "PENDING for corrected PM-04 SHA",
+      "independent_reviewer": "Codex independent reviewer agent /root/pm04_independent_review",
       "recommended_branch": "feat/pm-04-venue-parser-cancellation-and-supported-order-semantics",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9638,11 +9638,11 @@
         "docs/specs/20-testing-strategy.md"
       ],
       "evidence": {
-        "kind": "review_pending",
-        "source_commit": "a3f5653",
-        "code_target": "a3f5653",
+        "kind": "independent_review",
+        "source_commit": "97746dd61e285b6711519c73e6b153d599bcfbb5",
+        "code_target": "97746dd61e285b6711519c73e6b153d599bcfbb5",
         "path": "docs/sprints/handoffs/PM-04-HANDOFF.md",
-        "review": "Review PASS on 692157d was superseded by audit findings: OPEN after cancel was marked CANCELLED, UNKNOWN recovery lost venue fills, and non-finite quantity raised InvalidOperation. Corrections at a3f5653 require independent spec and quality review."
+        "review": "Independent reviewer PASS on exact code SHA 97746dd61e285b6711519c73e6b153d599bcfbb5, covering v2 active-state recovery, fill-history/VWAP authority, and inconsistent FILLED quantity fail-closed behavior. Owner verification: focused PM-04 6 passed; regression subset 16 passed; full suite 993 passed, 2 platform-limited skips, 3 warnings; lint and diff-check passed. Reviewer did not rerun tests. Production activation and venue/resource gates remain separate and blocked."
       },
       "acceptance_test_mapping": [
         {

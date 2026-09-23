@@ -48,7 +48,7 @@ None. Verify external gates and shared-file ownership before claim.
 - BAR-01 — Causal time and event bars [DONE; CORE]
 - UNIV-01 — Point-in-time investable universe [DONE; CORE]
 - PM-03 — Recovery mode and durable operator risk governance [DONE; CORE]
-- PM-04 — Venue parser cancellation and supported order semantics [REVIEW; CORE]
+- PM-04 — Venue parser cancellation and supported order semantics [DONE; CORE]
 
 ## Wave 6
 

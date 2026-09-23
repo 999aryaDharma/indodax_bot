@@ -1,11 +1,11 @@
 # PM-04 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: PM-04 — Venue parser cancellation and supported order semantics
 - Implementation agent: Antigravity
-- Independent reviewer: pending for corrected code SHA; the PASS at `84105fa` applies only to `692157d`
+- Independent reviewer: `/root/pm04_independent_review` — PASS on exact code SHA `97746dd61e285b6711519c73e6b153d599bcfbb5`
 - Branch / worktree: `fix/pm-04-v2-recovery` / `C:\Users\User\AppData\Local\Temp\indodax-pm04-v2-recovery`
 - Base SHA: `5229f4f`
 - Code target: `fix(pm-04): reject inconsistent fill state`
@@ -54,13 +54,13 @@ Lint check: `ruff check` passed cleanly (exit 0).
 Diff check: `git diff --check` passed cleanly (exit 0).
 
 ## Review
-- Independent Reviewer: PENDING for `97746dd61e285b6711519c73e6b153d599bcfbb5`; prior verdicts cover earlier code SHAs only
-- Verdict: Round 1 PASS on `692157d` superseded by later audit findings; corrected SHA awaits independent review
+- Independent Reviewer: `/root/pm04_independent_review` — PASS for `97746dd61e285b6711519c73e6b153d599bcfbb5`; review was code/spec read-only and did not rerun tests
+- Verdict: PASS on exact corrected code SHA; superseded earlier findings fixed and independently re-reviewed
 - Spec compliance: 100% verified across AC0–AC3
 - Quality & safety: PASS (strict Decimal quantity conservation, robust cancel uncertainty latches, exact race fill preservation, pre-transport semantics validation)
-- Findings: follow-up reviews also found that order limit price was misused as fill VWAP and `FILLED` status could contradict executed quantity. Fixes at `46e51ef` and `97746dd` keep uncertain fills unresolved and require exact fill-history reconciliation; independent re-review remains pending.
+- Findings: follow-up reviews found that order limit price was misused as fill VWAP and `FILLED` status could contradict executed quantity. Fixes at `46e51ef` and `97746dd` keep uncertain fills unresolved and require exact fill-history reconciliation; both findings independently PASS on the final SHA.
 
 ## Deviations and known risks
 - Deviations: None.
-- Unresolved issues / blockers: independent review of corrected committed SHA; venue order/TIF capability and activation gates remain externally unverified.
+- Unresolved issues / blockers: venue order/TIF capability and activation gates remain externally unverified; PM-04 DONE is not production activation approval.
 - Next unlocked capabilities: RP-05 remains blocked by RP-04 and PM-04 review.
