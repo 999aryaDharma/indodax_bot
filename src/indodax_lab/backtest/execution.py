@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
 
 from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide, lookup_cost
@@ -32,7 +33,13 @@ class ConservativeExecutionSimulator:
         self.quantity_precision = quantity_precision
         self.execution_version = "causal-bar-proxy-v2"
 
-    def simulate_execution(self, intent: SignalIntent, bar: MarketBar) -> ExecutionResult:
+    def simulate_execution(
+        self,
+        intent: SignalIntent,
+        bar: MarketBar,
+        *,
+        order_created_ts: datetime | None = None,
+    ) -> ExecutionResult:
         """Simulate order execution on a subsequent eligible market bar.
 
         Enforces:
@@ -45,6 +52,18 @@ class ConservativeExecutionSimulator:
         if intent.role_preference == OrderRole.MAKER and intent.limit_price is None:
             return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
                                    reason_code="MAKER_LIMIT_REQUIRED")
+        if intent.role_preference == OrderRole.MAKER:
+            if order_created_ts is None:
+                return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
+                                       reason_code="ORDER_CREATION_TIMESTAMP_REQUIRED")
+            if order_created_ts.tzinfo is None or order_created_ts.utcoffset() != timedelta(0):
+                raise ValueError("UTC_TIMEZONE_AWARE_REQUIRED:order_created_ts")
+            if order_created_ts < intent.decision_ts:
+                return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
+                                       reason_code="ORDER_CREATED_BEFORE_DECISION")
+            if order_created_ts > bar.open_time:
+                return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
+                                       reason_code="ORDER_NOT_ACTIVE_AT_BAR_OPEN")
         if intent.pair != bar.pair:
             return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
                                    reason_code="PAIR_MISMATCH")
@@ -113,7 +132,7 @@ class ConservativeExecutionSimulator:
             market=self.market,
             side=intent.side,
             role=exec_role,
-            fee_basis_ts=(intent.decision_ts if exec_role == OrderRole.MAKER else fill_time),
+            fee_basis_ts=(order_created_ts if exec_role == OrderRole.MAKER else fill_time),
         )
 
         # SIM-01-AC2: Insufficient depth dan min-size checks

@@ -133,10 +133,40 @@ def test_open_fill_ignores_outcome_volume_and_extrema():
 
 def test_maker_bar_evidence_is_not_backdated():
     b = bar(1, low="80")
+    order = intent(bar(0), qty="2", role_preference="maker", limit_price="90")
     result = ConservativeExecutionSimulator(costs()).simulate_execution(
-        intent(bar(0), qty="2", role_preference="maker", limit_price="90"), b)
+        order, b, order_created_ts=order.decision_ts)
     assert result.fill is not None
     assert result.fill.timestamp >= b.close_time
+
+
+def test_taker_fee_is_rechecked_at_fill_even_with_limit_price():
+    boundary = TS + timedelta(hours=1, minutes=45)
+    intervals = tuple(CostScheduleInterval(
+        schedule_id=name, market="spot_idr", side="buy", role="taker",
+        valid_from=start, valid_to=end, service_fee_rate=rate, tax_rate="0",
+        exchange_fee_rate="0", min_notional="1", precision=2, sources=("fixture",),
+        evidence_verified=True)
+        for name, start, end, rate in (
+            ("before", TS, boundary, "0.001"),
+            ("after", boundary, None, "0.01"),
+        ))
+    engine = ReplayBacktestEngine(
+        CostScheduleTable(schedule_set_id="fee-boundary", version="1", intervals=intervals),
+        policy(), initial_cash=D("201"))
+    delayed = bar(0, available_at=TS + timedelta(hours=1, minutes=30))
+
+    def strategy(observation, index):
+        if index == 0:
+            return intent(observation, qty="2", decision_ts=observation.available_at,
+                          limit_price="99", role_preference="taker")
+        return None
+
+    engine.run([delayed, bar(1), bar(2)], strategy)
+
+    assert engine.ledger.total_fees_paid == D("1.99")
+    assert engine.ledger.cash >= 0
+    assert engine.ledger.positions["btc_idr"].base_qty < D("2")
 
 
 def test_missing_open_liquidity_is_rejected():

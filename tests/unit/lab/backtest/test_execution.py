@@ -155,9 +155,10 @@ def test_limit_fill_uses_order_creation_fee_after_boundary() -> None:
         limit_price=Decimal("500000000"),
         role_preference=OrderRole.MAKER,
     )
+    order_created_ts = boundary + timedelta(seconds=30)
     bar = MarketBar(
         pair="btc_idr",
-        open_time=boundary,
+        open_time=boundary + timedelta(minutes=1),
         close_time=boundary + timedelta(hours=1),
         available_at=boundary + timedelta(hours=1),
         open=Decimal("500000000"),
@@ -168,12 +169,22 @@ def test_limit_fill_uses_order_creation_fee_after_boundary() -> None:
         quote_volume=Decimal("500000000"),
     )
 
-    result = simulator.simulate_execution(intent, bar)
+    missing_creation_time = simulator.simulate_execution(intent, bar)
+    assert missing_creation_time.status == ExecutionStatus.REJECTED
+    assert missing_creation_time.reason_code == "ORDER_CREATION_TIMESTAMP_REQUIRED"
+
+    after_bar_open = simulator.simulate_execution(
+        intent, bar, order_created_ts=bar.open_time + timedelta(seconds=1)
+    )
+    assert after_bar_open.status == ExecutionStatus.REJECTED
+    assert after_bar_open.reason_code == "ORDER_NOT_ACTIVE_AT_BAR_OPEN"
+
+    result = simulator.simulate_execution(intent, bar, order_created_ts=order_created_ts)
 
     assert result.status == ExecutionStatus.FILLED
     assert result.fill is not None
     assert result.fill.timestamp == bar.available_at
-    assert result.fill.fees == Decimal("500")
+    assert result.fill.fees == Decimal("1000")
 
 
 def test_taker_with_limit_price_uses_execution_fee_after_boundary() -> None:
@@ -367,7 +378,9 @@ def test_sim_01_contract_3(sample_cost_table: CostScheduleTable) -> None:
     )
 
     # In conservative execution, touching the limit price alone MUST NOT fill
-    result_touch = simulator.simulate_execution(limit_intent, touch_bar)
+    result_touch = simulator.simulate_execution(
+        limit_intent, touch_bar, order_created_ts=limit_intent.decision_ts
+    )
     assert result_touch.status == ExecutionStatus.REJECTED
     assert result_touch.reason_code == "LIMIT_TOUCH_NO_FILL"
 
@@ -383,7 +396,9 @@ def test_sim_01_contract_3(sample_cost_table: CostScheduleTable) -> None:
         base_volume=Decimal("1.0"),
         quote_volume=Decimal("500000000"),
     )
-    result_fill = simulator.simulate_execution(limit_intent, trade_through_bar)
+    result_fill = simulator.simulate_execution(
+        limit_intent, trade_through_bar, order_created_ts=limit_intent.decision_ts
+    )
     assert result_fill.status == ExecutionStatus.FILLED
     assert result_fill.fill is not None
     assert result_fill.fill.role == OrderRole.MAKER

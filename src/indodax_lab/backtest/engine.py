@@ -85,7 +85,11 @@ class ReplayBacktestEngine:
                 return None, None
             schedule = lookup_cost(self.cost_schedule_table, market=self.simulator.market,
                 side=intent.side, role=intent.role_preference,
-                fee_basis_ts=(intent.decision_ts if intent.limit_price is not None else timestamp))
+                fee_basis_ts=(
+                    intent.decision_ts
+                    if intent.role_preference == OrderRole.MAKER
+                    else timestamp
+                ))
             positions = {pair: p.model_copy(deep=True) for pair, p in self.ledger.positions.items()}
             # Pending risk occupies position count and exposure, not just cash.
             for waiting in pending_intents:
@@ -118,7 +122,12 @@ class ReplayBacktestEngine:
                 approved, _ = size(intent, price, ts)
                 if approved is None:
                     return
-                result = self.simulator.simulate_execution(approved, event_bar)
+                # Replay submits synchronously at decision_ts; keep that time explicit.
+                result = self.simulator.simulate_execution(
+                    approved,
+                    event_bar,
+                    order_created_ts=(intent.decision_ts if maker else None),
+                )
                 if result.fill is None:
                     self.rejections.append((intent.intent_id, result.reason_code))
                     return
