@@ -31,8 +31,9 @@
   tests/integration/lab/test_backtest_golden.py -q` → 60 passed;
   `git diff --check` passed. Ruff reports legacy lint findings in the touched
   files; no lint-clean claim is made.
-- Independent review of the final code SHA and refreshed evidence is pending. SIM-02 remains
-  REVIEW. COST-01 fee-source evidence remains externally blocked; no manifest
+- Independent review: PASS by `/root/sim01_final_review` on exact commit
+  `40e364efe93455cc0b210e264bd9a1b3fe7d4a59`; no Critical or Important findings.
+  SIM-02 remains REVIEW because SIM-01 is still REVIEW behind COST-01. No manifest
   transition is claimed.
 
 Status: REVIEW
