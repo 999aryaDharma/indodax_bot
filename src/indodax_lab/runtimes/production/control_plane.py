@@ -51,6 +51,8 @@ def create_production_app_from_env(
         or not configured_root.is_absolute()
     ):
         raise ValueError("PRODUCTION_RUNTIME_CONFIGURATION_REQUIRED")
+    if namespace.strip().casefold() != "production":
+        raise ValueError("PRODUCTION_NAMESPACE_REQUIRED")
 
     allowlist = tuple(value.strip() for value in allowlist_text.split(",") if value.strip())
     if not allowlist or any(any(char.isspace() for char in value) for value in allowlist):

@@ -29,7 +29,7 @@ def _environment(**overrides: str) -> dict[str, str]:
     values = {
         "INDODAX_VIEW_API_KEY": "test-api-key",
         "INDODAX_VIEW_SECRET_KEY": "test-secret-key",
-        "PRODUCTION_NAMESPACE": "production_main",
+        "PRODUCTION_NAMESPACE": "production",
         "PRODUCTION_STATE_ROOT": str(Path.cwd() / "fake-production-state"),
         "PRODUCTION_OPERATOR_ALLOWLIST": "arya@example.com",
     }
@@ -49,7 +49,7 @@ def test_api_05_2_composes_only_view_client_from_explicit_production_configurati
     principal = app.state.principal_resolver(request)
 
     assert snapshot.balances["idr"].available == Decimal("10")
-    assert service.production_namespace == "production_main"
+    assert service.production_namespace == "production"
     assert principal is not None
     assert principal.capabilities == {"production.read"}
     assert "test-api-key" not in repr(service.venue_account_source)
@@ -70,6 +70,7 @@ def test_api_05_2_composes_only_view_client_from_explicit_production_configurati
         {"INDODAX_VIEW_API_KEY": ""},
         {"INDODAX_VIEW_SECRET_KEY": ""},
         {"PRODUCTION_NAMESPACE": "research_shadow"},
+        {"PRODUCTION_NAMESPACE": "production_main"},
         {"PRODUCTION_OPERATOR_ALLOWLIST": ""},
     ],
 )
