@@ -5947,12 +5947,12 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/SIM-02-portfolio-risk-and-circuit-breakers.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-02-portfolio-risk-and-circuit-breakers",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "This closes the generic Research simulator risk capability only. Owner-approved Production risk defaults and qualification remain owned by PM-08; SIM-02 defaults are not active or qualified Production settings."
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency LED-01 supplies: Fill -> cash/asset/fee/PnL postings in one valuation currency; quantity tracked separately; Decimal.\n- Dependency SIM-01 supplies: SignalIntent + market + schedule -> REJECTED/PARTIAL/FILLED; next-open, precision, SL_FIRST, latency.",
       "unlocks": [
@@ -5971,35 +5971,36 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_handoff",
         "path": "docs/sprints/handoffs/SIM-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "a9dde4711fd9515b3a6b27a1736ecd8287ddc106",
+        "code_target": "a9dde4711fd9515b3a6b27a1736ecd8287ddc106",
+        "review": "Independent review /root/docs_review PASS on exact code SHA a9dde4711fd9515b3a6b27a1736ecd8287ddc106, round 2; previous Important fee-rounding cap finding resolved, no Critical/Important findings remain. Focused SIM-02 regression suite: 63 passed. Generic simulation capability only; PM-08 Production defaults remain separate/unqualified."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "SIM-02-AC0",
           "test_case": "test_sim_02_valid_contract",
           "behavior": "Sizing menghormati modal bersama, exposure dan batas rugi sebelum order dibuat",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-02-AC1",
           "test_case": "test_sim_02_contract_1",
           "behavior": "Size di bawah minimum ditolak bukan dibulatkan naik",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-02-AC2",
           "test_case": "test_sim_02_contract_2",
           "behavior": "Daily dan weekly loss memasukkan unrealized PnL",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-02-AC3",
           "test_case": "test_sim_02_contract_3",
           "behavior": "Drawdown halt tidak hilang setelah restart",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
@@ -9383,7 +9384,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/runtime-parity/RP-03-shared-portfolio-sizing-and-risk-semantics.md",
       "priority": "P0",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rp-03-shared-portfolio-sizing-and-risk-semantics",

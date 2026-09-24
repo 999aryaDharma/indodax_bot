@@ -88,3 +88,12 @@ Combined suite verification (34 tests across backtest, risk, execution, ledger, 
 - Deviations: None.
 - Unresolved issues / blockers: None for SIM-02.
 - Next unlocked capabilities: SIM-03 (Deterministic replay judge) once DATA-06 is joined, and SHADOW-02.
+
+
+## Fee-rounding review fix and final close-out (2026-09-25)
+
+- Independent review round 1 on `d5919228aeb23f84552779d70f3261263b8b9d1a` found an Important leverage-cap breach: fee estimate was unrounded for sizing while execution rounds fees to configured precision. The reviewer reproduction approved `497.51243781` with a rounded fee of `5`, exceeding post-fee leverage capacity `497.5`.
+- Added `test_rounded_execution_fee_stays_within_post_fee_leverage_cap`. RED: the new test failed with approved notional `497.51243781` > `497.5`. GREEN: sizing now recomputes fee at execution precision and downsizes against post-fee pair-position and account-leverage caps before minimum-size rejection. The recomputed smaller fee cannot exceed the original candidate fee; quantities remain rounded down.
+- Current focused verification: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/backtest/test_risk.py tests/unit/lab/backtest/test_judge_remediation.py tests/integration/lab/test_backtest_golden.py -q -p no:cacheprovider` -> 63 passed.
+- Independent review round 2 returned **PASS** on exact code SHA `a9dde4711fd9515b3a6b27a1736ecd8287ddc106`; no Critical/Important findings remain. Reviewer independently confirmed the repro now sizes to `497.50000000` with fee `5`; a `497.51` minimum correctly rejects after resizing.
+- SIM-02 is DONE for the generic Research simulator risk capability. Its configurable defaults are not owner-approved PM-08 Production settings and do not qualify live risk policy. Production defaults and qualification remain external to this sprint.

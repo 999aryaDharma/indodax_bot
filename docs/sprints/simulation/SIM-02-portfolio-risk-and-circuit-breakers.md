@@ -2,17 +2,17 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: safety | Domain: simulation | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/sim-02-portfolio-risk-and-circuit-breakers`
 
 Requirements: FR-06 | Legacy tasks: 18
 
-External gates: No additional portfolio activation gate; data/policy validity still applies.
+External gate: This closes the generic Research simulator risk capability only. Owner-approved Production risk defaults and qualification remain owned by PM-08; SIM-02 defaults are not active or qualified Production settings.
 
 Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
 

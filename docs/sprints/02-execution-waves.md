@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-None. Verify external gates and shared-file ownership before claim.
+RP-03. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -63,7 +63,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 7
 
 - FEAT-01 — Versioned feature registry [DONE; CORE]
-- SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
+- SIM-02 — Portfolio risk and circuit breakers [DONE; CORE]
 - RW1-01 — Reusable immutable dataset registry [DONE; CORE]
 - API-02 — Read-only Production API application and routes [DONE; CORE]
 
@@ -72,7 +72,7 @@ None. Verify external gates and shared-file ownership before claim.
 - FEAT-02 — Golden technical and liquidity transforms [DONE; CORE]
 - FEAT-03 — As-of market context [DONE; CORE]
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
-- RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
+- RP-03 — Shared portfolio sizing and risk semantics [READY; CORE]
 - UI-02 — Read-only Production operational pages [DONE; CORE]
 - API-07 — Tailscale-authenticated Production read composition [DONE; CORE]
 
