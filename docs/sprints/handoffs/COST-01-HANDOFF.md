@@ -43,6 +43,25 @@ are not accepted as current verification. Current audited implementation is on
 
 Status: REVIEW
 
+## Owner evidence update (2026-09-24)
+
+Owner confirmed the following values were read directly from the INDODAX app's
+Trading Fees screen in PRO mode. This is a current observation, not evidence of
+the rates' historical effective start dates:
+
+| Market | Side | Maker: service / tax / CFX = all-in | Taker: service / tax / CFX = all-in |
+|---|---|---|---|
+| IDR | Buy | 0.10% / 0% / 0.0111% = 0.1111% | 0.20% / 0% / 0.0111% = 0.2111% |
+| IDR | Sell | 0.10% / 0.21% / 0.0111% = 0.3211% | 0.20% / 0.21% / 0.0111% = 0.4211% |
+| USDT | Buy | 0.03% / 0.21% / 0.0222% = 0.2622% | 0.06% / 0.21% / 0.0222% = 0.2922% |
+| USDT | Sell | 0.03% / 0.21% / 0.0222% = 0.2622% | 0.06% / 0.21% / 0.0222% = 0.2922% |
+
+The public [INDODAX fee article](https://help.indodax.com/hc/id/articles/4416646599705-Rincian-Biaya-Transaksi-di-INDODAX)
+corroborates the fee components, market/side/order-role coverage, PMK 50/2025
+tax effective time, and Pro minimum. This owner observation supports current
+matrix values only. Prior intervals and the effective start of this exact
+matrix remain unverified; keep their schedules fail-closed and COST-01 in REVIEW.
+
 ## Identity
 - Sprint ID: COST-01 — Time-valid exchange cost schedules
 - Implementation agent: Antigravity
