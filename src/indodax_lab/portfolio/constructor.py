@@ -6,8 +6,9 @@ import uuid
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.ledger import Position
@@ -43,6 +44,226 @@ class TargetExposure(BaseModel):
         return dec
 
 
+class PendingReservation(BaseModel):
+    """Unfilled order remainder reserved against one portfolio revision."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    order_id: str
+    strategy_id: str
+    pair: str
+    side: OrderSide
+    remaining_qty: Decimal
+    reserved_notional: Decimal
+    reserved_fee: Decimal = Decimal("0")
+    reserved_risk: Decimal = Decimal("0")
+
+    @field_validator("order_id", "strategy_id")
+    @classmethod
+    def require_text_identity(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("RESERVATION_IDENTITY_REQUIRED")
+        return normalized
+
+    @field_validator("pair")
+    @classmethod
+    def normalize_pair(cls, value: str) -> str:
+        pair = value.strip().lower()
+        if not pair:
+            raise ValueError("RESERVATION_PAIR_REQUIRED")
+        return pair
+
+    @field_validator(
+        "remaining_qty", "reserved_notional", "reserved_fee", "reserved_risk", mode="before"
+    )
+    @classmethod
+    def parse_amounts(cls, value: Any) -> Decimal:
+        amount = Decimal(str(value))
+        if not amount.is_finite() or amount < 0:
+            raise ValueError("INVALID_RESERVATION_AMOUNT")
+        return amount
+
+    @model_validator(mode="after")
+    def require_positive_remainder(self) -> PendingReservation:
+        if self.remaining_qty <= 0 or self.reserved_notional <= 0:
+            raise ValueError("POSITIVE_RESERVATION_REMAINDER_REQUIRED")
+        return self
+
+
+class PortfolioState(BaseModel):
+    """Immutable financial snapshot; cash is ledger cash before pending reservations."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    valuation_currency: str
+    cash_balance: Decimal
+    positions: tuple[Position, ...] = ()
+    mark_prices: tuple[tuple[str, Decimal], ...] = ()
+    reservations: tuple[PendingReservation, ...] = ()
+    revision: int = Field(ge=0, strict=True)
+
+    @field_validator("cash_balance", mode="before")
+    @classmethod
+    def parse_cash(cls, value: Any) -> Decimal:
+        amount = Decimal(str(value))
+        if not amount.is_finite() or amount < 0:
+            raise ValueError("INVALID_PORTFOLIO_CASH")
+        return amount
+
+    @field_validator("valuation_currency")
+    @classmethod
+    def normalize_currency(cls, value: str) -> str:
+        currency = value.strip().upper()
+        if not currency:
+            raise ValueError("VALUATION_CURRENCY_REQUIRED")
+        return currency
+
+    @field_validator("positions", mode="before")
+    @classmethod
+    def normalize_positions(cls, value: Any) -> Any:
+        return tuple(value.values()) if isinstance(value, Mapping) else value
+
+    @field_validator("mark_prices", mode="before")
+    @classmethod
+    def normalize_marks(cls, value: Any) -> Any:
+        if isinstance(value, Mapping):
+            return tuple(
+                sorted((str(pair).lower(), Decimal(str(price))) for pair, price in value.items())
+            )
+        return value
+
+    @field_validator("reservations", mode="before")
+    @classmethod
+    def normalize_reservations(cls, value: Any) -> Any:
+        return tuple(value.values()) if isinstance(value, Mapping) else value
+
+    @model_validator(mode="after")
+    def validate_snapshot(self) -> PortfolioState:
+        positions = self.positions_by_pair
+        marks = self.mark_prices_by_pair
+        if len(positions) != len(self.positions):
+            raise ValueError("DUPLICATE_PORTFOLIO_POSITION_PAIR")
+        if len({r.order_id for r in self.reservations}) != len(self.reservations):
+            raise ValueError("DUPLICATE_PENDING_RESERVATION_ID")
+        if any(not price.is_finite() or price <= 0 for price in marks.values()):
+            raise ValueError("INVALID_PORTFOLIO_MARK")
+        if len(marks) != len(self.mark_prices):
+            raise ValueError("DUPLICATE_PORTFOLIO_MARK")
+        if any(position.base_qty > 0 and pair not in marks for pair, position in positions.items()):
+            raise ValueError("MISSING_POSITION_MARK")
+        if any(r.side == OrderSide.BUY and r.pair not in marks for r in self.reservations):
+            raise ValueError("MISSING_RESERVATION_MARK")
+        if self.reserved_cash > self.cash_balance:
+            raise ValueError("RESERVATIONS_EXCEED_CASH")
+        return self
+
+    @property
+    def positions_by_pair(self) -> dict[str, Position]:
+        return {position.pair.lower(): position for position in self.positions}
+
+    @property
+    def mark_prices_by_pair(self) -> dict[str, Decimal]:
+        return {pair.lower(): price for pair, price in self.mark_prices}
+
+    @property
+    def reserved_cash(self) -> Decimal:
+        return sum(
+            (
+                r.reserved_notional + r.reserved_fee
+                for r in self.reservations
+                if r.side == OrderSide.BUY
+            ),
+            Decimal("0"),
+        )
+
+    @property
+    def available_cash(self) -> Decimal:
+        return self.cash_balance - self.reserved_cash
+
+    @property
+    def pending_exposure_by_pair(self) -> dict[str, Decimal]:
+        exposure: dict[str, Decimal] = {}
+        marks = self.mark_prices_by_pair
+        for reservation in self.reservations:
+            if reservation.side == OrderSide.BUY:
+                marked_notional = reservation.remaining_qty * marks[reservation.pair]
+                exposure[reservation.pair] = (
+                    exposure.get(reservation.pair, Decimal("0"))
+                    + max(reservation.reserved_notional, marked_notional)
+                )
+        return exposure
+
+    @property
+    def pending_risk_by_strategy(self) -> dict[str, Decimal]:
+        risk: dict[str, Decimal] = {}
+        for reservation in self.reservations:
+            if reservation.side == OrderSide.BUY:
+                risk[reservation.strategy_id] = (
+                    risk.get(reservation.strategy_id, Decimal("0")) + reservation.reserved_risk
+                )
+        return risk
+
+    @property
+    def equity(self) -> Decimal:
+        marks = self.mark_prices_by_pair
+        asset_value = sum(
+            (
+                position.base_qty * marks.get(pair, Decimal("0"))
+                for pair, position in self.positions_by_pair.items()
+            ),
+            Decimal("0"),
+        )
+        return self.cash_balance + asset_value
+
+
+class AllocationPolicy(BaseModel):
+    """Versioned deterministic contention order for same-pair strategy intents."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    policy_id: str
+    version: str
+    strategy_priorities: tuple[tuple[str, int], ...] = ()
+
+    @field_validator("policy_id", "version")
+    @classmethod
+    def require_policy_identity(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("ALLOCATION_POLICY_IDENTITY_REQUIRED")
+        return value
+
+    @field_validator("strategy_priorities", mode="before")
+    @classmethod
+    def normalize_priorities(cls, value: Any) -> Any:
+        if isinstance(value, Mapping):
+            if any(type(priority) is not int for priority in value.values()):
+                raise ValueError("INVALID_STRATEGY_PRIORITY_MAP")
+            return tuple(sorted((str(key), priority) for key, priority in value.items()))
+        if value is not None and any(
+            not isinstance(item, (list, tuple))
+            or len(item) != 2
+            or type(item[1]) is not int
+            for item in value
+        ):
+            raise ValueError("INVALID_STRATEGY_PRIORITY_MAP")
+        return value
+
+    @model_validator(mode="after")
+    def validate_priorities(self) -> AllocationPolicy:
+        keys = [key for key, _ in self.strategy_priorities]
+        if len(keys) != len(set(keys)) or any(
+            not key.strip() or isinstance(priority, bool) or not isinstance(priority, int)
+            for key, priority in self.strategy_priorities
+        ):
+            raise ValueError("INVALID_STRATEGY_PRIORITY_MAP")
+        return self
+
+    @property
+    def priority_map(self) -> dict[str, int]:
+        return dict(self.strategy_priorities)
+
+
 class PortfolioConstructor:
     """Deterministic constructor translating strategy intents and marks into target exposures."""
 
@@ -67,7 +288,12 @@ class PortfolioConstructor:
     ) -> tuple[TargetExposure, ...]:
         """Compute target exposures by combining strategy intents with current positions."""
         exposures: list[TargetExposure] = []
-        intents_by_pair: dict[str, SignalIntent] = {i.pair.lower(): i for i in intents}
+        intents_by_pair: dict[str, SignalIntent] = {}
+        for intent in intents:
+            pair = intent.pair.lower()
+            if pair in intents_by_pair:
+                raise ValueError(f"SAME_PAIR_INTENT_CONFLICT:{pair}")
+            intents_by_pair[pair] = intent
         all_pairs = set(intents_by_pair.keys()) | {p.lower() for p in current_positions.keys()}
 
         for pair in sorted(all_pairs):
@@ -122,6 +348,51 @@ class PortfolioConstructor:
             )
 
         return tuple(exposures)
+
+    def construct_orders(
+        self,
+        intents: Sequence[SignalIntent],
+        state: PortfolioState,
+        allocation_policy: AllocationPolicy | None,
+    ) -> tuple[SignalIntent, ...]:
+        """Validate, arbitrate and deterministically order candidate intents."""
+        if not isinstance(state, PortfolioState):
+            raise ValueError("PORTFOLIO_STATE_REQUIRED")
+        if allocation_policy is not None and not isinstance(allocation_policy, AllocationPolicy):
+            raise ValueError("VERSIONED_ALLOCATION_POLICY_REQUIRED")
+
+        unique: dict[str, SignalIntent] = {}
+        grouped: dict[str, list[SignalIntent]] = {}
+        marks = state.mark_prices_by_pair
+        for intent in intents:
+            identity = intent.intent_id
+            if identity in unique:
+                if unique[identity] != intent:
+                    raise ValueError(f"DUPLICATE_INTENT_ID_CONFLICT:{identity}")
+                continue
+            unique[identity] = intent
+            pair = intent.pair.lower()
+            if pair not in marks:
+                raise ValueError(f"MISSING_OR_INVALID_MARK_PRICE:{pair}")
+            grouped.setdefault(pair, []).append(intent)
+
+        priorities = allocation_policy.priority_map if allocation_policy else {}
+        selected: list[SignalIntent] = []
+        for pair, candidates in grouped.items():
+            if len(candidates) > 1 and allocation_policy is None:
+                raise ValueError(f"SAME_PAIR_INTENT_CONFLICT:{pair}")
+            winner = min(
+                candidates,
+                key=lambda item: (
+                    -priorities.get(item.strategy_id, 0),
+                    item.strategy_id,
+                    item.intent_id,
+                ),
+            )
+            selected.append(winner)
+        return tuple(
+            sorted(selected, key=lambda item: (item.pair.lower(), item.strategy_id, item.intent_id))
+        )
 
     def generate_rebalance_intents(
         self,

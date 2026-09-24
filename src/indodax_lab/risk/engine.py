@@ -22,6 +22,7 @@ from indodax_lab.backtest.risk import (
 from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.execution.oms import OmsOrder, OmsStateMachine
 from indodax_lab.market.health import UNSAFE_TRADING_STATES, MarketHealthState
+from indodax_lab.portfolio.constructor import PortfolioState
 
 logger = logging.getLogger("risk_engine")
 
@@ -271,12 +272,17 @@ class RiskEngine:
         self,
         intent: SignalIntent,
         *,
-        current_equity: Decimal,
-        current_positions: Mapping[str, Position],
-        mark_prices: Mapping[str, Decimal],
+        current_equity: Decimal | None = None,
+        current_positions: Mapping[str, Position] | None = None,
+        mark_prices: Mapping[str, Decimal] | None = None,
         evaluation_time: datetime,
-        available_cash: Decimal,
+        available_cash: Decimal | None = None,
         market_health: MarketHealthState = MarketHealthState.HEALTHY,
+        portfolio_state: PortfolioState | None = None,
+        estimated_fee_rate: Decimal | None = None,
+        fee_precision: int | None = None,
+        quantity_precision: int | None = None,
+        max_risk_amount: Decimal | None = None,
     ) -> RiskAssessmentResult:
         """Evaluate intent across operational, market health, and financial risk constraints."""
         # 1. Operational kill switch
@@ -309,6 +315,67 @@ class RiskEngine:
                 rejection_reason=f"Exceeded max {self.max_orders_per_minute} orders per minute.",
             )
 
+        legacy_inputs_supplied = any(value is not None for value in (
+            current_equity, current_positions, mark_prices, available_cash
+        ))
+        pending_exposure_by_pair: Mapping[str, Decimal] = {}
+        if portfolio_state is not None:
+            if legacy_inputs_supplied:
+                return RiskAssessmentResult(
+                    approved=False,
+                    reason_code="DUPLICATE_PORTFOLIO_STATE",
+                    rejection_reason=(
+                        "Pass either a PortfolioState or legacy financial inputs, not both."
+                    ),
+                )
+            if not isinstance(portfolio_state, PortfolioState):
+                return RiskAssessmentResult(approved=False, reason_code="PORTFOLIO_STATE_REQUIRED")
+            current_equity = portfolio_state.equity
+            current_positions = portfolio_state.positions_by_pair
+            mark_prices = portfolio_state.mark_prices_by_pair
+            available_cash = portfolio_state.available_cash
+            pending_exposure_by_pair = portfolio_state.pending_exposure_by_pair
+            if intent.side == OrderSide.BUY and any(
+                value is None for value in (estimated_fee_rate, fee_precision, quantity_precision)
+            ):
+                return RiskAssessmentResult(
+                    approved=False,
+                    reason_code="COST_AND_PRECISION_REQUIRED",
+                    rejection_reason=(
+                        "State-based entries require explicit cost and precision inputs."
+                    ),
+                )
+        elif any(
+            value is None
+            for value in (current_equity, current_positions, mark_prices, available_cash)
+        ):
+            return RiskAssessmentResult(
+                approved=False,
+                reason_code="PORTFOLIO_STATE_REQUIRED",
+                rejection_reason="Financial state inputs are incomplete.",
+            )
+
+        if (
+            max_risk_amount is not None
+            and intent.side == OrderSide.BUY
+            and any(
+                value is None
+                for value in (estimated_fee_rate, fee_precision, quantity_precision)
+            )
+        ):
+            return RiskAssessmentResult(
+                approved=False,
+                reason_code="COST_AND_PRECISION_REQUIRED",
+                rejection_reason="Stop-risk sizing requires explicit cost and precision inputs.",
+            )
+        if self.risk_manager is None:
+            return RiskAssessmentResult(approved=False, reason_code="RISK_MANAGER_REQUIRED")
+        if max_risk_amount is not None and not intent.strategy_id.strip():
+            return RiskAssessmentResult(approved=False, reason_code="STRATEGY_ID_REQUIRED")
+        estimated_fee_rate = estimated_fee_rate if estimated_fee_rate is not None else Decimal("0")
+        fee_precision = fee_precision if fee_precision is not None else 8
+        quantity_precision = quantity_precision if quantity_precision is not None else 8
+
         # 4. Financial risk manager assessment (position size, circuit breakers, loss limits)
         result = self.risk_manager.assess_order(
             intent=intent,
@@ -317,6 +384,11 @@ class RiskEngine:
             mark_prices=mark_prices,
             evaluation_time=evaluation_time,
             available_cash=available_cash,
+            estimated_fee_rate=estimated_fee_rate,
+            fee_precision=fee_precision,
+            quantity_precision=quantity_precision,
+            pending_exposure_by_pair=pending_exposure_by_pair,
+            max_risk_amount=max_risk_amount,
         )
 
         if result.approved:

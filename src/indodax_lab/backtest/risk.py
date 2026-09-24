@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal, ROUND_DOWN
 import json
 import os
-from pathlib import Path
 import tempfile
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import datetime, timedelta
+from decimal import ROUND_DOWN, Decimal
+from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -98,13 +99,17 @@ class PortfolioRiskManager:
         if not self.initial_equity.is_finite() or self.initial_equity < 0:
             raise ValueError("INVALID_INITIAL_EQUITY")
         self.start_time = _ensure_utc(start_time, "start_time")
-        self.peak_equity = Decimal(str(peak_equity)) if peak_equity is not None else self.initial_equity
+        self.peak_equity = (
+            Decimal(str(peak_equity)) if peak_equity is not None else self.initial_equity
+        )
         self.is_halted = is_halted
         self.halt_reason = halt_reason
         self.halted_at = _ensure_utc(halted_at, "halted_at") if halted_at is not None else None
 
         self.daily_start_equity = (
-            Decimal(str(daily_start_equity)) if daily_start_equity is not None else self.initial_equity
+            Decimal(str(daily_start_equity))
+            if daily_start_equity is not None
+            else self.initial_equity
         )
         self.daily_start_date = (
             _ensure_utc(daily_start_date, "daily_start_date")
@@ -112,7 +117,9 @@ class PortfolioRiskManager:
             else self.start_time
         )
         self.weekly_start_equity = (
-            Decimal(str(weekly_start_equity)) if weekly_start_equity is not None else self.initial_equity
+            Decimal(str(weekly_start_equity))
+            if weekly_start_equity is not None
+            else self.initial_equity
         )
         self.weekly_start_date = (
             _ensure_utc(weekly_start_date, "weekly_start_date")
@@ -233,15 +240,23 @@ class PortfolioRiskManager:
         estimated_fee_rate: Decimal = Decimal("0"),
         fee_precision: int = 8,
         quantity_precision: int = 8,
+        pending_exposure_by_pair: Mapping[str, Decimal] | None = None,
+        max_risk_amount: Decimal | None = None,
     ) -> RiskAssessmentResult:
         """Assess order sizing and enforce loss / drawdown circuit breakers."""
         eval_utc = _ensure_utc(evaluation_time, "evaluation_time")
         price = mark_prices.get(intent.pair, intent.limit_price)
-        values = [current_equity, available_cash, estimated_fee_rate, *mark_prices.values()]
+        pending_exposure_by_pair = pending_exposure_by_pair or {}
+        values = [current_equity, available_cash, estimated_fee_rate, *mark_prices.values(),
+                  *pending_exposure_by_pair.values()]
         if (any(not v.is_finite() or v < 0 for v in values)
                 or price is None or not price.is_finite() or price <= 0
                 or any(v <= 0 for v in mark_prices.values())):
             return RiskAssessmentResult(approved=False, reason_code="INVALID_RISK_INPUT")
+        if max_risk_amount is not None and (
+            not max_risk_amount.is_finite() or max_risk_amount <= 0
+        ):
+            return RiskAssessmentResult(approved=False, reason_code="INVALID_RISK_BUDGET")
         if not 0 <= fee_precision <= 18 or not 0 <= quantity_precision <= 18:
             return RiskAssessmentResult(approved=False, reason_code="INVALID_PRECISION")
         if any(p.base_qty > 0 and pair not in mark_prices for pair, p in current_positions.items()):
@@ -339,7 +354,9 @@ class PortfolioRiskManager:
                 return RiskAssessmentResult(
                     approved=False,
                     reason_code="BELOW_MIN_SIZE_REJECTED",
-                    rejection_reason=f"Sell notional {sell_notional} < min {self.policy.min_order_notional}",
+                    rejection_reason=(
+                        f"Sell notional {sell_notional} < min {self.policy.min_order_notional}"
+                    ),
                 )
             return RiskAssessmentResult(
                 approved=True,
@@ -351,22 +368,56 @@ class PortfolioRiskManager:
         # BUY order:
         # Check max open positions limit
         pos = current_positions.get(intent.pair)
+        open_pairs = {
+            pair.lower()
+            for pair, position in current_positions.items()
+            if position.base_qty > Decimal("0")
+        }
+        open_pairs.update(
+            pair.lower()
+            for pair, amount in pending_exposure_by_pair.items()
+            if amount > Decimal("0")
+        )
         if pos is None or pos.base_qty <= Decimal("0"):
-            open_count = sum(1 for p in current_positions.values() if p.base_qty > Decimal("0"))
-            if open_count >= self.policy.max_open_positions:
+            if (
+                intent.pair.lower() not in open_pairs
+                and len(open_pairs) >= self.policy.max_open_positions
+            ):
                 return RiskAssessmentResult(
                     approved=False,
                     reason_code="MAX_POSITIONS_REACHED",
-                    rejection_reason=f"Already reached max {self.policy.max_open_positions} open positions",
+                    rejection_reason=(
+                        f"Already reached max {self.policy.max_open_positions} open positions"
+                    ),
                 )
 
         # SIM-02-AC0: Sizing respects shared capital, max position fraction, and available cash
         max_position_notional = current_equity * self.policy.max_position_fraction
         held_notional = pos.base_qty * price if pos is not None else Decimal("0")
+        held_notional += pending_exposure_by_pair.get(intent.pair.lower(), Decimal("0"))
         remaining_capacity = max(Decimal("0"), max_position_notional - held_notional)
         total_exposure = sum((p.base_qty * mark_prices.get(pair, Decimal("0"))
                               for pair, p in current_positions.items()), Decimal("0"))
-        leverage_capacity = max(Decimal("0"), current_equity * self.policy.max_account_leverage - total_exposure)
+        total_exposure += sum(pending_exposure_by_pair.values(), Decimal("0"))
+        leverage_capacity = max(
+            Decimal("0"), current_equity * self.policy.max_account_leverage - total_exposure
+        )
+        stop_distance: Decimal | None = None
+        if max_risk_amount is not None:
+            if intent.stop_loss is None or intent.stop_loss >= price:
+                return RiskAssessmentResult(
+                    approved=False,
+                    reason_code="RISK_STOP_REQUIRED",
+                    rejection_reason=(
+                        "A BUY risk budget requires a stop below the entry reference price."
+                    ),
+                )
+            stop_distance = price - intent.stop_loss
+            risk_per_unit = stop_distance + estimated_fee_rate * (price + intent.stop_loss)
+            if risk_per_unit <= 0:
+                return RiskAssessmentResult(approved=False, reason_code="INVALID_RISK_DISTANCE")
+            risk_qty = max_risk_amount / risk_per_unit
+            desired_notional = min(desired_notional, risk_qty * price)
         # Reserve a whole fee quantum for rounding, then quantize quantity DOWN.
         fee_buffer = Decimal(10) ** -fee_precision if estimated_fee_rate else Decimal("0")
         cash_capacity = max(Decimal("0"), available_cash - fee_buffer) / (1 + estimated_fee_rate)
@@ -381,8 +432,12 @@ class PortfolioRiskManager:
             # the binding constraint; retain the prior fee-inclusive divisor.
             remaining_capacity /= 1 + self.policy.max_position_fraction * estimated_fee_rate
         leverage_capacity /= 1 + self.policy.max_account_leverage * estimated_fee_rate
-        allowed_notional = min(desired_notional, remaining_capacity, leverage_capacity, cash_capacity)
-        approved_qty = (allowed_notional / price).quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
+        allowed_notional = min(
+            desired_notional, remaining_capacity, leverage_capacity, cash_capacity
+        )
+        approved_qty = (allowed_notional / price).quantize(
+            Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN
+        )
         allowed_notional = approved_qty * price
 
         # Enforce exposure limits against the same rounded fee execution books.
@@ -398,8 +453,21 @@ class PortfolioRiskManager:
         allowed_notional = min(
             allowed_notional, post_fee_position_capacity, post_fee_leverage_capacity
         )
-        approved_qty = (allowed_notional / price).quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
+        approved_qty = (allowed_notional / price).quantize(
+            Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN
+        )
         allowed_notional = approved_qty * price
+        if max_risk_amount is not None and stop_distance is not None:
+            entry_fee = (allowed_notional * estimated_fee_rate).quantize(fee_quantum)
+            exit_fee = (approved_qty * intent.stop_loss * estimated_fee_rate).quantize(fee_quantum)
+            actual_stop_risk = approved_qty * stop_distance + entry_fee + exit_fee
+            if actual_stop_risk > max_risk_amount:
+                available_stop_loss = max(Decimal("0"), max_risk_amount - entry_fee - exit_fee)
+                risk_qty = (available_stop_loss / stop_distance).quantize(
+                    Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN
+                )
+                approved_qty = min(approved_qty, risk_qty)
+                allowed_notional = approved_qty * price
 
         # SIM-02-AC1: Size di bawah minimum ditolak bukan dibulatkan naik
         if allowed_notional <= 0 or allowed_notional < self.policy.min_order_notional:
@@ -409,7 +477,8 @@ class PortfolioRiskManager:
                 approved_notional=Decimal("0"),
                 reason_code="BELOW_MIN_SIZE_REJECTED",
                 rejection_reason=(
-                    f"Approved notional {allowed_notional} is below minimum {self.policy.min_order_notional}"
+                    "Approved notional "
+                    f"{allowed_notional} is below minimum {self.policy.min_order_notional}"
                 ),
             )
 
