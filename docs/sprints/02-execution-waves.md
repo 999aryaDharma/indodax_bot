@@ -73,7 +73,7 @@ None. Verify external gates and shared-file ownership before claim.
 - FEAT-03 — As-of market context [DONE; CORE]
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
-- UI-02 — Read-only Production operational pages [IN_PROGRESS; CORE]
+- UI-02 — Read-only Production operational pages [DONE; CORE]
 
 ## Wave 9
 

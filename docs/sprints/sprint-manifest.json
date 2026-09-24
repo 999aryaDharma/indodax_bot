@@ -11513,28 +11513,30 @@
         "Pages remain legible at desktop and smartphone widths with semantic order preserved"
       ],
       "files": [
-        "frontend/src/features/production/OverviewPage.tsx",
-        "frontend/src/features/production/PortfolioPage.tsx",
-        "frontend/src/features/production/PositionsPage.tsx",
-        "frontend/src/features/production/OrdersPage.tsx",
-        "frontend/src/features/production/ReconciliationPage.tsx",
-        "frontend/src/features/production/RiskPage.tsx",
-        "frontend/src/features/production/ReleasesPage.tsx",
-        "frontend/src/features/production/AuditPage.tsx"
+        "frontend/src/features/production/pages.tsx",
+        "frontend/src/features/production/route.tsx",
+        "frontend/src/features/production/pages.test.tsx",
+        "frontend/src/api/client.ts",
+        "frontend/src/api/client.test.ts",
+        "frontend/src/api/types.ts",
+        "frontend/src/app/App.tsx",
+        "frontend/src/app/context.ts",
+        "frontend/src/app/context.test.ts",
+        "frontend/src/styles/tokens.css"
       ],
       "type": "integration",
       "tier": "CORE",
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-02-read-only-production-operational-pages.md",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "implementation_owner": "/root",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer",
       "recommended_branch": "feat/ui-02-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "Production routes now include Releases and Audit; typed read clients are being added for API-02 resource contracts. Production Main remains live; frontend reads only.",
+      "current_context": "Read-only Production operational pages implemented and independently reviewed PASS at code SHA b813a86415503471668e2ee3dc8a0ad8b2431333. Live API connectivity and rendered smartphone screenshots remain unverified; no live account or host access occurred.",
       "unlocks": [],
       "requirements": [
         "FR-23"
@@ -11555,27 +11557,34 @@
           "criterion": "UI-02-AC0",
           "test_case": "test_ui_02_0",
           "behavior": "HALTED/RECOVERY/UNKNOWN/mismatch/stale/unavailable remain prominent and text-labeled",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED"
         },
         {
           "criterion": "UI-02-AC1",
           "test_case": "test_ui_02_1",
           "behavior": "Tables align numeric values and expose provenance without rendering unknown metrics as zero",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED"
         },
         {
           "criterion": "UI-02-AC2",
           "test_case": "test_ui_02_2",
           "behavior": "Pages remain legible at desktop and smartphone widths with semantic order preserved",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
-      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+      "implementation_status_note": "18 frontend tests passed; typecheck and production build passed. Independent reviewer PASS at exact implementation SHA. Live Production API and rendered smartphone screenshot gates remain environment-dependent.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes.",
+      "evidence": {
+        "kind": "implementation",
+        "source_commit": "b813a86415503471668e2ee3dc8a0ad8b2431333",
+        "code_target": "b813a86415503471668e2ee3dc8a0ad8b2431333",
+        "path": "docs/sprints/handoffs/UI-02-REVIEW.md",
+        "review": "PASS by /root/prod_mvp_final_reviewer; 0 Critical and 0 Important findings."
+      }
     }
   ],
   "readiness_rule": "All dependencies DONE; external activation and review gates remain separate."
