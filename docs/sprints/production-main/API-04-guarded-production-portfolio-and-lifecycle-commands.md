@@ -46,7 +46,7 @@ API-00 through API-03 are DONE read/control-plane foundations. Named command adm
 
 ## In Scope
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority. Expose adjusted peak, absolute drawdown allowance, floor and remaining distance through existing reviewed settings/results; server operating costs are excluded from the trading-return target.
 
 - Research actor and read-only viewer cannot invoke Production commands.
 - Stale revision or changed proposal rejects approval and requires a new proposal.
@@ -86,7 +86,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority. Expose adjusted peak, absolute drawdown allowance, floor and remaining distance through existing reviewed settings/results; server operating costs are excluded from the trading-return target.
 
 ## Planned Files / Artifacts
 
@@ -101,7 +101,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority. Expose adjusted peak, absolute drawdown allowance, floor and remaining distance through existing reviewed settings/results; server operating costs are excluded from the trading-return target.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 

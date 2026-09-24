@@ -46,7 +46,7 @@ Candidate exit semantics are owned by RP-02; OMS and fill recovery exist. This t
 
 ## In Scope
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program capital-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
 
 - Partial entry fill receives exits only for actual filled quantity.
 - Cancel uncertainty and late fills never permit blind replacement or oversell.
@@ -56,9 +56,9 @@ request_drain(strategy_id, expected_revision, request_id) returns a durable rece
 - Restart restores trailing state ownership and pending exits before resume.
 - Unsupported stop or order semantics reject rather than substitute behavior.
 
-- Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
+- Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
 
-- Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor.
+- Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
 
 ## Out of Scope
 
@@ -78,9 +78,9 @@ The operator supplies versioned inputs through the named interface and receives 
 - **PM-09-AC5** Restart restores trailing state ownership and pending exits before resume.
 - **PM-09-AC6** Unsupported stop or order semantics reject rather than substitute behavior.
 
-- **PM-09-AC7** Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
+- **PM-09-AC7** Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
 
-- **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor.
+- **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
 
 ## Domain Rules / Invariants
 
@@ -88,7 +88,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program capital-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
 
 ## Planned Files / Artifacts
 
@@ -101,7 +101,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program capital-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -137,9 +137,9 @@ Run `python -m pytest tests/integration/lab/test_strategy_draining.py -q` after 
 - `test_pm_09_5`: Restart restores trailing state ownership and pending exits before resume.
 - `test_pm_09_6`: Unsupported stop or order semantics reject rather than substitute behavior.
 
-- `test_pm_09_7`: Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
+- `test_pm_09_7`: Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
 
-- `test_pm_09_8`: Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor.
+- `test_pm_09_8`: Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
 
 ## Failure / Edge Cases
 
@@ -179,9 +179,9 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **PM-09-AC5** Restart restores trailing state ownership and pending exits before resume. Evidence: `test_pm_09_5` at exact committed SHA.
 - [ ] **PM-09-AC6** Unsupported stop or order semantics reject rather than substitute behavior. Evidence: `test_pm_09_6` at exact committed SHA.
 
-- [ ] **PM-09-AC7** Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits. Evidence: `test_pm_09_7` at exact committed SHA.
+- [ ] **PM-09-AC7** Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits. Evidence: `test_pm_09_7` at exact committed SHA.
 
-- [ ] **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor. Evidence: `test_pm_09_8` at exact committed SHA.
+- [ ] **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor. Evidence: `test_pm_09_8` at exact committed SHA.
 
 ## Definition of Done
 

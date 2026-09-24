@@ -55,7 +55,7 @@ Render adoption review, allocation proposal/decision, pause-entry, resume, halt 
 - Draining shows pending positions orders reservations and blocked dust.
 - Keyboard and smartphone layouts preserve command context and confirmation details.
 
-- Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+- Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
 - Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
 
@@ -78,7 +78,7 @@ The operator supplies versioned inputs through the named interface and receives 
 - **UI-03-AC4** Draining shows pending positions orders reservations and blocked dust.
 - **UI-03-AC5** Keyboard and smartphone layouts preserve command context and confirmation details.
 
-- **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+- **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
 - **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
 
@@ -140,7 +140,7 @@ Run `cd frontend; npm test -- src/features/production/commands.test.tsx; npm run
 - `test_ui_03_4`: Draining shows pending positions orders reservations and blocked dust.
 - `test_ui_03_5`: Keyboard and smartphone layouts preserve command context and confirmation details.
 
-- `test_ui_03_6`: Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+- `test_ui_03_6`: Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
 - `test_ui_03_7`: Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
 
@@ -183,7 +183,7 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **UI-03-AC4** Draining shows pending positions orders reservations and blocked dust. Evidence: `test_ui_03_4` at exact committed SHA.
 - [ ] **UI-03-AC5** Keyboard and smartphone layouts preserve command context and confirmation details. Evidence: `test_ui_03_5` at exact committed SHA.
 
-- [ ] **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit. Evidence: `test_ui_03_6` at exact committed SHA.
+- [ ] **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit. Evidence: `test_ui_03_6` at exact committed SHA.
 
 - [ ] **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade. Evidence: `test_ui_03_7` at exact committed SHA.
 

@@ -45,7 +45,7 @@ Reuse PortfolioConstructor, PortfolioRiskManager, central RiskEngine and transac
 
 ## In Scope
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, initial-capital floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
 
 - Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice.
 - Invalid risk or exposure limits and overlapping pair owners reject the policy.
@@ -56,11 +56,13 @@ AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair ow
 - Verified cash flows adjust risk baselines without hiding losses.
 - Priority and intent ordering reproduce identical allocation on replay.
 
-- Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request.
+- Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses.
+- Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
 
-- Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately.
+- Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
+
+- Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. New acceptance remains unverified.
 
 ## Out of Scope
 
@@ -81,11 +83,13 @@ The operator supplies versioned inputs through the named interface and receives 
 - **PM-08-AC6** Verified cash flows adjust risk baselines without hiding losses.
 - **PM-08-AC7** Priority and intent ordering reproduce identical allocation on replay.
 
-- **PM-08-AC8** Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request.
+- **PM-08-AC8** Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses.
+- **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
 
-- **PM-08-AC10** Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately.
+- **PM-08-AC10** Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
+
+- **PM-08-AC11** Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL.
 
 ## Domain Rules / Invariants
 
@@ -93,7 +97,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, initial-capital floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
 
 ## Planned Files / Artifacts
 
@@ -107,7 +111,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, initial-capital floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -144,11 +148,13 @@ Run `python -m pytest tests/unit/lab/portfolio/test_shared_allocation.py -q` aft
 - `test_pm_08_6`: Verified cash flows adjust risk baselines without hiding losses.
 - `test_pm_08_7`: Priority and intent ordering reproduce identical allocation on replay.
 
-- `test_pm_08_8`: Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request.
+- `test_pm_08_8`: Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- `test_pm_08_9`: Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses.
+- `test_pm_08_9`: Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
 
-- `test_pm_08_10`: Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately.
+- `test_pm_08_10`: Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
+
+- `test_pm_08_peak_persistence`: Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. Pending implementation/qualification; no live failure injection is authorized by this documentation.
 
 ## Failure / Edge Cases
 
@@ -189,11 +195,13 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **PM-08-AC6** Verified cash flows adjust risk baselines without hiding losses. Evidence: `test_pm_08_6` at exact committed SHA.
 - [ ] **PM-08-AC7** Priority and intent ordering reproduce identical allocation on replay. Evidence: `test_pm_08_7` at exact committed SHA.
 
-- [ ] **PM-08-AC8** Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request. Evidence: `test_pm_08_8` at exact committed SHA.
+- [ ] **PM-08-AC8** Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out. Evidence: `test_pm_08_8` at exact committed SHA.
 
-- [ ] **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses. Evidence: `test_pm_08_9` at exact committed SHA.
+- [ ] **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses. Evidence: `test_pm_08_9` at exact committed SHA.
 
-- [ ] **PM-08-AC10** Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately. Evidence: `test_pm_08_10` at exact committed SHA.
+- [ ] **PM-08-AC10** Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately. Evidence: `test_pm_08_10` at exact committed SHA.
+
+- [ ] **PM-08-AC11** Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. Evidence: `test_pm_08_peak_persistence` and applicable qualification artifact at exact SHA; pending.
 
 ## Definition of Done
 

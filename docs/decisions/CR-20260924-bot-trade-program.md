@@ -25,3 +25,7 @@ On 2026-09-24 the owner approved a shared IDR 500,000 pool without fixed agent q
 ## Accepted owner refinement — configurable defaults and controlled close-out
 
 The owner requests dashboard-customizable supported Main and agent parameters, initialized from agreed defaults. Record the IDR 500,000 shared pool, initial-capital 20% loss floor, controlled close-out and manual resume, monthly reporting objective and unresolved risk settings. Impact: extend PM-08 floor/default validation, PM-09 durable close-out lifecycle, API-04 versioned draft approval and UI-03 default/draft/active presentation. Agent parameter changes use the existing candidate/release flow; no bypass endpoint or new scheduler is introduced. Amend ADR-010, program and existing sprint acceptance mappings; preserve statuses, dependencies and unrelated implementation work.
+
+## Accepted owner refinement — absolute peak drawdown
+
+Supersede the earlier initial-capital 20% rule: absolute portfolio drawdown allowance is IDR 100,000 from adjusted peak equity at any capital size. Retain controlled close-out, write gates and manual resume. Document reinvestment, negative-month evaluation, trading-cost-only profit target and operator absence of 8-12 hours. Update the program, ADR-010, affected sprint acceptance and manifest in place; statuses/dependencies and runtime are unchanged. Preserve other implementer work and historical handoffs; cash-flow adjustment and incident notification choices remain explicit future decisions.

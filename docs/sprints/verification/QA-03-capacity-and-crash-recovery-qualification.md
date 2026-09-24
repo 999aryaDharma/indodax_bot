@@ -46,6 +46,8 @@ REL-01, PM-06
 - `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
 - `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
@@ -63,6 +65,8 @@ New capability; dependencies must be DONE before implementation.
 - Worker kill tidak duplicate metrics.
 - Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
+
+- Qualification records incident and recovery outcomes with operator acknowledgement absent for 12 hours; preserves single-writer authority durable risk state and no blind order retry. New acceptance remains unverified.
 
 ## Out of Scope
 
@@ -82,6 +86,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 1. **QA-03-FR1:** Disk-full tidak mengakui sukses.
 2. **QA-03-FR2:** Worker kill tidak duplicate metrics.
 3. **QA-03-FR3:** Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata.
+
+- **QA-03-AC6** Qualification records incident and recovery outcomes with operator acknowledgement absent for 12 hours; preserves single-writer authority durable risk state and no blind order retry.
 
 ## Domain Rules / Invariants
 
@@ -158,6 +164,8 @@ At implementation, collect the mapped tests and run them by actual module path; 
 
 Record focused command and results; run affected regression gates. Shared-contract/migration/checkpoint/release changes require full suite. Follow `docs/specs/20-testing-strategy.md` for environment and optional-DL separation.
 
+- `test_qa_03_unattended_incidents`: Qualification records incident and recovery outcomes with operator acknowledgement absent for 12 hours; preserves single-writer authority durable risk state and no blind order retry. Pending implementation/qualification; no live failure injection is authorized by this documentation.
+
 ## Failure / Edge Cases
 
 - Case 1: Disk-full tidak mengakui sukses. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
@@ -208,6 +216,8 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [x] **QA-03-AC3** Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+
+- [ ] **QA-03-AC6** Qualification records incident and recovery outcomes with operator acknowledgement absent for 12 hours; preserves single-writer authority durable risk state and no blind order retry. Evidence: `test_qa_03_unattended_incidents` and applicable qualification artifact at exact SHA; pending.
 
 ## Definition of Done
 

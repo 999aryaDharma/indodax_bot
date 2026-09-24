@@ -46,6 +46,8 @@ QA-03, PM-06
 - `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
 - `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
@@ -62,6 +64,8 @@ New capability; dependencies must be DONE before implementation.
 - SIGTERM flush dan lease release.
 - Missing secret fail tanpa mencetak secret.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
+
+- Operator absence for up to 12 hours does not bypass entry blocks recovery or manual resume after stale feed exchange disconnection process death or uncertain orders. New acceptance remains unverified.
 
 ## Out of Scope
 
@@ -81,6 +85,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 1. **OPS-01-FR1:** Cold boot tidak menjalankan dua writer.
 2. **OPS-01-FR2:** SIGTERM flush dan lease release.
 3. **OPS-01-FR3:** Missing secret fail tanpa mencetak secret.
+
+- **OPS-01-AC6** Operator absence for up to 12 hours does not bypass entry blocks recovery or manual resume after stale feed exchange disconnection process death or uncertain orders.
 
 ## Domain Rules / Invariants
 
@@ -160,6 +166,8 @@ At implementation, collect the mapped tests and run them by actual module path; 
 
 Record focused command and results; run affected regression gates. Shared-contract/migration/checkpoint/release changes require full suite. Follow `docs/specs/20-testing-strategy.md` for environment and optional-DL separation.
 
+- `test_ops_01_unattended_recovery`: Operator absence for up to 12 hours does not bypass entry blocks recovery or manual resume after stale feed exchange disconnection process death or uncertain orders. Pending implementation/qualification; no live failure injection is authorized by this documentation.
+
 ## Failure / Edge Cases
 
 - Case 1: Cold boot tidak menjalankan dua writer. Expected behavior is this assertion; never fall through to a successful artifact on rejection.
@@ -210,6 +218,8 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **OPS-01-AC3** Missing secret fail tanpa mencetak secret. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+
+- [ ] **OPS-01-AC6** Operator absence for up to 12 hours does not bypass entry blocks recovery or manual resume after stale feed exchange disconnection process death or uncertain orders. Evidence: `test_ops_01_unattended_recovery` and applicable qualification artifact at exact SHA; pending.
 
 ## Definition of Done
 
