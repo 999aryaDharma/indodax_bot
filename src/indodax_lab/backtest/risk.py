@@ -88,6 +88,8 @@ class PortfolioRiskManager:
         daily_start_date: datetime | None = None,
         weekly_start_equity: Decimal | None = None,
         weekly_start_date: datetime | None = None,
+        last_observed_equity: Decimal | None = None,
+        last_observation_time: datetime | None = None,
     ) -> None:
         self.policy = policy
         self.initial_equity = Decimal(str(initial_equity))
@@ -115,6 +117,14 @@ class PortfolioRiskManager:
             if weekly_start_date is not None
             else self.start_time
         )
+        self.last_observed_equity = (
+            Decimal(str(last_observed_equity))
+            if last_observed_equity is not None else self.initial_equity
+        )
+        self.last_observation_time = (
+            _ensure_utc(last_observation_time, "last_observation_time")
+            if last_observation_time is not None else self.start_time
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize state for durable persistence across restarts."""
@@ -130,6 +140,8 @@ class PortfolioRiskManager:
             "daily_start_date": self.daily_start_date.isoformat(),
             "weekly_start_equity": str(self.weekly_start_equity),
             "weekly_start_date": self.weekly_start_date.isoformat(),
+            "last_observed_equity": str(self.last_observed_equity),
+            "last_observation_time": self.last_observation_time.isoformat(),
         }
 
     @classmethod
@@ -148,6 +160,12 @@ class PortfolioRiskManager:
             daily_start_date=datetime.fromisoformat(data["daily_start_date"]),
             weekly_start_equity=Decimal(data["weekly_start_equity"]),
             weekly_start_date=datetime.fromisoformat(data["weekly_start_date"]),
+            # Older snapshots lack the last mark; the high-water mark is a
+            # conservative fallback for the next period boundary.
+            last_observed_equity=Decimal(data.get("last_observed_equity", data["peak_equity"])),
+            last_observation_time=datetime.fromisoformat(
+                data.get("last_observation_time", data["weekly_start_date"])
+            ),
         )
 
     def save_to_json(self, path: Path) -> None:
@@ -166,7 +184,11 @@ class PortfolioRiskManager:
         value = Decimal(str(equity))
         if not value.is_finite() or value < 0:
             raise ValueError("INVALID_EQUITY_OBSERVATION")
-        self._roll_loss_periods(value, ts)
+        if ts < self.last_observation_time:
+            raise ValueError("OUT_OF_ORDER_EQUITY_OBSERVATION")
+        self._roll_loss_periods(self.last_observed_equity, ts)
+        self.last_observed_equity = value
+        self.last_observation_time = ts
         if value > self.peak_equity:
             self.peak_equity = value
         if self.peak_equity > 0:
@@ -176,13 +198,13 @@ class PortfolioRiskManager:
                 self.halt_reason = f"DRAWDOWN_BREACH:{drawdown:.4f}"
                 self.halted_at = ts
 
-    def _roll_loss_periods(self, equity: Decimal, timestamp: datetime) -> None:
+    def _roll_loss_periods(self, opening_equity: Decimal, timestamp: datetime) -> None:
         if timestamp.date() > self.daily_start_date.date():
-            self.daily_start_equity = equity
+            self.daily_start_equity = opening_equity
             self.daily_start_date = timestamp
         if (timestamp > self.weekly_start_date
                 and timestamp.isocalendar()[:2] != self.weekly_start_date.isocalendar()[:2]):
-            self.weekly_start_equity = equity
+            self.weekly_start_equity = opening_equity
             self.weekly_start_date = timestamp
 
     def assess_order(

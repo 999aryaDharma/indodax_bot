@@ -212,13 +212,23 @@ def test_loss_periods_roll_at_utc_day_and_iso_week_boundaries(default_policy: Ri
         side=OrderSide.BUY,
         desired_qty=Decimal("0.0001"),
     )
+    unobserved = PortfolioRiskManager(default_policy, Decimal("1000000"), BASE_TS)
+    unobserved_result = unobserved.assess_order(
+        intent, Decimal("940000"), {}, {"btc_idr": Decimal("500000000")},
+        monday + timedelta(days=1), Decimal("940000"),
+    )
+    assert unobserved_result.reason_code == "RISK_PERIOD_OPENING_EQUITY_UNOBSERVED"
+
     weekly_policy = default_policy.model_copy(update={
         "max_daily_loss_fraction": Decimal("0.08"),
         "max_weekly_loss_fraction": Decimal("0.05"),
     })
     weekly = PortfolioRiskManager(weekly_policy, Decimal("1000000"), BASE_TS)
-    weekly.observe_equity(Decimal("1000000"), monday)
-    weekly.observe_equity(Decimal("1000000"), monday + timedelta(days=1))
+    weekly.observe_equity(Decimal("1000000"), monday - timedelta(minutes=1))
+    # The first available mark after the week boundary is already down 6%;
+    # use the last pre-boundary equity as the period opening reference.
+    weekly.observe_equity(Decimal("940000"), monday)
+    weekly.observe_equity(Decimal("940000"), monday + timedelta(days=1))
     result = weekly.assess_order(
         intent, Decimal("940000"), {}, {"btc_idr": Decimal("500000000")},
         monday + timedelta(days=1, hours=1), Decimal("940000"),
@@ -232,15 +242,14 @@ def test_loss_periods_roll_at_utc_day_and_iso_week_boundaries(default_policy: Ri
     daily = PortfolioRiskManager(daily_policy, Decimal("1000000"), BASE_TS)
     next_day = monday + timedelta(days=1)
     daily.observe_equity(Decimal("1000000"), monday)
-    daily.observe_equity(Decimal("1000000"), next_day)
-    daily.observe_equity(Decimal("1000000"), next_day + timedelta(hours=1))
+    daily.observe_equity(Decimal("940000"), next_day)
     daily_intent = intent.model_copy(update={
         "intent_id": "daily-loss",
         "decision_ts": next_day + timedelta(hours=2),
     })
     result = daily.assess_order(
-        daily_intent, Decimal("880000"), {}, {"btc_idr": Decimal("500000000")},
-        next_day + timedelta(hours=2), Decimal("880000"),
+        daily_intent, Decimal("940000"), {}, {"btc_idr": Decimal("500000000")},
+        next_day + timedelta(hours=2), Decimal("940000"),
     )
     assert result.reason_code == "CIRCUIT_BREAKER_DAILY_LOSS"
 
