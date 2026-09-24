@@ -61,7 +61,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SHADOW-01 | Auditable forward paper decisions | shadow | P0 | feature | EVAL-03, ML-04, DATA-05 | REVIEW | [Spec](shadow\SHADOW-01-auditable-forward-paper-decisions.md) |
 | SHADOW-02 | Shared capital reconciliation | shadow | P0 | safety | SHADOW-01, SIM-02 | REVIEW | [Spec](shadow\SHADOW-02-shared-capital-reconciliation.md) |
 | SHADOW-03 | Champion replacement gate | shadow | P0 | safety | SHADOW-02, EVAL-03 | REVIEW | [Spec](shadow\SHADOW-03-champion-replacement-gate.md) |
-| COST-01 | Time-valid exchange cost schedules | simulation | P0 | data | DATA-01 | REVIEW | [Spec](simulation\COST-01-time-valid-exchange-cost-schedules.md) |
+| COST-01 | Time-valid exchange cost schedules | simulation | P0 | data | DATA-01 | DONE | [Spec](simulation\COST-01-time-valid-exchange-cost-schedules.md) |
 | LED-01 | Balanced research postings | simulation | P0 | safety | COST-01, BASE-04 | DONE | [Spec](simulation\LED-01-balanced-research-postings.md) |
 | SIM-01 | Conservative execution simulator | simulation | P0 | feature | COST-01, BAR-01 | REVIEW | [Spec](simulation\SIM-01-conservative-execution-simulator.md) |
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | REVIEW | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |

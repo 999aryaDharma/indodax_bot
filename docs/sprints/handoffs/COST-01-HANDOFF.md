@@ -178,3 +178,8 @@ These tests isolate COST-01 and do not rely on concurrent SIM implementation edi
 - Coverage includes independent expected fee fixture resolution, overlap rejection, interval boundaries, limit order-creation fee basis, unknown/unverified schedule rejection, invalid values, published tax/CFX boundaries and observed current PRO minimum boundary.
 
 These tests prove code behavior and boundary handling only. The published/observed rates do not verify the full active/historical matrix, and no unverified schedule yields a successful canonical lookup. The complete historical tariff matrix remains an external result/promotion blocker.
+
+
+## Independent close-out review (2026-09-25)
+
+Independent reviewer `/root/docs_review` reviewed the exact documentation SHA `9dc19e962ad0921e6b702d6b90142c43296d1d83` and returned **PASS**, with no Critical or Important findings. Review confirmed AC0–AC5 against the code/test snapshot, unknown tariffs remain blocked, and fixtures do not claim actual tariff/profit evidence. The coordinator recorded the specific residual historical-fee evidence gate in COST-01 and SIM-01 manifest entries. COST-01 is DONE for lookup/fail-closed capability only; historical fee matrix verification remains required before affected net metrics or promotion.

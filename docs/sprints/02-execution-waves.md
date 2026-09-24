@@ -30,7 +30,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 - BASE-05 — Unbiased signal observations [DONE; CORE]
 - DATA-02 — Durable immutable publication [DONE; CORE]
-- COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
+- COST-01 — Time-valid exchange cost schedules [DONE; CORE]
 - RW0-01 — Immutable Workbench domain manifests [DONE; CORE]
 - UI-01 — Production and Research context navigation with capability boundary [DONE; CORE]
 

@@ -5647,12 +5647,12 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/COST-01-time-valid-exchange-cost-schedules.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/cost-01-time-valid-exchange-cost-schedules",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "Official historical Indodax fee matrix/effective boundaries remain unverified for affected market × side × role × interval; fee-based net-performance claims and promotion are blocked there. Unknown/unverified rates must yield unavailable/fail-closed results, never zero/current-fee substitution or a shortened window. This evidence gate does not block engineering on explicit fixtures."
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency DATA-01 supplies: CanonicalPair, Candle, TradeEvent + path roots -> validated immutable records.",
       "unlocks": [
@@ -5670,48 +5670,48 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_handoff",
         "path": "docs/sprints/handoffs/COST-01-HANDOFF.md",
-        "source_commit": "627a74c994f29ecffd6e8270a1c459d731c7acd8",
-        "code_target": "627a74c994f29ecffd6e8270a1c459d731c7acd8",
-        "review": "PASS on exact code SHA for code/spec quality, no Critical/Important findings; reviewer did not rerun full suite. Canonical 28-interval authoritative fee evidence remains unverified, so status stays REVIEW."
+        "source_commit": "9dc19e962ad0921e6b702d6b90142c43296d1d83",
+        "code_target": "101e5d3ab4d42b7669f357c479105606ce4915a5",
+        "review": "Independent reviewer /root/docs_review PASS on exact documentation SHA 9dc19e962ad0921e6b702d6b90142c43296d1d83; no Critical/Important findings. Focused COST tests: 11 passed against code/config snapshot 101e5d3ab4d42b7669f357c479105606ce4915a5. Capability DONE; historical fee evidence remains external gate."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "COST-01-AC0",
           "test_case": "test_cost_01_valid_contract",
           "behavior": "Lookup fee memilih schedule historis yang tepat atau memblokir klaim promosi",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "COST-01-AC1",
           "test_case": "test_cost_01_contract_1",
           "behavior": "Overlap schedule key sama ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "COST-01-AC2",
           "test_case": "test_cost_01_contract_2",
           "behavior": "Boundary end memilih interval berikutnya",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "COST-01-AC3",
           "test_case": "test_cost_01_contract_3",
           "behavior": "Periode unknown tidak memakai fee hari ini",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "COST-01-AC4",
           "test_case": "test_unverified_canonical_schedule_is_not_resolved",
           "behavior": "Interval tanpa bukti terverifikasi ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "COST-01-AC5",
           "test_case": "test_limit_fill_uses_order_creation_fee_after_boundary",
           "behavior": "Resting limit order memakai jadwal fee saat order dibuat, walau fill terjadi setelah batas perubahan",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
@@ -5856,7 +5856,7 @@
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/sim-01-conservative-execution-simulator",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "Historical Indodax fee evidence remains incomplete: runs touching unverified market × side × role × intervals must report net performance unavailable/fail closed and cannot support promotion; never substitute zero/current fees or shorten the window. SIM engineering/review may proceed on explicit scoped fixtures that do not claim representative historical net profitability."
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency COST-01 supplies: market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).\n- Dependency BAR-01 supplies: PASS trades + continuity + fixed/train-only threshold -> separate bar_type datasets, end-exclusive windows.",
       "unlocks": [
