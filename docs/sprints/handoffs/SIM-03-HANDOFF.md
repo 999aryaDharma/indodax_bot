@@ -2,7 +2,7 @@
 
 ## Recovery review addendum (2026-09-25)
 
-- Reworked code SHA: `0a2a2132e9ff4728b2996b56757ecc5c0743362b`.
+- Reworked code SHA: `7464acda6150de86fd12777022db91a06278526a`.
 - Round-1 independent review by `/root/sim01_final_review` and `/root/sim01_review`
   requested changes on `8b35308019676c532a804ef7b43f2f8069357067`: result artifacts
   lacked structured rejections and cost/risk/input identity; publish failure
@@ -14,9 +14,10 @@
   with rejected/cancelled orders reports `COMPLETED_WITH_REJECTIONS`; technical
   exceptions still prevent publishing a successful result.
 - Result JSON now writes to a unique same-directory temporary file, flushes/fsyncs,
-  atomically replaces the target, and removes the temporary on failure. The failure
-  test targets an existing artifact whose name ends in `.tmp`, a case that collided
-  with the former fixed temporary path.
+  atomically replaces the target, and removes the temporary on failure. Both
+  `BacktestResult.save_json` and the CLI report publisher use this shared writer.
+  Failure tests target existing artifacts named `.tmp`, which collided with the
+  former fixed temporary path.
 - AC3 now asserts actual per-engine quantities (`0.00048862`) and compares them to
   the single-wallet hypothetical pooled quantity (`0.00097725`). The test cost
   fixture is explicitly labeled synthetic and not INDODAX evidence; it exercises
@@ -29,8 +30,12 @@
   tests/unit/lab/backtest/test_risk.py
   tests/unit/lab/backtest/test_judge_remediation.py
   tests/unit/lab/backtest/test_accounting_failure_atomicity.py -q` → 75 passed;
-  `git diff --check` passed. Ruff leaves four existing E501 findings in engine.py;
-  no lint-clean claim is made.
+  Windows ML environment run including CLI report tests → 77 passed. `git diff --check`
+  passed. Ruff import checks pass; full touched-file lint leaves existing E501 and
+  unused-import findings in legacy CLI/engine code; no lint-clean claim is made.
+- Round-2 review on commit `101e5d3ab4d42b7669f357c479105606ce4915a` found one
+  remaining Important issue: the CLI used its own fixed temp path. It now delegates
+  to the shared atomic writer, and the CLI-target `.tmp` failure test passes.
 - Independent re-review on the exact reworked commit is pending. SIM-03 remains
   REVIEW; dependency statuses remain unchanged.
 
@@ -39,7 +44,7 @@ Status: REVIEW
 ## Identity
 - Sprint ID: SIM-03 — Deterministic replay judge
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/sim01_final_review`, `/root/sim01_review` (re-review pending)
 - Branch / worktree: `feat/sim-03-deterministic-replay-judge`
 - Base SHA: `a7fc0c7`
 - Code target: `feat(sim-03): deterministic replay judge`
