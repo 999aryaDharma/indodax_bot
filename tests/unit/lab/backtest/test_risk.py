@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+import os
 from pathlib import Path
 import pytest
 
@@ -201,6 +202,25 @@ def test_sim_02_contract_3(default_policy: RiskPolicy, tmp_path: Path) -> None:
     assert restarted_risk_manager.is_halted is True
     assert result_after_restart.approved is False
     assert result_after_restart.reason_code == "CIRCUIT_BREAKER_DRAWDOWN_HALT"
+
+
+def test_failed_atomic_snapshot_replacement_preserves_previous_state(
+    default_policy: RiskPolicy, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manager = PortfolioRiskManager(default_policy, Decimal("1000000"), BASE_TS)
+    target = tmp_path / "risk_state.json"
+    previous = '{"is_halted": true, "halt_reason": "prior"}'
+    target.write_text(previous, encoding="utf-8")
+
+    def fail_replace(_source: str | os.PathLike[str], _target: str | os.PathLike[str]) -> None:
+        raise OSError("simulated interrupted replacement")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+    with pytest.raises(OSError, match="simulated interrupted replacement"):
+        manager.save_to_json(target)
+
+    assert target.read_text(encoding="utf-8") == previous
+    assert list(tmp_path.glob(".risk_state.json.*")) == []
 
 
 def test_loss_periods_roll_at_utc_day_and_iso_week_boundaries(default_policy: RiskPolicy) -> None:

@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, ROUND_DOWN
 import json
+import os
 from pathlib import Path
+import tempfile
 from typing import Any, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -170,7 +172,20 @@ class PortfolioRiskManager:
 
     def save_to_json(self, path: Path) -> None:
         """Persist risk state to JSON file."""
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        target = Path(path)
+        temp_path: Path | None = None
+        try:
+            fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+            temp_path = Path(temp_name)
+            with os.fdopen(fd, "w", encoding="utf-8") as snapshot:
+                snapshot.write(json.dumps(self.to_dict(), indent=2))
+                snapshot.flush()
+                os.fsync(snapshot.fileno())
+            os.replace(temp_path, target)
+            temp_path = None
+        finally:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
 
     @classmethod
     def load_from_json(cls, path: Path) -> PortfolioRiskManager:
