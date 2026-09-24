@@ -6,7 +6,7 @@
 
 **Architecture:** An explicit runtime composition reads the existing server-side view-only environment variables, validates Production namespace/state root, wraps `IndodaxReadOnlyClient` as the marked `VenueAccountProvider`, and injects a principal resolver that trusts Tailscale Serve identity headers only behind the loopback proxy boundary. Only `production.read` is granted.
 
-**Tech Stack:** Existing Python/FastAPI/Pydantic/IndodaxReadOnlyClient; no new dependencies.
+**Tech Stack:** Existing Python/FastAPI/Pydantic/IndodaxReadOnlyClient; declare FastAPI and Uvicorn as Production API runtime dependencies.
 
 **Spec:** [CR](../../decisions/CR-20260924-production-dashboard-auth.md), [ADR-011](../../decisions/ADR-011-tailscale-operator-identity.md).
 
