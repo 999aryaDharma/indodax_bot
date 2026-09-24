@@ -12,7 +12,7 @@ Recommended Branch: `feat/cost-01-time-valid-exchange-cost-schedules`
 
 Requirements: FR-06 | Legacy tasks: 17
 
-External gates: No additional portfolio activation gate; data/policy validity still applies.
+External gate: unverified historical fee evidence blocks net-performance claims/promotion for affected market × side × role × time intervals. It does not block implementation/review of the completed cost-schedule lookup/fail-closed capability or downstream mechanics using explicit contract fixtures.
 
 Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
 
@@ -164,7 +164,7 @@ Record focused command and results; run affected regression gates. Shared-contra
 
 ## Security / Privacy / Safety
 
-No order-routing/network write capability. Unknown historical cost blocks promotion; signed or locally reviewed schedules.
+No order-routing/network write capability. Unknown historical cost blocks fee-based performance claims and promotion for that interval; verified schedules and synthetic contract fixtures remain distinguishable.
 
 Trust boundary assessment: untrusted provider/artifact input or privileged state mutation exists; require negative tests and redacted diagnostics.
 
@@ -200,7 +200,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **COST-01-AC3** Periode unknown tidak memakai fee hari ini. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **COST-01-AC4** Interval tanpa bukti terverifikasi ditolak. Evidence: canonical config lookup raises `UNVERIFIED_COST_SCHEDULE`.
 - [ ] **COST-01-AC5** Resting limit order memakai jadwal fee saat order dibuat, walau fill terjadi setelah batas perubahan. Evidence: boundary fixture resolves the creation-time interval.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Public contract resolves an evidenced fixture and returns an explicit blocked result for the unverified canonical schedule. Evidence: `test_cost_01_valid_contract`, `test_unverified_canonical_schedule_is_not_resolved` and exact-scope tests. A blocked result is consumable; fee-based net-PnL/performance is unavailable for any interval without verified applicable costs.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
@@ -248,3 +248,9 @@ Commit scoped changes, record exact SHA/commands/AC evidence in handoff, self-re
 Stop at REVIEW for an independent reviewer; coordinator alone records DONE after PASS.
 If blocked, report root cause and preserve work; do not fabricate test or review evidence.
 ```
+
+## Owner-approved scope clarification (2026-09-25)
+
+Close COST-01 as the time-valid schedule capability: exact Decimal lookup by market/side/role/time, explicit verified-evidence provenance, correct order-time fee basis, and fail-closed unknown/unverified behavior. The present 28 IDR rows are still unverified and no verified USDT schedule is registered; this prevents successful fee-based net-performance results for affected historical/current periods, not downstream implementation work. Synthetic/hand-built fixtures prove interface behavior only; they are not evidence for Indodax PnL.
+
+Keep the market × side × role × effective-boundary evidence inventory and owner evidence requests in `docs/sprints/handoffs/COST-01-HANDOFF.md`. Add the remaining tariff matrix as a downstream external data gate. SIM-01 may implement and review conservative execution against explicitly scoped fixtures; backtest/replay reports whose requested window crosses unknown rates must return cost-unavailable/no net-performance claim, not zero cost or a partial-window result presented as full-period. COST-01 manifest remains REVIEW until exact-commit re-review and coordinator status/projection update.

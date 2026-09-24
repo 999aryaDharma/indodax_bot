@@ -156,3 +156,25 @@ Combined verification with previous capabilities (29 tests total) passed (1.33s)
 
 
 Owner clarified on 2026-09-24 that the three-era summary is an estimate, not official historical evidence. It supplies no replacement dated matrix or effective-boundary evidence. The owner evidence requests listed above therefore remain open; COST-01 remains REVIEW.
+
+
+## Owner-approved capability/data-gate split (2026-09-25)
+
+The owner requested COST-01 stop blocking downstream implementation. Scope is the capability to resolve verified schedules and to reject unverified/unknown intervals without fabricated fees. Treat that capability as independently closable; do not describe unknown tariffs as verified.
+
+Current inspection still finds all 28 configured IDR rows `evidence_verified: false`, no configured USDT rows, and unresolved official matrix/effective-boundary gaps listed above. Synthetic contract fixtures are not actual Indodax tariff proof. These gaps block fee-based net-performance claims/promotion for affected dates/pairs/roles. They do not block SIM-01 implementation/review on explicit fixtures that do not claim representative historical net profitability. Unknown-period runs must fail/abstain or report unavailable; never substitute zero/current fee or silently shorten the requested period.
+
+Focused verification on current working code 2026-09-25: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/backtest/test_cost_schedule.py tests/unit/lab/backtest/test_indodax_cost_boundaries.py tests/unit/lab/backtest/test_execution.py -q -p no:cacheprovider` -> 17 passed. Initial sandbox invocation errored before test execution because shared `%TEMP%/pytest-of-User` was inaccessible; approved elevated rerun passed. Prior exact implementation SHA/review evidence above remains the code basis; no COST implementation changes occurred in this clarification.
+
+Requested disposition: close the capability sprint only after independent review of the revised criterion/scope and exact documentation SHA; retain historical tariff evidence as a named downstream external gate. Manifest status has not yet transitioned pending review.
+
+
+## Focused re-verification for capability close-out (2026-09-25)
+
+These tests isolate COST-01 and do not rely on concurrent SIM implementation edits:
+
+- Command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/backtest/test_cost_schedule.py tests/unit/lab/backtest/test_indodax_cost_boundaries.py -q -p no:cacheprovider`
+- Result: 11 passed in 0.51s on source snapshot `101e5d3ab4d42b7669f357c479105606ce4915a5`; tested code/config blob IDs: costs.py `619fe5def46323ac9398b4cd7b4231ca082287e7`, cost config `ed50d565134de8bb0894e86a2784895a52a6cbe0`. COST code/config/test files were clean and unchanged; concurrent SIM-01 edits were not in this focused test invocation.
+- Coverage includes independent expected fee fixture resolution, overlap rejection, interval boundaries, limit order-creation fee basis, unknown/unverified schedule rejection, invalid values, published tax/CFX boundaries and observed current PRO minimum boundary.
+
+These tests prove code behavior and boundary handling only. The published/observed rates do not verify the full active/historical matrix, and no unverified schedule yields a successful canonical lookup. The complete historical tariff matrix remains an external result/promotion blocker.

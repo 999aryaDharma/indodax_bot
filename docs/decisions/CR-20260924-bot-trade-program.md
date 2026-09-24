@@ -41,3 +41,7 @@ Record all 14 discussed policy aspects in `docs/implementation/PRODUCTION-RISK-P
 ## Confirmed numerical policy defaults
 
 Owner confirmation admits the IDR 4,000/trade, IDR 10,000/global, IDR 8,000/cluster and IDR 15,000/day defaults plus two positions, 25% per-pair and 50% total notional ceilings for qualification before activation. Update PM-08 and UI-03 acceptance mappings. Other proposed settings retain explicit PROPOSED/OPEN status; this is documentation, not live configuration.
+
+## Accepted owner change — separate cost capability from tariff evidence (2026-09-25)
+
+COST-01 is to close as a fail-closed schedule-resolution capability once its existing code/test acceptance and exact-SHA independent review are satisfied. Incomplete historical Indodax tariffs remain an explicit external data gate on fee-based performance claims/promotion for affected windows; they do not block SIM-01 engineering against scoped contract fixtures. Unknown-cost experiments cannot claim net performance or silently use zero/current rates/shorten ranges. Do not set DONE until coordinator review permits it; keep the fee evidence status visible in COST-01 and affected downstream specs. No change to trading fees, code, credentials, live system or promotion criteria is authorized.

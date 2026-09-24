@@ -12,7 +12,7 @@ Recommended Branch: `feat/sim-01-conservative-execution-simulator`
 
 Requirements: FR-06 | Legacy tasks: 18
 
-External gates: No additional portfolio activation gate; data/policy validity still applies.
+External gate: historical fee evidence remains required for fee-based net-performance results/promotion over the selected interval. This does not block simulator implementation/review on explicit fixtures; any simulation resolving an unverified schedule must return cost-unavailable/no net-performance claim, not assume zero/current cost or silently shorten its requested window.
 
 Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
 
@@ -47,7 +47,7 @@ LABEL-01, ML-02, SIM-02
 
 New capability; dependencies must be DONE before implementation.
 
-- Dependency COST-01 supplies: market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).
+- Dependency COST-01 supplies: market, side, role, fee_basis_ts -> a verified schedule with provenance or explicit blocked/unavailable result; [valid_from,valid_to). Unknown costs cannot generate successful net PnL. Historical schedule completeness is a separate external evidence gate.
 - Dependency BAR-01 supplies: PASS trades + continuity + fixed/train-only threshold -> separate bar_type datasets, end-exclusive windows.
 
 ## In Scope
