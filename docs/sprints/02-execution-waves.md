@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-API-02, UI-01. Verify external gates and shared-file ownership before claim.
+UI-02. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -32,7 +32,7 @@ API-02, UI-01. Verify external gates and shared-file ownership before claim.
 - DATA-02 — Durable immutable publication [DONE; CORE]
 - COST-01 — Time-valid exchange cost schedules [REVIEW; CORE]
 - RW0-01 — Immutable Workbench domain manifests [DONE; CORE]
-- UI-01 — Production and Research context navigation with capability boundary [READY; CORE]
+- UI-01 — Production and Research context navigation with capability boundary [DONE; CORE]
 
 ## Wave 3
 
@@ -65,7 +65,7 @@ API-02, UI-01. Verify external gates and shared-file ownership before claim.
 - FEAT-01 — Versioned feature registry [DONE; CORE]
 - SIM-02 — Portfolio risk and circuit breakers [REVIEW; CORE]
 - RW1-01 — Reusable immutable dataset registry [DONE; CORE]
-- API-02 — Read-only Production API application and routes [READY; CORE]
+- API-02 — Read-only Production API application and routes [DONE; CORE]
 
 ## Wave 8
 
@@ -73,7 +73,7 @@ API-02, UI-01. Verify external gates and shared-file ownership before claim.
 - FEAT-03 — As-of market context [DONE; CORE]
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
-- UI-02 — Read-only Production operational pages [PLANNED; CORE]
+- UI-02 — Read-only Production operational pages [READY; CORE]
 
 ## Wave 9
 

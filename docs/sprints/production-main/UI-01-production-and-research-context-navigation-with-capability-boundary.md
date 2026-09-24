@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: integration | Domain: production-main | Portfolio: CORE
 

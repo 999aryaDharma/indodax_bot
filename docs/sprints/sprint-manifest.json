@@ -11256,14 +11256,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-02-read-only-production-api-application-and-routes.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "/root",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer (PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6)",
       "recommended_branch": "feat/api-02-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "Shared contracts and frontend shell exist; read models and server capability policy remain dependency work.",
+      "current_context": "Read-only Production API routes are implemented and independently reviewed. Focused API checks passed; live Indodax and ASUS connectivity were not exercised.",
       "unlocks": [
         "UI-02"
       ],
@@ -11287,27 +11287,34 @@
           "criterion": "API-02-AC0",
           "test_case": "test_api_02_0",
           "behavior": "Every route requires read capability and serializes Decimal/UTC/provenance contracts",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-02-AC1",
           "test_case": "test_api_02_1",
           "behavior": "Router/import graph cannot resolve the write venue or any POST order/withdraw/repair route",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "API-02-AC2",
           "test_case": "test_api_02_2",
           "behavior": "Unavailable services return explicit safe state and outage responses",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
-      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+      "implementation_status_note": "Independent review PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6; 27 focused API tests passed, Ruff and diff-check passed. No live Indodax or ASUS access.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/API-02-HANDOFF.md",
+        "source_commit": "603f72fa6feb5a8cf348e61a47a4e29dc35252e6",
+        "code_target": "603f72fa6feb5a8cf348e61a47a4e29dc35252e6",
+        "review": "Independent PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6 by /root/prod_mvp_final_reviewer. Focused API suite: 27 passed; Ruff and diff-check passed. No live Indodax connectivity or ASUS deployment was exercised."
+      }
     },
     {
       "id": "UI-00",
@@ -11430,14 +11437,14 @@
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-01-production-and-research-context-navigation-with-capability-boundary.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "/root",
+      "independent_reviewer": "/root/prod_mvp_final_reviewer (PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6)",
       "recommended_branch": "feat/ui-01-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "UI-00 shell exists; context-aware navigation and server-derived capability boundaries remain this sprint's scope.",
+      "current_context": "Production, Research and System route contexts and capability boundaries are implemented and independently reviewed. All active-context routes are available in smartphone navigation.",
       "unlocks": [
         "UI-02"
       ],
@@ -11460,27 +11467,34 @@
           "criterion": "UI-01-AC0",
           "test_case": "test_ui_01_0",
           "behavior": "Unknown/denied capability displays a blocked state and exposes no Production control affordance",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "UI-01-AC1",
           "test_case": "test_ui_01_1",
           "behavior": "Changing route context cannot reuse a Production capability in Research or vice versa",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         },
         {
           "criterion": "UI-01-AC2",
           "test_case": "test_ui_01_2",
           "behavior": "Navigation remains grouped and usable on desktop and smartphone",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "VERIFIED_BY_TEST"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Admitted by CR-2026-09-23; state is structurally derived from dependencies.",
-      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes."
+      "implementation_status_note": "Independent review PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6; 12 frontend tests, typecheck and production build passed. Smartphone render and live API connectivity were not inspected.",
+      "recovery": "Revert only sprint-owned files; no Production runtime data or host state changes.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/UI-01-HANDOFF.md",
+        "source_commit": "603f72fa6feb5a8cf348e61a47a4e29dc35252e6",
+        "code_target": "603f72fa6feb5a8cf348e61a47a4e29dc35252e6",
+        "review": "Independent PASS on exact source SHA 603f72fa6feb5a8cf348e61a47a4e29dc35252e6 by /root/prod_mvp_final_reviewer. Frontend: 12 tests passed; typecheck and production build passed. Smartphone rendered screenshot and live API connectivity were not inspected."
+      }
     },
     {
       "id": "UI-02",
@@ -11513,7 +11527,7 @@
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-02-read-only-production-operational-pages.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/ui-02-production-control-plane",

@@ -2,6 +2,6 @@
 
 Derived from manifest; historical baseline is retained separately.
 
-{'REVIEW': 59, 'DONE': 32, 'PLANNED': 33, 'READY': 2}
+{'REVIEW': 59, 'DONE': 34, 'PLANNED': 32, 'READY': 1}
 
-READY: API-02, UI-01.
+READY: UI-02.
