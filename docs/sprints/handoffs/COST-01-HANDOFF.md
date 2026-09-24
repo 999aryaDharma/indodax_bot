@@ -153,3 +153,6 @@ Combined verification with previous capabilities (29 tests total) passed (1.33s)
 - Deviations: None.
 - Unresolved issues / blockers: None for COST-01.
 - Next unlocked capabilities: LED-01 (Balanced research postings), SIM-01 (Conservative execution simulator).
+
+
+Owner clarified on 2026-09-24 that the three-era summary is an estimate, not official historical evidence. It supplies no replacement dated matrix or effective-boundary evidence. The owner evidence requests listed above therefore remain open; COST-01 remains REVIEW.
