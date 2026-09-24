@@ -5,13 +5,14 @@ import { ControlPlaneError, getProductionOverview, overviewDataForDisplay } from
 import type { ApiEnvelope, ProductionOverview } from "../api/types";
 import { canReadProduction, capabilityState, mobileRoutes, routeForPath, routes } from "./context";
 import { formatAge, formatWitaClock, formatWitaTimestamp } from "./time";
+import { ProductionReadPage } from "../features/production/route";
 
 type ViewState = "loading" | "ready" | "unavailable" | "error" | "empty" | "denied";
 const icons: Record<string, typeof Gauge> = {
   "System Overview": Gauge, Operations: Pulse, Portfolio: Circle, Positions: ListBullets, Orders: ListBullets,
-  Risk: ShieldCheck, Reconciliation: Compass, Workbench: Compass, Strategies: ListBullets, Models: Circle,
+  Risk: ShieldCheck, Reconciliation: Compass, Releases: Gauge, "Audit Trail": ShieldCheck, Workbench: Compass, Strategies: ListBullets, Models: Circle,
   Experiments: Pulse, Candidates: ShieldCheck, Tournament: Gauge, "Market Data": Pulse,
-  Infrastructure: Gauge, Logs: ListBullets, Audit: ShieldCheck,
+  Infrastructure: Gauge, Logs: ListBullets, "System Audit": ShieldCheck,
 };
 
 function Status({ label, value }: { label: string; value: string | number | null }) {
@@ -149,7 +150,9 @@ export function App() {
     <div className="main-column">
       <header className="global-bar"><div className="crumb"><span>{active.group}</span><span>/</span><strong>{active.label}</strong></div><div className="global-states"><span><i className="live-dot" />{active.group === "Research" ? "RESEARCH · ISOLATED" : active.group === "System" ? "SYSTEM" : "PRODUCTION · LIVE"}</span><time aria-label={`WITA (UTC+8), ${formatWitaClock(now)}`} title="Asia/Makassar (UTC+8)">WITA {formatWitaClock(now)}</time></div></header>
       {canReadProduction(active)
-        ? <ProductionOverviewPage snapshot={snapshot} reload={() => void reload()} state={state} message={message} now={now} />
+        ? active.label === "System Overview" || active.label === "Operations"
+          ? <ProductionOverviewPage snapshot={snapshot} reload={() => void reload()} state={state} message={message} now={now} />
+          : <ProductionReadPage label={active.label} now={now} />
         : <ContextPage context={active.context} label={active.label} />}
     </div>
   </div>;

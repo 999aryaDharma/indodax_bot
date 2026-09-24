@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ControlPlaneError, getProductionOverview, overviewDataForDisplay } from "./client";
-import type { ApiEnvelope, ProductionOverview } from "./types";
+import { ControlPlaneError, getProductionOrdersPage, getProductionOverview, getProductionPortfolio, overviewDataForDisplay } from "./client";
+import type { ApiEnvelope, PortfolioView, ProductionOverview } from "./types";
 
 const overview: ProductionOverview = {
   mode: "SHADOW",
@@ -106,5 +106,54 @@ describe("Production overview client", () => {
     await expect(getProductionOverview()).rejects.toMatchObject({
       code: "PRODUCTION_READ_FORBIDDEN", retryable: false, requestId: expect.any(String),
     });
+  });
+
+  it("validates portfolio provenance and preserves exact Decimal strings", async () => {
+    const data: PortfolioView = {
+      evidence: {
+        status: "AVAILABLE", source: "production.indodax.account", source_revision: "account-r3",
+        as_of: "2026-09-24T00:00:00Z", source_updated_at: "2026-09-24T00:00:00Z", freshness: "FRESH", reason: null,
+      },
+      balances: [{ currency: "idr", available: "1000.00000001", hold: "2.5", total: "1002.50000001" }],
+      quote_available: "1000.00000001", quote_hold: "2.5", quote_currency: "idr", equity: null,
+      balance_authority: "AVAILABLE",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      request_id: "portfolio-request", as_of: "2026-09-24T00:00:00Z", source_revision: "account-r3",
+      status: "AVAILABLE", data, provenance: { source: "production.indodax.account", revision: "account-r3" },
+    }), { status: 200 })));
+
+    const result = await getProductionPortfolio();
+
+    expect(result.data.balances[0].available).toBe("1000.00000001");
+    expect(result.data.equity).toBeNull();
+  });
+
+  it("requests bounded order pages with the requested offset and limit", async () => {
+    const response = {
+      request_id: "orders-request", as_of: "2026-09-24T00:00:00Z", source_revision: "orders-r1",
+      status: "AVAILABLE", provenance: { source: "production.oms", revision: "orders-r1" },
+      data: {
+        evidence: { status: "AVAILABLE", source: "production.oms", source_revision: "orders-r1", as_of: null, source_updated_at: null, freshness: "UNKNOWN", reason: null },
+        data: [], total: 105, offset: 100, limit: 5,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(response), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getProductionOrdersPage(100, 5);
+
+    expect(result.data).toMatchObject({ total: 105, offset: 100, limit: 5, data: [] });
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:8000/api/v1/production/orders/page?offset=100&limit=5");
+  });
+
+  it("rejects a portfolio envelope with invalid source evidence", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      request_id: "bad-portfolio", as_of: "2026-09-24T00:00:00Z", source_revision: "r1", status: "AVAILABLE",
+      data: { evidence: { status: "AVAILABLE" }, balances: [], balance_authority: "AVAILABLE" },
+      provenance: { source: "production", revision: "r1" },
+    }), { status: 200 })));
+
+    await expect(getProductionPortfolio()).rejects.toMatchObject({ code: "INVALID_RESPONSE", retryable: false });
   });
 });

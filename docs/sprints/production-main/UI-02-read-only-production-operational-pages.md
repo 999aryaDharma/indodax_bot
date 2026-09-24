@@ -12,11 +12,11 @@
 
 ## Metadata
 
-Status: READY
+Status: IN_PROGRESS
 
 Priority: P1 | Type: integration | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: /root | Independent Reviewer: PENDING
 
 Recommended Branch: feat/ui-02-production-control-plane
 
@@ -57,7 +57,7 @@ No mandatory dependent sprint.
 
 ## Current Context
 
-The UI shell and planned Production API/read models are defined; operational Production pages remain to be implemented after API/UI dependency sprints pass review.
+API-02 and UI-01 passed independent review. Read-only pages are wired to typed GET clients; live API evidence remains environment-dependent.
 
 ## In Scope
 
@@ -93,14 +93,13 @@ Overview, Portfolio, Positions, Orders, Reconciliation, Risk, Releases and Audit
 
 ## Planned Files / Artifacts
 
-- frontend/src/features/production/OverviewPage.tsx
-- frontend/src/features/production/PortfolioPage.tsx
-- frontend/src/features/production/PositionsPage.tsx
-- frontend/src/features/production/OrdersPage.tsx
-- frontend/src/features/production/ReconciliationPage.tsx
-- frontend/src/features/production/RiskPage.tsx
-- frontend/src/features/production/ReleasesPage.tsx
-- frontend/src/features/production/AuditPage.tsx
+- frontend/src/features/production/pages.tsx
+- frontend/src/features/production/route.tsx
+- frontend/src/features/production/pages.test.tsx
+- frontend/src/api/client.ts
+- frontend/src/api/types.ts
+- frontend/src/app/App.tsx
+- frontend/src/styles/tokens.css
 
 ## Interfaces & Contracts
 

@@ -127,4 +127,4 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | API-02 | Read-only Production API application and routes | production-main | P0 | integration | API-01, API-03 | DONE | [Spec](production-main\API-02-read-only-production-api-application-and-routes.md) |
 | UI-00 | Kumo and Geist shell foundation with typed API client | production-main | P1 | integration | — | DONE | [Spec](production-main\UI-00-kumo-and-geist-shell-foundation-with-typed-api-client.md) |
 | UI-01 | Production and Research context navigation with capability boundary | production-main | P1 | integration | UI-00, API-03 | DONE | [Spec](production-main\UI-01-production-and-research-context-navigation-with-capability-boundary.md) |
-| UI-02 | Read-only Production operational pages | production-main | P1 | integration | UI-01, API-02 | READY | [Spec](production-main\UI-02-read-only-production-operational-pages.md) |
+| UI-02 | Read-only Production operational pages | production-main | P1 | integration | UI-01, API-02 | IN_PROGRESS | [Spec](production-main\UI-02-read-only-production-operational-pages.md) |

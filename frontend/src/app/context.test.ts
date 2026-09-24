@@ -12,6 +12,9 @@ describe("environment route boundary", () => {
 
   it("maps navigation labels to explicit route namespaces", () => {
     expect(routeForLabel("Portfolio").path).toBe("/production/portfolio");
+    expect(routeForPath("/production/releases").context).toBe("Production Main");
+    expect(routeForPath("/production/audit").path).toBe("/production/audit");
+    expect(canReadProduction(routeForPath("/production/audit"))).toBe(true);
     expect(routeForLabel("Tournament").path).toBe("/research/tournament");
     expect(routeForPath("/not-a-route").path).toBe("/production/overview");
   });
@@ -27,7 +30,7 @@ describe("environment route boundary", () => {
     expect(mobileRoutes("Production Main").map((route) => route.path)).toEqual([
       "/production/overview", "/production/operations", "/production/portfolio",
       "/production/positions", "/production/orders", "/production/risk",
-      "/production/reconciliation",
+      "/production/reconciliation", "/production/releases", "/production/audit",
     ]);
     expect(mobileRoutes("Research Workbench")).toHaveLength(6);
     expect(mobileRoutes("System")).toHaveLength(4);

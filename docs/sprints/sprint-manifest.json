@@ -11527,14 +11527,14 @@
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-02-read-only-production-operational-pages.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
+      "status": "IN_PROGRESS",
+      "implementation_owner": "/root",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/ui-02-production-control-plane",
       "external_gates": [
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
-      "current_context": "UI shell exists; read-only operational pages depend on accepted API read models/routes and context/capability work.",
+      "current_context": "Production routes now include Releases and Audit; typed read clients are being added for API-02 resource contracts. Production Main remains live; frontend reads only.",
       "unlocks": [],
       "requirements": [
         "FR-23"

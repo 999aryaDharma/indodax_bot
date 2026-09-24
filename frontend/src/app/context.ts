@@ -7,13 +7,14 @@ export const routes: AppRoute[] = [
   ...[
     ["Operations", "operations"], ["Portfolio", "portfolio"], ["Positions", "positions"],
     ["Orders", "orders"], ["Risk", "risk"], ["Reconciliation", "reconciliation"],
+    ["Releases", "releases"], ["Audit Trail", "audit"],
   ].map(([label, slug]) => ({ path: `/production/${slug}`, label, group: "Production", context: "Production Main" }) as AppRoute),
   ...[
     ["Workbench", "workbench"], ["Strategies", "strategies"], ["Models", "models"],
     ["Experiments", "experiments"], ["Candidates", "candidates"], ["Tournament", "tournament"],
   ].map(([label, slug]) => ({ path: `/research/${slug}`, label, group: "Research", context: "Research Workbench" }) as AppRoute),
   ...[
-    ["Market Data", "market-data"], ["Infrastructure", "infrastructure"], ["Logs", "logs"], ["Audit", "audit"],
+    ["Market Data", "market-data"], ["Infrastructure", "infrastructure"], ["Logs", "logs"], ["System Audit", "audit"],
   ].map(([label, slug]) => ({ path: `/system/${slug}`, label, group: "System", context: "System" }) as AppRoute),
 ];
 
@@ -30,7 +31,7 @@ export function mobileRoutes(context: AppContext): AppRoute[] {
 }
 
 export function canReadProduction(route: AppRoute): boolean {
-  return route.path === "/production/overview";
+  return route.context === "Production Main";
 }
 
 export function capabilityState(code: string | null): "allowed" | "denied" | "unknown" {
