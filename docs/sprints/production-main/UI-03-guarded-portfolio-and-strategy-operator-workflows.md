@@ -40,13 +40,15 @@ PM-06
 - `docs/implementation/CONTRACTS.md`
 - `docs/specs/20-testing-strategy.md`
 
+- `docs/implementation/PRODUCTION-RISK-POLICY-V1.md`
+
 ## Current Context
 
 Reuse existing pages.tsx, route.tsx, typed client, Kumo and Geist. Read Impeccable before frontend implementation; dashboard.pen remains read-only.
 
 ## In Scope
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility. Separate new-risk-period approval from resume; display active-period and cumulative performance with 5 percent monthly target and rolling 90-day evaluation.
 
 - Viewer and Research context cannot reach operator commands.
 - Stale proposal forces refresh and never silently resubmits approval.
@@ -57,9 +59,11 @@ Render adoption review, allocation proposal/decision, pause-entry, resume, halt 
 
 - Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
-- Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+- Owner-approved absolute risk and exposure defaults display as drafts for qualification; remaining unset policies stay explicit and defaults never overwrite active values.
 
 - Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
+
+- Dashboard distinguishes new-period approval from resume and displays prior loss actual new equity and cumulative results without resetting monthly or rolling 90-day reporting.
 
 ## Out of Scope
 
@@ -80,9 +84,11 @@ The operator supplies versioned inputs through the named interface and receives 
 
 - **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
-- **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+- **UI-03-AC7** Owner-approved absolute risk and exposure defaults display as drafts for qualification; remaining unset policies stay explicit and defaults never overwrite active values.
 
 - **UI-03-AC8** Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
+
+- **UI-03-AC9** Dashboard distinguishes new-period approval from resume and displays prior loss actual new equity and cumulative results without resetting monthly or rolling 90-day reporting.
 
 ## Domain Rules / Invariants
 
@@ -90,7 +96,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility. Separate new-risk-period approval from resume; display active-period and cumulative performance with 5 percent monthly target and rolling 90-day evaluation.
 
 ## Planned Files / Artifacts
 
@@ -105,7 +111,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility. Separate new-risk-period approval from resume; display active-period and cumulative performance with 5 percent monthly target and rolling 90-day evaluation.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -142,9 +148,11 @@ Run `cd frontend; npm test -- src/features/production/commands.test.tsx; npm run
 
 - `test_ui_03_6`: Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit.
 
-- `test_ui_03_7`: Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+- `test_ui_03_7`: Owner-approved absolute risk and exposure defaults display as drafts for qualification; remaining unset policies stay explicit and defaults never overwrite active values.
 
 - `test_ui_03_8`: Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
+
+- `test_ui_03_9`: Dashboard distinguishes new-period approval from resume and displays prior loss actual new equity and cumulative results without resetting monthly or rolling 90-day reporting.
 
 ## Failure / Edge Cases
 
@@ -185,9 +193,11 @@ Revert only compatible code/configuration before activation. Preserve journal an
 
 - [ ] **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 initial capital and 100000 absolute drawdown from adjusted peak and monthly target are labeled without presenting a target as guaranteed profit. Evidence: `test_ui_03_6` at exact committed SHA.
 
-- [ ] **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade. Evidence: `test_ui_03_7` at exact committed SHA.
+- [ ] **UI-03-AC7** Owner-approved absolute risk and exposure defaults display as drafts for qualification; remaining unset policies stay explicit and defaults never overwrite active values. Evidence: `test_ui_03_7` at exact committed SHA.
 
 - [ ] **UI-03-AC8** Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning. Evidence: `test_ui_03_8` at exact committed SHA.
+
+- [ ] **UI-03-AC9** Dashboard distinguishes new-period approval from resume and displays prior loss actual new equity and cumulative results without resetting monthly or rolling 90-day reporting. Evidence: `test_ui_03_9` at exact SHA; pending.
 
 ## Definition of Done
 

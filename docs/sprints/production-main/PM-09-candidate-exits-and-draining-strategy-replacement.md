@@ -40,13 +40,15 @@ PM-06, API-04
 - `docs/implementation/CONTRACTS.md`
 - `docs/specs/20-testing-strategy.md`
 
+- `docs/implementation/PRODUCTION-RISK-POLICY-V1.md`
+
 ## Current Context
 
 Candidate exit semantics are owned by RP-02; OMS and fill recovery exist. This task integrates ownership and lifecycle without creating another exit evaluator.
 
 ## In Scope
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT. Complete and record the old close-out before risk-period renewal; preserve incident and fill evidence across periods.
 
 - Partial entry fill receives exits only for actual filled quantity.
 - Cancel uncertainty and late fills never permit blind replacement or oversell.
@@ -59,6 +61,8 @@ request_drain(strategy_id, expected_revision, request_id) returns a durable rece
 - Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
 
 - Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
+
+- Risk-period renewal requires completed close-out zero UNKNOWN no reservations and fresh full reconciliation; late fills prevent premature period closure.
 
 ## Out of Scope
 
@@ -82,13 +86,15 @@ The operator supplies versioned inputs through the named interface and receives 
 
 - **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
 
+- **PM-09-AC9** Risk-period renewal requires completed close-out zero UNKNOWN no reservations and fresh full reconciliation; late fills prevent premature period closure.
+
 ## Domain Rules / Invariants
 
 BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC availability, immutable identity, no future information, exactly-once effects and separation of Research from Production authority.
 
 ## Architecture / Design Contract
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT. Complete and record the old close-out before risk-period renewal; preserve incident and fill evidence across periods.
 
 ## Planned Files / Artifacts
 
@@ -101,7 +107,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.
+request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program peak-equity-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT. Complete and record the old close-out before risk-period renewal; preserve incident and fill evidence across periods.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -140,6 +146,8 @@ Run `python -m pytest tests/integration/lab/test_strategy_draining.py -q` after 
 - `test_pm_09_7`: Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits.
 
 - `test_pm_09_8`: Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor.
+
+- `test_pm_09_9`: Risk-period renewal requires completed close-out zero UNKNOWN no reservations and fresh full reconciliation; late fills prevent premature period closure.
 
 ## Failure / Edge Cases
 
@@ -182,6 +190,8 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **PM-09-AC7** Peak-equity-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits. Evidence: `test_pm_09_7` at exact committed SHA.
 
 - [ ] **PM-09-AC8** Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the peak-equity floor. Evidence: `test_pm_09_8` at exact committed SHA.
+
+- [ ] **PM-09-AC9** Risk-period renewal requires completed close-out zero UNKNOWN no reservations and fresh full reconciliation; late fills prevent premature period closure. Evidence: `test_pm_09_9` at exact SHA; pending.
 
 ## Definition of Done
 

@@ -39,13 +39,15 @@ RW6-01, PM-09
 - `docs/implementation/CONTRACTS.md`
 - `docs/specs/20-testing-strategy.md`
 
+- `docs/implementation/PRODUCTION-RISK-POLICY-V1.md`
+
 ## Current Context
 
 Reuse PortfolioConstructor, PortfolioRiskManager, central RiskEngine and transactional execution state; existing sizing alone does not establish multi-strategy capital arbitration.
 
 ## In Scope
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09. Prepare separately approved risk periods from reconciled actual equity, preserve predecessor peaks and losses, and never reset the period through ordinary resume.
 
 - Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice.
 - Invalid risk or exposure limits and overlapping pair owners reject the policy.
@@ -58,11 +60,15 @@ AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair ow
 
 - Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
+- Missing required risk settings or unreviewed cash-flow peak-adjustment rules block new-policy activation; approved numeric defaults still require qualification and restart never resets active policy or losses.
 
 - Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
 
 - Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. New acceptance remains unverified.
+
+- New risk period binds actual reconciled equity peak release and policy to an immutable predecessor; old losses and peak remain unchanged and ordinary resume cannot create a period.
+
+- Enforce qualified defaults 4000 per trade 10000 global 8000 BTC ETH SOL cluster 15000 daily loss two pair slots 25 percent per pair and 50 percent total notional; pending risk transfers atomically on fills.
 
 ## Out of Scope
 
@@ -85,11 +91,15 @@ The operator supplies versioned inputs through the named interface and receives 
 
 - **PM-08-AC8** Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
+- **PM-08-AC9** Missing required risk settings or unreviewed cash-flow peak-adjustment rules block new-policy activation; approved numeric defaults still require qualification and restart never resets active policy or losses.
 
 - **PM-08-AC10** Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
 
 - **PM-08-AC11** Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL.
+
+- **PM-08-AC12** New risk period binds actual reconciled equity peak release and policy to an immutable predecessor; old losses and peak remain unchanged and ordinary resume cannot create a period.
+
+- **PM-08-AC13** Enforce qualified defaults 4000 per trade 10000 global 8000 BTC ETH SOL cluster 15000 daily loss two pair slots 25 percent per pair and 50 percent total notional; pending risk transfers atomically on fills.
 
 ## Domain Rules / Invariants
 
@@ -97,7 +107,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09. Prepare separately approved risk periods from reconciled actual equity, preserve predecessor peaks and losses, and never reset the period through ordinary resume.
 
 ## Planned Files / Artifacts
 
@@ -111,7 +121,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, absolute peak-equity floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09. Prepare separately approved risk periods from reconciled actual equity, preserve predecessor peaks and losses, and never reset the period through ordinary resume.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -150,11 +160,15 @@ Run `python -m pytest tests/unit/lab/portfolio/test_shared_allocation.py -q` aft
 
 - `test_pm_08_8`: Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out.
 
-- `test_pm_08_9`: Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses.
+- `test_pm_08_9`: Missing required risk settings or unreviewed cash-flow peak-adjustment rules block new-policy activation; approved numeric defaults still require qualification and restart never resets active policy or losses.
 
 - `test_pm_08_10`: Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately.
 
 - `test_pm_08_peak_persistence`: Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. Pending implementation/qualification; no live failure injection is authorized by this documentation.
+
+- `test_pm_08_12`: New risk period binds actual reconciled equity peak release and policy to an immutable predecessor; old losses and peak remain unchanged and ordinary resume cannot create a period.
+
+- `test_pm_08_13`: Enforce qualified defaults 4000 per trade 10000 global 8000 BTC ETH SOL cluster 15000 daily loss two pair slots 25 percent per pair and 50 percent total notional; pending risk transfers atomically on fills.
 
 ## Failure / Edge Cases
 
@@ -197,11 +211,15 @@ Revert only compatible code/configuration before activation. Preserve journal an
 
 - [ ] **PM-08-AC8** Absolute drawdown allowance stays 100000; peaks 500000 600000 and 1000000 yield floors 400000 500000 and 900000, and equality triggers durable close-out. Evidence: `test_pm_08_8` at exact committed SHA.
 
-- [ ] **PM-08-AC9** Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow peak-adjustment rules block new-policy activation; defaults and restart never reset active policy or losses. Evidence: `test_pm_08_9` at exact committed SHA.
+- [ ] **PM-08-AC9** Missing required risk settings or unreviewed cash-flow peak-adjustment rules block new-policy activation; approved numeric defaults still require qualification and restart never resets active policy or losses. Evidence: `test_pm_08_9` at exact committed SHA.
 
 - [ ] **PM-08-AC10** Missing marks or exit costs block entry; peak-equity-floor valuation counts costs once and reports peak drawdown separately. Evidence: `test_pm_08_10` at exact committed SHA.
 
 - [ ] **PM-08-AC11** Adjusted peak and drawdown breach survive restart and manual resume; losses never lower the floor, missing marks never establish a peak and deposits or withdrawals are not trading PnL. Evidence: `test_pm_08_peak_persistence` and applicable qualification artifact at exact SHA; pending.
+
+- [ ] **PM-08-AC12** New risk period binds actual reconciled equity peak release and policy to an immutable predecessor; old losses and peak remain unchanged and ordinary resume cannot create a period. Evidence: `test_pm_08_12` at exact SHA; pending.
+
+- [ ] **PM-08-AC13** Enforce qualified defaults 4000 per trade 10000 global 8000 BTC ETH SOL cluster 15000 daily loss two pair slots 25 percent per pair and 50 percent total notional; pending risk transfers atomically on fills. Evidence: `test_pm_08_13` at exact SHA; pending.
 
 ## Definition of Done
 

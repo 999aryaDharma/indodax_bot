@@ -29,3 +29,15 @@ The owner requests dashboard-customizable supported Main and agent parameters, i
 ## Accepted owner refinement — absolute peak drawdown
 
 Supersede the earlier initial-capital 20% rule: absolute portfolio drawdown allowance is IDR 100,000 from adjusted peak equity at any capital size. Retain controlled close-out, write gates and manual resume. Document reinvestment, negative-month evaluation, trading-cost-only profit target and operator absence of 8-12 hours. Update the program, ADR-010, affected sprint acceptance and manifest in place; statuses/dependencies and runtime are unchanged. Preserve other implementer work and historical handoffs; cash-flow adjustment and incident notification choices remain explicit future decisions.
+
+## Accepted owner refinement — separately approved risk periods
+
+Permit a new risk period after completed drawdown close-out and independent operator decision; retain old-period loss/peak/incident evidence and cumulative accounting. Bind actual opening equity, release and risk policy to the proposal; ordinary resume cannot reset the peak. Preserve 5% net monthly target and add rolling 90-day evaluation without weakening candidate qualification. Extend existing PM-08/PM-09/API-04/UI-03 contracts and acceptance mappings; no new service, endpoint, runtime change, status change or dependency change is implied. Unconfirmed numerical baseline proposals remain outside this freeze.
+
+## Decision-register coverage
+
+Record all 14 discussed policy aspects in `docs/implementation/PRODUCTION-RISK-POLICY-V1.md`, separating DECIDED, PROPOSED and OPEN/BLOCKING. Preserve numerical proposals awaiting owner confirmation, pending execution/liquidity/incident details and verified venue documentation separately from operational evidence. The register does not authorize implementation outside each owning sprint or weaken existing gates.
+
+## Confirmed numerical policy defaults
+
+Owner confirmation admits the IDR 4,000/trade, IDR 10,000/global, IDR 8,000/cluster and IDR 15,000/day defaults plus two positions, 25% per-pair and 50% total notional ceilings for qualification before activation. Update PM-08 and UI-03 acceptance mappings. Other proposed settings retain explicit PROPOSED/OPEN status; this is documentation, not live configuration.
