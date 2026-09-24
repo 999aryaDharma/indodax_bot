@@ -1,5 +1,33 @@
 # SIM-02 handoff
 
+## Recovery review addendum (2026-09-25)
+
+- Reworked code SHA: `9aa7080a7daf75e885c83adf321f5f6e9c3dad80`.
+- Independent review round 1 by `/root/sim01_final_review` requested changes on
+  `f0249993d317f93e8be2afd5c02b41f718b452fc`. Review identified period-opening
+  equity being reset too late and missing weekly-loss evidence. Both are addressed:
+  observed equity now rolls daily/ISO-week baselines using the last pre-boundary
+  observation, period-mismatched orders fail closed until an observation arrives,
+  and the state round-trips these fields. Legacy state without last-observation
+  fields uses the high-water equity as a conservative fallback.
+- Nonblank policy identity and positive minimum notional are now validated. The
+  review's additional claims that fraction bounds, existing pair exposure, and
+  leverage were unenforced were checked against the reviewed source: `Field`
+  constraints and both exposure-cap calculations were already present. Regression
+  tests now pin those existing guards.
+- New UTC-boundary test first failed because the daily-loss assertion was approved;
+  after the fix, the suite verifies both daily and weekly loss, boundary gaps,
+  and missing-period observation rejection.
+- Verification on the reworked code: `rtk pytest
+  tests/unit/lab/backtest/test_risk.py
+  tests/unit/lab/backtest/test_judge_remediation.py
+  tests/integration/lab/test_backtest_golden.py -q` → 59 passed;
+  `git diff --check` passed. Ruff reports legacy lint findings in the touched
+  files; no lint-clean claim is made.
+- Independent review round 2 of the exact reworked SHA is pending. SIM-02 remains
+  REVIEW. COST-01 fee-source evidence remains externally blocked; no manifest
+  transition is claimed.
+
 Status: REVIEW
 
 ## Identity
