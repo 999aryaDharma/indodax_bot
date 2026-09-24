@@ -2,7 +2,7 @@
 
 ## Recovery review addendum (2026-09-25)
 
-- Reworked code SHA: `9aa7080a7daf75e885c83adf321f5f6e9c3dad80`.
+- Reworked code SHA: `edb597a736f380b3dd0ea234190e5c1d9c3fa97d`.
 - Independent review round 1 by `/root/sim01_final_review` requested changes on
   `f0249993d317f93e8be2afd5c02b41f718b452fc`. Review identified period-opening
   equity being reset too late and missing weekly-loss evidence. Both are addressed:
@@ -18,13 +18,20 @@
 - New UTC-boundary test first failed because the daily-loss assertion was approved;
   after the fix, the suite verifies both daily and weekly loss, boundary gaps,
   and missing-period observation rejection.
+- Round-2 review on `9aa7080a7daf75e885c83adf321f5f6e9c3dad80` confirmed code review
+  PASS and cleared its earlier policy/exposure findings. Acceptance remained
+  CHANGES_REQUESTED because the handoff had not yet been refreshed and JSON snapshot
+  writes could truncate prior halt state on interruption. Snapshot writes now use a
+  same-directory temporary file, flush/fsync, then atomic replacement; a failure
+  regression test proves the previous file is preserved and the temporary file is
+  removed.
 - Verification on the reworked code: `rtk pytest
   tests/unit/lab/backtest/test_risk.py
   tests/unit/lab/backtest/test_judge_remediation.py
-  tests/integration/lab/test_backtest_golden.py -q` → 59 passed;
+  tests/integration/lab/test_backtest_golden.py -q` → 60 passed;
   `git diff --check` passed. Ruff reports legacy lint findings in the touched
   files; no lint-clean claim is made.
-- Independent review round 2 of the exact reworked SHA is pending. SIM-02 remains
+- Independent review of the final code SHA and refreshed evidence is pending. SIM-02 remains
   REVIEW. COST-01 fee-source evidence remains externally blocked; no manifest
   transition is claimed.
 
