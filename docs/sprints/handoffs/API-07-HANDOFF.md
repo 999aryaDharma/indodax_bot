@@ -19,7 +19,8 @@
 ## Review and External Gates
 
 - Independent review on `b09249dd7f88ca79656518352d8d40b2f47fc254`: CHANGES_REQUESTED for missing runnable ASGI/dependency declaration, proxy-header rewriting compatibility, TestClient compatibility across supported versions, and stale ADR sprint IDs. Fixes are in `3d59484fc2f5d6a7e9d27916b052f01eaa3f534e`.
-- Re-review on `8e7c21431483f8a5149d24415dba954d431ad5ab`: PASS for prior Critical/Important findings; one Minor spec wording inconsistency (“no new dependencies”) is corrected in the current docs commit. Final exact-SHA confirmation is PENDING.
+- Re-review on `8e7c21431483f8a5149d24415dba954d431ad5ab`: PASS for prior Critical/Important findings; one Minor spec wording inconsistency (“no new dependencies”) was corrected.
+- Final exact-SHA review on `51cc55d1eb4720c318bd0594fc02c2b0bad4fff5`: PASS; corrected dependency wording verified, no new findings.
 - Reviewer: `/root/api03_security`.
 - Tailscale Serve only; no Funnel or tagged-device operator sessions. API listener must be loopback-only and reachable only through Serve.
 - Because Research shares ASUS, activation requires verified process/network isolation preventing Research from directly reaching the listener and spoofing proxy headers. Loopback alone does not provide this isolation.

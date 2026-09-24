@@ -18,6 +18,6 @@
 
 ## Review and External Gates
 
-- Independent review: first batch review requested backend follow-up; UI-09 has no reported code finding. Final batch re-review is PENDING on the new exact SHA.
+- Independent review: exact batch SHA `51cc55d1eb4720c318bd0594fc02c2b0bad4fff5` PASS; no UI code findings. Reviewer environment could not start `npm test -- --run` (`esbuild spawn EPERM`); owner run recorded 19 passing tests on unchanged UI source SHA `7a7ff2b4a30e5664fbc23c01617e42a1b0bcb353`. Reviewer independently confirmed typecheck and production build pass.
 - Production reverse proxy must serve the static dashboard and route `/api/v1` through Tailscale Serve to the API listener. This is not configured or deployed by this sprint.
 - Vite proxy applies only to local development.

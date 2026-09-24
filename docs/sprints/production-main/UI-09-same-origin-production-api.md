@@ -12,11 +12,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: `/root` | Independent Reviewer: PENDING
+Implementation Owner: `/root` | Independent Reviewer: `/root/api03_security`
 
 Recommended Branch: feat/ui-04-same-origin-production-api
 
@@ -155,9 +155,9 @@ Acceptance tests, focused frontend checks and exact-SHA independent review pass;
 
 ## Reviewer Checklist
 
-- [ ] Production default is relative same-origin URL.
-- [ ] Browser does not hold backend or Indodax credentials.
-- [ ] Vite proxy preserves `/api/v1` path correctly.
+- [x] Production default is relative same-origin URL.
+- [x] Browser does not hold backend or Indodax credentials.
+- [x] Vite proxy preserves `/api/v1` path correctly.
 
 ## Commit Guidance
 

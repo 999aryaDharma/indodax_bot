@@ -12,7 +12,7 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: security | Domain: production-main | Portfolio: CORE
 
@@ -163,11 +163,11 @@ All criteria pass on exact SHA, handoff records commands and external gates, and
 
 ## Reviewer Checklist
 
-- [ ] Identity trust is restricted to Tailscale Serve and exact allowlist.
-- [ ] Provider only performs Indodax view reads.
-- [ ] No credentials or `production.control` leak to browser/logs.
-- [ ] ASGI entrypoint binds loopback with proxy-header rewriting disabled.
-- [ ] ASUS isolation remains an external activation gate.
+- [x] Identity trust is restricted to Tailscale Serve and exact allowlist.
+- [x] Provider only performs Indodax view reads.
+- [x] No credentials or `production.control` leak to browser/logs.
+- [x] ASGI entrypoint binds loopback with proxy-header rewriting disabled.
+- [x] ASUS isolation remains an external activation gate.
 
 ## Commit Guidance
 

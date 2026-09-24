@@ -12556,22 +12556,25 @@
       "checks": [
         "Missing or disallowed Tailscale identity is denied; allowlisted identity receives only production.read",
         "Missing config or Research namespace fails before venue call",
-        "Only existing view-only Indodax client is composed; credentials never leak"
+        "Only existing view-only Indodax client is composed; credentials never leak",
+        "ASGI entrypoint binds only loopback and disables forwarded-header peer rewriting"
       ],
       "files": [
         "src/indodax_lab/api/auth.py",
         "src/indodax_lab/runtimes/production/control_plane.py",
         "tests/unit/lab/api/test_tailscale_operator_auth.py",
-        "tests/integration/lab/api/test_production_runtime_composition.py"
+        "tests/integration/lab/api/test_production_runtime_composition.py",
+        "requirements-production-api.txt",
+        "requirements-dev.txt"
       ],
       "type": "security",
       "tier": "CORE",
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/production-main/API-07-tailscale-authenticated-production-read-composition.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "/root",
-      "independent_reviewer": "PENDING",
+      "independent_reviewer": "/root/api03_security",
       "recommended_branch": "feat/api-07-tailscale-production-read",
       "external_gates": [
         "Tailscale Serve (not Funnel), loopback listener, and verified network/process isolation preventing co-resident Research from reaching or spoofing the API listener before activation.",
@@ -12600,25 +12603,37 @@
       "acceptance_test_mapping": [
         {
           "criterion": "API-07-AC0",
-          "test_case": "test_api_07_0",
-          "behavior": "Missing/disallowed identity is denied and allowlisted identity gets only production.read"
+          "test_case": "test_api_07_0 + test_api_07_1",
+          "behavior": "Allow-listed identity receives only production.read; missing/disallowed/non-loopback identities are denied"
         },
         {
           "criterion": "API-07-AC1",
-          "test_case": "test_api_07_1",
-          "behavior": "Runtime composition rejects missing config and Research namespace before any venue call"
+          "test_case": "test_api_07_3",
+          "behavior": "Runtime composition rejects missing config and non-production namespace before any venue call"
         },
         {
           "criterion": "API-07-AC2",
           "test_case": "test_api_07_2",
           "behavior": "Provider uses the existing view-only client and no credential is exposed/logged"
+        },
+        {
+          "criterion": "API-07-AC3",
+          "test_case": "test_api_07_4",
+          "behavior": "ASGI entrypoint binds only loopback and does not rewrite the proxy peer from forwarded headers"
         }
       ],
       "risk_level": "high",
       "context_complexity": "medium",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Owner-directed read-only integration; ASUS/Tailscale activation is an external gate."
+      "implementation_status_note": "Owner-directed read-only integration; ASUS/Tailscale activation is an external gate.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/API-07-HANDOFF.md",
+        "source_commit": "51cc55d1eb4720c318bd0594fc02c2b0bad4fff5",
+        "code_target": "3d59484fc2f5d6a7e9d27916b052f01eaa3f534e",
+        "review": "PASS on exact batch SHA 51cc55d1eb4720c318bd0594fc02c2b0bad4fff5 by /root/api03_security; 22 focused API tests and Ruff pass. ASUS isolation remains an activation gate."
+      }
     },
     {
       "id": "UI-09",
@@ -12646,9 +12661,9 @@
       "spec": "DESIGN.md",
       "path": "docs/sprints/production-main/UI-09-same-origin-production-api.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "/root",
-      "independent_reviewer": "PENDING",
+      "independent_reviewer": "/root/api03_security",
       "recommended_branch": "feat/ui-09-same-origin-production-api",
       "external_gates": [
         "Production reverse proxy must serve UI and forward /api/v1 through Tailscale Serve; no deployment is part of this sprint."
@@ -12691,7 +12706,14 @@
       "context_complexity": "low",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Owner-directed UI transport correction; no deployment is claimed."
+      "implementation_status_note": "Owner-directed UI transport correction; no deployment is claimed.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/UI-09-HANDOFF.md",
+        "source_commit": "51cc55d1eb4720c318bd0594fc02c2b0bad4fff5",
+        "code_target": "7a7ff2b4a30e5664fbc23c01617e42a1b0bcb353",
+        "review": "PASS on exact batch SHA 51cc55d1eb4720c318bd0594fc02c2b0bad4fff5 by /root/api03_security; owner reports 19 tests, typecheck and build pass on unchanged UI source. Reviewer typecheck/build pass; its test runner was blocked by spawn EPERM."
+      }
     }
   ],
   "readiness_rule": "All dependencies DONE; external activation and review gates remain separate."

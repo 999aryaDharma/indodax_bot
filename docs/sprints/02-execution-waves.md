@@ -74,13 +74,13 @@ None. Verify external gates and shared-file ownership before claim.
 - SIM-03 — Deterministic replay judge [REVIEW; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [PLANNED; CORE]
 - UI-02 — Read-only Production operational pages [DONE; CORE]
-- API-07 — Tailscale-authenticated Production read composition [REVIEW; CORE]
+- API-07 — Tailscale-authenticated Production read composition [DONE; CORE]
 
 ## Wave 9
 
 - FEAT-04 — Immutable feature materialization [DONE; CORE]
 - SIM-04 — Net-cost risk and capacity metrics [REVIEW; CORE]
-- UI-09 — Same-origin Production API access [REVIEW; CORE]
+- UI-09 — Same-origin Production API access [DONE; CORE]
 
 ## Wave 10
 

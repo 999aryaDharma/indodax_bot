@@ -134,5 +134,5 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | PM-09 | Candidate exits and draining strategy replacement | production-main | P1 | integration | PM-08, RP-02, RP-04, PM-04 | PLANNED | [Spec](production-main\PM-09-candidate-exits-and-draining-strategy-replacement.md) |
 | API-04 | Guarded Production portfolio and lifecycle commands | production-main | P1 | integration | PM-09, API-02, API-03, API-07 | PLANNED | [Spec](production-main\API-04-guarded-production-portfolio-and-lifecycle-commands.md) |
 | UI-03 | Guarded portfolio and strategy operator workflows | production-main | P1 | integration | API-04, UI-02, API-07, UI-09 | PLANNED | [Spec](production-main\UI-03-guarded-portfolio-and-strategy-operator-workflows.md) |
-| API-07 | Tailscale-authenticated Production read composition | production-main | P0 | security | API-02, API-03 | REVIEW | [Spec](production-main\API-07-tailscale-authenticated-production-read-composition.md) |
-| UI-09 | Same-origin Production API access | production-main | P0 | integration | UI-02, API-02 | REVIEW | [Spec](production-main\UI-09-same-origin-production-api.md) |
+| API-07 | Tailscale-authenticated Production read composition | production-main | P0 | security | API-02, API-03 | DONE | [Spec](production-main\API-07-tailscale-authenticated-production-read-composition.md) |
+| UI-09 | Same-origin Production API access | production-main | P0 | integration | UI-02, API-02 | DONE | [Spec](production-main\UI-09-same-origin-production-api.md) |
