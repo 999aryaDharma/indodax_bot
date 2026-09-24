@@ -36,8 +36,11 @@
 - Round-2 review on commit `101e5d3ab4d42b7669f357c479105606ce4915a` found one
   remaining Important issue: the CLI used its own fixed temp path. It now delegates
   to the shared atomic writer, and the CLI-target `.tmp` failure test passes.
-- Independent re-review on the exact reworked commit is pending. SIM-03 remains
-  REVIEW; dependency statuses remain unchanged.
+- Independent review: PASS by `/root/sim01_final_review` and `/root/sim01_review`
+  on exact commit `76aaac2d7d8f550ffbee9aa2e85aebc3d9aa6e50` (code parent
+  `7464acda6150de86fd12777022db91a06278526a`); no Critical or Important findings.
+  SIM-03 remains REVIEW because SIM-01 and SIM-02 remain REVIEW behind COST-01;
+  dependency statuses remain unchanged.
 
 Status: REVIEW
 
