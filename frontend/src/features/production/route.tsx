@@ -16,7 +16,7 @@ export function ProductionReadPage({ label, now }: { label: string; now: Date })
   const generation = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    generation.current += 1;
+    const currentGeneration = ++generation.current;
     setResponse(null); setMessage(null); setLoadingMore(false); setState("loading");
     try {
       const result = label === "Portfolio" ? await getProductionPortfolio(signal)
@@ -25,11 +25,11 @@ export function ProductionReadPage({ label, now }: { label: string; now: Date })
             : label === "Reconciliation" ? await getProductionReconciliation(signal)
               : label === "Risk" ? await getProductionRisk(signal)
                 : label === "Releases" ? await getProductionRelease(signal) : await getProductionAudit(signal);
-      if (signal?.aborted) return;
+      if (signal?.aborted || currentGeneration !== generation.current) return;
       setResponse(result as Envelope);
       setState(result.status === "UNAVAILABLE" ? "unavailable" : result.status === "EMPTY" ? "empty" : "ready");
     } catch (error) {
-      if (signal?.aborted) return;
+      if (signal?.aborted || currentGeneration !== generation.current) return;
       const code = error instanceof ControlPlaneError ? error.code : null;
       setState(capabilityState(code) === "denied" ? "denied" : "error");
       setMessage(error instanceof ControlPlaneError ? `${error.message} Request ${error.requestId ?? "unknown"}.` : "Unexpected API error.");
@@ -46,16 +46,20 @@ export function ProductionReadPage({ label, now }: { label: string; now: Date })
     const view = response?.data;
     if (label !== "Orders" || !view || !("total" in view) || view.total === null) return;
     const currentGeneration = generation.current;
-    const sourceRevision = response.source_revision;
+    const sourceRevision = view.evidence.source_revision;
+    if (sourceRevision === null) {
+      setMessage("The Orders source did not provide a stable revision. Refresh before loading another page.");
+      return;
+    }
     setLoadingMore(true);
     try {
       const page = await getProductionOrdersPage(view.data.length, 50);
       if (currentGeneration !== generation.current) return;
-      if (page.source_revision !== sourceRevision || page.data.evidence.source_revision !== view.evidence.source_revision) {
+      if (page.data.evidence.source_revision !== sourceRevision) {
         setMessage("The Orders snapshot changed during pagination. Refresh to load a consistent page.");
         return;
       }
-      setResponse((current) => current?.source_revision === sourceRevision && "total" in current.data
+      setResponse((current) => current && "total" in current.data && current.data.evidence.source_revision === sourceRevision
         ? { ...page, data: { ...page.data, data: [...current.data.data, ...page.data.data] } as Data } : current);
     } catch (error) {
       if (currentGeneration !== generation.current) return;
