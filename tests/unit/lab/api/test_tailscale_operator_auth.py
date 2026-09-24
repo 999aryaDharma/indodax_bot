@@ -20,7 +20,7 @@ def _request(login: str | None, client_host: str) -> Request:
     )
 
 
-def test_api_05_0_exact_allowlisted_loopback_identity_gets_read_only_capability() -> None:
+def test_api_07_0_exact_allowlisted_loopback_identity_gets_read_only_capability() -> None:
     resolve = tailscale_principal_resolver({"arya@example.com"})
 
     principal = resolve(_request("Arya@Example.com", "127.0.0.1"))
@@ -31,7 +31,7 @@ def test_api_05_0_exact_allowlisted_loopback_identity_gets_read_only_capability(
     assert principal.capabilities == {Capability.PRODUCTION_READ}
 
 
-def test_api_05_1_missing_disallowed_and_nonloopback_identities_are_denied() -> None:
+def test_api_07_1_missing_disallowed_and_nonloopback_identities_are_denied() -> None:
     resolve = tailscale_principal_resolver({"arya@example.com"})
 
     assert resolve(_request(None, "127.0.0.1")) is None

@@ -67,3 +67,27 @@ def create_production_app_from_env(
         venue_account_source=account_provider,
         principal_resolver=tailscale_principal_resolver(allowlist),
     )
+
+
+def main() -> None:
+    """Run the Production API on loopback behind Tailscale Serve."""
+    port_text = os.environ.get("PRODUCTION_API_PORT", "8000")
+    try:
+        port = int(port_text)
+    except ValueError as exc:
+        raise ValueError("PRODUCTION_API_PORT_INVALID") from exc
+    if not 1 <= port <= 65535:
+        raise ValueError("PRODUCTION_API_PORT_INVALID")
+
+    import uvicorn
+
+    uvicorn.run(
+        create_production_app_from_env(),
+        host="127.0.0.1",
+        port=port,
+        proxy_headers=False,
+    )
+
+
+if __name__ == "__main__":
+    main()
