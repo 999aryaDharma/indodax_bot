@@ -11497,7 +11497,8 @@
       "unlocks": [
         "API-02",
         "UI-01",
-        "API-04"
+        "API-04",
+        "API-07"
       ],
       "requirements": [
         "FR-23"
@@ -11583,7 +11584,9 @@
       "current_context": "Read-only Production API routes are implemented and independently reviewed. Focused API checks passed; live Indodax and ASUS connectivity were not exercised.",
       "unlocks": [
         "UI-02",
-        "API-04"
+        "API-04",
+        "API-07",
+        "UI-09"
       ],
       "requirements": [
         "FR-23"
@@ -11856,7 +11859,8 @@
       ],
       "current_context": "Read-only Production operational pages implemented and independently reviewed PASS at code SHA b813a86415503471668e2ee3dc8a0ad8b2431333. Live API connectivity and rendered smartphone screenshots remain unverified; no live account or host access occurred.",
       "unlocks": [
-        "UI-03"
+        "UI-03",
+        "UI-09"
       ],
       "requirements": [
         "FR-23"
@@ -12341,7 +12345,8 @@
       "dependencies": [
         "PM-09",
         "API-02",
-        "API-03"
+        "API-03",
+        "API-07"
       ],
       "goal": "Guarded Production portfolio and lifecycle commands",
       "contract": "Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.",
@@ -12442,7 +12447,9 @@
       "legacy_tasks": [],
       "dependencies": [
         "API-04",
-        "UI-02"
+        "UI-02",
+        "API-07",
+        "UI-09"
       ],
       "goal": "Guarded portfolio and strategy operator workflows",
       "contract": "Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.",
@@ -12534,6 +12541,157 @@
       "security_critical": true,
       "data_migration": false,
       "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "API-07",
+      "title": "Tailscale-authenticated Production read composition",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "API-02",
+        "API-03"
+      ],
+      "goal": "Authenticate allow-listed Tailscale operators and compose the real Indodax view-only provider for Production reads.",
+      "contract": "Runtime composition reads server-side Indodax view-only credentials, validates Production namespace/root, wraps only IndodaxReadOnlyClient, and grants allow-listed Tailscale Serve identities production.read only.",
+      "checks": [
+        "Missing or disallowed Tailscale identity is denied; allowlisted identity receives only production.read",
+        "Missing config or Research namespace fails before venue call",
+        "Only existing view-only Indodax client is composed; credentials never leak"
+      ],
+      "files": [
+        "src/indodax_lab/api/auth.py",
+        "src/indodax_lab/runtimes/production/control_plane.py",
+        "tests/unit/lab/api/test_tailscale_operator_auth.py",
+        "tests/integration/lab/api/test_production_runtime_composition.py"
+      ],
+      "type": "security",
+      "tier": "CORE",
+      "spec": "docs/implementation/CONTRACTS.md",
+      "path": "docs/sprints/production-main/API-07-tailscale-authenticated-production-read-composition.md",
+      "priority": "P0",
+      "status": "REVIEW",
+      "implementation_owner": "/root",
+      "independent_reviewer": "PENDING",
+      "recommended_branch": "feat/api-07-tailscale-production-read",
+      "external_gates": [
+        "Tailscale Serve (not Funnel), loopback listener, and verified network/process isolation preventing co-resident Research from reaching or spoofing the API listener before activation.",
+        "No live env inspection or ASUS access in implementation."
+      ],
+      "current_context": "API-02/03 are DONE. create_app supports injected provider and resolver; IndodaxReadOnlyClient.get_account_snapshot exists, but no runtime composition binds them.",
+      "unlocks": [
+        "API-04",
+        "UI-03"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/decisions/CR-20260924-production-dashboard-auth.md",
+        "docs/decisions/ADR-011-tailscale-operator-identity.md",
+        "src/indodax_lab/api/app.py",
+        "src/indodax_lab/api/auth.py",
+        "src/indodax_lab/execution/indodax_readonly.py",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-07-AC0",
+          "test_case": "test_api_07_0",
+          "behavior": "Missing/disallowed identity is denied and allowlisted identity gets only production.read"
+        },
+        {
+          "criterion": "API-07-AC1",
+          "test_case": "test_api_07_1",
+          "behavior": "Runtime composition rejects missing config and Research namespace before any venue call"
+        },
+        {
+          "criterion": "API-07-AC2",
+          "test_case": "test_api_07_2",
+          "behavior": "Provider uses the existing view-only client and no credential is exposed/logged"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "medium",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Owner-directed read-only integration; ASUS/Tailscale activation is an external gate."
+    },
+    {
+      "id": "UI-09",
+      "title": "Same-origin Production API access",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "UI-02",
+        "API-02"
+      ],
+      "goal": "Route Production dashboard requests through same-origin /api/v1 and configure a local Vite development proxy.",
+      "contract": "Browser defaults to relative /api/v1, Vite proxies that prefix to local backend in development, and browser continues omitting credentials.",
+      "checks": [
+        "Default API URL is same-origin /api/v1",
+        "Browser requests omit credentials and Indodax keys",
+        "Vite proxy forwards API path to local backend"
+      ],
+      "files": [
+        "frontend/src/api/client.ts",
+        "frontend/src/api/client.test.ts",
+        "frontend/vite.config.ts"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "DESIGN.md",
+      "path": "docs/sprints/production-main/UI-09-same-origin-production-api.md",
+      "priority": "P0",
+      "status": "REVIEW",
+      "implementation_owner": "/root",
+      "independent_reviewer": "PENDING",
+      "recommended_branch": "feat/ui-09-same-origin-production-api",
+      "external_gates": [
+        "Production reverse proxy must serve UI and forward /api/v1 through Tailscale Serve; no deployment is part of this sprint."
+      ],
+      "current_context": "UI-02 and API-02 are DONE. Browser client currently defaults to 127.0.0.1:8000 which refers to operator device in deployed use; Vite has no proxy.",
+      "unlocks": [
+        "UI-03"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/decisions/CR-20260924-production-dashboard-auth.md",
+        "docs/decisions/ADR-011-tailscale-operator-identity.md",
+        "frontend/src/api/client.ts",
+        "frontend/vite.config.ts",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "UI-09-AC0",
+          "test_case": "test_ui_09_0",
+          "behavior": "Default API calls use same-origin /api/v1"
+        },
+        {
+          "criterion": "UI-09-AC1",
+          "test_case": "test_ui_09_1",
+          "behavior": "Browser requests omit credentials and never include Indodax keys"
+        },
+        {
+          "criterion": "UI-09-AC2",
+          "test_case": "test_ui_09_2",
+          "behavior": "Vite development proxy forwards API paths to local backend"
+        }
+      ],
+      "risk_level": "medium",
+      "context_complexity": "low",
+      "security_critical": false,
+      "data_migration": false,
+      "implementation_status_note": "Owner-directed UI transport correction; no deployment is claimed."
     }
   ],
   "readiness_rule": "All dependencies DONE; external activation and review gates remain separate."

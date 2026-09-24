@@ -23,6 +23,7 @@ API-00 through API-03 are DONE read/control-plane foundations. Named command adm
 - PM-09 — Candidate exits and draining strategy replacement
 - API-02 — Read-only Production API application and routes
 - API-03 — Fail-closed read capability policy and audit context
+- API-07 — Tailscale-authenticated Production read composition
 
 ## Unlocks
 

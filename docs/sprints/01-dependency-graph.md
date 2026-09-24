@@ -132,8 +132,10 @@ Full edge list; prerequisite → consumer. Manifest is authoritative.
 | PM-07 | PM-02, PM-03, PM-04, PM-05 |
 | PM-08 | PM-07, PM-05, RP-03 |
 | PM-09 | PM-08, RP-02, RP-04, PM-04 |
-| API-04 | PM-09, API-02, API-03 |
-| UI-03 | API-04, UI-02 |
+| API-04 | PM-09, API-02, API-03, API-07 |
+| UI-03 | API-04, UI-02, API-07, UI-09 |
+| API-07 | API-02, API-03 |
+| UI-09 | UI-02, API-02 |
 
 ## Selected critical boundaries
 
@@ -153,4 +155,4 @@ flowchart TD
   EVAL_03["EVAL-03 sealed lifecycle"] --> SHADOW_03
 ```
 
-Nodes: 132. Edges: 257. Cycles must equal 0; enforced by validator.
+Nodes: 134. Edges: 264. Cycles must equal 0; enforced by validator.

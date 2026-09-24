@@ -40,7 +40,7 @@ This sprint is part of the read-only Production MVP admitted by CR-2026-09-23 an
 
 ## Unlocks
 
-API-02, UI-01, API-04
+API-02, UI-01, API-04, API-07
 
 ## Required Reading
 

@@ -31,6 +31,7 @@ Use `@cloudflare/kumo` 2.14.0 React components for shared controls and tables; u
 ## Later dependencies outside this MVP
 
 - Production commands: API-04 depends on the required PM safety/governance tasks and API-02; UI-03 depends on API-04 and UI-02.
+- Tailscale-authenticated Production read composition and same-origin routing: API-07/UI-09 are separately admitted by [CR-20260924-PDA](../decisions/CR-20260924-production-dashboard-auth.md); UI-04 remains the Research UI identifier and API-05 remains the Production event-stream identifier in this roadmap.
 - Production event stream: API-05 depends on API-01/API-02; UI-07 consumes it.
 - Research API: RW-API-00..06 keep their Research domain dependencies (RW0/RW1/RW2/RW3/RW4/RW5/RW6/RW9 and PM-05 where required). They do not gate the Production MVP.
 - Research UI: UI-04/UI-05/UI-06 depend on the corresponding RW APIs and research services.

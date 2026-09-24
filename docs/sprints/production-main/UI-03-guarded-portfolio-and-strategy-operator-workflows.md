@@ -22,6 +22,8 @@ Reuse existing pages.tsx, route.tsx, typed client, Kumo and Geist. Read Impeccab
 
 - API-04 — Guarded Production portfolio and lifecycle commands
 - UI-02 — Read-only Production operational pages
+- API-07 — Tailscale-authenticated Production read composition
+- UI-09 — Same-origin Production API access
 
 ## Unlocks
 

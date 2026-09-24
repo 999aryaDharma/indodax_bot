@@ -199,3 +199,5 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [PM-09 — Candidate exits and draining strategy replacement](production-main\PM-09-candidate-exits-and-draining-strategy-replacement.md) — CORE; Candidate exits and draining strategy replacement
 - [API-04 — Guarded Production portfolio and lifecycle commands](production-main\API-04-guarded-production-portfolio-and-lifecycle-commands.md) — CORE; Guarded Production portfolio and lifecycle commands
 - [UI-03 — Guarded portfolio and strategy operator workflows](production-main\UI-03-guarded-portfolio-and-strategy-operator-workflows.md) — CORE; Guarded portfolio and strategy operator workflows
+- [API-07 — Tailscale-authenticated Production read composition](production-main\API-07-tailscale-authenticated-production-read-composition.md) — CORE; Authenticate allow-listed Tailscale operators and compose the real Indodax view-only provider for Production reads.
+- [UI-09 — Same-origin Production API access](production-main\UI-09-same-origin-production-api.md) — CORE; Route Production dashboard requests through same-origin /api/v1 and configure a local Vite development proxy.

@@ -41,3 +41,7 @@ Use the current `AGENTS.md` and `.agents/coordination/protocol.md` for execution
 ## Bot Trade Program — 2026-09-24
 
 Read [the accepted program](BOT-TRADE-PROGRAM.md), [CR](../decisions/CR-20260924-bot-trade-program.md) and [ADR-010](../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) for Workbench product decisions and multi-strategy Production. DATA-07 and PM-07–09/API-04/UI-03 extend the manifest. No implementation completion or live activation is claimed.
+
+## Production dashboard access — 2026-09-24
+
+[CR-20260924-PDA](../decisions/CR-20260924-production-dashboard-auth.md) and [ADR-011](../decisions/ADR-011-tailscale-operator-identity.md) govern allow-listed Tailscale Serve identity separately from Indodax view-only credentials. [ADR-012](../decisions/ADR-012-runtime-ownership-and-storage-layout.md) records the three operational areas, two authority boundaries and gradual code/storage ownership target. API-07/UI-09 are the implementation sprints; ASUS isolation and deployment remain external gates.
