@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import re
+from collections.abc import Callable, Collection
 from datetime import datetime
 from enum import StrEnum
 from uuid import uuid4
@@ -57,3 +59,32 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["x-request-id"] = request.state.request_id
         return response
+
+
+def tailscale_principal_resolver(
+    allowed_logins: Collection[str],
+) -> Callable[[Request], Principal | None]:
+    """Trust Serve identity headers only from a loopback reverse-proxy connection."""
+    allowed = frozenset(login.strip().casefold() for login in allowed_logins if login.strip())
+
+    def resolve(request: Request) -> Principal | None:
+        client_host = request.client.host if request.client is not None else ""
+        try:
+            if not ipaddress.ip_address(client_host).is_loopback:
+                return None
+        except ValueError:
+            return None
+
+        login = request.headers.get("Tailscale-User-Login", "").strip()
+        if not login or any(char.isspace() for char in login):
+            return None
+        normalized = login.casefold()
+        if normalized not in allowed:
+            return None
+        return Principal(
+            subject=normalized,
+            actor_class=ActorClass.OPERATOR,
+            capabilities=frozenset({Capability.PRODUCTION_READ}),
+        )
+
+    return resolve
