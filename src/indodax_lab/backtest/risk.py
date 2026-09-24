@@ -385,6 +385,22 @@ class PortfolioRiskManager:
         approved_qty = (allowed_notional / price).quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
         allowed_notional = approved_qty * price
 
+        # Enforce exposure limits against the same rounded fee execution books.
+        fee_quantum = Decimal(10) ** -fee_precision
+        rounded_fee = (allowed_notional * estimated_fee_rate).quantize(fee_quantum)
+        post_fee_equity = max(Decimal("0"), current_equity - rounded_fee)
+        post_fee_position_capacity = max(
+            Decimal("0"), post_fee_equity * self.policy.max_position_fraction - held_notional
+        )
+        post_fee_leverage_capacity = max(
+            Decimal("0"), post_fee_equity * self.policy.max_account_leverage - total_exposure
+        )
+        allowed_notional = min(
+            allowed_notional, post_fee_position_capacity, post_fee_leverage_capacity
+        )
+        approved_qty = (allowed_notional / price).quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
+        allowed_notional = approved_qty * price
+
         # SIM-02-AC1: Size di bawah minimum ditolak bukan dibulatkan naik
         if allowed_notional <= 0 or allowed_notional < self.policy.min_order_notional:
             return RiskAssessmentResult(

@@ -325,3 +325,37 @@ def test_position_and_leverage_caps_include_existing_exposure(default_policy: Ri
     )
     assert not result.approved
     assert result.reason_code == "BELOW_MIN_SIZE_REJECTED"
+
+
+def test_rounded_execution_fee_stays_within_post_fee_leverage_cap() -> None:
+    policy = RiskPolicy(
+        policy_id="rounded-fee-leverage",
+        version="1",
+        max_position_fraction=Decimal("0.90"),
+        min_order_notional=Decimal("1"),
+        max_account_leverage=Decimal("0.50"),
+    )
+    intent = SignalIntent(
+        intent_id="rounded-fee-cap",
+        decision_ts=BASE_TS,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("1000"),
+    )
+    manager = PortfolioRiskManager(policy, Decimal("1000"), BASE_TS)
+
+    result = manager.assess_order(
+        intent,
+        Decimal("1000"),
+        {},
+        {"btc_idr": Decimal("1")},
+        BASE_TS,
+        Decimal("1000"),
+        estimated_fee_rate=Decimal("0.01"),
+        fee_precision=0,
+        quantity_precision=8,
+    )
+
+    fee = (result.approved_notional * Decimal("0.01")).quantize(Decimal("1"))
+    assert result.approved
+    assert result.approved_notional <= policy.max_account_leverage * (Decimal("1000") - fee)
