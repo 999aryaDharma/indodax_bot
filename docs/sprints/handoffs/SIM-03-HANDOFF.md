@@ -1,5 +1,39 @@
 # SIM-03 handoff
 
+## Recovery review addendum (2026-09-25)
+
+- Reworked code SHA: `0a2a2132e9ff4728b2996b56757ecc5c0743362b`.
+- Round-1 independent review by `/root/sim01_final_review` and `/root/sim01_review`
+  requested changes on `8b35308019676c532a804ef7b43f2f8069357067`: result artifacts
+  lacked structured rejections and cost/risk/input identity; publish failure
+  preservation and actual independent sizing were not tested; dependency claims were
+  stale; and the synthetic fee fixture implied official evidence. The fixes below
+  address those items.
+- Backtest results now carry a canonical market-input hash, cost schedule and risk
+  policy IDs/versions, emitted strategy IDs, and ordered rejection reasons. A run
+  with rejected/cancelled orders reports `COMPLETED_WITH_REJECTIONS`; technical
+  exceptions still prevent publishing a successful result.
+- Result JSON now writes to a unique same-directory temporary file, flushes/fsyncs,
+  atomically replaces the target, and removes the temporary on failure. The failure
+  test targets an existing artifact whose name ends in `.tmp`, a case that collided
+  with the former fixed temporary path.
+- AC3 now asserts actual per-engine quantities (`0.00048862`) and compares them to
+  the single-wallet hypothetical pooled quantity (`0.00097725`). The test cost
+  fixture is explicitly labeled synthetic and not INDODAX evidence; it exercises
+  deterministic fee arithmetic only and does not satisfy COST-01.
+- Current manifest dependencies (2026-09-25): LED-01 and DATA-06 DONE; SIM-01 and
+  SIM-02 REVIEW; COST-01 REVIEW. Earlier dependency claims and AC rows below are
+  historical evidence only and do not indicate current readiness.
+- Verification on this code SHA: `rtk pytest
+  tests/integration/lab/test_backtest_golden.py
+  tests/unit/lab/backtest/test_risk.py
+  tests/unit/lab/backtest/test_judge_remediation.py
+  tests/unit/lab/backtest/test_accounting_failure_atomicity.py -q` → 75 passed;
+  `git diff --check` passed. Ruff leaves four existing E501 findings in engine.py;
+  no lint-clean claim is made.
+- Independent re-review on the exact reworked commit is pending. SIM-03 remains
+  REVIEW; dependency statuses remain unchanged.
+
 Status: REVIEW
 
 ## Identity
@@ -26,7 +60,8 @@ Status: REVIEW
   - Independent ledgers are strictly segregated; multiple portfolio accounts never pool capital or balance.
 - Migration and compatibility:
   - Additive backtest execution engine; backward compatible.
-  - Dependencies: LED-01 (DONE), SIM-01 (DONE), SIM-02 (DONE), DATA-06 (DONE).
+- Historical dependencies at implementation: LED-01, SIM-01, SIM-02 and DATA-06
+  were recorded DONE; see the recovery addendum above for current manifest status.
 
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
