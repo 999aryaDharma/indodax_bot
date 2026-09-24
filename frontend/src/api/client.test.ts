@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ControlPlaneError, getProductionOrdersPage, getProductionOverview, getProductionPortfolio, overviewDataForDisplay } from "./client";
 import type { ApiEnvelope, PortfolioView, ProductionOverview } from "./types";
+import viteConfig from "../../vite.config";
 
 const overview: ProductionOverview = {
   mode: "SHADOW",
@@ -44,7 +45,7 @@ describe("Production overview client", () => {
 
     expect((result.data as ProductionOverview & { equity: string }).equity).toBe("102.43000000");
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://127.0.0.1:8000/api/v1/production/overview",
+      "/api/v1/production/overview",
       expect.objectContaining({
         method: "GET",
         credentials: "omit",
@@ -144,7 +145,13 @@ describe("Production overview client", () => {
     const result = await getProductionOrdersPage(100, 5);
 
     expect(result.data).toMatchObject({ total: 105, offset: 100, limit: 5, data: [] });
-    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:8000/api/v1/production/orders/page?offset=100&limit=5");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/production/orders/page?offset=100&limit=5");
+  });
+
+  it("proxies the same-origin API path to the local backend in development", () => {
+    expect(viteConfig.server?.proxy?.["/api/v1"]).toMatchObject({
+      target: "http://127.0.0.1:8000",
+    });
   });
 
   it("rejects a portfolio envelope with invalid source evidence", async () => {

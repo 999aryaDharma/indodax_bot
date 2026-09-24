@@ -3,7 +3,7 @@ import type {
   ProductionOverview, ReconciliationView, ReleaseView, ResourceEvidence, RiskView,
 } from "./types";
 
-const baseUrl = import.meta.env.VITE_CONTROL_PLANE_API_URL ?? "http://127.0.0.1:8000/api/v1";
+const baseUrl = "/api/v1";
 
 export class ControlPlaneError extends Error {
   constructor(
