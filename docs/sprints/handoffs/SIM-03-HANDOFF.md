@@ -54,3 +54,10 @@ Relevant lab suite verification (44 passed, 2 skipped across backtest, risk, exe
 - Deviations: None.
 - Unresolved issues / blockers: None for SIM-03.
 - Next unlocked capabilities: SIM-04 (Net-cost risk and capacity metrics) and STRAT-01 (Declarative strategy protocol).
+
+## Recovery review addendum (2026-09-24)
+
+- Affected engine change SHA: `260fd066fc46171cece30ca38f7fa0b055f1dabb` (`src/indodax_lab/backtest/engine.py` and `tests/unit/lab/backtest/test_judge_remediation.py`). Replay sizing selects maker fee basis at synchronous order creation and taker fee basis at the execution event, regardless of whether a limit price is present.
+- Independent review: `/root/sim01_final_review`, PASS scoped to the replay fee-timing change and cash-safety regression; this is not a full SIM-03 acceptance review.
+- Verification on the reviewed tree: the focused combined command recorded in the SIM-01 recovery addendum → 67 passed, including `tests/integration/lab/test_backtest_golden.py`.
+- Gate: SIM-03 remains REVIEW; this scoped review does not replace full acceptance review, and dependency status is not DONE.

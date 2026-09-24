@@ -62,6 +62,33 @@ tax effective time, and Pro minimum. This owner observation supports current
 matrix values only. Prior intervals and the effective start of this exact
 matrix remain unverified; keep their schedules fail-closed and COST-01 in REVIEW.
 
+## Evidence recovery audit (2026-09-24)
+
+The following official sources are available and establish only the scopes noted:
+
+- INDODAX [trading-fee details](https://help.indodax.com/hc/id/articles/4416646599705-Rincian-Biaya-Transaksi-di-INDODAX): tax change under PMK 50/2025 effective 2025-08-01, tax components across maker/taker and IDR/USDT, PRO minimum, current fee detail location, and order-created-time fee behavior for resting limits. It does not publish a complete dated historical trading-fee matrix.
+- INDODAX [PPN 12% adjustment](https://blog.indodax.com/?p=30884): 2025-01-01 rates, including IDR buy tax 0.12%, USDT buy/sell tax 0.22%, and IDR CFX adjustment to 0.0224%.
+- INDODAX [return to 11% VAT](https://blog.indodax.com/implementasi-ppn-12/): correction effective 2025-02-13 11:00 WIB and PRO IDR/USDT matrix image. This reveals the configured `indodax_idr_2025h1_*` interval (2025-01-01 through 2025-08-01) spans two tax regimes; the fee schedule must be split and reconciled before it can be evidence-verified.
+- INDODAX [CFX implementation notice](https://blog.indodax.com/en_US/penerapan-fee-cfx/): CFX/all-in schedule applies to all IDR and USDT pairs from 2024-10-31 23:59:59 WIB; article images contain the announced Pro matrix.
+- INDODAX [CFX reduction notice](https://blog.indodax.com/penurunan-biaya-cfx/): CFX rates IDR 0.0111% / USDT 0.0222% effective 2026-03-01 00:00 WIB and confirms old CFX rates remain for limits created before the boundary.
+- Kementerian Keuangan [JDIH PMK 50/2025](https://jdih.kemenkeu.go.id/dok/pmk-50-tahun-2025): official regulation metadata confirms the effective date 2025-08-01; the regulation supports tax treatment, not exchange service fees.
+
+### Unverified matrix and period inventory
+
+`configs/costs/indodax_idr_v1.yaml` contains 28 IDR rows across seven intervals; every row remains `evidence_verified: false`. It contains no USDT rows. The following coverage is therefore still unproven as a complete schedule keyed by market × side × maker/taker × components × effective boundary:
+
+| Configured interval | Missing or incomplete evidence |
+|---|---|
+| IDR 2021-01-01–2022-05-01 | Historical service/tax/CFX (or explicit zero) rates and exact bounds for buy/sell maker/taker. Existing “Historical Fee Schedule 2021” label is not a retrievable official source. |
+| IDR 2022-05-01–2024-10-31 23:59:59 WIB | Complete service/tax rates and boundary for both sides and roles; PMK reference alone cannot verify Indodax maker/taker service fees. |
+| IDR/USDT from 2024-10-31 23:59:59 WIB | The CFX launch source establishes the boundary and CFX component, but archived Pro fee matrix evidence is still required for all components and roles in each affected interval. Current YAML models IDR only. |
+| IDR/USDT 2025-01-01–2025-02-13 11:00 WIB | The temporary 12% PPN regime and exact all-in matrices need an explicit interval; current YAML does not end the interval at this boundary. |
+| IDR/USDT 2025-02-13 11:00 WIB–2025-08-01 00:00 WIB | Corrected 11% regime matrix and exact all-in components need a separate verified interval; current YAML retains 12% buy tax/old component values through August. |
+| IDR/USDT from 2025-08-01 00:00 WIB–2026-03-01 00:00 WIB | PMK 50 verifies tax rule; complete market/side/role service and CFX matrix/bounds still need archived INDODAX evidence. Current YAML has IDR only. |
+| IDR/USDT from 2026-03-01 00:00 WIB onward | CFX component boundary is public. Owner's app screenshot supports the current PRO rates (dated observation 2026-09-24) but does not prove those rates began on 2026-03-01 or 2026-09-21. Need official dated matrix/boundary, including minimum-order rule scope. Current YAML has IDR only and uses 2026-09-21 as an unverified start. |
+
+Owner should provide dated, attributable INDODAX evidence (official archived fee notice/matrix or support confirmation) for the missing service/tax/CFX values and exact effective boundaries, plus historical PRO-versus-Lite applicability and minimum-order rule where the simulator models it. For any interval that cannot be sourced, keep it explicitly unknown/unverified and excluded from fee-based performance claims; do not infer backward from today's app view. The supplied current screenshot is not historical evidence. No credentials or live account were accessed.
+
 ## Identity
 - Sprint ID: COST-01 — Time-valid exchange cost schedules
 - Implementation agent: Antigravity

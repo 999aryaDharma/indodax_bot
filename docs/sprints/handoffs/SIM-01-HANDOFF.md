@@ -52,3 +52,11 @@ Combined suite verification (30 tests across backtest, execution, ledger, costs,
 - Deviations: None.
 - Unresolved issues / blockers: None for SIM-01.
 - Next unlocked capabilities: SIM-02 (Portfolio risk and circuit breakers) and LABEL-01 (once FEAT-04 is complete).
+
+## Recovery review addendum (2026-09-24)
+
+- Reviewed code SHA: `260fd066fc46171cece30ca38f7fa0b055f1dabb`.
+- Changes since the historical evidence SHA: Maker execution now requires a valid explicit `order_created_ts` and selects the maker fee interval using that timestamp; taker fees use fill time even when `limit_price` exists. Replay submits maker orders synchronously at `decision_ts` and passes that creation time explicitly.
+- Independent review: `/root/sim01_final_review`, PASS for SIM-01 code/spec quality on the reviewed SHA; no findings. Reviewer verified timestamp guards, role-based fee basis, and AC0–AC3 fixture compatibility.
+- Verification on the reviewed tree: `rtk pytest tests/integration/lab/test_backtest_golden.py tests/unit/lab/backtest/test_execution.py tests/unit/lab/backtest/test_judge_remediation.py tests/unit/lab/backtest/test_cost_schedule.py tests/unit/lab/backtest/test_indodax_cost_boundaries.py tests/unit/lab/backtest/test_risk.py -q` → 67 passed.
+- Gate: SIM-01 remains REVIEW because COST-01 is still REVIEW; schedule evidence is incomplete and unverified intervals fail closed.
