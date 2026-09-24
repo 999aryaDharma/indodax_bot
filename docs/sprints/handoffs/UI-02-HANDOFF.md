@@ -1,6 +1,7 @@
 # UI-02 Handoff
 
-- Implementation SHA: `eb99c569ef946522ddbeda1cda2e88f11ffe34af`
+- Initial implementation SHA: `eb99c569ef946522ddbeda1cda2e88f11ffe34af`
+- Review fixes SHA: `13f64d4aab93f155b6f939ada3df7fe5bc5fed8d`
 - Owner: `/root`
 - Status: implementation committed; independent review pending.
 - Scope: typed read-only API clients and Production pages for overview, portfolio, positions, orders, reconciliation, risk, releases and audit. Orders use bounded pagination. Research/System routes remain isolated. No write controls or live credentials were added.
@@ -12,6 +13,7 @@
 - `rtk npm run typecheck` (from `frontend/`): PASS.
 - `rtk npm run build` (from `frontend/`): PASS.
 - `rtk git diff --check`: PASS.
+- Follow-up review findings addressed: pagination is revision/generation guarded; stale evidence receives a prominent warning; numeric quantity/balance cells are right-aligned; Orders displays page-load failures; overview is not redundantly fetched on other Production routes.
 
 Live Production API connectivity and visual browser screenshots were not exercised in this environment. The UI only displays API response values and reports unavailable/unknown states without fabricating account data. No ASUS host, live key, order, ledger, or runtime database was accessed.
 
