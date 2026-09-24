@@ -159,6 +159,8 @@ def test_sim_02_contract_3(default_policy: RiskPolicy, tmp_path: Path) -> None:
         desired_qty=Decimal("0.0001"),
     )
 
+    risk_manager.observe_equity(Decimal("830000"), BASE_TS + timedelta(days=2))
+
     result = risk_manager.assess_order(
         intent=intent,
         current_equity=Decimal("830000"),
@@ -186,6 +188,7 @@ def test_sim_02_contract_3(default_policy: RiskPolicy, tmp_path: Path) -> None:
         side=OrderSide.BUY,
         desired_qty=Decimal("0.0001"),
     )
+    restarted_risk_manager.observe_equity(Decimal("840000"), BASE_TS + timedelta(days=3))
     result_after_restart = restarted_risk_manager.assess_order(
         intent=subsequent_intent,
         current_equity=Decimal("840000"),
@@ -198,3 +201,98 @@ def test_sim_02_contract_3(default_policy: RiskPolicy, tmp_path: Path) -> None:
     assert restarted_risk_manager.is_halted is True
     assert result_after_restart.approved is False
     assert result_after_restart.reason_code == "CIRCUIT_BREAKER_DRAWDOWN_HALT"
+
+
+def test_loss_periods_roll_at_utc_day_and_iso_week_boundaries(default_policy: RiskPolicy) -> None:
+    monday = datetime(2024, 6, 3, 0, 0, tzinfo=UTC)
+    intent = SignalIntent(
+        intent_id="weekly-loss",
+        decision_ts=monday + timedelta(days=1, hours=1),
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"),
+    )
+    weekly_policy = default_policy.model_copy(update={
+        "max_daily_loss_fraction": Decimal("0.08"),
+        "max_weekly_loss_fraction": Decimal("0.05"),
+    })
+    weekly = PortfolioRiskManager(weekly_policy, Decimal("1000000"), BASE_TS)
+    weekly.observe_equity(Decimal("1000000"), monday)
+    weekly.observe_equity(Decimal("1000000"), monday + timedelta(days=1))
+    result = weekly.assess_order(
+        intent, Decimal("940000"), {}, {"btc_idr": Decimal("500000000")},
+        monday + timedelta(days=1, hours=1), Decimal("940000"),
+    )
+    assert result.reason_code == "CIRCUIT_BREAKER_WEEKLY_LOSS"
+
+    daily_policy = default_policy.model_copy(update={
+        "max_daily_loss_fraction": Decimal("0.05"),
+        "max_weekly_loss_fraction": Decimal("0.10"),
+    })
+    daily = PortfolioRiskManager(daily_policy, Decimal("1000000"), BASE_TS)
+    next_day = monday + timedelta(days=1)
+    daily.observe_equity(Decimal("1000000"), monday)
+    daily.observe_equity(Decimal("1000000"), next_day)
+    daily.observe_equity(Decimal("1000000"), next_day + timedelta(hours=1))
+    daily_intent = intent.model_copy(update={
+        "intent_id": "daily-loss",
+        "decision_ts": next_day + timedelta(hours=2),
+    })
+    result = daily.assess_order(
+        daily_intent, Decimal("880000"), {}, {"btc_idr": Decimal("500000000")},
+        next_day + timedelta(hours=2), Decimal("880000"),
+    )
+    assert result.reason_code == "CIRCUIT_BREAKER_DAILY_LOSS"
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {"policy_id": "  "},
+        {"version": ""},
+        {"min_order_notional": Decimal("0")},
+        {"max_open_positions": 0},
+        {"max_position_fraction": Decimal("1.01")},
+        {"max_drawdown_halt_fraction": Decimal("1.01")},
+        {"max_account_leverage": Decimal("1.01")},
+    ],
+)
+def test_risk_policy_rejects_invalid_identity_or_unsafe_bounds(
+    default_policy: RiskPolicy, update: dict[str, object]
+) -> None:
+    values = default_policy.model_dump()
+    values.update(update)
+    with pytest.raises(ValueError):
+        RiskPolicy(**values)
+
+
+def test_position_and_leverage_caps_include_existing_exposure(default_policy: RiskPolicy) -> None:
+    intent = SignalIntent(
+        intent_id="add-to-existing",
+        decision_ts=BASE_TS,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0002"),
+    )
+    existing = {"btc_idr": Position(
+        pair="btc_idr", base_qty=Decimal("0.0004"), cost_basis=Decimal("200000")
+    )}
+    manager = PortfolioRiskManager(default_policy, Decimal("1000000"), BASE_TS)
+    result = manager.assess_order(
+        intent, Decimal("1000000"), existing, {"btc_idr": Decimal("500000000")},
+        BASE_TS, Decimal("800000"),
+    )
+    assert not result.approved
+    assert result.reason_code == "BELOW_MIN_SIZE_REJECTED"
+
+    leverage_policy = default_policy.model_copy(update={"max_account_leverage": Decimal("0.10")})
+    manager = PortfolioRiskManager(leverage_policy, Decimal("1000000"), BASE_TS)
+    result = manager.assess_order(
+        intent.model_copy(update={"pair": "eth_idr"}), Decimal("1000000"),
+        {"btc_idr": Position(pair="btc_idr", base_qty=Decimal("0.00019"),
+                              cost_basis=Decimal("95000"))},
+        {"btc_idr": Decimal("500000000"), "eth_idr": Decimal("50000000")},
+        BASE_TS, Decimal("905000"),
+    )
+    assert not result.approved
+    assert result.reason_code == "BELOW_MIN_SIZE_REJECTED"

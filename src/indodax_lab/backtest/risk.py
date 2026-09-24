@@ -30,11 +30,18 @@ class RiskPolicy(BaseModel):
     version: str
     max_position_fraction: Decimal = Field(default=Decimal("0.20"), gt=0, le=1)
     max_open_positions: int = Field(default=3, gt=0, strict=True)
-    min_order_notional: Decimal = Decimal("10000")
+    min_order_notional: Decimal = Field(default=Decimal("10000"), gt=0)
     max_daily_loss_fraction: Decimal = Field(default=Decimal("0.05"), gt=0, le=1)
     max_weekly_loss_fraction: Decimal = Field(default=Decimal("0.10"), gt=0, le=1)
     max_drawdown_halt_fraction: Decimal = Field(default=Decimal("0.15"), gt=0, le=1)
     max_account_leverage: Decimal = Field(default=Decimal("1.0"), gt=0, le=1)
+
+    @field_validator("policy_id", "version")
+    @classmethod
+    def require_identity(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("RISK_POLICY_IDENTITY_REQUIRED")
+        return value
 
     @field_validator(
         "max_position_fraction",
@@ -159,6 +166,7 @@ class PortfolioRiskManager:
         value = Decimal(str(equity))
         if not value.is_finite() or value < 0:
             raise ValueError("INVALID_EQUITY_OBSERVATION")
+        self._roll_loss_periods(value, ts)
         if value > self.peak_equity:
             self.peak_equity = value
         if self.peak_equity > 0:
@@ -167,6 +175,15 @@ class PortfolioRiskManager:
                 self.is_halted = True
                 self.halt_reason = f"DRAWDOWN_BREACH:{drawdown:.4f}"
                 self.halted_at = ts
+
+    def _roll_loss_periods(self, equity: Decimal, timestamp: datetime) -> None:
+        if timestamp.date() > self.daily_start_date.date():
+            self.daily_start_equity = equity
+            self.daily_start_date = timestamp
+        if (timestamp > self.weekly_start_date
+                and timestamp.isocalendar()[:2] != self.weekly_start_date.isocalendar()[:2]):
+            self.weekly_start_equity = equity
+            self.weekly_start_date = timestamp
 
     def assess_order(
         self,
@@ -204,15 +221,14 @@ class PortfolioRiskManager:
             return RiskAssessmentResult(approved=True, approved_qty=qty,
                                         approved_notional=qty * price, reason_code="APPROVED")
 
-        # Roll daily reference equity on date change
-        if eval_utc.date() > self.daily_start_date.date():
-            self.daily_start_equity = current_equity
-            self.daily_start_date = eval_utc
-
-        # Roll weekly reference equity on 7-day interval
-        if eval_utc - self.weekly_start_date >= timedelta(days=7):
-            self.weekly_start_equity = current_equity
-            self.weekly_start_date = eval_utc
+        # Period openings require an observed equity mark. Never infer them from
+        # a later order's equity and erase intervening loss.
+        if (eval_utc.date() > self.daily_start_date.date()
+                or eval_utc.isocalendar()[:2] != self.weekly_start_date.isocalendar()[:2]):
+            return RiskAssessmentResult(
+                approved=False,
+                reason_code="RISK_PERIOD_OPENING_EQUITY_UNOBSERVED",
+            )
 
         # SIM-02-AC3: Drawdown halt tidak hilang setelah restart
         if self.is_halted:
