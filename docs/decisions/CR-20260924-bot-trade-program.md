@@ -21,3 +21,7 @@ Run `python docs/quality/validate_planning.py --refresh --self-test` and `git di
 ## Accepted owner refinement — dynamic allocation
 
 On 2026-09-24 the owner approved a shared IDR 500,000 pool without fixed agent quotas, candidate-owned adaptive sizing/SL/TP under central risk limits, and skipping below-minimum orders without inflating risk. ADR-010 and the program record the supersession, three selected agents and unresolved numerical limits. PM-08 acceptance/contract text is updated in place; RP-03, PM-09, RW6 and guarded API/UI consume it through existing dependencies. No new sprint, status change, runtime change or deployment is implied.
+
+## Accepted owner refinement — configurable defaults and controlled close-out
+
+The owner requests dashboard-customizable supported Main and agent parameters, initialized from agreed defaults. Record the IDR 500,000 shared pool, initial-capital 20% loss floor, controlled close-out and manual resume, monthly reporting objective and unresolved risk settings. Impact: extend PM-08 floor/default validation, PM-09 durable close-out lifecycle, API-04 versioned draft approval and UI-03 default/draft/active presentation. Agent parameter changes use the existing candidate/release flow; no bypass endpoint or new scheduler is introduced. Amend ADR-010, program and existing sprint acceptance mappings; preserve statuses, dependencies and unrelated implementation work.

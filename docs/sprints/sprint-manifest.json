@@ -12125,7 +12125,7 @@
         "RP-03"
       ],
       "goal": "Shared capital allocation and stop risk sizing",
-      "contract": "AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.",
+      "contract": "AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation. Enforce the program dashboard defaults, initial-capital floor and explicit unset live-risk settings; publish the durable floor-breach intent for PM-09.",
       "checks": [
         "Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice",
         "Invalid risk or exposure limits and overlapping pair owners reject the policy",
@@ -12134,7 +12134,10 @@
         "Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints",
         "Risk or exposure limit reduction below current usage stops affected entry without forced sale",
         "Verified cash flows adjust risk baselines without hiding losses",
-        "Priority and intent ordering reproduce identical allocation on replay"
+        "Priority and intent ordering reproduce identical allocation on replay",
+        "Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request",
+        "Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses",
+        "Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately"
       ],
       "files": [
         "src/indodax_lab/portfolio/constructor.py",
@@ -12221,6 +12224,24 @@
           "test_case": "test_pm_08_7",
           "behavior": "Priority and intent ordering reproduce identical allocation on replay",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC8",
+          "test_case": "test_pm_08_8",
+          "behavior": "Initial capital 500000 yields a 400000 floor; rising equity does not raise it and equality triggers a durable close-out request",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC9",
+          "test_case": "test_pm_08_9",
+          "behavior": "Unset live per-trade aggregate daily-loss limits or unreviewed cash-flow baseline rules block new-policy activation; defaults and restart never reset active policy or losses",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC10",
+          "test_case": "test_pm_08_10",
+          "behavior": "Missing marks or exit costs block entry; capital-floor valuation counts costs once and reports peak drawdown separately",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -12241,7 +12262,7 @@
         "PM-04"
       ],
       "goal": "Candidate exits and draining strategy replacement",
-      "contract": "request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh.",
+      "contract": "request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh. Integrate the program capital-floor controlled close-out with durable cancellation, reconciliation and safe exits, separate from replacement draining and operational HALT.",
       "checks": [
         "Partial entry fill receives exits only for actual filled quantity",
         "Cancel uncertainty and late fills never permit blind replacement or oversell",
@@ -12249,7 +12270,9 @@
         "New strategy cannot own pair until old position orders and reservations are resolved",
         "Unsellable dust blocks drain completion with an explicit reason",
         "Restart restores trailing state ownership and pending exits before resume",
-        "Unsupported stop or order semantics reject rather than substitute behavior"
+        "Unsupported stop or order semantics reject rather than substitute behavior",
+        "Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits",
+        "Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor"
       ],
       "files": [
         "src/indodax_lab/control/pipeline.py",
@@ -12329,6 +12352,18 @@
           "test_case": "test_pm_09_6",
           "behavior": "Unsupported stop or order semantics reject rather than substitute behavior",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC7",
+          "test_case": "test_pm_09_7",
+          "behavior": "Capital-floor breach persists controlled close-out across restart and rebound, cancelling entry remainders and reconciling uncertain orders and late fills before safe exits",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC8",
+          "test_case": "test_pm_09_8",
+          "behavior": "Close-out coordinates pending exits and bot ownership without oversell; unsafe writes or dust remain blocked and manual resume cannot bypass the capital floor",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -12349,14 +12384,16 @@
         "API-07"
       ],
       "goal": "Guarded Production portfolio and lifecycle commands",
-      "contract": "Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.",
+      "contract": "Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.",
       "checks": [
         "Research actor and read-only viewer cannot invoke Production commands",
         "Stale revision or changed proposal rejects approval and requires a new proposal",
         "Duplicate identical request returns same receipt and conflicting payload rejects",
         "Command audit failure cannot acknowledge successful mutation",
         "Resume revalidates recovery risk release and reconciliation gates",
-        "No route exposes order withdrawal or model reload authority"
+        "No route exposes order withdrawal or model reload authority",
+        "Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state",
+        "Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits"
       ],
       "files": [
         "src/indodax_lab/api/routers/production_commands.py",
@@ -12432,6 +12469,18 @@
           "test_case": "test_api_04_5",
           "behavior": "No route exposes order withdrawal or model reload authority",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC6",
+          "test_case": "test_api_04_6",
+          "behavior": "Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC7",
+          "test_case": "test_api_04_7",
+          "behavior": "Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -12452,14 +12501,17 @@
         "UI-09"
       ],
       "goal": "Guarded portfolio and strategy operator workflows",
-      "contract": "Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.",
+      "contract": "Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.",
       "checks": [
         "Viewer and Research context cannot reach operator commands",
         "Stale proposal forces refresh and never silently resubmits approval",
         "Duplicate click uses one idempotency key and displays one outcome",
         "Unknown basis unadopted assets and unavailable marks are explicitly labeled",
         "Draining shows pending positions orders reservations and blocked dust",
-        "Keyboard and smartphone layouts preserve command context and confirmation details"
+        "Keyboard and smartphone layouts preserve command context and confirmation details",
+        "Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit",
+        "Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade",
+        "Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning"
       ],
       "files": [
         "frontend/src/features/production/commands.tsx",
@@ -12533,6 +12585,24 @@
           "criterion": "UI-03-AC5",
           "test_case": "test_ui_03_5",
           "behavior": "Keyboard and smartphone layouts preserve command context and confirmation details",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC6",
+          "test_case": "test_ui_03_6",
+          "behavior": "Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC7",
+          "test_case": "test_ui_03_7",
+          "behavior": "Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC8",
+          "test_case": "test_ui_03_8",
+          "behavior": "Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],

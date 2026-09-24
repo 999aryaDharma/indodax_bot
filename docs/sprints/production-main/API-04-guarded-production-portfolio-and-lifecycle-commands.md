@@ -46,7 +46,7 @@ API-00 through API-03 are DONE read/control-plane foundations. Named command adm
 
 ## In Scope
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
 
 - Research actor and read-only viewer cannot invoke Production commands.
 - Stale revision or changed proposal rejects approval and requires a new proposal.
@@ -54,6 +54,10 @@ Implement only the command routes and CommandReceipt contract named in BOT-TRADE
 - Command audit failure cannot acknowledge successful mutation.
 - Resume revalidates recovery risk release and reconciliation gates.
 - No route exposes order withdrawal or model reload authority.
+
+- Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state.
+
+- Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits.
 
 ## Out of Scope
 
@@ -72,13 +76,17 @@ The operator supplies versioned inputs through the named interface and receives 
 - **API-04-AC4** Resume revalidates recovery risk release and reconciliation gates.
 - **API-04-AC5** No route exposes order withdrawal or model reload authority.
 
+- **API-04-AC6** Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state.
+
+- **API-04-AC7** Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits.
+
 ## Domain Rules / Invariants
 
 BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC availability, immutable identity, no future information, exactly-once effects and separation of Research from Production authority.
 
 ## Architecture / Design Contract
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
 
 ## Planned Files / Artifacts
 
@@ -93,7 +101,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.
+Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior. Reuse the same proposal/decision flow for program dashboard defaults and validated drafts; candidate parameter edits use existing candidate/release authority.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -127,6 +135,10 @@ Run `python -m pytest tests/integration/lab/api/test_production_commands.py -q` 
 - `test_api_04_3`: Command audit failure cannot acknowledge successful mutation.
 - `test_api_04_4`: Resume revalidates recovery risk release and reconciliation gates.
 - `test_api_04_5`: No route exposes order withdrawal or model reload authority.
+
+- `test_api_04_6`: Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state.
+
+- `test_api_04_7`: Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits.
 
 ## Failure / Edge Cases
 
@@ -164,6 +176,10 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **API-04-AC3** Command audit failure cannot acknowledge successful mutation. Evidence: `test_api_04_3` at exact committed SHA.
 - [ ] **API-04-AC4** Resume revalidates recovery risk release and reconciliation gates. Evidence: `test_api_04_4` at exact committed SHA.
 - [ ] **API-04-AC5** No route exposes order withdrawal or model reload authority. Evidence: `test_api_04_5` at exact committed SHA.
+
+- [ ] **API-04-AC6** Existing proposal and decision flow exposes defaults drafts active revisions validation and impact; unset mandatory risk settings prevent activation without mutating active state. Evidence: `test_api_04_6` at exact committed SHA.
+
+- [ ] **API-04-AC7** Agent parameter changes require new candidate evaluation and release; risk widening requires shared-capital evidence and no command hot-edits existing position exits. Evidence: `test_api_04_7` at exact committed SHA.
 
 ## Definition of Done
 

@@ -33,3 +33,9 @@ Implement the program's targeted tests, independently review exact SHAs, then sa
 ## Owner amendment — dynamic shared pool (2026-09-24)
 
 The owner supersedes the earlier fixed per-strategy capital-cap allocation and sum-at-most-one rule with one dynamic shared pool. Agent-owned immutable rules determine adaptive sizing, SL and TP; central risk, cash, reservations and venue constraints remain authoritative. Below-minimum proposals reject without increasing risk or changing the stop merely to meet a minimum. This amendment supersedes fixed-quota wording in the original program and frozen Main amendment; PM-08 and downstream Portfolio Shadow consume the revised program. Existing release gates and credential isolation are unchanged.
+
+## Owner amendment — dashboard defaults and capital floor (2026-09-24)
+
+Accept the program's configurable Main/agent drafts with separate default, draft and active values. Initial-capital loss replaces the earlier ambiguous 20% drawdown wording: IDR 500,000 baseline gives an IDR 400,000 floor, independent of subsequent peaks. At/below the floor, centrally governed controlled close-out supersedes waiting for candidate exit signals, but never bypasses operational write gates, ownership, fill accounting or reconciliation. Candidate replacement draining and operational HALT retain their existing meanings. Resume is manual and cannot bypass the floor.
+
+Defaults never overwrite active settings. Per-trade risk remains an evaluation choice between 0.5% and 1%; aggregate/daily-loss limits and cash-flow baseline adjustment are not silently invented. Missing mandatory settings block activation of the new policy. PM-08, PM-09, API-04 and UI-03 own integration through existing interfaces. Existing read-only API/UI and live runtime remain unchanged by this documentation.

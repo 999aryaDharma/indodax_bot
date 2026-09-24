@@ -46,7 +46,7 @@ Reuse existing pages.tsx, route.tsx, typed client, Kumo and Geist. Read Impeccab
 
 ## In Scope
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
 
 - Viewer and Research context cannot reach operator commands.
 - Stale proposal forces refresh and never silently resubmits approval.
@@ -54,6 +54,12 @@ Render adoption review, allocation proposal/decision, pause-entry, resume, halt 
 - Unknown basis unadopted assets and unavailable marks are explicitly labeled.
 - Draining shows pending positions orders reservations and blocked dust.
 - Keyboard and smartphone layouts preserve command context and confirmation details.
+
+- Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+
+- Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+
+- Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
 
 ## Out of Scope
 
@@ -72,13 +78,19 @@ The operator supplies versioned inputs through the named interface and receives 
 - **UI-03-AC4** Draining shows pending positions orders reservations and blocked dust.
 - **UI-03-AC5** Keyboard and smartphone layouts preserve command context and confirmation details.
 
+- **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+
+- **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+
+- **UI-03-AC8** Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
+
 ## Domain Rules / Invariants
 
 BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC availability, immutable identity, no future information, exactly-once effects and separation of Research from Production authority.
 
 ## Architecture / Design Contract
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
 
 ## Planned Files / Artifacts
 
@@ -93,7 +105,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.
+Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits. Provide supported Main and agent configuration with separate backend default/draft/active values, unset-field guidance and controlled-close-out visibility.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -127,6 +139,12 @@ Run `cd frontend; npm test -- src/features/production/commands.test.tsx; npm run
 - `test_ui_03_3`: Unknown basis unadopted assets and unavailable marks are explicitly labeled.
 - `test_ui_03_4`: Draining shows pending positions orders reservations and blocked dust.
 - `test_ui_03_5`: Keyboard and smartphone layouts preserve command context and confirmation details.
+
+- `test_ui_03_6`: Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit.
+
+- `test_ui_03_7`: Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade.
+
+- `test_ui_03_8`: Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning.
 
 ## Failure / Edge Cases
 
@@ -164,6 +182,12 @@ Revert only compatible code/configuration before activation. Preserve journal an
 - [ ] **UI-03-AC3** Unknown basis unadopted assets and unavailable marks are explicitly labeled. Evidence: `test_ui_03_3` at exact committed SHA.
 - [ ] **UI-03-AC4** Draining shows pending positions orders reservations and blocked dust. Evidence: `test_ui_03_4` at exact committed SHA.
 - [ ] **UI-03-AC5** Keyboard and smartphone layouts preserve command context and confirmation details. Evidence: `test_ui_03_5` at exact committed SHA.
+
+- [ ] **UI-03-AC6** Configuration distinguishes backend defaults draft and active values; 500000 capital 20 percent initial-capital floor and monthly target are labeled without presenting a target as guaranteed profit. Evidence: `test_ui_03_6` at exact committed SHA.
+
+- [ ] **UI-03-AC7** Unselected live risk values display unset while 0.5 and 1 percent remain evaluation scenarios; defaults never overwrite active values after refresh or upgrade. Evidence: `test_ui_03_7` at exact committed SHA.
+
+- [ ] **UI-03-AC8** Controlled close-out shows residual positions uncertain orders and blocked dust; manual resume displays backend gate failures and agent edits follow candidate versioning. Evidence: `test_ui_03_8` at exact committed SHA.
 
 ## Definition of Done
 

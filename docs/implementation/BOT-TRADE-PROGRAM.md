@@ -54,11 +54,35 @@ One reviewed Production release may contain multiple immutable strategy candidat
 
 Strategy, agent and bot name the same trading decision unit in product language. BTC-C07 (BTC/IDR), ETH-C02 (ETH/IDR) and SOL-C02 (SOL/IDR) are the three owner-selected Main candidates. ML/DL models are internal components, not extra agents. Exact candidate versions, artifact bindings and release qualification remain to be verified; selection does not certify readiness or override staged release gates.
 
-The owner-provided experimental capital is IDR 500,000 total in the shared pool. The 5% net monthly objective is a target, not a promise or sizing input. The owner stated a maximum drawdown tolerance of 20%; the executable policy still requires reviewed baselines and halt/exit behavior. A one-month report does not replace forward qualification.
+The owner-provided experimental capital is IDR 500,000 total in the shared pool. The 5% net monthly objective is a target, not a promise or sizing input. The owner selected a 20% capital-loss threshold relative to initial capital, not peak equity; the default threshold is IDR 400,000. Peak-to-trough drawdown remains a separate reported metric. A one-month report does not replace forward qualification.
 
-Illustration only: IDR 2,500 risk (0.5% of IDR 500,000), a 2% stop and an assumed 0.6% combined cost/slippage allowance imply approximately IDR 96,154 notional before rounding and other constraints. Neither 0.5% risk nor 0.6% costs is an approved live default. Per-trade and aggregate risk limits remain to be selected and evaluated.
+Illustration only: IDR 2,500 risk (0.5% of IDR 500,000), a 2% stop and an assumed 0.6% combined cost/slippage allowance imply approximately IDR 96,154 notional before rounding and other constraints. Neither 0.5% risk nor 0.6% costs is an approved live default. Compare 0.5% and 1% per-trade ceilings as evaluation scenarios; neither is approved for live activation. Aggregate risk and daily-loss limits remain unset.
 
 Venue references checked 2026-09-24: [Indodax fee/minimum explanation](https://help.indodax.com/hc/id/articles/4416646599705-Rincian-Biaya-Transaksi-di-INDODAX) distinguishes Lite IDR 10,000 and Pro IDR 25,000; [official API pair metadata](https://github.com/btcid/indodax-official-api-docs/blob/master/Public-RestAPI.md#pairs) documents pair minima and increments. Current minima for the intended API route are not certified by this documentation update.
+
+### Dashboard defaults and capital-loss response
+
+Defaults populate new drafts only; they never initialize financial balances, overwrite active policy, reset a baseline, or apply automatically after restart/upgrade. Main and agent settings remain configurable through reviewed, versioned policies/candidates.
+
+| Setting | Initial draft default |
+|---|---|
+| Program initial capital | IDR 500,000 total; actual cash/assets come from reconciliation |
+| Capital allocation | One shared pool, no fixed per-agent quota |
+| Selected candidates | BTC-C07, ETH-C02, SOL-C02; exact versions and staged release gates still required |
+| Agent sizing and exits | Candidate-owned adaptive sizing, SL, TP and trailing rules; no fabricated numeric parameters |
+| Reporting target/window | 5% net monthly, monthly report; no forced trading or shorter qualification |
+| Capital-loss threshold | 20% of reviewed initial-capital baseline; IDR 400,000 at IDR 500,000 baseline |
+| Threshold action | Controlled close-out of bot-owned positions, followed by manual resume review |
+| Per-trade risk ceiling | Unset for live; evaluate 0.5% and 1% |
+| Aggregate risk and daily-loss limits | Unset; mandatory before new-policy activation |
+
+- PM-08 compares reconciled cash plus trustworthy marked asset value minus estimated remaining exit costs against the capital floor, using Decimal and counting costs once. At or below the floor triggers the policy; rising equity does not raise this initial-capital floor. Missing marks/costs block entry and disclose unavailable evaluation, never assume zero or safe.
+- External deposits/withdrawals require a reviewed baseline-adjustment rule before new-policy activation. Preserve cash-flow attribution and historical losses; manual resume, edits and restart cannot silently reset the baseline. This packet does not supply an unapproved adjustment formula.
+- PM-09 persists a controlled-close-out intent when the floor is breached: prohibit new entries, request cancellation of outstanding entry remainders through normal OMS, reconcile uncertain orders and late fills, and close only bot-owned/adopted quantities through the existing approved execution policy when all required write gates permit it. Coordinate with existing pending exits to prevent duplicate sells. No immediate-fill, minimum final equity or automatic order-type substitution is promised.
+- The close-out intent survives restart into RECOVERY; a price rebound does not clear it. Missing venue capability, unsafe execution, unknown orders and unsellable dust leave explicit blocked/residual state. Completion requires zero bot-owned positions, resolved entry/exit orders, released reservations and fresh reconciliation. Non-adopted assets remain visible but are not liquidated.
+- Manual resume is required after close-out and still must pass capital-floor, risk, release, health and reconciliation checks; a resume command alone cannot override an unresolved floor breach. Controlled close-out is a portfolio-risk action, distinct from candidate replacement draining and from operational HALT. HALT continues to prohibit writes when its gates fail; eligible close-out work waits durably.
+- API-04/UI-03 reuse allocation proposal/decision and existing candidate composition/release flows. Expose backend defaults, draft values, active revision, unset required fields, validation issues, affected positions and activation outcome. Editing supported agent parameters creates a new candidate draft for existing evaluation/release; no direct live agent-parameter patch route is admitted.
+- Default/draft/active values stay distinct. Approval binds exact validated bytes and current revisions; stale approval requires a new proposal, identical retries return one result. Widening risk requires new shared-capital evidence. Lower limits block affected entries without implicit liquidation unless the separately approved capital-floor close-out policy is triggered. Existing positions retain candidate-bound exits; central close-out policy can override waiting for a strategy exit signal without rewriting that candidate.
 
 ### Exits, fills and replacement
 
