@@ -23,10 +23,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-import sys
 from typing import Sequence
 
 import yaml
@@ -39,9 +39,10 @@ from indodax_lab.backtest.feature_replay import (
     FeatureReplayConfig,
     load_bars_from_parquet_dir,
 )
-from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.metrics import compute_performance_metrics
+from indodax_lab.backtest.result import write_json_atomically
 from indodax_lab.backtest.risk import RiskPolicy
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.strategies.base import (
     DecisionFrame,
     RegisteredStrategy,
@@ -50,7 +51,6 @@ from indodax_lab.strategies.base import (
 )
 from indodax_lab.strategies.c01 import c01_decide
 from indodax_lab.strategies.registry import StrategyRegistry
-
 
 # ---------------------------------------------------------------------------
 # Strategy wiring
@@ -161,8 +161,12 @@ def _build_report(
         # This replay uses raw-bar pass-through fields, not the feature registry.
         "feature_set_id": None,
         "feature_set_version": None,
-        "cost_schedule_id": "indodax_idr",
-        "cost_schedule_version": "1.0.0",
+        "market_input_hash": result.market_input_hash,
+        "cost_schedule_id": result.cost_schedule_set_id,
+        "cost_schedule_version": result.cost_schedule_version,
+        "risk_policy_id": result.risk_policy_id,
+        "risk_policy_version": result.risk_policy_version,
+        "run_status": result.status,
         "cost_config_path": cost_config_path,
         # Scope
         "pair": pair,
@@ -436,10 +440,7 @@ def main(argv: Sequence[str] | None = None, stdout=None) -> int:
     if args.output:
         out_path = Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        # Atomic write: write to .tmp then rename
-        tmp_path = out_path.with_suffix(".tmp")
-        tmp_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-        tmp_path.replace(out_path)
+        write_json_atomically(out_path, report)
         out.write(f"[run_backtest] report written to {out_path}\n")
         out.write(f"[run_backtest] artifact_sha256={report['artifact_sha256']}\n")
     else:

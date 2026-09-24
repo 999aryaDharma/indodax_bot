@@ -13,6 +13,24 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict
 
 
+def write_json_atomically(path: Path, value: dict[str, Any]) -> None:
+    """Write JSON with same-directory replacement; preserve old output on failure."""
+    target = Path(path)
+    temp_path: Path | None = None
+    try:
+        fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+        temp_path = Path(temp_name)
+        with os.fdopen(fd, "w", encoding="utf-8") as artifact:
+            artifact.write(json.dumps(value, indent=2))
+            artifact.flush()
+            os.fsync(artifact.fileno())
+        os.replace(temp_path, target)
+        temp_path = None
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
 class BacktestResult(BaseModel):
     """The canonical deterministic replay outcome for a strategy run."""
 
@@ -71,20 +89,7 @@ class BacktestResult(BaseModel):
 
     def save_json(self, path: Path) -> None:
         """Atomically persist manifest to path using temp-file rename."""
-        target = Path(path)
-        temp_path: Path | None = None
-        try:
-            fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
-            temp_path = Path(temp_name)
-            with os.fdopen(fd, "w", encoding="utf-8") as artifact:
-                artifact.write(json.dumps(self.to_dict(), indent=2))
-                artifact.flush()
-                os.fsync(artifact.fileno())
-            os.replace(temp_path, target)
-            temp_path = None
-        finally:
-            if temp_path is not None:
-                temp_path.unlink(missing_ok=True)
+        write_json_atomically(path, self.to_dict())
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BacktestResult:
