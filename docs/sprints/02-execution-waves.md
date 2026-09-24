@@ -57,7 +57,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 6
 
 - DATA-06 — Provider-derived reproducible snapshot [DONE; CORE]
-- SIM-01 — Conservative execution simulator [REVIEW; CORE]
+- SIM-01 — Conservative execution simulator [DONE; CORE]
 - API-01 — Production service-derived read models [DONE; CORE]
 
 ## Wave 7

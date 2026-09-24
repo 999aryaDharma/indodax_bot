@@ -5851,9 +5851,9 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/SIM-01-conservative-execution-simulator.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-01-conservative-execution-simulator",
       "external_gates": [
         "Historical Indodax fee evidence remains incomplete: runs touching unverified market × side × role × intervals must report net performance unavailable/fail closed and cannot support promotion; never substitute zero/current fees or shorten the window. SIM engineering/review may proceed on explicit scoped fixtures that do not claim representative historical net profitability."
@@ -5875,35 +5875,36 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_handoff",
         "path": "docs/sprints/handoffs/SIM-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "6abb8125c5993528ca6e714d5b51a8e516f88cf3",
+        "code_target": "260fd066fc46171cece30ca38f7fa0b055f1dabb",
+        "review": "Independent review /root/docs_review PASS on exact HEAD 6abb8125c5993528ca6e714d5b51a8e516f88cf3; no Critical/Important findings. Focused current-checkout verification: 79 passed. Capability DONE only; historical fee evidence and profitability remain gated."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "SIM-01-AC0",
           "test_case": "test_sim_01_valid_contract",
           "behavior": "Order intent menghasilkan fill paling awal di event yang eligible berikutnya dengan biaya realistis",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-01-AC1",
           "test_case": "test_sim_01_contract_1",
           "behavior": "Same-close execution ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-01-AC2",
           "test_case": "test_sim_01_contract_2",
           "behavior": "Insufficient depth dan min-size menghasilkan reject atau partial",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-01-AC3",
           "test_case": "test_sim_01_contract_3",
           "behavior": "Limit touch tidak otomatis maker fill",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "high",

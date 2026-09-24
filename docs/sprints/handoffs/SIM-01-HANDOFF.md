@@ -60,3 +60,11 @@ Combined suite verification (30 tests across backtest, execution, ledger, costs,
 - Independent review: `/root/sim01_final_review`, PASS for SIM-01 code/spec quality on the reviewed SHA; no findings. Reviewer verified timestamp guards, role-based fee basis, and AC0–AC3 fixture compatibility.
 - Verification on the reviewed tree: `rtk pytest tests/integration/lab/test_backtest_golden.py tests/unit/lab/backtest/test_execution.py tests/unit/lab/backtest/test_judge_remediation.py tests/unit/lab/backtest/test_cost_schedule.py tests/unit/lab/backtest/test_indodax_cost_boundaries.py tests/unit/lab/backtest/test_risk.py -q` → 67 passed.
 - Gate: SIM-01 remains REVIEW because COST-01 is still REVIEW; schedule evidence is incomplete and unverified intervals fail closed.
+
+
+## Final capability close-out (2026-09-25)
+
+- Reviewed exact HEAD: `6abb8125c5993528ca6e714d5b51a8e516f88cf3`. Independent reviewer `/root/docs_review` returned **PASS**, no Critical/Important findings, for AC0–AC3. Review confirmed next-open causality, depth/minimum rejection and partial fills, maker trade-through, timestamp guards, precision rounding, and unknown-cost failure propagation. Replay engine reporting changes since reviewed SIM code commit `260fd066fc46171cece30ca38f7fa0b055f1dabb` were also inspected.
+- Current-checkout focused verification: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/integration/lab/test_backtest_golden.py tests/unit/lab/backtest/test_execution.py tests/unit/lab/backtest/test_judge_remediation.py tests/unit/lab/backtest/test_cost_schedule.py tests/unit/lab/backtest/test_indodax_cost_boundaries.py tests/unit/lab/backtest/test_risk.py -q -p no:cacheprovider` -> 79 passed in 0.76s.
+- COST-01 and BAR-01 are DONE capabilities. Historical fee evidence remains incomplete: simulations spanning unverified intervals must fail closed/report net performance unavailable and cannot support profitability claims or promotion. This close-out does not verify tariffs or claim profitability.
+- Status is DONE for the conservative simulator capability after independent review; downstream tasks may rely on the implementation subject to the explicit external fee gate.
