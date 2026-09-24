@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 import hashlib
 import json
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
-from typing import Callable, Sequence
 
 from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide, lookup_cost
-from indodax_lab.backtest.events import ExecutionStatus, MarketBar
+from indodax_lab.backtest.events import MarketBar
 from indodax_lab.backtest.execution import ConservativeExecutionSimulator
-from indodax_lab.contracts.decision import SignalIntent
-from indodax_lab.backtest.ledger import ResearchLedger, Position
+from indodax_lab.backtest.ledger import Position, ResearchLedger
 from indodax_lab.backtest.result import BacktestResult
 from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy
+from indodax_lab.contracts.decision import SignalIntent
 
 
 class ReplayBacktestEngine:
@@ -60,6 +60,12 @@ class ReplayBacktestEngine:
 
         sorted_bars = sorted((MarketBar.model_validate(b.model_dump()) for b in bars),
                              key=lambda b: (b.open_time, b.pair))
+        input_bytes = json.dumps(
+            [bar.model_dump(mode="json") for bar in sorted_bars],
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        market_input_hash = hashlib.sha256(input_bytes).hexdigest()
         start_time = sorted_bars[0].open_time
         end_time = max(b.available_at for b in sorted_bars)
         previous_close = {}
@@ -71,6 +77,7 @@ class ReplayBacktestEngine:
         self.ledger = ResearchLedger(self.initial_cash, self.valuation_currency, start_time)
         self.risk_manager = PortfolioRiskManager(self.risk_policy, self.initial_cash, start_time)
         self.rejections: list[tuple[str, str]] = []
+        strategy_ids: set[str] = set()
         pending_intents: list[SignalIntent] = []
         barriers: dict[str, tuple[SignalIntent, datetime]] = {}
         marks: dict[str, Decimal] = {}
@@ -198,6 +205,7 @@ class ReplayBacktestEngine:
             intent = SignalIntent.model_validate(intent.model_dump())
             if intent.decision_ts != timestamp or intent.pair != bar.pair:
                 raise ValueError("STRATEGY_INTENT_NOT_AT_OBSERVATION_AVAILABILITY")
+            strategy_ids.add(intent.strategy_id)
             if intent.intent_id in seen_intents:
                 raise ValueError("DUPLICATE_INTENT_ID")
             seen_intents.add(intent.intent_id)
@@ -246,7 +254,14 @@ class ReplayBacktestEngine:
             fill_count=fill_count,
             transaction_count=len(self.ledger.transactions),
             postings_hash=postings_hash,
-            status="SUCCESS",
+            market_input_hash=market_input_hash,
+            cost_schedule_set_id=self.cost_schedule_table.schedule_set_id,
+            cost_schedule_version=self.cost_schedule_table.version,
+            risk_policy_id=self.risk_policy.policy_id,
+            risk_policy_version=self.risk_policy.version,
+            strategy_ids=tuple(sorted(strategy_ids)),
+            rejections=tuple(self.rejections),
+            status="COMPLETED_WITH_REJECTIONS" if self.rejections else "SUCCESS",
             execution_version=self.simulator.execution_version,
             execution_assumptions=assumptions,
         )

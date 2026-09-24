@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from datetime import datetime
 from decimal import Decimal
-import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -29,7 +31,14 @@ class BacktestResult(BaseModel):
     fill_count: int
     transaction_count: int
     postings_hash: str
-    status: str = "SUCCESS"
+    market_input_hash: str | None = None
+    cost_schedule_set_id: str | None = None
+    cost_schedule_version: str | None = None
+    risk_policy_id: str | None = None
+    risk_policy_version: str | None = None
+    strategy_ids: tuple[str, ...] = ()
+    rejections: tuple[tuple[str, str], ...] = ()
+    status: Literal["SUCCESS", "COMPLETED_WITH_REJECTIONS"] = "SUCCESS"
     execution_version: str = "legacy-unversioned"
     execution_assumptions: tuple[str, ...] = ()
 
@@ -48,6 +57,13 @@ class BacktestResult(BaseModel):
             "fill_count": self.fill_count,
             "transaction_count": self.transaction_count,
             "postings_hash": self.postings_hash,
+            "market_input_hash": self.market_input_hash,
+            "cost_schedule_set_id": self.cost_schedule_set_id,
+            "cost_schedule_version": self.cost_schedule_version,
+            "risk_policy_id": self.risk_policy_id,
+            "risk_policy_version": self.risk_policy_version,
+            "strategy_ids": list(self.strategy_ids),
+            "rejections": [list(rejection) for rejection in self.rejections],
             "status": self.status,
             "execution_version": self.execution_version,
             "execution_assumptions": list(self.execution_assumptions),
@@ -56,9 +72,19 @@ class BacktestResult(BaseModel):
     def save_json(self, path: Path) -> None:
         """Atomically persist manifest to path using temp-file rename."""
         target = Path(path)
-        tmp = target.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
-        tmp.replace(target)
+        temp_path: Path | None = None
+        try:
+            fd, temp_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
+            temp_path = Path(temp_name)
+            with os.fdopen(fd, "w", encoding="utf-8") as artifact:
+                artifact.write(json.dumps(self.to_dict(), indent=2))
+                artifact.flush()
+                os.fsync(artifact.fileno())
+            os.replace(temp_path, target)
+            temp_path = None
+        finally:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BacktestResult:
@@ -76,6 +102,13 @@ class BacktestResult(BaseModel):
             fill_count=data["fill_count"],
             transaction_count=data["transaction_count"],
             postings_hash=data["postings_hash"],
+            market_input_hash=data.get("market_input_hash"),
+            cost_schedule_set_id=data.get("cost_schedule_set_id"),
+            cost_schedule_version=data.get("cost_schedule_version"),
+            risk_policy_id=data.get("risk_policy_id"),
+            risk_policy_version=data.get("risk_policy_version"),
+            strategy_ids=tuple(data.get("strategy_ids", ())),
+            rejections=tuple(tuple(item) for item in data.get("rejections", ())),
             status=data.get("status", "SUCCESS"),
             execution_version=data.get("execution_version", "legacy-unversioned"),
             execution_assumptions=tuple(data.get("execution_assumptions", ())),

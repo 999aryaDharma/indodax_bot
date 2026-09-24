@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-import json
 from pathlib import Path
+
 import pytest
 
 from indodax_lab.backtest.costs import (
@@ -18,7 +19,6 @@ from indodax_lab.backtest.engine import ReplayBacktestEngine
 from indodax_lab.backtest.events import MarketBar, SignalIntent
 from indodax_lab.backtest.result import BacktestResult
 from indodax_lab.backtest.risk import RiskPolicy
-
 
 BASE_TS = datetime(2024, 6, 1, 0, 0, 0, tzinfo=UTC)
 
@@ -38,7 +38,7 @@ def test_schedule_table() -> CostScheduleTable:
             exchange_fee_rate=Decimal("0.000200"),
             min_notional=Decimal("10000"),
             precision=0,
-            sources=("PMK 68",),
+            sources=("synthetic test fixture; not INDODAX fee evidence",),
             evidence_verified=True,
         ),
         CostScheduleInterval(
@@ -53,7 +53,7 @@ def test_schedule_table() -> CostScheduleTable:
             exchange_fee_rate=Decimal("0.000200"),
             min_notional=Decimal("10000"),
             precision=0,
-            sources=("PMK 68",),
+            sources=("synthetic test fixture; not INDODAX fee evidence",),
             evidence_verified=True,
         ),
     )
@@ -128,6 +128,32 @@ def _simple_strategy(bar: MarketBar, bar_index: int) -> SignalIntent | None:
     return None
 
 
+def _large_buy_strategy(bar: MarketBar, bar_index: int) -> SignalIntent | None:
+    if bar_index == 0:
+        return SignalIntent(
+            intent_id="large-buy",
+            decision_ts=bar.close_time,
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            desired_qty=Decimal("0.001"),
+            strategy_id="large-buy-test",
+        )
+    return None
+
+
+def _below_minimum_strategy(bar: MarketBar, bar_index: int) -> SignalIntent | None:
+    if bar_index == 0:
+        return SignalIntent(
+            intent_id="tiny-buy",
+            decision_ts=bar.close_time,
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            desired_qty=Decimal("0.000001"),
+            strategy_id="tiny-buy-test",
+        )
+    return None
+
+
 def test_sim_03_valid_contract(
     test_schedule_table: CostScheduleTable, test_risk_policy: RiskPolicy, tmp_path: Path
 ) -> None:
@@ -145,6 +171,15 @@ def test_sim_03_valid_contract(
     assert result.total_fees_paid > Decimal("0")
     assert result.postings_hash is not None
     assert len(result.postings_hash) == 64  # SHA256
+    assert len(result.market_input_hash) == 64
+    assert result.cost_schedule_set_id == test_schedule_table.schedule_set_id
+    assert result.cost_schedule_version == test_schedule_table.version
+    assert result.risk_policy_id == test_risk_policy.policy_id
+    assert result.risk_policy_version == test_risk_policy.version
+    restored = BacktestResult.from_dict(result.to_dict())
+    assert restored.market_input_hash == result.market_input_hash
+    assert restored.cost_schedule_set_id == result.cost_schedule_set_id
+    assert restored.risk_policy_version == result.risk_policy_version
 
 
 def test_sim_03_contract_1(
@@ -176,6 +211,7 @@ def test_sim_03_contract_1(
     assert res1.total_net_pnl == res2.total_net_pnl
     assert res1.total_fees_paid == res2.total_fees_paid
     assert res1.fill_count == res2.fill_count
+    assert res1.market_input_hash == res2.market_input_hash
 
 
 def test_sim_03_contract_2(
@@ -189,6 +225,8 @@ def test_sim_03_contract_2(
     )
     bars = _sample_bars()
     output_manifest = tmp_path / "run_result.json"
+    prior_result = '{"status": "SUCCESS", "run_id": "previous"}'
+    output_manifest.write_text(prior_result, encoding="utf-8")
 
     with pytest.raises(RuntimeError) as exc_info:
         engine.run_and_publish(
@@ -199,8 +237,43 @@ def test_sim_03_contract_2(
         )
 
     assert "SIMULATED_CRASH_BEFORE_PUBLISH" in str(exc_info.value)
-    # The output manifest MUST NOT exist as a valid completed artifact
-    assert not output_manifest.exists()
+    assert output_manifest.read_text(encoding="utf-8") == prior_result
+
+
+def test_failed_result_replace_preserves_existing_artifact(
+    test_schedule_table: CostScheduleTable,
+    test_risk_policy: RiskPolicy,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = ReplayBacktestEngine(test_schedule_table, test_risk_policy, Decimal("500000"))
+    result = engine.run(_sample_bars(), _simple_strategy)
+    output = tmp_path / "result.tmp"
+    prior_result = '{"status": "SUCCESS", "run_id": "previous"}'
+    output.write_text(prior_result, encoding="utf-8")
+
+    def fail_replace(_source: str | os.PathLike[str], _target: str | os.PathLike[str]) -> None:
+        raise OSError("simulated publish interruption")
+
+    monkeypatch.setattr(os, "replace", fail_replace)
+    with pytest.raises(OSError, match="simulated publish interruption"):
+        result.save_json(output)
+
+    assert output.read_text(encoding="utf-8") == prior_result
+    assert list(tmp_path.glob(".result.tmp.*")) == []
+
+
+def test_rejected_run_publishes_structured_reasons_and_policy_identity(
+    test_schedule_table: CostScheduleTable, test_risk_policy: RiskPolicy
+) -> None:
+    engine = ReplayBacktestEngine(test_schedule_table, test_risk_policy, Decimal("500000"))
+    result = engine.run(_sample_bars(), _below_minimum_strategy)
+    assert result.status == "COMPLETED_WITH_REJECTIONS"
+    assert result.rejections == (("tiny-buy", "BELOW_MIN_SIZE_REJECTED"),)
+    assert result.strategy_ids == ("tiny-buy-test",)
+    restored = BacktestResult.from_dict(result.to_dict())
+    assert restored.status == result.status
+    assert restored.rejections == result.rejections
 
 
 def test_sim_03_contract_3(
@@ -222,8 +295,8 @@ def test_sim_03_contract_3(
     )
 
     bars = _sample_bars()
-    res_a = engine_a.run(bars=bars, strategy_fn=_simple_strategy)
-    res_b = engine_b.run(bars=bars, strategy_fn=_simple_strategy)
+    res_a = engine_a.run(bars=bars, strategy_fn=_large_buy_strategy)
+    res_b = engine_b.run(bars=bars, strategy_fn=_large_buy_strategy)
 
     # Invariants:
     # 1. Capital is NOT pooled (each starts with 500,000, not 1,000,000)
@@ -232,10 +305,17 @@ def test_sim_03_contract_3(
     assert res_a.initial_cash == Decimal("500000")
     assert res_b.initial_cash == Decimal("500000")
 
-    # 2. Maximum single order sizing respects independent limit, not combined pool
-    # With max_position_fraction = 50%, max notional is 250,000, NOT 500,000
-    max_position_notional_a = engine_a.risk_manager.policy.max_position_fraction * res_a.initial_cash
-    assert max_position_notional_a == Decimal("250000")
+    # Actual first-entry fills remain capped at 50% of each independent wallet.
+    qty_a = engine_a.ledger.positions["btc_idr"].base_qty
+    qty_b = engine_b.ledger.positions["btc_idr"].base_qty
+    assert qty_a == qty_b == Decimal("0.00048862")
+
+    # A single hypothetical 1,000,000 pool admits twice the per-engine quantity.
+    shared = ReplayBacktestEngine(
+        test_schedule_table, test_risk_policy, Decimal("1000000"), candidate_id="shared"
+    )
+    shared.run(bars=bars, strategy_fn=_large_buy_strategy)
+    assert shared.ledger.positions["btc_idr"].base_qty == Decimal("0.00097725")
 
 
 def test_replay_exact_cost_once_arithmetic(test_schedule_table, test_risk_policy):
