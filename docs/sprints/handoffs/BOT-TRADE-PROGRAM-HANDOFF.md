@@ -20,7 +20,11 @@ Implementation details and path inventories live in each sprint spec. DATA-07 re
 
 ## Review and external gates
 
-Documentation commit SHA and independent review verdict will be recorded after the commit is reviewed. Review round 1 pending. Future implementation tasks are not DONE.
+Documentation source commit: `faf7750` (full SHA is available through Git). Review round 1 by `/root/docs_review` began against that exact commit and found conflicting RW6 allocation ordering. The follow-up corrects RW6 and its manifest contract to policy priority, strategy ID, intent ID, and clarifies that overlapping owners reject Production-compatible qualification. The reviewer then hit its session usage limit before issuing a complete verdict. Independent review remains **PENDING**, not PASS; preserve round count 1 and re-review the correction commit before approval. Future implementation tasks are not DONE.
+
+Additional owner-authorized disk inspection distinguishes physical 500 GB storage from the root LV: projects has approximately 279 GiB available and Docker volume 47 GiB. Image/cache accounting and privileged-directory limitations are documented without cleanup or migration. Mount-aware capacity ACs were added to JOB-02/OPS-01/QA-03.
+
+Combined-workspace validation after another Codex added its own API-05/UI-04 planning: `python docs/quality/validate_planning.py --self-test` PASS, 134 nodes, 264 edges, zero cycles, 7/7 negative mutations rejected. `git diff --check -- docs` PASS. Those other tasks/ADR-011 and their readiness are not owned or reviewed by this delivery; only this packet's manifest fields are staged in its follow-up commit.
 
 External gates: current provider history/capabilities and fee evidence; model/runtime eligibility; independent dependency review; realistic ASUS mixed-load latency/memory/thermal/disk/recovery proof; G0–G7 and per-candidate plus aggregate portfolio qualification. No safe agent/pair count is established by the snapshot.
 

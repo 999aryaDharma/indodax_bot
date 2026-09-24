@@ -200,6 +200,8 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
+- [ ] **OPS-01-AC5** Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention. Evidence: `test_ops_01_mount_capacity` and measured mount inventory; pending.
+
 - [ ] **OPS-01-AC4** Separate Production and Research process budgets preserve Production latency and durability under Research overload. Evidence: `test_ops_01_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [ ] **OPS-01-AC0** Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur. Evidence: valid fixture through the public interface, with expected output independent of implementation.

@@ -198,6 +198,8 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
+- [ ] **QA-03-AC5** Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention. Evidence: `test_qa_03_mount_capacity` and measured mount inventory; pending.
+
 - [ ] **QA-03-AC4** Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets. Evidence: `test_qa_03_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [x] **QA-03-AC0** ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment. Evidence: valid fixture through the public interface, with expected output independent of implementation.

@@ -120,13 +120,15 @@ Research/operator consumer invokes the declared interface on verified inputs. It
 
 ## Domain Rules / Invariants
 
-PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.
+Production-compatible qualification rejects overlapping pair owners at manifest validation. Same-pair collision tests prove that rejection; legacy exploratory shared-pair simulations cannot qualify a Production release.
+
+PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy follows PM-08: policy priority, then strategy ID, then stable intent ID, with cash reserved once.
 
 Decimal accounting, UTC availability, immutable identities, exactly-once effects and separate execution authority follow CONTRACTS.md/ADR-002. Simulator assumptions cannot redefine accounting.
 
 ## Architecture / Design Contract
 
-Reuse existing primitives named under Current Context. New files own only the declared service/contract. PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.
+Reuse existing primitives named under Current Context. New files own only the declared service/contract. PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy follows PM-08: policy priority, then strategy ID, then stable intent ID, with cash reserved once.
 
 ## Planned Files / Artifacts
 
@@ -150,7 +152,7 @@ Produces:
 
 ```text
 
-PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.
+PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy follows PM-08: policy priority, then strategy ID, then stable intent ID, with cash reserved once.
 
 ```
 
@@ -164,7 +166,7 @@ Schema: use the named manifest/state/result model; append-only identity and life
 
 ## API / External Contract Impact
 
-PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.
+PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy follows PM-08: policy priority, then strategy ID, then stable intent ID, with cash reserved once.
 
 No new production write authority. Provider facts are not asserted by offline fixtures.
 

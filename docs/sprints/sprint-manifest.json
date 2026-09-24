@@ -4546,7 +4546,8 @@
         "Cold boot does not start duplicate writers or mix Production and Research service identity/configuration/state",
         "SIGTERM flush dan lease release",
         "Missing secret fail tanpa mencetak secret",
-        "Separate Production and Research process budgets preserve Production latency and durability under Research overload"
+        "Separate Production and Research process budgets preserve Production latency and durability under Research overload",
+        "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention"
       ],
       "files": [
         "deploy/lab-collector.service",
@@ -4620,6 +4621,12 @@
           "criterion": "OPS-01-AC4",
           "test_case": "test_ops_01_capacity_4",
           "behavior": "Separate Production and Research process budgets preserve Production latency and durability under Research overload",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "OPS-01-AC5",
+          "test_case": "test_ops_01_mount_capacity",
+          "behavior": "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -4929,7 +4936,8 @@
         "Sensor UNKNOWN tidak dianggap aman",
         "AC terputus memicu checkpoint pause",
         "ASUS profile tidak mengimpor atau menjalankan training",
-        "Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail"
+        "Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail",
+        "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention"
       ],
       "files": [
         "src/indodax_lab/orchestration/resources.py",
@@ -5001,6 +5009,12 @@
           "criterion": "JOB-02-AC4",
           "test_case": "test_job_02_capacity_4",
           "behavior": "Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "JOB-02-AC5",
+          "test_case": "test_job_02_mount_capacity",
+          "behavior": "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -8363,7 +8377,8 @@
         "Disk-full does not acknowledge success",
         "Worker termination does not duplicate metrics",
         "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata",
-        "Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets"
+        "Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets",
+        "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention"
       ],
       "files": [
         "tests/integration/lab/test_operational_recovery.py",
@@ -8433,6 +8448,12 @@
           "criterion": "QA-03-AC4",
           "test_case": "test_qa_03_capacity_4",
           "behavior": "Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "QA-03-AC5",
+          "test_case": "test_qa_03_mount_capacity",
+          "behavior": "Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -10472,7 +10493,7 @@
         "PM-08"
       ],
       "goal": "Intentional multi-candidate capital sharing through one common ledger/risk authority.",
-      "contract": "PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.",
+      "contract": "PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy follows PM-08: policy priority, then strategy ID, then stable intent ID, with cash reserved once.",
       "checks": [
         "Simultaneous intents cannot overspend shared cash",
         "Same-pair conflicts resolve by declared stable policy",

@@ -32,6 +32,31 @@ Commands used only host metadata/resource reads: `date -Is`, `uname -r`, `lscpu`
 
 **Interpretation:** about 1.90 GiB available RAM and an already shared two-core CPU warrant bounded admission and incremental tests. Container memory limits are not reserved capacity, and their sum is not available host memory. This inspection does not justify a fixed supported strategy/pair/model count. The existing MEDIUM/HIGH defaults still require measured host-specific qualification, not lowering thresholds merely to admit work.
 
+### Physical disk and mount-specific capacity correction
+
+The owner's follow-up correctly distinguishes the 500 GB physical disk from the root filesystem. Additional read-only inspection at 21:10:06–21:11:43 WITA returned:
+
+| Device / mount | Provisioning / observed usage |
+|---|---|
+| Physical `/dev/sda` | 500,107,862,016 bytes (500 GB decimal) |
+| Root LV `/` | 100 GiB logical volume; ext4 reports 98 GiB total, 67 GiB used, approximately 26.05 GiB available |
+| Projects LV `/srv/storage` | 300 GiB logical volume; ext4 reports 295 GiB total, 1.1 GiB used, 279 GiB available |
+| Docker LV `/var/lib/docker` | 50 GiB logical volume; ext4 reports 49 GiB total, 360 MiB used, 47 GiB available |
+| EFI and boot | Approximately 1.05 GiB and 2 GiB partitions |
+
+Thus root available space is **not** whole-machine available space. LVM free extents remain unknown: `sudo -n pvs/vgs/lvs` required a password and were not escalated through another mechanism. No resize, remount, relocation or deletion was performed.
+
+Largest reported usage categories:
+
+- Docker daemon reports 104 images, 43.93 GB total, 29.45 GB reclaimable; build cache 4.818 GB total, 2.803 GB reclaimable. These are daemon accounting figures; shared layers/cache can overlap and reclaimable is not a deletion recommendation or guaranteed recovered bytes.
+- Accessible directory scan reports approximately 4.9 GiB under `/home/kesawa`, chiefly two Actions runner directories at 2.3 GiB each; `/srv/rbta-iso/data` approximately 4.1 GiB; `/var/log/journal` approximately 1.7 GiB; `/srv/bimbel-staging` approximately 880 MiB.
+- Docker reports `DockerRootDir=/var/lib/docker` and `driver-type=io.containerd.snapshotter.v1`. `/var/lib/containerd` exists with root-only access; its size could not be read. Containerd image storage is a plausible explanation for high image accounting with low Docker-mount use, but exact physical attribution is **unverified**. The permission-denied `du` result of 4 KiB is directory metadata, not its content size.
+- Directory scans are partial because root-only paths are unreadable and scans were time-bounded at idle I/O priority. They do not reconcile all root filesystem bytes. No secret/config or trading data file contents were read.
+
+Added commands: `lsblk -b -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS`, `df -hT`, `docker system df`, narrowly formatted `docker info`, permission metadata and bounded `du -x` directory-size scans. Root/srv/data storage remains in place.
+
+**Required planning correction:** OPS-01/JOB-02 must resolve the actual filesystem for each configured data, journal, model, temporary and archive path; enforce per-mount free-space/inode and I/O budgets. `/srv/storage` is a candidate for a separately reviewed Research data root, not automatic approval to move Production state. Separate logical volumes still share the same physical disk and contend for I/O. New path selection or migration requires explicit ownership, permissions, byte verification and rollback; no capacity plan may assume 279 GiB of projects space is already available at a root-resident path.
+
 ## Required topology
 
 Production and Research remain separate processes, identities, roots, local state stores, credentials and resource budgets on ASUS. Production independently owns its feed health/account truth. Deduplication is within each authority plane, not shared financial state or a shared Research feed health flag.

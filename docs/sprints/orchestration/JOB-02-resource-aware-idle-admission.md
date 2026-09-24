@@ -194,6 +194,8 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
+- [ ] **JOB-02-AC5** Capacity guards resolve each configured path to its actual mount and account for shared physical disk contention. Evidence: `test_job_02_mount_capacity` and measured mount inventory; pending.
+
 - [ ] **JOB-02-AC4** Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail. Evidence: `test_job_02_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [ ] **JOB-02-AC0** Pekerjaan berat hanya masuk saat profil host, daya, RAM, idle dan thermal memenuhi policy. Evidence: valid fixture through the public interface, with expected output independent of implementation.
