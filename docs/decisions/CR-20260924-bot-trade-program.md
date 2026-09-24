@@ -6,7 +6,7 @@ Status: ACCEPTED by owner for documentation and future implementation planning, 
 
 Freeze the agreed Workbench flow: form/YAML/MCP composition, real Indodax historical collection by pair/range/timeframe, independent per-pair backtests, detailed trade results, realtime isolated shadow and drawdown-filtered Top 10.
 
-Extend Main Bot planning to multiple immutable strategies sharing one account portfolio, one owner per pair, strategy caps, equity-based stop-risk sizing, reviewed adoption, candidate-owned exits, draining replacement and guarded dashboard controls.
+Extend Main Bot planning to multiple immutable strategies sharing one account portfolio, one owner per pair, dynamic shared-pool allocation, equity-based stop-risk sizing, reviewed adoption, candidate-owned exits, draining replacement and guarded dashboard controls.
 
 ## Impact and authority
 
@@ -17,3 +17,7 @@ Add DATA-07, PM-07–PM-09, API-04 and UI-03. Extend PLANNED owner tasks and reg
 ## Validation and rollback
 
 Run `python docs/quality/validate_planning.py --refresh --self-test` and `git diff --check`. Review exact documentation SHA. Revert only this packet if rejected; preserve user edits, runtime data and historical evidence. New tasks remain READY/PLANNED based on dependencies, not DONE. No deployment or live account operation follows from documentation acceptance.
+
+## Accepted owner refinement — dynamic allocation
+
+On 2026-09-24 the owner approved a shared IDR 500,000 pool without fixed agent quotas, candidate-owned adaptive sizing/SL/TP under central risk limits, and skipping below-minimum orders without inflating risk. ADR-010 and the program record the supersession, three selected agents and unresolved numerical limits. PM-08 acceptance/contract text is updated in place; RP-03, PM-09, RW6 and guarded API/UI consume it through existing dependencies. No new sprint, status change, runtime change or deployment is implied.

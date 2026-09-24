@@ -12125,14 +12125,14 @@
         "RP-03"
       ],
       "goal": "Shared capital allocation and stop risk sizing",
-      "contract": "AllocationPolicy pins strategy caps, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.",
+      "contract": "AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.",
       "checks": [
-        "Concurrent strategy signals cannot spend the same cash twice",
-        "Caps above one or overlapping pair owners reject the policy",
-        "Filled exposure and pending fees consume strategy and account headroom exactly once",
+        "Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice",
+        "Invalid risk or exposure limits and overlapping pair owners reject the policy",
+        "Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once",
         "Missing stop stale marks or unavailable costs reject new entry",
-        "Below-minimum rounded size rejects without rounding upward",
-        "Cap reduction below exposure stops entry without forced sale",
+        "Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints",
+        "Risk or exposure limit reduction below current usage stops affected entry without forced sale",
         "Verified cash flows adjust risk baselines without hiding losses",
         "Priority and intent ordering reproduce identical allocation on replay"
       ],
@@ -12177,19 +12177,19 @@
         {
           "criterion": "PM-08-AC0",
           "test_case": "test_pm_08_0",
-          "behavior": "Concurrent strategy signals cannot spend the same cash twice",
+          "behavior": "Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "PM-08-AC1",
           "test_case": "test_pm_08_1",
-          "behavior": "Caps above one or overlapping pair owners reject the policy",
+          "behavior": "Invalid risk or exposure limits and overlapping pair owners reject the policy",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "PM-08-AC2",
           "test_case": "test_pm_08_2",
-          "behavior": "Filled exposure and pending fees consume strategy and account headroom exactly once",
+          "behavior": "Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
@@ -12201,13 +12201,13 @@
         {
           "criterion": "PM-08-AC4",
           "test_case": "test_pm_08_4",
-          "behavior": "Below-minimum rounded size rejects without rounding upward",
+          "behavior": "Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "PM-08-AC5",
           "test_case": "test_pm_08_5",
-          "behavior": "Cap reduction below exposure stops entry without forced sale",
+          "behavior": "Risk or exposure limit reduction below current usage stops affected entry without forced sale",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {

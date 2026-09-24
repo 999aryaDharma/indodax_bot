@@ -10,7 +10,7 @@ The owner selected multiple Production strategies (for example BTC, ETH and altc
 
 One reviewed release may bind multiple immutable candidates with exclusive pair ownership, a versioned allocation policy and per-candidate qualification evidence. There remains one central portfolio/risk/OMS/ledger/reconciliation authority. A one-candidate release is the cardinality-one case; legacy evidence remains readable but cannot silently satisfy the new schema.
 
-All account assets are observed and reconciled; existing assets require reviewed adoption before strategy execution. Account use is bot-exclusive. Equity-based risk sizing, strategy allocation caps, confirmed-fill accounting and draining replacement follow the [program contract](../implementation/BOT-TRADE-PROGRAM.md).
+All account assets are observed and reconciled; existing assets require reviewed adoption before strategy execution. Account use is bot-exclusive. Equity-based risk sizing, shared-pool risk and exposure limits, confirmed-fill accounting and draining replacement follow the [program contract](../implementation/BOT-TRADE-PROGRAM.md).
 
 API-04 and UI-03 are admitted for guarded adoption, allocation, pause-entry, resume, halt and draining commands. Their backend authority, authentication, audit, revision fencing and idempotency are mandatory. This supersedes the earlier CR's read-only admission only for those new tasks; completed read routes do not acquire writes. No direct exchange order or withdrawal control is admitted.
 
@@ -24,8 +24,12 @@ SL/TP execution depends on verified venue capability and declared adapter behavi
 
 ## Alternatives rejected
 
-Per-strategy Production wallets/ledgers create competing financial authorities. Overlapping pair ownership requires subposition/fill arbitration the owner did not select. Automatic rebalance, automatic cross-cap borrowing and hot-edited candidate exits are excluded.
+Per-strategy Production wallets/ledgers create competing financial authorities. Overlapping pair ownership requires subposition/fill arbitration the owner did not select. Automatic asset rebalancing and hot-edited candidate exit rules are excluded. Shared-pool access is not cross-cap borrowing because agents have no fixed capital quotas.
 
 ## Validation
 
 Implement the program's targeted tests, independently review exact SHAs, then satisfy existing release gates. Documentation acceptance is not implementation PASS or live authorization.
+
+## Owner amendment — dynamic shared pool (2026-09-24)
+
+The owner supersedes the earlier fixed per-strategy capital-cap allocation and sum-at-most-one rule with one dynamic shared pool. Agent-owned immutable rules determine adaptive sizing, SL and TP; central risk, cash, reservations and venue constraints remain authoritative. Below-minimum proposals reject without increasing risk or changing the stop merely to meet a minimum. This amendment supersedes fixed-quota wording in the original program and frozen Main amendment; PM-08 and downstream Portfolio Shadow consume the revised program. Existing release gates and credential isolation are unchanged.

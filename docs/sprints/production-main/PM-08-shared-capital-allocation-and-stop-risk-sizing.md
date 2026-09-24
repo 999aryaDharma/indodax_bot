@@ -45,14 +45,14 @@ Reuse PortfolioConstructor, PortfolioRiskManager, central RiskEngine and transac
 
 ## In Scope
 
-AllocationPolicy pins strategy caps, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
 
-- Concurrent strategy signals cannot spend the same cash twice.
-- Caps above one or overlapping pair owners reject the policy.
-- Filled exposure and pending fees consume strategy and account headroom exactly once.
+- Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice.
+- Invalid risk or exposure limits and overlapping pair owners reject the policy.
+- Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once.
 - Missing stop stale marks or unavailable costs reject new entry.
-- Below-minimum rounded size rejects without rounding upward.
-- Cap reduction below exposure stops entry without forced sale.
+- Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints.
+- Risk or exposure limit reduction below current usage stops affected entry without forced sale.
 - Verified cash flows adjust risk baselines without hiding losses.
 - Priority and intent ordering reproduce identical allocation on replay.
 
@@ -66,12 +66,12 @@ The operator supplies versioned inputs through the named interface and receives 
 
 ## Functional Requirements
 
-- **PM-08-AC0** Concurrent strategy signals cannot spend the same cash twice.
-- **PM-08-AC1** Caps above one or overlapping pair owners reject the policy.
-- **PM-08-AC2** Filled exposure and pending fees consume strategy and account headroom exactly once.
+- **PM-08-AC0** Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice.
+- **PM-08-AC1** Invalid risk or exposure limits and overlapping pair owners reject the policy.
+- **PM-08-AC2** Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once.
 - **PM-08-AC3** Missing stop stale marks or unavailable costs reject new entry.
-- **PM-08-AC4** Below-minimum rounded size rejects without rounding upward.
-- **PM-08-AC5** Cap reduction below exposure stops entry without forced sale.
+- **PM-08-AC4** Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints.
+- **PM-08-AC5** Risk or exposure limit reduction below current usage stops affected entry without forced sale.
 - **PM-08-AC6** Verified cash flows adjust risk baselines without hiding losses.
 - **PM-08-AC7** Priority and intent ordering reproduce identical allocation on replay.
 
@@ -81,7 +81,7 @@ BOT-TRADE-PROGRAM is normative for this task. Preserve Decimal accounting, UTC a
 
 ## Architecture / Design Contract
 
-AllocationPolicy pins strategy caps, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
 
 ## Planned Files / Artifacts
 
@@ -95,7 +95,7 @@ Paths are owned implementation targets, not claims that new files already exist.
 
 ## Interfaces & Contracts
 
-AllocationPolicy pins strategy caps, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
+AllocationPolicy pins shared-pool allocation without fixed agent quotas, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Candidate-owned adaptive sizing and exits remain bounded by central risk limits. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.
 
 Reuse ServiceError, ArtifactRef, existing API envelope and revision contracts. Unavailable values carry null plus reason; money is Decimal text on wire.
 
@@ -123,12 +123,12 @@ Expose source revision, provenance, lifecycle, unavailable values and failure re
 
 Run `python -m pytest tests/unit/lab/portfolio/test_shared_allocation.py -q` after implementation. Use fake transport and temporary state. Full suite is required when changing shared contracts/schemas.
 
-- `test_pm_08_0`: Concurrent strategy signals cannot spend the same cash twice.
-- `test_pm_08_1`: Caps above one or overlapping pair owners reject the policy.
-- `test_pm_08_2`: Filled exposure and pending fees consume strategy and account headroom exactly once.
+- `test_pm_08_0`: Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice.
+- `test_pm_08_1`: Invalid risk or exposure limits and overlapping pair owners reject the policy.
+- `test_pm_08_2`: Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once.
 - `test_pm_08_3`: Missing stop stale marks or unavailable costs reject new entry.
-- `test_pm_08_4`: Below-minimum rounded size rejects without rounding upward.
-- `test_pm_08_5`: Cap reduction below exposure stops entry without forced sale.
+- `test_pm_08_4`: Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints.
+- `test_pm_08_5`: Risk or exposure limit reduction below current usage stops affected entry without forced sale.
 - `test_pm_08_6`: Verified cash flows adjust risk baselines without hiding losses.
 - `test_pm_08_7`: Priority and intent ordering reproduce identical allocation on replay.
 
@@ -162,12 +162,12 @@ Revert only compatible code/configuration before activation. Preserve journal an
 
 ## Acceptance Criteria
 
-- [ ] **PM-08-AC0** Concurrent strategy signals cannot spend the same cash twice. Evidence: `test_pm_08_0` at exact committed SHA.
-- [ ] **PM-08-AC1** Caps above one or overlapping pair owners reject the policy. Evidence: `test_pm_08_1` at exact committed SHA.
-- [ ] **PM-08-AC2** Filled exposure and pending fees consume strategy and account headroom exactly once. Evidence: `test_pm_08_2` at exact committed SHA.
+- [ ] **PM-08-AC0** Concurrent strategy signals share available cash without fixed quotas and cannot spend the same cash twice. Evidence: `test_pm_08_0` at exact committed SHA.
+- [ ] **PM-08-AC1** Invalid risk or exposure limits and overlapping pair owners reject the policy. Evidence: `test_pm_08_1` at exact committed SHA.
+- [ ] **PM-08-AC2** Filled exposure and pending reservations including fees consume shared cash and portfolio risk headroom exactly once. Evidence: `test_pm_08_2` at exact committed SHA.
 - [ ] **PM-08-AC3** Missing stop stale marks or unavailable costs reject new entry. Evidence: `test_pm_08_3` at exact committed SHA.
-- [ ] **PM-08-AC4** Below-minimum rounded size rejects without rounding upward. Evidence: `test_pm_08_4` at exact committed SHA.
-- [ ] **PM-08-AC5** Cap reduction below exposure stops entry without forced sale. Evidence: `test_pm_08_5` at exact committed SHA.
+- [ ] **PM-08-AC4** Below-minimum rounded size rejects without rounding upward or tightening the strategy stop; entry and planned exits satisfy verified pair-specific venue constraints. Evidence: `test_pm_08_4` at exact committed SHA.
+- [ ] **PM-08-AC5** Risk or exposure limit reduction below current usage stops affected entry without forced sale. Evidence: `test_pm_08_5` at exact committed SHA.
 - [ ] **PM-08-AC6** Verified cash flows adjust risk baselines without hiding losses. Evidence: `test_pm_08_6` at exact committed SHA.
 - [ ] **PM-08-AC7** Priority and intent ordering reproduce identical allocation on replay. Evidence: `test_pm_08_7` at exact committed SHA.
 

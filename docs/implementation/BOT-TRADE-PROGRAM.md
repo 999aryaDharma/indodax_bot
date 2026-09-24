@@ -39,12 +39,26 @@ One reviewed Production release may contain multiple immutable strategy candidat
 
 ### Allocation and risk
 
-- AllocationPolicy is immutable and revisioned: candidate/strategy refs, exclusive pair ownership, per-strategy equity-cap fractions, account/pair exposure limits, per-trade risk fraction, aggregate open-risk limit, capital ceiling, loss/drawdown limits and fixed strategy priority. Fractions sum to at most 1; remainder is reserve. These values are mandatory reviewed configuration, not copied from legacy defaults.
-- No per-strategy wallets or automatic borrowing of another strategy's cap. Filled exposure plus outstanding buy reservations (including fees) count against cap, account exposure and available cash exactly once.
-- Risk budget uses current reconciled, marked equity. Quantity uses entry-to-stop distance plus versioned cost/slippage allowance, then is bounded by cash, remaining strategy/pair/account headroom, aggregate open/pending risk, liquidity and current venue constraints. Invalid/absent stop, stale marks or unknown costs reject new entry. Round down; below-minimum quantity rejects.
+- AllocationPolicy is immutable and revisioned: candidate/strategy refs, exclusive pair ownership, account/pair exposure limits, maximum per-trade risk, aggregate open/pending risk, capital ceiling, loss/drawdown limits and fixed strategy priority. Main uses one shared cash pool without fixed per-agent quotas or a sum-of-agent-caps rule. Values require reviewed configuration, never legacy defaults.
+- Each agent owns its versioned sizing, risk-request, entry, SL, TP and trailing rules. Those rules may produce different sizes and exits from current conditions without changing candidate identity. Editing rules, parameters or model artifacts creates a new candidate. Agent requests cannot widen central limits or authorize orders themselves.
+- Filled exposure plus outstanding buy reservations (including fees) consume shared cash, exposure and risk headroom exactly once. Main may reduce a proposal or reject it, never enlarge its risk to meet venue minimums. There are no agent-local wallets or reserved capital entitlements.
+- Risk budget uses current reconciled, marked equity and the smaller of the candidate request and central allowance. Quantity uses entry-to-stop distance plus versioned cost/slippage allowance, bounded by available cash, pair/account exposure, aggregate open/pending risk, liquidity and verified venue constraints. Invalid/absent stop, stale marks or unknown costs reject entry. Round down to the permitted increment and recheck costs, risk and venue minimums.
+- Below-minimum orders are skipped with a reason; never round upward or tighten a strategy stop solely to qualify. Verify both entry and planned exit quantities/notionals, including partial TP and residual dust after fees, against applicable venue rules at planned exit prices. Reject infeasible plans; partial fills and price moves can still create dust, handled explicitly by OMS/reconciliation rather than erased.
+- Risk is a modeled loss budget, not a guaranteed maximum realized loss: gaps, liquidity and outages can worsen fills. API pair metadata and the actual order route require current evidence; neither the Lite minimum nor documentation sample values are universal API limits.
 - Process simultaneous proposals deterministically by policy priority then strategy ID then intent ID, reserving atomically before accepting the next. This makes the cash-contention result reproducible across backtest, Portfolio Shadow and Production.
-- Strategy cap reduction below current exposure stops new entry for that strategy; it does not liquidate or erase reservations. Loss/drawdown reference equity is adjusted for verified external cash flows so deposits cannot mask losses.
+- Risk/exposure limit reduction below current usage stops affected new entry; it does not liquidate or erase reservations. Loss/drawdown reference equity is adjusted for verified external cash flows so deposits cannot mask losses.
 - RW6 shared-capital Portfolio Shadow must test the exact candidate set and allocation policy before a multi-strategy release qualifies. Independent per-pair or tournament results alone do not prove shared-capital behavior.
+
+
+### Owner-selected agents and initial capital
+
+Strategy, agent and bot name the same trading decision unit in product language. BTC-C07 (BTC/IDR), ETH-C02 (ETH/IDR) and SOL-C02 (SOL/IDR) are the three owner-selected Main candidates. ML/DL models are internal components, not extra agents. Exact candidate versions, artifact bindings and release qualification remain to be verified; selection does not certify readiness or override staged release gates.
+
+The owner-provided experimental capital is IDR 500,000 total in the shared pool. The 5% net monthly objective is a target, not a promise or sizing input. The owner stated a maximum drawdown tolerance of 20%; the executable policy still requires reviewed baselines and halt/exit behavior. A one-month report does not replace forward qualification.
+
+Illustration only: IDR 2,500 risk (0.5% of IDR 500,000), a 2% stop and an assumed 0.6% combined cost/slippage allowance imply approximately IDR 96,154 notional before rounding and other constraints. Neither 0.5% risk nor 0.6% costs is an approved live default. Per-trade and aggregate risk limits remain to be selected and evaluated.
+
+Venue references checked 2026-09-24: [Indodax fee/minimum explanation](https://help.indodax.com/hc/id/articles/4416646599705-Rincian-Biaya-Transaksi-di-INDODAX) distinguishes Lite IDR 10,000 and Pro IDR 25,000; [official API pair metadata](https://github.com/btcid/indodax-official-api-docs/blob/master/Public-RestAPI.md#pairs) documents pair minima and increments. Current minima for the intended API route are not certified by this documentation update.
 
 ### Exits, fills and replacement
 
