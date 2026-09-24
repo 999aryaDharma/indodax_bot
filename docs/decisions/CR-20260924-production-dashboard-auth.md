@@ -8,7 +8,7 @@ Complete the Production dashboard connection to the real Production-owned read-o
 
 ## Impact
 
-Admit API-07 and UI-09. API-07 composes the existing read-only client and server-side environment credentials into API-02's provider contract, resolves only allow-listed Tailscale Serve operator identity to `production.read`, and fails closed when trusted identity/configuration is absent. It grants no write capability. UI-09 changes the browser API default to same-origin `/api/v1` and uses a local Vite proxy for development; browser requests never receive Indodax credentials.
+Admit API-07 and UI-09. API-07 composes the existing read-only client and server-side environment credentials into API-02's provider contract, resolves only allow-listed Tailscale Serve operator identity to `production.read`, and fails closed when trusted identity/configuration is absent. It provides a runnable loopback-only ASGI entrypoint with proxy-header rewriting disabled and grants no write capability. UI-09 changes the browser API default to same-origin `/api/v1` and uses a local Vite proxy for development; browser requests never receive Indodax credentials.
 
 Tailscale Serve must be used (not Funnel); its identity headers are trusted only on a backend listener reachable exclusively through the trusted proxy, with an interactive user identity (tagged devices do not populate these headers). Since Research shares ASUS, network/process isolation preventing Research from directly reaching or spoofing requests to the Production API is a deployment gate. Do not change ASUS or deploy as part of these sprints.
 

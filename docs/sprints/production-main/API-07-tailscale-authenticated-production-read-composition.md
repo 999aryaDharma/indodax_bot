@@ -16,7 +16,7 @@ Status: REVIEW
 
 Priority: P0 | Type: security | Domain: production-main | Portfolio: CORE
 
-Implementation Owner: `/root` | Independent Reviewer: PENDING
+Implementation Owner: `/root` | Independent Reviewer: `/root/api03_security`
 
 Recommended Branch: feat/api-05-tailscale-production-read
 
@@ -60,7 +60,7 @@ API-04, UI-03
 
 ## In Scope
 
-Implement a small Production composition entrypoint/provider adapter and trusted Tailscale Serve principal resolver. Read `INDODAX_VIEW_API_KEY`, `INDODAX_VIEW_SECRET_KEY`, `PRODUCTION_NAMESPACE`, `PRODUCTION_STATE_ROOT` and `PRODUCTION_OPERATOR_ALLOWLIST` only at runtime. Require namespace exactly `production`, an absolute state root, nonempty credentials and allowlist; deny by default. Only an allow-listed `Tailscale-User-Login` resolves to `ActorClass.OPERATOR` with `production.read`.
+Implement a small Production composition entrypoint/provider adapter and trusted Tailscale Serve principal resolver. Read `INDODAX_VIEW_API_KEY`, `INDODAX_VIEW_SECRET_KEY`, `PRODUCTION_NAMESPACE`, `PRODUCTION_STATE_ROOT`, `PRODUCTION_OPERATOR_ALLOWLIST` and optional `PRODUCTION_API_PORT` only at runtime. Require namespace exactly `production`, an absolute state root, nonempty credentials and allowlist; deny by default. Only an allow-listed `Tailscale-User-Login` resolves to `ActorClass.OPERATOR` with `production.read`. Provide a runnable ASGI entrypoint that binds loopback and disables forwarded-header rewriting.
 
 ## Out of Scope
 
@@ -89,13 +89,15 @@ Reuse existing `create_app`, `Principal`, `Capability` and `IndodaxReadOnlyClien
 
 - `src/indodax_lab/api/auth.py`
 - `src/indodax_lab/runtimes/production/control_plane.py`
+- `requirements-production-api.txt`
+- `requirements-dev.txt`
 - `tests/unit/lab/api/test_tailscale_operator_auth.py`
 - `tests/integration/lab/api/test_production_runtime_composition.py`
 - `docs/sprints/handoffs/API-07-HANDOFF.md`
 
 ## Interfaces & Contracts
 
-`create_production_app_from_env()` validates env configuration (`PRODUCTION_NAMESPACE=production`) and returns the existing read-only FastAPI app. Resolver maps the exact allow-listed Tailscale login to a principal with only `production.read`.
+`create_production_app_from_env()` validates env configuration (`PRODUCTION_NAMESPACE=production`) and returns the existing read-only FastAPI app. `python -m indodax_lab.runtimes.production.control_plane` runs Uvicorn on `127.0.0.1` with `proxy_headers=False`, preserving the direct loopback peer check while Tailscale Serve supplies the identity header. Resolver maps the exact allow-listed Tailscale login to a principal with only `production.read`.
 
 ## Data / Persistence Impact
 
@@ -150,9 +152,10 @@ Revert only API-07-owned files; existing read API continues to fail closed witho
 
 ## Acceptance Criteria
 
-- **API-07-AC0**: Missing/disallowed identity is denied and allowlisted identity gets only production.read (test_api_07_0).
-- **API-07-AC1**: Runtime composition rejects missing config and Research namespace before any venue call (test_api_07_1).
+- **API-07-AC0**: Allow-listed identity receives only production.read; missing/disallowed/non-loopback identities are denied (test_api_07_0, test_api_07_1).
+- **API-07-AC1**: Runtime composition rejects missing config and non-production namespace before any venue call (test_api_07_3).
 - **API-07-AC2**: Provider uses the existing view-only client and no credential is exposed/logged (test_api_07_2).
+- **API-07-AC3**: ASGI entrypoint binds only loopback and does not rewrite the proxy peer from forwarded headers (test_api_07_4).
 
 ## Definition of Done
 
@@ -163,6 +166,7 @@ All criteria pass on exact SHA, handoff records commands and external gates, and
 - [ ] Identity trust is restricted to Tailscale Serve and exact allowlist.
 - [ ] Provider only performs Indodax view reads.
 - [ ] No credentials or `production.control` leak to browser/logs.
+- [ ] ASGI entrypoint binds loopback with proxy-header rewriting disabled.
 - [ ] ASUS isolation remains an external activation gate.
 
 ## Commit Guidance

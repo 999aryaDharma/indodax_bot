@@ -16,4 +16,4 @@ Production API capability policy already fails closed without a principal. Indod
 
 ## Consequences
 
-API-05 owns server authentication and Production provider composition. UI-04 owns the browser API origin. ASUS proxy, host isolation and real credentials are not changed or verified in these code sprints. Tailscale documents header injection/removal and recommends a localhost backend; exact ASUS isolation still requires deployment evidence.
+API-07 owns server authentication, runnable Production read composition and provider wiring. UI-09 owns the browser API origin. ASUS proxy, host isolation and real credentials are not changed or verified in these code sprints. Tailscale documents header injection/removal and recommends a localhost backend; exact ASUS isolation still requires deployment evidence.

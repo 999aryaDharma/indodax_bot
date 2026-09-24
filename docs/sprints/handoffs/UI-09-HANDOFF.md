@@ -18,6 +18,6 @@
 
 ## Review and External Gates
 
-- Independent review: PENDING on the final batch SHA.
+- Independent review: first batch review requested backend follow-up; UI-09 has no reported code finding. Final batch re-review is PENDING on the new exact SHA.
 - Production reverse proxy must serve the static dashboard and route `/api/v1` through Tailscale Serve to the API listener. This is not configured or deployed by this sprint.
 - Vite proxy applies only to local development.
