@@ -109,17 +109,17 @@ Full edge list; prerequisite → consumer. Manifest is authoritative.
 | PM-04 | PM-01, PM-02 |
 | RP-04 | RP-02, RP-03, PM-02 |
 | RP-05 | RP-04, PM-04 |
-| RW3-01 | RW1-01, RW2-03, RP-04, EVAL-01, JOB-01 |
+| RW3-01 | RW1-01, RW2-03, RP-04, EVAL-01, JOB-01, DATA-07 |
 | RW4-01 | RW3-01, ML-04 |
 | RW5-01 | RW4-01, RP-05 |
 | RW5-02 | RW5-01, SHADOW-03 |
-| RW6-01 | RW5-01, RP-03 |
-| RW7-01 | RW1-01, RW2-03, RW4-01 |
+| RW6-01 | RW5-01, RP-03, PM-08 |
+| RW7-01 | RW1-01, RW2-03, RW4-01, DATA-07 |
 | RW7-02 | RW7-01, RW5-02, RW6-01, RW9-01 |
 | RW8-01 | RW5-02, RW6-01 |
 | RW8-02 | RW8-01, RW2-03, RW3-01 |
 | PM-05 | RW4-01, PM-03 |
-| PM-06 | PM-05, RW5-01 |
+| PM-06 | PM-05, RW5-01, PM-09, API-04, UI-03, RP-05, RW6-01, OPS-01, QA-03 |
 | RW9-01 | RW4-01, RW5-02, PM-05 |
 | API-00 | None |
 | API-01 | API-00, PM-01, PM-02, PM-03, PM-04 |
@@ -128,6 +128,12 @@ Full edge list; prerequisite → consumer. Manifest is authoritative.
 | UI-00 | None |
 | UI-01 | UI-00, API-03 |
 | UI-02 | UI-01, API-02 |
+| DATA-07 | DATA-03, DATA-05, RW1-01, JOB-01, JOB-02 |
+| PM-07 | PM-02, PM-03, PM-04, PM-05 |
+| PM-08 | PM-07, PM-05, RP-03 |
+| PM-09 | PM-08, RP-02, RP-04, PM-04 |
+| API-04 | PM-09, API-02, API-03 |
+| UI-03 | API-04, UI-02 |
 
 ## Selected critical boundaries
 
@@ -147,4 +153,4 @@ flowchart TD
   EVAL_03["EVAL-03 sealed lifecycle"] --> SHADOW_03
 ```
 
-Nodes: 126. Edges: 226. Cycles must equal 0; enforced by validator.
+Nodes: 132. Edges: 257. Cycles must equal 0; enforced by validator.

@@ -126,3 +126,7 @@ Workflows expose typed local application services first. QuantOps MCP invokes on
 Dashboard form and graph views serialize the same PipelineManifest and call the same validator. Draft save uses expected revision; stale revision returns conflict and preserves both edits for explicit clone/retry. Reports display missing evidence as unknown, never zero. Read models derive from authoritative artifacts/stores, not UI state.
 
 Logs/metrics correlate namespace, candidate digest, event/intent/order/fill IDs, policy version and result reason; omit secret/private payloads. Performance gates are measured on target host before activation. No host-specific absolute path is part of artifact identity.
+
+## Bot Trade Program extension
+
+[ADR-010](../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) and [BOT-TRADE-PROGRAM](BOT-TRADE-PROGRAM.md) extend release identity to multiple candidates with exclusive pair ownership and central allocation policy. They define reviewed adoption, batch experiments, YAML parity, ranking and named guarded commands. The named owner tasks version these types; old singular fields are legacy-compatible inputs only through explicit conversion, never silent activation eligibility.

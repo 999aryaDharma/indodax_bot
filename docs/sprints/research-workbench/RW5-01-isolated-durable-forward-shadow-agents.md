@@ -64,20 +64,16 @@ RW5-02, RW6-01, PM-06
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -86,6 +82,10 @@ LiveShadowEngine is one shared portfolio with checkpoints.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Allocate exclusive namespace per agent and immutable starting cash
 
@@ -248,6 +248,10 @@ Do not reset legacy wallet to become a tournament; create new agent identity and
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW5-01-AC6** Agent admission reserves measured incremental resources and slow consumer pause preserves other agents. Evidence: `test_rw5_01_capacity_6` plus applicable measured host artifact; not established by historical tests.
+
+- [ ] **RW5-01-AC5** Realtime agents preserve isolated wallets and candidate-bound exits across partial fill and restart. Evidence: `test_rw5_01_program_5` at exact implementation SHA.
 
 - [ ] **RW5-01-AC0** Agent A trade cannot change B cash/positions/risk/cursor. Evidence: named test on exact committed SHA.
 

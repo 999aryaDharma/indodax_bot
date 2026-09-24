@@ -104,3 +104,7 @@ The first coding tasks are `API-00` and `UI-00` in the Production API and Unifie
 - Duplicate command IDs and repeated browser retries must produce one effect.
 - API responses must never confuse ranking with qualification or paper/shadow evidence with production authorization.
 - Production and Research resources must not leak ledger, candidate, dataset, or persistence namespaces across boundaries.
+
+## 2026-09-24 scope amendment
+
+`docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md` admits API-04/UI-03 for the exact commands in `docs/implementation/BOT-TRADE-PROGRAM.md`. Manifest owns dependencies and status; source inspection or this admission is not proof that the new commands exist.

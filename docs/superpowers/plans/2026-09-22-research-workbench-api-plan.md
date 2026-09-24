@@ -102,3 +102,7 @@ Test immutable dataset versions, completed experiment immutability, clone semant
 - Promotion requests never become live deployment commands.
 - Research API cannot import or instantiate production write adapters.
 - Handoff records exact endpoint schemas, focused tests, full regression, and unresolved service dependencies.
+
+## 2026-09-24 Workbench amendment
+
+Use `docs/implementation/BOT-TRADE-PROGRAM.md`: collection capabilities and coverage from DATA-07, form/YAML/MCP manifest parity, model readiness, independent per-pair batches, closed-trade metrics and drawdown-filtered Top 10. Consume owning services; do not add a parallel collector or ranking engine.

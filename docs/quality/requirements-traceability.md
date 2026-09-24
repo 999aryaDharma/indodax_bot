@@ -9,7 +9,7 @@ AC behavior-test mappings and evidence references are in manifest/sprint handoff
 | FR-09 | evaluation | EVAL-01, EVAL-02, EVAL-03 | Sprint handoff / historical evidence |
 | FR-05 | features | FEAT-01, FEAT-02, FEAT-03, FEAT-04 | Sprint handoff / historical evidence |
 | FR-07 | labels | LABEL-01, LABEL-02, SPLIT-01, TRAIN-01 | Sprint handoff / historical evidence |
-| FR-02 | market-data | DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06 | Sprint handoff / historical evidence |
+| FR-02, FR-19 | market-data | DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07 | Sprint handoff / historical evidence |
 | FR-14 | microstructure | L01-01, L02-01, LOB-01 | Sprint handoff / historical evidence |
 | FR-10 | models | M01-01, M02-01, M03-01, M04-01, M05-01, M06-01, ML-01, ML-02, ML-03, ML-04, R01-01 | Sprint handoff / historical evidence |
 | FR-15 | operations | OPS-01, OPS-02, OPS-03 | Sprint handoff / historical evidence |
@@ -23,7 +23,7 @@ AC behavior-test mappings and evidence references are in manifest/sprint handoff
 | FR-17 | planning | DOC-01 | Sprint handoff / historical evidence |
 | FR-20 | runtime-parity | RP-01, RP-02, RP-03, RP-04, RP-05 | Sprint handoff / historical evidence |
 | FR-19, FR-21, FR-22 | research-workbench | RW0-01, RW1-01, RW2-01, RW2-02, RW2-03, RW3-01, RW4-01, RW5-01, RW5-02, RW6-01, RW7-01, RW7-02, RW8-01, RW8-02, RW9-01 | Sprint handoff / historical evidence |
-| FR-23 | production-main | PM-01, PM-02, PM-03, PM-04, PM-05, PM-06, API-00, API-01, API-03, API-02, UI-00, UI-01, UI-02 | Sprint handoff / historical evidence |
+| FR-23 | production-main | PM-01, PM-02, PM-03, PM-04, PM-05, PM-06, API-00, API-01, API-03, API-02, UI-00, UI-01, UI-02, PM-07, PM-08, PM-09, API-04, UI-03 | Sprint handoff / historical evidence |
 
 | Non-functional requirement | Required evidence surfaces |
 |---|---|

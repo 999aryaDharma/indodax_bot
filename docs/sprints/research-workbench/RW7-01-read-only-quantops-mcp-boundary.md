@@ -57,6 +57,7 @@ Purpose: Read-only QuantOps MCP boundary. Gap: Allowlisted read-only discovery o
 - RW1-01 — Reusable immutable dataset registry
 - RW2-03 — Typed declarative pipeline composer
 - RW4-01 — Immutable candidate packaging and lifecycle
+- DATA-07 — Selectable public collection and coverage workflow
 
 ## Unlocks
 
@@ -65,20 +66,15 @@ RW7-02
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -87,6 +83,8 @@ No tracked QuantOps server found; services are planned.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Declare explicit tool allowlist and typed request schemas
 
@@ -243,6 +241,8 @@ MCP package/runtime dependency pinned during implementation via reviewed depende
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW7-01-AC4** MCP lists source coverage and model readiness with explicit unavailable reasons. Evidence: `test_rw7_01_program_4` at exact implementation SHA.
 
 - [ ] **RW7-01-AC0** Read tool returns registry truth without mutation. Evidence: named test on exact committed SHA.
 

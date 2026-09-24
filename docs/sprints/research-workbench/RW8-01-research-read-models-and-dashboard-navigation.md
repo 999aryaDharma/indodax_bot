@@ -64,20 +64,15 @@ RW8-02
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Console dashboard and design artifact exist; Workbench web app absent.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Implement read DTOs from services, not UI-owned state
 
@@ -248,6 +245,8 @@ Frontend dependency/framework selection is constrained to React+TypeScript/Vite;
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW8-01-AC5** Display requested versus actual coverage per-pair results and Top 10 exclusions without zero defaults. Evidence: `test_rw8_01_program_5` at exact implementation SHA.
 
 - [ ] **RW8-01-AC0** View values reconcile with authoritative store. Evidence: named test on exact committed SHA.
 

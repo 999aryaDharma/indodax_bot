@@ -64,20 +64,15 @@ RW5-01, RW7-01, PM-05, RW9-01
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Model/release bundles and candidate IDs exist; no full immutable research packag
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Require completed reviewed experiment and all declared artifact refs
 
@@ -250,6 +247,8 @@ Legacy model bundles are components only; import does not create forward qualifi
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW4-01-AC6** Freeze exact reviewed experiment runtime and policy identity before shadow registration. Evidence: `test_rw4_01_program_6` at exact implementation SHA.
 
 - [ ] **RW4-01-AC5** Packaged candidate refers to the original executed runtime plan with no change in decision identity. Evidence: `test_rw4_01_bootstrap_recovery` through public interfaces.
 - [ ] **RW4-01-AC0** Changed model/feature/policy bytes invalidate package. Evidence: named test on exact committed SHA.

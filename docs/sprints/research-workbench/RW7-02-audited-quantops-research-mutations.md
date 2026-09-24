@@ -66,20 +66,15 @@ No mandatory dependent sprint.
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -88,6 +83,8 @@ Mutation wrappers absent; service behavior must exist first.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Register only mutation tools whose service acceptance has passed
 
@@ -248,6 +245,8 @@ No arbitrary run-script wrapper; retire/archive instead of deleting history.
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW7-02-AC5** MCP composition collection batch backtest and shadow lifecycle call the same validated audited services. Evidence: `test_rw7_02_program_5` at exact implementation SHA.
 
 - [ ] **RW7-02-AC0** Same request retry creates one job/version/agent. Evidence: named test on exact committed SHA.
 

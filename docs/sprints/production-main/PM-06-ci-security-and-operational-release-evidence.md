@@ -56,6 +56,13 @@ Purpose: CI security and operational release evidence. Gap: Reproducible environ
 
 - PM-05 — Candidate-bound release provenance
 - RW5-01 — Isolated durable forward-shadow agents
+- PM-09 — Candidate exits and draining strategy replacement
+- API-04 — Guarded Production portfolio and lifecycle commands
+- UI-03 — Guarded portfolio and strategy operator workflows
+- RP-05 — Runtime parity qualification fixtures
+- RW6-01 — Separate shared-capital Portfolio Shadow
+- OPS-01 — Host profiles and service lifecycle
+- QA-03 — Capacity and crash recovery qualification
 
 ## Unlocks
 
@@ -64,20 +71,16 @@ No mandatory dependent sprint.
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -86,6 +89,10 @@ CI tests/lints subsets; service templates and deployment workflow are not govern
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Pin compatible dependency lock and emit SBOM/security/history-scan evidence
 
@@ -252,6 +259,10 @@ Legacy main deploy workflow remains explicitly unqualified until separately revi
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **PM-06-AC6** Release capacity evidence matches exact Production and Research workload fingerprint rather than raw hardware specifications. Evidence: `test_pm_06_capacity_6` plus applicable measured host artifact; not established by historical tests.
+
+- [ ] **PM-06-AC5** Release qualification includes shared-capital scenarios guarded command negatives and host mixed-load evidence. Evidence: `test_pm_06_program_5` at exact implementation SHA.
 
 - [ ] **PM-06-AC0** Missing CLI entrypoint fails offline check. Evidence: named test on exact committed SHA.
 

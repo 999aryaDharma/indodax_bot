@@ -59,6 +59,7 @@ Purpose: Experiment lifecycle and backtest orchestration. Gap: Immutable experim
 - RP-04 — Canonical feed and environment runtime adapters
 - EVAL-01 — Immutable experiment registry
 - JOB-01 — Durable leased jobs
+- DATA-07 — Selectable public collection and coverage workflow
 
 ## Unlocks
 
@@ -67,20 +68,15 @@ RW4-01, RW8-02
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -89,6 +85,8 @@ Run registry, replay engine and leased queue exist independently.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Map existing run records as historical terminal evidence without inventing drafts
 
@@ -257,6 +255,12 @@ Existing SUCCESS maps to legacy completed result only with provenance; no retroa
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW3-01-AC6** Multi-pair batch creates equal-capital independent runs with stable child identities on retry. Evidence: `test_rw3_01_program_6` at exact implementation SHA.
+
+- [ ] **RW3-01-AC7** One failed pair preserves sibling results and is visible in batch status. Evidence: `test_rw3_01_program_7` at exact implementation SHA.
+
+- [ ] **RW3-01-AC8** Trade reports separate fills closed lifecycles open positions fees and unavailable win rate. Evidence: `test_rw3_01_program_8` at exact implementation SHA.
 
 - [ ] **RW3-01-AC5** First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest. Evidence: `test_rw3_01_bootstrap_recovery` through public interfaces.
 - [ ] **RW3-01-AC0** Completed experiment edit rejects and clone gets new ID. Evidence: named test on exact committed SHA.

@@ -32,7 +32,7 @@ Direct consumers: JOB-02, OPS-02
 
 ## Unlocks
 
-OPS-02, JOB-02, RW2-02, RW3-01
+OPS-02, JOB-02, RW2-02, RW3-01, DATA-07
 
 ## Required Reading
 

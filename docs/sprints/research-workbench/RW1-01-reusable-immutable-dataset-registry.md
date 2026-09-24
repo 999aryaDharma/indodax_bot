@@ -59,7 +59,7 @@ Purpose: Reusable immutable dataset registry. Gap: Range-aware reusable versions
 
 ## Unlocks
 
-RW3-01, RW7-01
+RW3-01, RW7-01, DATA-07
 
 ## Required Reading
 

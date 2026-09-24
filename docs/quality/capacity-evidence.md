@@ -1,5 +1,7 @@
 # Host Capacity and Crash Recovery Evidence (QA-03)
 
+> Evidence qualification, 2026-09-24: the historical statements below do not certify co-resident ASUS Production + WebSocket + multi-strategy shadow capacity. OPS-01/QA-03 remain REVIEW. See [current cross-check](../implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md); new mixed-load measurements are pending.
+
 ## Host Qualification Summary
 This document certifies host capacity constraints, crash survival, and storage recovery mechanisms for the Indodax Research Lab release candidate.
 

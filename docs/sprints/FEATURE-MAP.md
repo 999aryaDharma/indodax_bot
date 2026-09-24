@@ -59,6 +59,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [DATA-04 — Snapshot quality decisions](market-data\DATA-04-snapshot-quality-decisions.md) — CORE; Snapshot rusak menghasilkan quality finding dan tidak dapat menjadi input eligible.
 - [DATA-05 — Reliable forward market collection](market-data\DATA-05-reliable-forward-market-collection.md) — CORE; Collector mempertahankan bukti sequence gap dan reconnect tanpa menganggap event hilang sebagai normal.
 - [DATA-06 — Provider-derived reproducible snapshot](market-data\DATA-06-provider-derived-reproducible-snapshot.md) — CORE; Pipeline offline benar-benar menghubungkan wire sampai final snapshot melalui artifact yang diverifikasi.
+- [DATA-07 — Selectable public collection and coverage workflow](market-data\DATA-07-selectable-public-collection-and-coverage-workflow.md) — CORE; Selectable public collection and coverage workflow
 
 ## microstructure
 
@@ -193,3 +194,8 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [UI-00 — Kumo and Geist shell foundation with typed API client](production-main\UI-00-kumo-and-geist-shell-foundation-with-typed-api-client.md) — CORE; Build shared desktop/smartphone dashboard shell and typed client against the frozen API contract while backend read models progress independently.
 - [UI-01 — Production and Research context navigation with capability boundary](production-main\UI-01-production-and-research-context-navigation-with-capability-boundary.md) — CORE; Keep Production and Research route contexts distinct and reflect backend capability decisions safely.
 - [UI-02 — Read-only Production operational pages](production-main\UI-02-read-only-production-operational-pages.md) — CORE; Render operational truth, authoritative state and failure context through read-only Production pages.
+- [PM-07 — Reviewed account portfolio adoption](production-main\PM-07-reviewed-account-portfolio-adoption.md) — CORE; Reviewed account portfolio adoption
+- [PM-08 — Shared capital allocation and stop risk sizing](production-main\PM-08-shared-capital-allocation-and-stop-risk-sizing.md) — CORE; Shared capital allocation and stop risk sizing
+- [PM-09 — Candidate exits and draining strategy replacement](production-main\PM-09-candidate-exits-and-draining-strategy-replacement.md) — CORE; Candidate exits and draining strategy replacement
+- [API-04 — Guarded Production portfolio and lifecycle commands](production-main\API-04-guarded-production-portfolio-and-lifecycle-commands.md) — CORE; Guarded Production portfolio and lifecycle commands
+- [UI-03 — Guarded portfolio and strategy operator workflows](production-main\UI-03-guarded-portfolio-and-strategy-operator-workflows.md) — CORE; Guarded portfolio and strategy operator workflows

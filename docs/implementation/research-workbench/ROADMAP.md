@@ -14,3 +14,7 @@ Classification: PLANNED. Status/DAG authority: [manifest](../../sprints/sprint-m
 - [RW9 — Production bridge](RW9-production-bridge.md)
 
 Every task requires dependencies DONE and independent exact-SHA review. Real data, model environment, licenses, venue behavior and host gates are separately recorded. Existing implementation is reused; REVIEW prerequisites are reviewed, not automatically rebuilt.
+
+## Product workflow amendment
+
+[Program contract](../BOT-TRADE-PROGRAM.md): DATA-07 reuses collection and registry primitives, RW2 adds YAML/form/MCP parity, RW3 produces independent per-pair batches, RW5 supplies Top 10, RW6 qualifies shared Production allocation, and RW7/RW8 expose the same services. Preserve existing dependency/review gates.

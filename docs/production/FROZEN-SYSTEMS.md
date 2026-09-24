@@ -90,3 +90,7 @@ Frozen v1.0 explicitly supersedes:
 8. Forward promotion requires >=90 days AND >=100 closed trades plus clean operational evidence.
 9. MCP may create/research/test/request promotion; it may not bypass production gates.
 10. Real-money execution remains centrally governed by Portfolio + Risk + OMS + Venue + Ledger + Reconciliation.
+
+## 2026-09-24 Production amendment
+
+[ADR-010](../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) permits one reviewed release to contain multiple immutable candidates sharing central Production capital, with exclusive pair ownership and guarded operator commands. The [Bot Trade Program](../implementation/BOT-TRADE-PROGRAM.md) defines requirements and task ownership. This is planned integration, not deployment or qualification; Research isolation and G0–G7 remain mandatory.

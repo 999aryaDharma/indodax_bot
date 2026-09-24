@@ -64,20 +64,15 @@ RP-02, RW3-01, RW7-01, RW8-02
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Callbacks and pair branches compose strategies ad hoc.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Validate node/port types and DAG reachability against CONTRACTS.md
 
@@ -242,6 +239,10 @@ Keep callback backtests legacy until explicit pipeline import; no arbitrary Pyth
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW2-03-AC4** Form YAML and MCP round trip to identical canonical manifest digest. Evidence: `test_rw2_03_program_4` at exact implementation SHA.
+
+- [ ] **RW2-03-AC5** Reject duplicate YAML keys custom tags unknown fields and oversized nested payloads. Evidence: `test_rw2_03_program_5` at exact implementation SHA.
 
 - [ ] **RW2-03-AC0** TA-only and TA+ML+DL soft-vote graphs validate. Evidence: named test on exact committed SHA.
 

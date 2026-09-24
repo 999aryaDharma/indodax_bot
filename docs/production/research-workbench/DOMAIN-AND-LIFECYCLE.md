@@ -208,3 +208,7 @@ Agent V2 evidence
 ```
 
 This preserves reproducibility and prevents silent online model mutation.
+
+## Program extensions
+
+Follow the [Bot Trade Program](../../implementation/BOT-TRADE-PROGRAM.md) for multi-pair batch identity, closed-trade metrics, candidate uniqueness per ranked cohort and inclusive drawdown-filtered Top 10. These extend existing immutable manifests and services; no alternate registry is introduced.

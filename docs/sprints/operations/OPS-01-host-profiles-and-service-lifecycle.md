@@ -33,7 +33,7 @@ Direct consumers: QA-03
 
 ## Unlocks
 
-QA-03
+QA-03, PM-06
 
 ## Required Reading
 
@@ -44,6 +44,7 @@ QA-03
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
 - `docs/decisions/ADR-009-asus-production-and-research-runtime.md`
 - `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -53,6 +54,8 @@ New capability; dependencies must be DONE before implementation.
 - Dependency SHADOW-02 supplies: durable event IDs + risk policy -> reconciled postings, independent vs shared reports.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
 
 - Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur.
 - Cold boot tidak menjalankan dua writer dan tidak mencampur service identity/configuration/state Production dengan Research.
@@ -196,6 +199,8 @@ Existing code paths are preserved unless this sprint explicitly owns their behav
 Disable use of the new candidate/output version and keep the last verified compatible version. Do not overwrite historical artifacts; rebuild/retry from the same verified immutable inputs. For code-only pure changes, revert scoped commit after checking downstream compatibility.
 
 ## Acceptance Criteria
+
+- [ ] **OPS-01-AC4** Separate Production and Research process budgets preserve Production latency and durability under Research overload. Evidence: `test_ops_01_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [ ] **OPS-01-AC0** Production Main and Research Runtime dapat dikelola sebagai service terpisah pada ASUS dengan resource headroom Production terukur; ML/DL training dan tuning berjalan pada profil Lenovo terukur. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [ ] **OPS-01-AC1** Cold boot tidak menjalankan dua writer. Evidence: mapped test, exact command/exit and target SHA.

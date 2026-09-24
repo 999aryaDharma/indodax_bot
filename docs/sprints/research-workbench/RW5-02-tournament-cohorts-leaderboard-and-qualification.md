@@ -64,20 +64,15 @@ RW7-02, RW8-01, RW9-01
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Historical tournament and simple promotion counters exist.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Aggregate metrics from exact fills/trades and mark provenance
 
@@ -248,6 +245,12 @@ Existing champion registry remains historical research terminology; no productio
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW5-02-AC5** Top 10 filters comparable valid entries by inclusive frozen drawdown limit before net-return ranking. Evidence: `test_rw5_02_program_5` at exact implementation SHA.
+
+- [ ] **RW5-02-AC6** Ranking ties use drawdown candidate ID then agent ID and return fewer than ten when necessary. Evidence: `test_rw5_02_program_6` at exact implementation SHA.
+
+- [ ] **RW5-02-AC7** Duplicate ranked candidate in one cohort rejects and qualification remains separate. Evidence: `test_rw5_02_program_7` at exact implementation SHA.
 
 - [ ] **RW5-02-AC0** 89 days/100 trades and 90 days/99 trades both reject. Evidence: named test on exact committed SHA.
 

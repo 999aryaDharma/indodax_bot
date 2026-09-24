@@ -2888,7 +2888,8 @@
       ],
       "current_context": "Existing committed implementation; preserve and reverify only when affected.\n\n- Dependency DATA-02 supplies: Arrow explicit schema + ZSTD + partial/fsync/rename + canonical checksum manifest.",
       "unlocks": [
-        "DATA-04"
+        "DATA-04",
+        "DATA-07"
       ],
       "requirements": [
         "FR-02"
@@ -3081,7 +3082,8 @@
       "unlocks": [
         "BAR-01",
         "SHADOW-01",
-        "UNIV-01"
+        "UNIV-01",
+        "DATA-07"
       ],
       "requirements": [
         "FR-02"
@@ -4543,7 +4545,8 @@
       "checks": [
         "Cold boot does not start duplicate writers or mix Production and Research service identity/configuration/state",
         "SIGTERM flush dan lease release",
-        "Missing secret fail tanpa mencetak secret"
+        "Missing secret fail tanpa mencetak secret",
+        "Separate Production and Research process budgets preserve Production latency and durability under Research overload"
       ],
       "files": [
         "deploy/lab-collector.service",
@@ -4566,7 +4569,8 @@
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency JOB-02 supplies: Injected resource probes + LOW/MEDIUM/HIGH/GPU profile -> admit/defer with reasons.\n- Dependency SHADOW-02 supplies: durable event IDs + risk policy -> reconciled postings, independent vs shared reports.",
       "unlocks": [
-        "QA-03"
+        "QA-03",
+        "PM-06"
       ],
       "requirements": [
         "FR-15"
@@ -4578,7 +4582,8 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
         "docs/decisions/ADR-009-asus-production-and-research-runtime.md",
-        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md"
+        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "evidence": {
         "kind": "unverified_handoff",
@@ -4609,6 +4614,12 @@
           "criterion": "OPS-01-AC3",
           "test_case": "test_ops_01_contract_3",
           "behavior": "Missing secret fail tanpa mencetak secret",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "OPS-01-AC4",
+          "test_case": "test_ops_01_capacity_4",
+          "behavior": "Separate Production and Research process budgets preserve Production latency and durability under Research overload",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -4898,7 +4909,8 @@
         "OPS-02",
         "JOB-02",
         "RW2-02",
-        "RW3-01"
+        "RW3-01",
+        "DATA-07"
       ]
     },
     {
@@ -4916,7 +4928,8 @@
       "checks": [
         "Sensor UNKNOWN tidak dianggap aman",
         "AC terputus memicu checkpoint pause",
-        "ASUS profile tidak mengimpor atau menjalankan training"
+        "ASUS profile tidak mengimpor atau menjalankan training",
+        "Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail"
       ],
       "files": [
         "src/indodax_lab/orchestration/resources.py",
@@ -4939,7 +4952,8 @@
       "unlocks": [
         "DL-01",
         "OPS-01",
-        "JOB-03"
+        "JOB-03",
+        "DATA-07"
       ],
       "requirements": [
         "FR-11"
@@ -4949,7 +4963,8 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/13-jobs-resource-policy-and-repeats.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "evidence": {
         "kind": "unverified_handoff",
@@ -4980,6 +4995,12 @@
           "criterion": "JOB-02-AC3",
           "test_case": "test_job_02_contract_3",
           "behavior": "ASUS profile tidak mengimpor atau menjalankan training",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "JOB-02-AC4",
+          "test_case": "test_job_02_capacity_4",
+          "behavior": "Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -8341,7 +8362,8 @@
       "checks": [
         "Disk-full does not acknowledge success",
         "Worker termination does not duplicate metrics",
-        "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata"
+        "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata",
+        "Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets"
       ],
       "files": [
         "tests/integration/lab/test_operational_recovery.py",
@@ -8361,7 +8383,8 @@
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency OPS-01 supplies: systemd service/timer or equivalent local host supervisor -> start/stop/restart with explicit roots and env.\n- Dependency OPS-03 supplies: registry reachability + retention policy -> deletion candidates, approved apply report.\n- Dependency QA-01 supplies: tiny offline tournament -> all lifecycle outcomes + identical snapshot/folds/costs comparison.",
       "unlocks": [
-        "REL-01"
+        "REL-01",
+        "PM-06"
       ],
       "requirements": [
         "FR-18"
@@ -8372,7 +8395,8 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
         "docs/decisions/ADR-009-asus-production-and-research-runtime.md",
-        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md"
+        "docs/production/research-workbench/SHARED-MARKET-RUNTIME.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "evidence": {
         "kind": "unverified_handoff",
@@ -8403,6 +8427,12 @@
           "criterion": "QA-03-AC3",
           "test_case": "test_qa_03_contract_3",
           "behavior": "Resource ceiling ditetapkan dari measured co-resident ASUS Production + Research baseline, bukan spesifikasi CPU semata",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "QA-03-AC4",
+          "test_case": "test_qa_03_capacity_4",
+          "behavior": "Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -8836,7 +8866,8 @@
       "current_context": "Backfill/snapshot/quality/publication and inventory exist; aggregate identity contains root paths.",
       "unlocks": [
         "RW3-01",
-        "RW7-01"
+        "RW7-01",
+        "DATA-07"
       ],
       "requirements": [
         "FR-19"
@@ -8908,7 +8939,8 @@
         "Published same-version parameter/logic change rejects",
         "Stale draft revision cannot overwrite edit",
         "Unknown import/module path rejects",
-        "Clone preserves parent and leaves original intact"
+        "Clone preserves parent and leaves original intact",
+        "Expose versioned parameter schemas and component metadata to form/YAML/MCP without executable user expressions"
       ],
       "files": [
         "src/indodax_lab/strategies/registry.py",
@@ -8943,7 +8975,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -8969,6 +9003,12 @@
           "test_case": "test_rw2_01_3",
           "behavior": "Clone preserves parent and leaves original intact",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW2-01-AC4",
+          "test_case": "test_rw2_01_program_4",
+          "behavior": "Expose versioned parameter schemas and component metadata to form/YAML/MCP without executable user expressions",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -8991,7 +9031,8 @@
         "Arbitrary pickle and remote executable loaders reject",
         "Wrong feature order/schema cannot silently predict",
         "Training creates new model version and never mutates running candidate",
-        "Missing accelerator/runtime is BLOCKED_RESOURCE, not successful model"
+        "Missing accelerator/runtime is BLOCKED_RESOURCE, not successful model",
+        "Model listing distinguishes registered verified compatible and runtime-eligible states without fallback substitution"
       ],
       "files": [
         "src/indodax_lab/models/artifacts.py",
@@ -9026,7 +9067,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9058,6 +9101,12 @@
           "test_case": "test_rw2_02_4",
           "behavior": "Missing accelerator/runtime is BLOCKED_RESOURCE, not successful model",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW2-02-AC5",
+          "test_case": "test_rw2_02_program_5",
+          "behavior": "Model listing distinguishes registered verified compatible and runtime-eligible states without fallback substitution",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9078,7 +9127,9 @@
         "TA-only and TA+ML+DL soft-vote graphs validate",
         "Cycles, incompatible ports, dangling refs and ambiguous fan-in reject",
         "Missing required model output abstains with reason",
-        "Identical graph yields identical digest regardless of UI mode"
+        "Identical graph yields identical digest regardless of UI mode",
+        "Form YAML and MCP round trip to identical canonical manifest digest",
+        "Reject duplicate YAML keys custom tags unknown fields and oversized nested payloads"
       ],
       "files": [
         "src/indodax_lab/pipelines/registry.py",
@@ -9115,7 +9166,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9141,6 +9194,18 @@
           "test_case": "test_rw2_03_3",
           "behavior": "Identical graph yields identical digest regardless of UI mode",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW2-03-AC4",
+          "test_case": "test_rw2_03_program_4",
+          "behavior": "Form YAML and MCP round trip to identical canonical manifest digest",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW2-03-AC5",
+          "test_case": "test_rw2_03_program_5",
+          "behavior": "Reject duplicate YAML keys custom tags unknown fields and oversized nested payloads",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9162,7 +9227,8 @@
         "Future-row perturbation leaves past decisions unchanged",
         "Feature/model mismatch rejects before decision",
         "C02 trailing/breakeven advances once per new closed bar",
-        "Missing M02/D04 declared artifact cannot silently degrade to TA-only"
+        "Missing M02/D04 declared artifact cannot silently degrade to TA-only",
+        "Candidate stop and exit state have identical semantics before environment-specific venue effects"
       ],
       "files": [
         "src/indodax_lab/backtest/feature_replay.py",
@@ -9184,7 +9250,8 @@
       ],
       "current_context": "Feature registry and registered TA implementations coexist with custom shadow feature/TA/exit code.",
       "unlocks": [
-        "RP-04"
+        "RP-04",
+        "PM-09"
       ],
       "requirements": [
         "FR-20"
@@ -9197,7 +9264,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9235,6 +9304,12 @@
           "test_case": "test_rp_02_bootstrap_recovery",
           "behavior": "Historical plan executes before candidate packaging and yields same decision trace when later wrapped as a candidate",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-02-AC6",
+          "test_case": "test_rp_02_program_6",
+          "behavior": "Candidate stop and exit state have identical semantics before environment-specific venue effects",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9255,7 +9330,8 @@
         "Two same-pair opposing intents never silently last-win",
         "Limit/TIF/role/exit lineage survives construction",
         "Same state/intent/cost yields exact same approved quantity in each runtime",
-        "Pending exposure and fees cannot be spent twice"
+        "Pending exposure and fees cannot be spent twice",
+        "Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority"
       ],
       "files": [
         "src/indodax_lab/portfolio/constructor.py",
@@ -9279,7 +9355,8 @@
       "current_context": "PortfolioConstructor drops intent metadata and overwrites same-pair intents; risk caller semantics differ.",
       "unlocks": [
         "RP-04",
-        "RW6-01"
+        "RW6-01",
+        "PM-08"
       ],
       "requirements": [
         "FR-20"
@@ -9292,7 +9369,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9317,6 +9396,12 @@
           "criterion": "RP-03-AC3",
           "test_case": "test_rp_03_3",
           "behavior": "Pending exposure and fees cannot be spent twice",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-03-AC4",
+          "test_case": "test_rp_03_program_4",
+          "behavior": "Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -9462,7 +9547,8 @@
         "PM-03",
         "PM-04",
         "RP-04",
-        "API-01"
+        "API-01",
+        "PM-07"
       ],
       "requirements": [
         "FR-23"
@@ -9565,7 +9651,8 @@
       "current_context": "Optional mode/kill/throttle persistence and reset health defaults permit weak paths.",
       "unlocks": [
         "PM-05",
-        "API-01"
+        "API-01",
+        "PM-07"
       ],
       "requirements": [
         "FR-23"
@@ -9660,7 +9747,9 @@
       "current_context": "Read/write parser reuse and inconclusive-cancel exception already present.",
       "unlocks": [
         "RP-05",
-        "API-01"
+        "API-01",
+        "PM-07",
+        "PM-09"
       ],
       "requirements": [
         "FR-23"
@@ -9728,7 +9817,9 @@
         "Slow consumer has explicit gap/backpressure and resumable cursor",
         "Wrapper/factory cannot inject live writer into research",
         "Partial/rejected/uncertain simulated orders exercise shared OMS",
-        "Restart cannot duplicate a processed event"
+        "Restart cannot duplicate a processed event",
+        "Environment adapters preserve candidate exit and financial recovery semantics without Research writer capability",
+        "Multi-strategy consumers share bounded Research subscriptions and fan-out without sharing Production authority"
       ],
       "files": [
         "src/indodax_lab/control/pipeline.py",
@@ -9756,7 +9847,8 @@
       "current_context": "MarketGateway and fake venue exist; shadow polls per engine and bypasses OMS.",
       "unlocks": [
         "RP-05",
-        "RW3-01"
+        "RW3-01",
+        "PM-09"
       ],
       "requirements": [
         "FR-20"
@@ -9769,7 +9861,10 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9807,6 +9902,18 @@
           "test_case": "test_rp_04_bootstrap_recovery",
           "behavior": "No-fill market events advance feature and risk state once while delayed fills remain recoverable after cursor acknowledgement",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-04-AC6",
+          "test_case": "test_rp_04_program_6",
+          "behavior": "Environment adapters preserve candidate exit and financial recovery semantics without Research writer capability",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-04-AC7",
+          "test_case": "test_rp_04_capacity_7",
+          "behavior": "Multi-strategy consumers share bounded Research subscriptions and fan-out without sharing Production authority",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9828,7 +9935,8 @@
         "Same risk state gives same quantity/reason",
         "Same normalized fills produce identical journal totals",
         "Clock/fill differences cannot mask order-semantic divergence",
-        "Research transitive imports expose no real writer"
+        "Research transitive imports expose no real writer",
+        "Identical candidate events policies and starting state yield equal decisions before venue effects"
       ],
       "files": [
         "tests/integration/lab/test_runtime_parity.py",
@@ -9848,7 +9956,8 @@
       ],
       "current_context": "Unit suites prove individual components; no cross-environment parity suite.",
       "unlocks": [
-        "RW5-01"
+        "RW5-01",
+        "PM-06"
       ],
       "requirements": [
         "FR-20"
@@ -9861,7 +9970,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9893,6 +10004,12 @@
           "test_case": "test_rp_05_4",
           "behavior": "Research transitive imports expose no real writer",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RP-05-AC5",
+          "test_case": "test_rp_05_program_5",
+          "behavior": "Identical candidate events policies and starting state yield equal decisions before venue effects",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -9908,7 +10025,8 @@
         "RW2-03",
         "RP-04",
         "EVAL-01",
-        "JOB-01"
+        "JOB-01",
+        "DATA-07"
       ],
       "goal": "Immutable experiment revisions with durable run/cancel/finalization and comparable results.",
       "contract": "ExperimentService.create(manifest)->ExperimentRecord; clone(id,changes)->ExperimentRecord; validate(id)->ValidationReport; run_backtest(id)->JobRecord; cancel(id,request_id)->ExperimentRecord; result(id)->ResultArtifact; compare(ids)->ComparisonReport.",
@@ -9917,7 +10035,10 @@
         "Cancel racing stale worker prevents successful publication",
         "Crash between artifact and final status resumes idempotently",
         "Failed trials remain queryable",
-        "Same manifest/seed/events reproduces normalized result digest"
+        "Same manifest/seed/events reproduces normalized result digest",
+        "Multi-pair batch creates equal-capital independent runs with stable child identities on retry",
+        "One failed pair preserves sibling results and is visible in batch status",
+        "Trade reports separate fills closed lifecycles open positions fees and unavailable win rate"
       ],
       "files": [
         "src/indodax_lab/evaluation/registry.py",
@@ -9954,7 +10075,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -9992,6 +10115,24 @@
           "test_case": "test_rw3_01_bootstrap_recovery",
           "behavior": "First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW3-01-AC6",
+          "test_case": "test_rw3_01_program_6",
+          "behavior": "Multi-pair batch creates equal-capital independent runs with stable child identities on retry",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW3-01-AC7",
+          "test_case": "test_rw3_01_program_7",
+          "behavior": "One failed pair preserves sibling results and is visible in batch status",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW3-01-AC8",
+          "test_case": "test_rw3_01_program_8",
+          "behavior": "Trade reports separate fills closed lifecycles open positions fees and unavailable win rate",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10013,7 +10154,8 @@
         "Failed or unreviewed experiment cannot package as verified",
         "Missing evidence blocks rather than using filename identity",
         "Retraining yields new candidate version",
-        "Lifecycle metadata cannot alter frozen configuration"
+        "Lifecycle metadata cannot alter frozen configuration",
+        "Freeze exact reviewed experiment runtime and policy identity before shadow registration"
       ],
       "files": [
         "src/indodax_lab/evaluation/candidates.py",
@@ -10049,7 +10191,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10087,6 +10231,12 @@
           "test_case": "test_rw4_01_bootstrap_recovery",
           "behavior": "Packaged candidate refers to the original executed runtime plan with no change in decision identity",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW4-01-AC6",
+          "test_case": "test_rw4_01_program_6",
+          "behavior": "Freeze exact reviewed experiment runtime and policy identity before shadow registration",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10108,7 +10258,9 @@
         "Namespace collision or candidate replacement rejects",
         "Restart restores exactly with duplicate event no-op",
         "Corrupt A halts A without corrupting B",
-        "Retire preserves all evidence"
+        "Retire preserves all evidence",
+        "Realtime agents preserve isolated wallets and candidate-bound exits across partial fill and restart",
+        "Agent admission reserves measured incremental resources and slow consumer pause preserves other agents"
       ],
       "files": [
         "src/indodax_lab/paper/agents.py",
@@ -10144,7 +10296,10 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10176,6 +10331,18 @@
           "test_case": "test_rw5_01_4",
           "behavior": "Retire preserves all evidence",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW5-01-AC5",
+          "test_case": "test_rw5_01_program_5",
+          "behavior": "Realtime agents preserve isolated wallets and candidate-bound exits across partial fill and restart",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW5-01-AC6",
+          "test_case": "test_rw5_01_capacity_6",
+          "behavior": "Agent admission reserves measured incremental resources and slow consumer pause preserves other agents",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10197,7 +10364,10 @@
         "Rank one with unresolved incident is unqualified",
         "Candidate hash change invalidates accumulated qualification",
         "Missing marks produce unknown metrics rather than zero",
-        "Qualification cannot call venue or release activation"
+        "Qualification cannot call venue or release activation",
+        "Top 10 filters comparable valid entries by inclusive frozen drawdown limit before net-return ranking",
+        "Ranking ties use drawdown candidate ID then agent ID and return fewer than ten when necessary",
+        "Duplicate ranked candidate in one cohort rejects and qualification remains separate"
       ],
       "files": [
         "src/indodax_lab/evaluation/tournament.py",
@@ -10234,7 +10404,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10266,6 +10438,24 @@
           "test_case": "test_rw5_02_4",
           "behavior": "Qualification cannot call venue or release activation",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW5-02-AC5",
+          "test_case": "test_rw5_02_program_5",
+          "behavior": "Top 10 filters comparable valid entries by inclusive frozen drawdown limit before net-return ranking",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW5-02-AC6",
+          "test_case": "test_rw5_02_program_6",
+          "behavior": "Ranking ties use drawdown candidate ID then agent ID and return fewer than ten when necessary",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW5-02-AC7",
+          "test_case": "test_rw5_02_program_7",
+          "behavior": "Duplicate ranked candidate in one cohort rejects and qualification remains separate",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10278,7 +10468,8 @@
       "legacy_tasks": [],
       "dependencies": [
         "RW5-01",
-        "RP-03"
+        "RP-03",
+        "PM-08"
       ],
       "goal": "Intentional multi-candidate capital sharing through one common ledger/risk authority.",
       "contract": "PortfolioShadowService.create(manifest:PortfolioShadowManifest)->PortfolioRun; process(event)->RuntimeStepResult; compare_with_agents(run_id,agent_ids)->ComparisonReport. Allocation policy is explicit priority by candidate ID then stable intent ID with cash reserved once.",
@@ -10287,7 +10478,10 @@
         "Same-pair conflicts resolve by declared stable policy",
         "Reordered callback delivery yields identical allocation",
         "Shared run cannot mutate any isolated agent",
-        "Attributed totals reconcile once to shared ledger"
+        "Attributed totals reconcile once to shared ledger",
+        "Replay exact Production candidate set and allocation policy through shared-capital arbitration",
+        "Independent tournament outcomes cannot qualify aggregate Production capital contention",
+        "Shared capital qualification records candidate set feature triggers and persistence workload fingerprint"
       ],
       "files": [
         "src/indodax_lab/paper/portfolio.py",
@@ -10309,7 +10503,8 @@
       "current_context": "SharedCapitalLedger allocates cash outside common financial runtime.",
       "unlocks": [
         "RW7-02",
-        "RW8-01"
+        "RW8-01",
+        "PM-06"
       ],
       "requirements": [
         "FR-19"
@@ -10322,7 +10517,10 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10354,6 +10552,24 @@
           "test_case": "test_rw6_01_4",
           "behavior": "Attributed totals reconcile once to shared ledger",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW6-01-AC5",
+          "test_case": "test_rw6_01_program_5",
+          "behavior": "Replay exact Production candidate set and allocation policy through shared-capital arbitration",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW6-01-AC6",
+          "test_case": "test_rw6_01_program_6",
+          "behavior": "Independent tournament outcomes cannot qualify aggregate Production capital contention",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW6-01-AC7",
+          "test_case": "test_rw6_01_capacity_7",
+          "behavior": "Shared capital qualification records candidate set feature triggers and persistence workload fingerprint",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10367,7 +10583,8 @@
       "dependencies": [
         "RW1-01",
         "RW2-03",
-        "RW4-01"
+        "RW4-01",
+        "DATA-07"
       ],
       "goal": "Allowlisted read-only discovery over existing typed service contracts.",
       "contract": "Tools list_pairs/find_dataset/list_datasets/get_dataset/list_strategies/get_strategy/list_models/get_model/get_pipeline/get_backtest_status/get_backtest_result/compare_experiments map to service methods. Responses contain schema_version, request_id, data or error(code,message).",
@@ -10375,7 +10592,8 @@
         "Read tool returns registry truth without mutation",
         "Unknown submit_real_order/withdraw/direct_promote_live rejects",
         "Traversal or embedded executable payload treated as data and rejected by schema",
-        "Missing service gives unavailable error, never synthetic success"
+        "Missing service gives unavailable error, never synthetic success",
+        "MCP lists source coverage and model readiness with explicit unavailable reasons"
       ],
       "files": [
         "src/indodax_lab/mcp/server.py",
@@ -10410,7 +10628,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10436,6 +10656,12 @@
           "test_case": "test_rw7_01_3",
           "behavior": "Missing service gives unavailable error, never synthetic success",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW7-01-AC4",
+          "test_case": "test_rw7_01_program_4",
+          "behavior": "MCP lists source coverage and model readiness with explicit unavailable reasons",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10459,7 +10685,8 @@
         "Same request ID with different payload rejects",
         "Completed experiment/candidate edits reject",
         "Failed request audit survives restart",
-        "No tool can reset production risk or activate release"
+        "No tool can reset production risk or activate release",
+        "MCP composition collection batch backtest and shadow lifecycle call the same validated audited services"
       ],
       "files": [
         "src/indodax_lab/mcp/mutation_tools.py",
@@ -10491,7 +10718,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10523,6 +10752,12 @@
           "test_case": "test_rw7_02_4",
           "behavior": "No tool can reset production risk or activate release",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW7-02-AC5",
+          "test_case": "test_rw7_02_program_5",
+          "behavior": "MCP composition collection batch backtest and shadow lifecycle call the same validated audited services",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10544,7 +10779,8 @@
         "Unknown metric never displayed as zero",
         "Agent detail shows isolated namespace and candidate digest",
         "Pagination stable under new records",
-        "Read API cannot mutate or return private credentials"
+        "Read API cannot mutate or return private credentials",
+        "Display requested versus actual coverage per-pair results and Top 10 exclusions without zero defaults"
       ],
       "files": [
         "src/indodax_lab/web/research_api.py",
@@ -10579,7 +10815,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10611,6 +10849,12 @@
           "test_case": "test_rw8_01_4",
           "behavior": "Read API cannot mutate or return private credentials",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW8-01-AC5",
+          "test_case": "test_rw8_01_program_5",
+          "behavior": "Display requested versus actual coverage per-pair results and Top 10 exclusions without zero defaults",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10633,7 +10877,8 @@
         "Stale edit returns conflict and preserves saved draft",
         "Invalid cycle blocks experiment submission",
         "Clone completed experiment creates new identity",
-        "Browser cannot add unknown executable component"
+        "Browser cannot add unknown executable component",
+        "Form and YAML edits use one revisioned draft validator and preserve semantic identity"
       ],
       "files": [
         "src/indodax_lab/web/research_api.py",
@@ -10667,7 +10912,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10699,6 +10946,12 @@
           "test_case": "test_rw8_02_4",
           "behavior": "Browser cannot add unknown executable component",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "RW8-02-AC5",
+          "test_case": "test_rw8_02_program_5",
+          "behavior": "Form and YAML edits use one revisioned draft validator and preserve semantic identity",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10720,7 +10973,9 @@
         "Same filename with changed bytes fails",
         "Digest-only legacy bundle cannot claim authenticity",
         "Dirty source/unknown dependency identity cannot produce eligible release",
-        "Research request cannot mark deployed"
+        "Research request cannot mark deployed",
+        "Release verifies each candidate policy and exclusive pair ownership and retains legacy bundle readability",
+        "No candidate or aggregate evidence mismatch can authorize multi-strategy release activation"
       ],
       "files": [
         "src/indodax_lab/verification/release_bundle.py",
@@ -10743,7 +10998,9 @@
       "current_context": "ReleaseBundle hashes fields but candidate identities optional; digest is not signature.",
       "unlocks": [
         "PM-06",
-        "RW9-01"
+        "RW9-01",
+        "PM-07",
+        "PM-08"
       ],
       "requirements": [
         "FR-23"
@@ -10756,7 +11013,9 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10788,6 +11047,18 @@
           "test_case": "test_pm_05_4",
           "behavior": "Research request cannot mark deployed",
           "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-05-AC5",
+          "test_case": "test_pm_05_program_5",
+          "behavior": "Release verifies each candidate policy and exclusive pair ownership and retains legacy bundle readability",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-05-AC6",
+          "test_case": "test_pm_05_program_6",
+          "behavior": "No candidate or aggregate evidence mismatch can authorize multi-strategy release activation",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
       "risk_level": "high",
@@ -10800,7 +11071,14 @@
       "legacy_tasks": [],
       "dependencies": [
         "PM-05",
-        "RW5-01"
+        "RW5-01",
+        "PM-09",
+        "API-04",
+        "UI-03",
+        "RP-05",
+        "RW6-01",
+        "OPS-01",
+        "QA-03"
       ],
       "goal": "Reproducible environment, security evidence and executable service/recovery drills.",
       "contract": "ReleaseEvidence records source SHA, lock/SBOM/security scan digests, command exits, target-host measurements, backup/restore RPO/RTO and gate states. CI validates service entrypoints offline; operational drills require separate authorized host.",
@@ -10809,7 +11087,9 @@
         "Secret/history/CVE finding prevents eligible release",
         "Required skipped test cannot become PASS",
         "Backup restore verifies hashes and exact financial revision",
-        "No workflow execution or host benchmark is claimed from local fixtures"
+        "No workflow execution or host benchmark is claimed from local fixtures",
+        "Release qualification includes shared-capital scenarios guarded command negatives and host mixed-load evidence",
+        "Release capacity evidence matches exact Production and Research workload fingerprint rather than raw hardware specifications"
       ],
       "files": [
         ".github/workflows/ci.yml",
@@ -10844,7 +11124,10 @@
         "docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md",
         "docs/implementation/CONTRACTS.md",
         "docs/implementation/RUNTIME-PARITY.md",
-        "docs/specs/20-testing-strategy.md"
+        "docs/specs/20-testing-strategy.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
       ],
       "acceptance_test_mapping": [
         {
@@ -10875,6 +11158,18 @@
           "criterion": "PM-06-AC4",
           "test_case": "test_pm_06_4",
           "behavior": "No workflow execution or host benchmark is claimed from local fixtures",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-06-AC5",
+          "test_case": "test_pm_06_program_5",
+          "behavior": "Release qualification includes shared-capital scenarios guarded command negatives and host mixed-load evidence",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-06-AC6",
+          "test_case": "test_pm_06_capacity_6",
+          "behavior": "Release capacity evidence matches exact Production and Research workload fingerprint rather than raw hardware specifications",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
@@ -11180,7 +11475,8 @@
       "current_context": "Implemented and independently reviewed at fc40bca766b918191f3748241bb84edd544a04dd; policy fails closed until trusted identity middleware supplies a principal.",
       "unlocks": [
         "API-02",
-        "UI-01"
+        "UI-01",
+        "API-04"
       ],
       "requirements": [
         "FR-23"
@@ -11265,7 +11561,8 @@
       ],
       "current_context": "Read-only Production API routes are implemented and independently reviewed. Focused API checks passed; live Indodax and ASUS connectivity were not exercised.",
       "unlocks": [
-        "UI-02"
+        "UI-02",
+        "API-04"
       ],
       "requirements": [
         "FR-23"
@@ -11537,7 +11834,9 @@
         "No real-money activation, exchange credentials, remote host change or Production deployment in this sprint."
       ],
       "current_context": "Read-only Production operational pages implemented and independently reviewed PASS at code SHA b813a86415503471668e2ee3dc8a0ad8b2431333. Live API connectivity and rendered smartphone screenshots remain unverified; no live account or host access occurred.",
-      "unlocks": [],
+      "unlocks": [
+        "UI-03"
+      ],
       "requirements": [
         "FR-23"
       ],
@@ -11585,6 +11884,635 @@
         "path": "docs/sprints/handoffs/UI-02-REVIEW.md",
         "review": "PASS by /root/prod_mvp_final_reviewer; 0 Critical and 0 Important findings."
       }
+    },
+    {
+      "id": "DATA-07",
+      "title": "Selectable public collection and coverage workflow",
+      "domain": "market-data",
+      "legacy_tasks": [],
+      "dependencies": [
+        "DATA-03",
+        "DATA-05",
+        "RW1-01",
+        "JOB-01",
+        "JOB-02"
+      ],
+      "goal": "Selectable public collection and coverage workflow",
+      "contract": "Public capability catalog and collect(DatasetRequest, request_id) return durable job/dataset refs and QualityReport using the existing collector, job and registry contracts. Inspect CanonicalPair ownership before extending it; update its existing owner rather than creating a competing pair type.",
+      "checks": [
+        "Unsupported pair or timeframe rejects before fetch",
+        "Requested range gaps remain explicit and never become complete coverage",
+        "Identical retry resumes durable windows without duplicate publication",
+        "Public collection needs no account credential and retains raw response bytes",
+        "Extending pair eligibility preserves existing canonical pair validation and historical hashes",
+        "Historical collection defers without fresh qualified headroom and resumes only durable windows"
+      ],
+      "files": [
+        "src/indodax_lab/data/indodax_candles.py",
+        "src/indodax_lab/cli/backfill_candles.py",
+        "src/indodax_lab/data/dataset_registry.py",
+        "src/indodax_lab/contracts/common.py",
+        "tests/integration/lab/test_selectable_collection.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/market-data/DATA-07-selectable-public-collection-and-coverage-workflow.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/data-07-selectable-public-collection-and-coverage-workflow",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "Collector input already includes pair, interval, start and end. Current source mapping is three pairs and six timeframes; current provider reachability and retention are unverified.",
+      "unlocks": [
+        "RW3-01",
+        "RW7-01"
+      ],
+      "requirements": [
+        "FR-19"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md",
+        "docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "DATA-07-AC0",
+          "test_case": "test_data_07_0",
+          "behavior": "Unsupported pair or timeframe rejects before fetch",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "DATA-07-AC1",
+          "test_case": "test_data_07_1",
+          "behavior": "Requested range gaps remain explicit and never become complete coverage",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "DATA-07-AC2",
+          "test_case": "test_data_07_2",
+          "behavior": "Identical retry resumes durable windows without duplicate publication",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "DATA-07-AC3",
+          "test_case": "test_data_07_3",
+          "behavior": "Public collection needs no account credential and retains raw response bytes",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "DATA-07-AC4",
+          "test_case": "test_data_07_4",
+          "behavior": "Extending pair eligibility preserves existing canonical pair validation and historical hashes",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "DATA-07-AC5",
+          "test_case": "test_data_07_capacity_5",
+          "behavior": "Historical collection defers without fresh qualified headroom and resumes only durable windows",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "PM-07",
+      "title": "Reviewed account portfolio adoption",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "PM-02",
+        "PM-03",
+        "PM-04",
+        "PM-05"
+      ],
+      "goal": "Reviewed account portfolio adoption",
+      "contract": "propose_adoption(snapshot_ref, assignments) and approve_adoption(proposal_id, expected_revision, actor, reason, request_id) return a durable AdoptionRecord with release/owner refs, quantity, cost-basis validity and reconciliation evidence. Reuse financial transaction/revision ownership from PM-02.",
+      "checks": [
+        "Stale snapshot or unresolved existing order prevents adoption",
+        "Unknown cost basis stays unknown while post-adoption baseline is separately attributed",
+        "Unadopted assets affect exposure but cannot be sold by a strategy",
+        "Unexplained external account change blocks new entry until reviewed reconciliation",
+        "Duplicate adoption and restart have one position ownership effect",
+        "Verified deposits do not appear as trading profit"
+      ],
+      "files": [
+        "src/indodax_lab/portfolio/adoption.py",
+        "src/indodax_lab/execution/reconciliation.py",
+        "src/indodax_lab/execution/ledger_store.py",
+        "tests/unit/lab/portfolio/test_adoption.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/production-main/PM-07-reviewed-account-portfolio-adoption.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/pm-07-reviewed-account-portfolio-adoption",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "Production already owns venue account truth and durable financial state; this task adds reviewed strategy ownership, not a second ledger.",
+      "unlocks": [
+        "PM-08"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "PM-07-AC0",
+          "test_case": "test_pm_07_0",
+          "behavior": "Stale snapshot or unresolved existing order prevents adoption",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-07-AC1",
+          "test_case": "test_pm_07_1",
+          "behavior": "Unknown cost basis stays unknown while post-adoption baseline is separately attributed",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-07-AC2",
+          "test_case": "test_pm_07_2",
+          "behavior": "Unadopted assets affect exposure but cannot be sold by a strategy",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-07-AC3",
+          "test_case": "test_pm_07_3",
+          "behavior": "Unexplained external account change blocks new entry until reviewed reconciliation",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-07-AC4",
+          "test_case": "test_pm_07_4",
+          "behavior": "Duplicate adoption and restart have one position ownership effect",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-07-AC5",
+          "test_case": "test_pm_07_5",
+          "behavior": "Verified deposits do not appear as trading profit",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": true,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "PM-08",
+      "title": "Shared capital allocation and stop risk sizing",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "PM-07",
+        "PM-05",
+        "RP-03"
+      ],
+      "goal": "Shared capital allocation and stop risk sizing",
+      "contract": "AllocationPolicy pins strategy caps, pair owners, priority, account/pair exposure, aggregate risk, capital ceiling and cost-aware stop-risk sizing. Central assessment atomically reserves against one portfolio revision and returns approved quantity or explicit rejection; all environments call this same implementation.",
+      "checks": [
+        "Concurrent strategy signals cannot spend the same cash twice",
+        "Caps above one or overlapping pair owners reject the policy",
+        "Filled exposure and pending fees consume strategy and account headroom exactly once",
+        "Missing stop stale marks or unavailable costs reject new entry",
+        "Below-minimum rounded size rejects without rounding upward",
+        "Cap reduction below exposure stops entry without forced sale",
+        "Verified cash flows adjust risk baselines without hiding losses",
+        "Priority and intent ordering reproduce identical allocation on replay"
+      ],
+      "files": [
+        "src/indodax_lab/portfolio/constructor.py",
+        "src/indodax_lab/portfolio/allocation.py",
+        "src/indodax_lab/risk/engine.py",
+        "src/indodax_lab/backtest/risk.py",
+        "tests/unit/lab/portfolio/test_shared_allocation.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/production-main/PM-08-shared-capital-allocation-and-stop-risk-sizing.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/pm-08-shared-capital-allocation-and-stop-risk-sizing",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "Reuse PortfolioConstructor, PortfolioRiskManager, central RiskEngine and transactional execution state; existing sizing alone does not establish multi-strategy capital arbitration.",
+      "unlocks": [
+        "RW6-01",
+        "PM-09"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "PM-08-AC0",
+          "test_case": "test_pm_08_0",
+          "behavior": "Concurrent strategy signals cannot spend the same cash twice",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC1",
+          "test_case": "test_pm_08_1",
+          "behavior": "Caps above one or overlapping pair owners reject the policy",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC2",
+          "test_case": "test_pm_08_2",
+          "behavior": "Filled exposure and pending fees consume strategy and account headroom exactly once",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC3",
+          "test_case": "test_pm_08_3",
+          "behavior": "Missing stop stale marks or unavailable costs reject new entry",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC4",
+          "test_case": "test_pm_08_4",
+          "behavior": "Below-minimum rounded size rejects without rounding upward",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC5",
+          "test_case": "test_pm_08_5",
+          "behavior": "Cap reduction below exposure stops entry without forced sale",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC6",
+          "test_case": "test_pm_08_6",
+          "behavior": "Verified cash flows adjust risk baselines without hiding losses",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-08-AC7",
+          "test_case": "test_pm_08_7",
+          "behavior": "Priority and intent ordering reproduce identical allocation on replay",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": true,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "PM-09",
+      "title": "Candidate exits and draining strategy replacement",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "PM-08",
+        "RP-02",
+        "RP-04",
+        "PM-04"
+      ],
+      "goal": "Candidate exits and draining strategy replacement",
+      "contract": "request_drain(strategy_id, expected_revision, request_id) returns a durable receipt; ACTIVE/DRAINING/RETIRED ownership is persisted with exit state. Transfer ownership only after positions, nonterminal orders and reservations are zero and reconciliation is fresh.",
+      "checks": [
+        "Partial entry fill receives exits only for actual filled quantity",
+        "Cancel uncertainty and late fills never permit blind replacement or oversell",
+        "Draining prevents entry but retains eligible candidate exits",
+        "New strategy cannot own pair until old position orders and reservations are resolved",
+        "Unsellable dust blocks drain completion with an explicit reason",
+        "Restart restores trailing state ownership and pending exits before resume",
+        "Unsupported stop or order semantics reject rather than substitute behavior"
+      ],
+      "files": [
+        "src/indodax_lab/control/pipeline.py",
+        "src/indodax_lab/portfolio/lifecycle.py",
+        "src/indodax_lab/execution/oms_store.py",
+        "tests/integration/lab/test_strategy_draining.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/production-main/PM-09-candidate-exits-and-draining-strategy-replacement.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/pm-09-candidate-exits-and-draining-strategy-replacement",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "Candidate exit semantics are owned by RP-02; OMS and fill recovery exist. This task integrates ownership and lifecycle without creating another exit evaluator.",
+      "unlocks": [
+        "PM-06",
+        "API-04"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "PM-09-AC0",
+          "test_case": "test_pm_09_0",
+          "behavior": "Partial entry fill receives exits only for actual filled quantity",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC1",
+          "test_case": "test_pm_09_1",
+          "behavior": "Cancel uncertainty and late fills never permit blind replacement or oversell",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC2",
+          "test_case": "test_pm_09_2",
+          "behavior": "Draining prevents entry but retains eligible candidate exits",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC3",
+          "test_case": "test_pm_09_3",
+          "behavior": "New strategy cannot own pair until old position orders and reservations are resolved",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC4",
+          "test_case": "test_pm_09_4",
+          "behavior": "Unsellable dust blocks drain completion with an explicit reason",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC5",
+          "test_case": "test_pm_09_5",
+          "behavior": "Restart restores trailing state ownership and pending exits before resume",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "PM-09-AC6",
+          "test_case": "test_pm_09_6",
+          "behavior": "Unsupported stop or order semantics reject rather than substitute behavior",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": true,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "API-04",
+      "title": "Guarded Production portfolio and lifecycle commands",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "PM-09",
+        "API-02",
+        "API-03"
+      ],
+      "goal": "Guarded Production portfolio and lifecycle commands",
+      "contract": "Implement only the command routes and CommandReceipt contract named in BOT-TRADE-PROGRAM. Thin routes call adoption/allocation/lifecycle/control authorities; require production.control, request ID, reason, expected revision and exact proposal binding. Existing read APIs retain read-only behavior.",
+      "checks": [
+        "Research actor and read-only viewer cannot invoke Production commands",
+        "Stale revision or changed proposal rejects approval and requires a new proposal",
+        "Duplicate identical request returns same receipt and conflicting payload rejects",
+        "Command audit failure cannot acknowledge successful mutation",
+        "Resume revalidates recovery risk release and reconciliation gates",
+        "No route exposes order withdrawal or model reload authority"
+      ],
+      "files": [
+        "src/indodax_lab/api/routers/production_commands.py",
+        "src/indodax_lab/api/contracts/production.py",
+        "src/indodax_lab/api/dependencies.py",
+        "src/indodax_lab/api/app.py",
+        "src/indodax_lab/api/capabilities.py",
+        "tests/integration/lab/api/test_production_commands.py"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/production-main/API-04-guarded-production-portfolio-and-lifecycle-commands.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/api-04-guarded-production-portfolio-and-lifecycle-commands",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "API-00 through API-03 are DONE read/control-plane foundations. Named command admission is new under ADR-010; reuse current auth and audit infrastructure without broadening read capabilities.",
+      "unlocks": [
+        "PM-06",
+        "UI-03"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "API-04-AC0",
+          "test_case": "test_api_04_0",
+          "behavior": "Research actor and read-only viewer cannot invoke Production commands",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC1",
+          "test_case": "test_api_04_1",
+          "behavior": "Stale revision or changed proposal rejects approval and requires a new proposal",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC2",
+          "test_case": "test_api_04_2",
+          "behavior": "Duplicate identical request returns same receipt and conflicting payload rejects",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC3",
+          "test_case": "test_api_04_3",
+          "behavior": "Command audit failure cannot acknowledge successful mutation",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC4",
+          "test_case": "test_api_04_4",
+          "behavior": "Resume revalidates recovery risk release and reconciliation gates",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "API-04-AC5",
+          "test_case": "test_api_04_5",
+          "behavior": "No route exposes order withdrawal or model reload authority",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+    },
+    {
+      "id": "UI-03",
+      "title": "Guarded portfolio and strategy operator workflows",
+      "domain": "production-main",
+      "legacy_tasks": [],
+      "dependencies": [
+        "API-04",
+        "UI-02"
+      ],
+      "goal": "Guarded portfolio and strategy operator workflows",
+      "contract": "Render adoption review, allocation proposal/decision, pause-entry, resume, halt and drain against API-04 receipts. Show exact policy/release revision, current exposure and impact. No local financial authority or hot SL/TP edits.",
+      "checks": [
+        "Viewer and Research context cannot reach operator commands",
+        "Stale proposal forces refresh and never silently resubmits approval",
+        "Duplicate click uses one idempotency key and displays one outcome",
+        "Unknown basis unadopted assets and unavailable marks are explicitly labeled",
+        "Draining shows pending positions orders reservations and blocked dust",
+        "Keyboard and smartphone layouts preserve command context and confirmation details"
+      ],
+      "files": [
+        "frontend/src/features/production/commands.tsx",
+        "frontend/src/features/production/pages.tsx",
+        "frontend/src/features/production/route.tsx",
+        "frontend/src/api/client.ts",
+        "frontend/src/api/types.ts",
+        "frontend/src/features/production/commands.test.tsx"
+      ],
+      "type": "integration",
+      "tier": "CORE",
+      "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
+      "path": "docs/sprints/production-main/UI-03-guarded-portfolio-and-strategy-operator-workflows.md",
+      "priority": "P1",
+      "status": "PLANNED",
+      "implementation_owner": "UNASSIGNED",
+      "independent_reviewer": "UNASSIGNED",
+      "recommended_branch": "feat/ui-03-guarded-portfolio-and-strategy-operator-workflows",
+      "external_gates": [
+        "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
+      ],
+      "current_context": "Reuse existing pages.tsx, route.tsx, typed client, Kumo and Geist. Read Impeccable before frontend implementation; dashboard.pen remains read-only.",
+      "unlocks": [
+        "PM-06"
+      ],
+      "requirements": [
+        "FR-23"
+      ],
+      "required_reading": [
+        "AGENTS.md",
+        "docs/production/FROZEN-SYSTEMS.md",
+        "docs/production/main/README.md",
+        "docs/production/research-workbench/README.md",
+        "docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md",
+        "docs/implementation/BOT-TRADE-PROGRAM.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/specs/20-testing-strategy.md"
+      ],
+      "acceptance_test_mapping": [
+        {
+          "criterion": "UI-03-AC0",
+          "test_case": "test_ui_03_0",
+          "behavior": "Viewer and Research context cannot reach operator commands",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC1",
+          "test_case": "test_ui_03_1",
+          "behavior": "Stale proposal forces refresh and never silently resubmits approval",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC2",
+          "test_case": "test_ui_03_2",
+          "behavior": "Duplicate click uses one idempotency key and displays one outcome",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC3",
+          "test_case": "test_ui_03_3",
+          "behavior": "Unknown basis unadopted assets and unavailable marks are explicitly labeled",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC4",
+          "test_case": "test_ui_03_4",
+          "behavior": "Draining shows pending positions orders reservations and blocked dust",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        },
+        {
+          "criterion": "UI-03-AC5",
+          "test_case": "test_ui_03_5",
+          "behavior": "Keyboard and smartphone layouts preserve command context and confirmation details",
+          "status": "PLANNED_BEHAVIOR_MAPPING"
+        }
+      ],
+      "risk_level": "high",
+      "context_complexity": "L",
+      "security_critical": true,
+      "data_migration": false,
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
     }
   ],
   "readiness_rule": "All dependencies DONE; external activation and review gates remain separate."

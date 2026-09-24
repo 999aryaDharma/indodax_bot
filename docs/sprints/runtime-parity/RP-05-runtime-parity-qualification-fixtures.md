@@ -59,25 +59,20 @@ Purpose: Runtime parity qualification fixtures. Gap: Evidence of shared decision
 
 ## Unlocks
 
-RW5-01
+RW5-01, PM-06
 
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Unit suites prove individual components; no cross-environment parity suite.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Replay common canonical sequence into historical/shadow/production-shaped fake compositions
 
@@ -246,6 +243,8 @@ No old shadow performance becomes qualification evidence; this suite is offline 
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RP-05-AC5** Identical candidate events policies and starting state yield equal decisions before venue effects. Evidence: `test_rp_05_program_5` at exact implementation SHA.
 
 - [ ] **RP-05-AC0** Candidate intent IDs/content match before venue boundary. Evidence: named test on exact committed SHA.
 

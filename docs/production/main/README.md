@@ -169,3 +169,7 @@ Architecture in this directory is frozen v1.0. Changes require an ADR or explici
 See:
 - `SOP-AND-GATES.md`
 - `IMPLEMENTATION-ROADMAP.md`
+
+## Multi-strategy release amendment
+
+[ADR-010](../../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) explicitly extends singular-candidate language above to a candidate set in one reviewed release. One central portfolio/risk/OMS/ledger remains authoritative. Reviewed adoption, strategy caps, exclusive pair ownership, draining and guarded controls follow the [program contract](../../implementation/BOT-TRADE-PROGRAM.md). Existing read-only API/UI remains read-only; new commands are owned by API-04/UI-03 and require separate implementation and qualification.

@@ -163,3 +163,7 @@ Test matrix:
 - Guarded commands are unreachable until their PM/RP dependencies are DONE.
 - API has no generic order-write or withdrawal endpoint.
 - Exact source SHA, test exits, environment, and unresolved external gates are recorded in `docs/sprints/handoffs/API-PRODUCTION-HANDOFF.md`.
+
+## 2026-09-24 command-scope amendment
+
+The canonical API-04 sprint is now admitted in the manifest. Follow `docs/implementation/BOT-TRADE-PROGRAM.md` for exact adoption/allocation/pause/resume/halt/drain routes, revisioned proposals and receipts. Its dependency is PM-09 plus API-02/API-03; existing GET routes stay read-only. Earlier task sketches do not admit additional control types automatically.

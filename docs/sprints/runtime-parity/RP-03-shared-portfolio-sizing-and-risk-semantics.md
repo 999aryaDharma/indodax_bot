@@ -59,25 +59,20 @@ Purpose: Shared portfolio sizing and risk semantics. Gap: Deterministic allocati
 
 ## Unlocks
 
-RP-04, RW6-01
+RP-04, RW6-01, PM-08
 
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ PortfolioConstructor drops intent metadata and overwrites same-pair intents; ris
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Characterize existing risk quantities/cost rounding
 
@@ -244,6 +241,8 @@ Keep old generate_rebalance_intents wrapper for historical callers; qualificatio
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RP-03-AC4** Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority. Evidence: `test_rp_03_program_4` at exact implementation SHA.
 
 - [ ] **RP-03-AC0** Two same-pair opposing intents never silently last-win. Evidence: named test on exact committed SHA.
 

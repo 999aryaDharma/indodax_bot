@@ -146,3 +146,7 @@ Verify:
 - Research is usable for evidence navigation and, when services exist, controlled mutation.
 - UI renders API provenance and qualification status rather than inventing it.
 - All command actions are backend guarded, audited, idempotent, and unavailable in unsafe environments.
+
+## 2026-09-24 operator-workflow amendment
+
+Canonical UI-03 depends on API-04 and UI-02 and follows `docs/implementation/BOT-TRADE-PROGRAM.md`. Use existing pages.tsx and route.tsx equivalents rather than recreating the older proposed file inventory. Add reviewed adoption/allocation and draining presentation alongside guarded lifecycle controls; backend owns all financial decisions. YAML is the selected companion to the component form for Workbench.

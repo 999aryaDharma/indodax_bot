@@ -40,3 +40,7 @@ Use `@cloudflare/kumo` 2.14.0 React components for shared controls and tables; u
 ## Admission rule
 
 Until canonical sprint specs are admitted to the manifest and all projections validate, these IDs are planning only. A sprint is claimable only when the manifest marks it READY and every declared dependency is DONE. Structural READY does not qualify data, a release, a host, or real-money activation.
+
+## Guarded commands admission
+
+[ADR-010](../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) admits API-04/UI-03 planning for the exact adoption, allocation, pause-entry, resume, halt and draining commands in [BOT-TRADE-PROGRAM](BOT-TRADE-PROGRAM.md). Existing read-only task evidence stays unchanged. Backend approval and release gates remain authoritative.

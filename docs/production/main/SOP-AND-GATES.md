@@ -141,3 +141,7 @@ HALT does **not** imply automatic flattening.
 ## Promotion boundary from Research
 
 Research can only submit a `request_promotion(candidate_id)` style request. Production promotion is a separate governed action. No MCP/LLM/dashboard action may directly bypass G0-G7.
+
+## Candidate-set interpretation under ADR-010
+
+For a multi-strategy release, G2/G3 evidence applies to every included candidate. G6 begins with one reviewed candidate; expansion requires explicit release review and aggregate shared-capital evidence under G7. The exact candidate set and allocation policy must pass Portfolio Shadow and integration scenarios before activation. [ADR-010](../../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) changes no gate thresholds and grants no deployment authority.

@@ -37,3 +37,7 @@ This program uses Python 3.11-compatible typed contracts, existing Pydantic/Deci
 ## Agent delivery workflow
 
 Use the current `AGENTS.md` and `.agents/coordination/protocol.md` for execution. Batch independent READY sprints when dependencies are DONE and file scopes do not overlap; keep one owner per sprint and one writer per shared path. Work in the current checkout by default. Commit passing slices promptly, run focused checks by default, and have one independent reviewer check each sprint at the final batch SHA. Update manifest and projections once after review. Full audits, repeated global-doc reads, worktrees and full-suite runs are not routine requirements.
+
+## Bot Trade Program — 2026-09-24
+
+Read [the accepted program](BOT-TRADE-PROGRAM.md), [CR](../decisions/CR-20260924-bot-trade-program.md) and [ADR-010](../decisions/ADR-010-multi-strategy-production-and-guarded-controls.md) for Workbench product decisions and multi-strategy Production. DATA-07 and PM-07–09/API-04/UI-03 extend the manifest. No implementation completion or live activation is claimed.

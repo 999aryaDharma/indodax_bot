@@ -56,28 +56,25 @@ Purpose: Separate shared-capital Portfolio Shadow. Gap: Intentional multi-candid
 
 - RW5-01 — Isolated durable forward-shadow agents
 - RP-03 — Shared portfolio sizing and risk semantics
+- PM-08 — Shared capital allocation and stop risk sizing
 
 ## Unlocks
 
-RW7-02, RW8-01
+RW7-02, RW8-01, PM-06
 
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -86,6 +83,10 @@ SharedCapitalLedger allocates cash outside common financial runtime.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Resolve selected immutable candidates into one distinct namespace
 
@@ -246,6 +247,12 @@ Deprecate SharedCapitalLedger for new qualification; legacy checkpoint import is
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RW6-01-AC7** Shared capital qualification records candidate set feature triggers and persistence workload fingerprint. Evidence: `test_rw6_01_capacity_7` plus applicable measured host artifact; not established by historical tests.
+
+- [ ] **RW6-01-AC5** Replay exact Production candidate set and allocation policy through shared-capital arbitration. Evidence: `test_rw6_01_program_5` at exact implementation SHA.
+
+- [ ] **RW6-01-AC6** Independent tournament outcomes cannot qualify aggregate Production capital contention. Evidence: `test_rw6_01_program_6` at exact implementation SHA.
 
 - [ ] **RW6-01-AC0** Simultaneous intents cannot overspend shared cash. Evidence: named test on exact committed SHA.
 

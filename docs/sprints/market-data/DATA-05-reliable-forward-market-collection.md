@@ -32,7 +32,7 @@ Direct consumers: UNIV-01, BAR-01, SHADOW-01
 
 ## Unlocks
 
-BAR-01, SHADOW-01, UNIV-01
+BAR-01, SHADOW-01, UNIV-01, DATA-07
 
 ## Required Reading
 

@@ -126,6 +126,7 @@ None. Verify external gates and shared-file ownership before claim.
 - EVAL-03 — Sealed candidate lifecycle [REVIEW; CORE]
 - TRAIN-01 — Verified training dataset assembly [REVIEW; CORE]
 - OPS-03 — Storage retention and integrity maintenance [REVIEW; CORE]
+- DATA-07 — Selectable public collection and coverage workflow [PLANNED; CORE]
 
 ## Wave 14
 
@@ -213,15 +214,29 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 27
 
 - RW5-02 — Tournament cohorts leaderboard and qualification [PLANNED; CORE]
-- RW6-01 — Separate shared-capital Portfolio Shadow [PLANNED; CORE]
-- PM-06 — CI security and operational release evidence [PLANNED; CORE]
+- PM-07 — Reviewed account portfolio adoption [PLANNED; CORE]
 
 ## Wave 28
 
-- RW8-01 — Research read models and dashboard navigation [PLANNED; CORE]
 - RW9-01 — Promotion request and production export bridge [PLANNED; CORE]
+- PM-08 — Shared capital allocation and stop risk sizing [PLANNED; CORE]
 
 ## Wave 29
 
+- RW6-01 — Separate shared-capital Portfolio Shadow [PLANNED; CORE]
+- PM-09 — Candidate exits and draining strategy replacement [PLANNED; CORE]
+
+## Wave 30
+
 - RW7-02 — Audited QuantOps research mutations [PLANNED; CORE]
+- RW8-01 — Research read models and dashboard navigation [PLANNED; CORE]
+- API-04 — Guarded Production portfolio and lifecycle commands [PLANNED; CORE]
+
+## Wave 31
+
 - RW8-02 — Workbench form and graph editors [PLANNED; CORE]
+- UI-03 — Guarded portfolio and strategy operator workflows [PLANNED; CORE]
+
+## Wave 32
+
+- PM-06 — CI security and operational release evidence [PLANNED; CORE]

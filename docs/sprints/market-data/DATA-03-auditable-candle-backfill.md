@@ -32,7 +32,7 @@ Direct consumers: DATA-04
 
 ## Unlocks
 
-DATA-04
+DATA-04, DATA-07
 
 ## Required Reading
 

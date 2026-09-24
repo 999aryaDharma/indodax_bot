@@ -34,7 +34,7 @@ Direct consumers: REL-01
 
 ## Unlocks
 
-REL-01
+REL-01, PM-06
 
 ## Required Reading
 
@@ -44,6 +44,7 @@ REL-01
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
 - `docs/decisions/ADR-009-asus-production-and-research-runtime.md`
 - `docs/production/research-workbench/SHARED-MARKET-RUNTIME.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -54,6 +55,8 @@ New capability; dependencies must be DONE before implementation.
 - Dependency QA-01 supplies: tiny offline tournament -> all lifecycle outcomes + identical snapshot/folds/costs comparison.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
 
 - ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment.
 - Disk-full tidak mengakui sukses.
@@ -194,6 +197,8 @@ Existing code paths are preserved unless this sprint explicitly owns their behav
 Disable use of the new candidate/output version and keep the last verified compatible version. Do not overwrite historical artifacts; rebuild/retry from the same verified immutable inputs. For code-only pure changes, revert scoped commit after checking downstream compatibility.
 
 ## Acceptance Criteria
+
+- [ ] **QA-03-AC4** Recorded ASUS mixed-load qualification includes stepped pair agent model counts and 24h soak with preregistered budgets. Evidence: `test_qa_03_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [x] **QA-03-AC0** ASUS punya bukti capacity, isolation, workload co-residency dan recovery untuk Production Main + Research Runtime sebelum release/deployment. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [x] **QA-03-AC1** Disk-full tidak mengakui sukses. Evidence: mapped test, exact command/exit and target SHA.

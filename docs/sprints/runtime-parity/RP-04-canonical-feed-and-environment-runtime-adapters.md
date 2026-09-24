@@ -60,25 +60,21 @@ Purpose: Canonical feed and environment runtime adapters. Gap: One production-sh
 
 ## Unlocks
 
-RP-05, RW3-01
+RP-05, RW3-01, PM-09
 
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -87,6 +83,10 @@ MarketGateway and fake venue exist; shadow polls per engine and bypasses OMS.
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Publish validated immutable feed events once per stream
 
@@ -263,6 +263,10 @@ Old shadow runner remains legacy until a reviewed opt-in migration; historical r
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RP-04-AC7** Multi-strategy consumers share bounded Research subscriptions and fan-out without sharing Production authority. Evidence: `test_rp_04_capacity_7` plus applicable measured host artifact; not established by historical tests.
+
+- [ ] **RP-04-AC6** Environment adapters preserve candidate exit and financial recovery semantics without Research writer capability. Evidence: `test_rp_04_program_6` at exact implementation SHA.
 
 - [ ] **RP-04-AC5** No-fill market events advance feature and risk state once while delayed fills remain recoverable after cursor acknowledgement. Evidence: `test_rp_04_bootstrap_recovery` through public interfaces.
 - [ ] **RP-04-AC0** N agents cause one upstream poll per stream, not N. Evidence: named test on exact committed SHA.

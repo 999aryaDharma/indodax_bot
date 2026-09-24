@@ -59,25 +59,20 @@ Purpose: Shared candidate feature and exit evaluation. Gap: One verified evaluat
 
 ## Unlocks
 
-RP-04
+RP-04, PM-09
 
 ## Required Reading
 
 - `AGENTS.md`
-
 - `docs/production/FROZEN-SYSTEMS.md`
-
 - `docs/production/main/README.md`
-
 - `docs/production/main/SOP-AND-GATES.md`
-
 - `docs/production/research-workbench/DOMAIN-AND-LIFECYCLE.md`
-
 - `docs/implementation/CONTRACTS.md`
-
 - `docs/implementation/RUNTIME-PARITY.md`
-
 - `docs/specs/20-testing-strategy.md`
+- `docs/decisions/ADR-010-multi-strategy-production-and-guarded-controls.md`
+- `docs/implementation/BOT-TRADE-PROGRAM.md`
 
 ## Current Context
 
@@ -86,6 +81,8 @@ Feature registry and registered TA implementations coexist with custom shadow fe
 Audit baseline: `fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4`. Inspect exact dependency handoffs before claim; REVIEW is not DONE.
 
 ## In Scope
+
+Owner-approved 2026-09-24 amendment: implement this sprint's behavior in `docs/implementation/BOT-TRADE-PROGRAM.md`; prior requirements remain mandatory.
 
 - Resolve immutable RuntimePlan through verified component/policy refs for first historical experiment; packaging later wraps the same plan
 
@@ -252,6 +249,8 @@ Old shadow parameters/exits remain an archived policy version; new semantics req
 Select prior compatible code/artifact before activation; preserve failed/new evidence. Never overwrite immutable versions or erase committed financial history. For stateful migration use read-only source plus separately validated new namespace; reject ambiguity.
 
 ## Acceptance Criteria
+
+- [ ] **RP-02-AC6** Candidate stop and exit state have identical semantics before environment-specific venue effects. Evidence: `test_rp_02_program_6` at exact implementation SHA.
 
 - [ ] **RP-02-AC5** Historical plan executes before candidate packaging and yields same decision trace when later wrapped as a candidate. Evidence: `test_rp_02_bootstrap_recovery` through public interfaces.
 - [ ] **RP-02-AC0** Same candidate/event/state gives identical intent bytes. Evidence: named test on exact committed SHA.

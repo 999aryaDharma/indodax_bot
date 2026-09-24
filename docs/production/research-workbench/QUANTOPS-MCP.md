@@ -168,3 +168,7 @@ No destructive deletion of historical experiments, candidates or trade evidence.
 8. promotion-request integration.
 
 Production write tools remain outside this MCP.
+
+## Form and YAML parity
+
+The [program contract](../../implementation/BOT-TRADE-PROGRAM.md) requires form, declarative YAML and MCP to resolve one manifest/validator. Model listing includes compatibility and readiness, collection returns actual coverage, and batch results expose each pair independently. Production guarded commands remain outside Research MCP.

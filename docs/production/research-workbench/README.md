@@ -190,3 +190,7 @@ See:
 - `DOMAIN-AND-LIFECYCLE.md`
 - `QUANTOPS-MCP.md`
 - `UI-UX-AND-ROADMAP.md`
+
+## Owner-approved product workflow
+
+The [Bot Trade Program](../../implementation/BOT-TRADE-PROGRAM.md) fixes form/YAML/MCP composition, selectable historical collection, independent per-pair results and drawdown-filtered Top 10. Portfolio Shadow also evaluates the exact shared-capital Production candidate set and allocation policy; isolated tournament rank alone is insufficient.

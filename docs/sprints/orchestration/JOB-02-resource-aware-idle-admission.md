@@ -32,7 +32,7 @@ Direct consumers: JOB-03, DL-01, OPS-01
 
 ## Unlocks
 
-DL-01, OPS-01, JOB-03
+DL-01, OPS-01, JOB-03, DATA-07
 
 ## Required Reading
 
@@ -41,6 +41,7 @@ DL-01, OPS-01, JOB-03
 - `docs/specs/13-jobs-resource-policy-and-repeats.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`
 
 ## Current Context
 
@@ -49,6 +50,8 @@ New capability; dependencies must be DONE before implementation.
 - Dependency JOB-01 supplies: SQLite WAL local queue: PENDING/RUNNING/SUCCESS/FAILED_RETRYABLE/FAILED_FINAL/BLOCKED_DATA/BLOCKED_POLICY/CANCELLED/STALE.
 
 ## In Scope
+
+2026-09-24 capacity extension: follow `docs/implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md`; additional cases remain unverified, including for REVIEW tasks.
 
 - Pekerjaan berat hanya masuk saat profil host, daya, RAM, idle dan thermal memenuhi policy.
 - Sensor UNKNOWN tidak dianggap aman.
@@ -190,6 +193,8 @@ Existing code paths are preserved unless this sprint explicitly owns their behav
 Disable use of the new candidate/output version and keep the last verified compatible version. Do not overwrite historical artifacts; rebuild/retry from the same verified immutable inputs. For code-only pure changes, revert scoped commit after checking downstream compatibility.
 
 ## Acceptance Criteria
+
+- [ ] **JOB-02-AC4** Unknown or stale required resource sensors reject admission and optional Research load sheds before Production deadlines fail. Evidence: `test_job_02_capacity_4` plus applicable measured host artifact; not established by historical tests.
 
 - [ ] **JOB-02-AC0** Pekerjaan berat hanya masuk saat profil host, daya, RAM, idle dan thermal memenuhi policy. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [ ] **JOB-02-AC1** Sensor UNKNOWN tidak dianggap aman. Evidence: mapped test, exact command/exit and target SHA.
