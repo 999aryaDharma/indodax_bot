@@ -13,6 +13,15 @@ describe("Production read pages", () => {
     expect(html).toContain("UNKNOWN · venue truth unresolved");
     expect(html).toContain("production-main");
     expect(html).toContain("0.25");
+    expect(html).toContain("class=\"numeric\"");
+  });
+
+  it("calls out stale evidence before displaying last-reported values", () => {
+    const stale = { ...evidence, freshness: "STALE" as const };
+    const response = envelope<OrdersView>({ evidence: stale, total: 1, offset: 0, limit: 50, data: [{ internal_order_id: "oms-1", venue_order_id: null, pair: "btc_idr", side: "buy", desired_qty: "0.25", filled_qty: "0", state: "OPEN" }] });
+    const html = renderToStaticMarkup(<OrdersPage response={response} state="ready" message={null} now={new Date("2026-09-24T12:00:05Z")} reload={() => undefined} loadMore={() => undefined} loadingMore={false} />);
+    expect(html.indexOf("STALE PRODUCTION SNAPSHOT")).toBeLessThan(html.indexOf("0.25"));
+    expect(html).toContain("class=\"status-value warning\"");
   });
 
   it("makes a mismatch explicit without adding repair controls", () => {

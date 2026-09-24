@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ControlPlaneError, getProductionAudit, getProductionOrdersPage, getProductionPortfolio, getProductionPositions, getProductionReconciliation, getProductionRelease, getProductionRisk } from "../../api/client";
 import type { ApiEnvelope, AuditView, OrdersView, PortfolioView, PositionsView, ReconciliationView, ReleaseView, RiskView } from "../../api/types";
 import { capabilityState } from "../../app/context";
@@ -13,9 +13,11 @@ export function ProductionReadPage({ label, now }: { label: string; now: Date })
   const [state, setState] = useState<ReadState>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const generation = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    setResponse(null); setMessage(null); setState("loading");
+    generation.current += 1;
+    setResponse(null); setMessage(null); setLoadingMore(false); setState("loading");
     try {
       const result = label === "Portfolio" ? await getProductionPortfolio(signal)
         : label === "Positions" ? await getProductionPositions(signal)
@@ -43,14 +45,22 @@ export function ProductionReadPage({ label, now }: { label: string; now: Date })
   async function loadMore() {
     const view = response?.data;
     if (label !== "Orders" || !view || !("total" in view) || view.total === null) return;
+    const currentGeneration = generation.current;
+    const sourceRevision = response.source_revision;
     setLoadingMore(true);
     try {
       const page = await getProductionOrdersPage(view.data.length, 50);
-      setResponse((current) => current && "total" in current.data
+      if (currentGeneration !== generation.current) return;
+      if (page.source_revision !== sourceRevision || page.data.evidence.source_revision !== view.evidence.source_revision) {
+        setMessage("The Orders snapshot changed during pagination. Refresh to load a consistent page.");
+        return;
+      }
+      setResponse((current) => current?.source_revision === sourceRevision && "total" in current.data
         ? { ...page, data: { ...page.data, data: [...current.data.data, ...page.data.data] } as Data } : current);
     } catch (error) {
+      if (currentGeneration !== generation.current) return;
       setMessage(error instanceof ControlPlaneError ? `${error.message} Request ${error.requestId ?? "unknown"}.` : "Could not load more orders.");
-    } finally { setLoadingMore(false); }
+    } finally { if (currentGeneration === generation.current) setLoadingMore(false); }
   }
 
   const common = { response, state, message, now, reload: () => void load() };

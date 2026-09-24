@@ -123,7 +123,7 @@ export function App() {
 
   useEffect(() => {
     setSnapshot(null); setMessage(null);
-    if (canReadProduction(active)) void reload();
+    if (active.label === "System Overview" || active.label === "Operations") void reload();
     else setState("unavailable");
   }, [path]);
 

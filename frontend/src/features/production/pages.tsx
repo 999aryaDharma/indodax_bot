@@ -45,7 +45,8 @@ function PageLayout({ title, summary, state, message, reload, children }: {
 function Evidence({ evidence, now, children }: { evidence: ResourceEvidence; now: Date; children: ReactNode }) {
   const available = evidence.status === "AVAILABLE" || evidence.status === "PARTIAL";
   return <section className={`data-panel evidence-${evidence.status.toLowerCase()}`}>
-    <div className="panel-heading"><h2>Production evidence</h2><StatusValue label="Source state" value={evidence.status} /></div>
+    <div className="panel-heading"><h2>Production evidence</h2><div className="evidence-states"><StatusValue label="Source state" value={evidence.status} /><StatusValue label="Freshness" value={evidence.freshness} /></div></div>
+    {evidence.freshness === "STALE" && <div className="read-notice stale-evidence" role="alert"><strong>STALE PRODUCTION SNAPSHOT</strong><p>Values below are the last reported snapshot and may not reflect current live account or service state.</p></div>}
     {!available && <p className="resource-reason">{evidence.reason?.replaceAll("_", " ") ?? "The source did not provide authoritative values."}</p>}
     {available && children}
     <dl className="evidence-details">
@@ -60,12 +61,12 @@ function Evidence({ evidence, now, children }: { evidence: ResourceEvidence; now
 }
 
 function Table<T>({ columns, rows, rowKey, emptyLabel }: {
-  columns: { label: string; value: (row: T) => ReactNode }[];
+  columns: { label: string; value: (row: T) => ReactNode; numeric?: boolean }[];
   rows: T[]; rowKey: (row: T) => string; emptyLabel: string;
 }) {
   return <div className="table-scroll"><table className="read-table">
-    <thead><tr>{columns.map((column) => <th scope="col" key={column.label}>{column.label}</th>)}</tr></thead>
-    <tbody>{rows.length ? rows.map((row) => <tr key={rowKey(row)}>{columns.map((column) => <td data-label={column.label} key={column.label}>{column.value(row)}</td>)}</tr>)
+    <thead><tr>{columns.map((column) => <th scope="col" className={column.numeric ? "numeric" : undefined} key={column.label}>{column.label}</th>)}</tr></thead>
+    <tbody>{rows.length ? rows.map((row) => <tr key={rowKey(row)}>{columns.map((column) => <td data-label={column.label} className={column.numeric ? "numeric" : undefined} key={column.label}>{column.value(row)}</td>)}</tr>)
       : <tr className="empty-row"><td colSpan={columns.length}>{emptyLabel}</td></tr>}</tbody>
   </table></div>;
 }
@@ -118,9 +119,9 @@ export function PortfolioPage({ response, state, message, now, reload }: PagePro
         <h3 className="subsection-heading">Balances by currency</h3>
         <Table columns={[
           { label: "Currency", value: (row) => row.currency.toUpperCase() },
-          { label: "Available", value: (row) => row.available },
-          { label: "On hold", value: (row) => row.hold },
-          { label: "Total", value: (row) => row.total },
+          { label: "Available", value: (row) => row.available, numeric: true },
+          { label: "On hold", value: (row) => row.hold, numeric: true },
+          { label: "Total", value: (row) => row.total, numeric: true },
         ]} rows={view.balances} rowKey={(row) => row.currency} emptyLabel="No balance rows were returned." />
       </>}
       {view.balance_authority !== "AVAILABLE" && <p className="resource-reason">Balance authority is unavailable.</p>}
@@ -134,8 +135,8 @@ export function PositionsPage({ response, state, message, now, reload }: PagePro
     {view && <Evidence evidence={view.evidence} now={now}>
       {view.financial_authority === "AVAILABLE" ? <Table columns={[
         { label: "Pair", value: (row) => row.pair.toUpperCase() },
-        { label: "Base quantity", value: (row) => row.base_qty },
-        { label: "Cost basis", value: (row) => row.cost_basis },
+        { label: "Base quantity", value: (row) => row.base_qty, numeric: true },
+        { label: "Cost basis", value: (row) => row.cost_basis, numeric: true },
       ]} rows={view.data} rowKey={(row) => row.pair} emptyLabel="No open positions were returned." />
         : <p className="resource-reason">Financial position authority is unavailable; position values are hidden.</p>}
     </Evidence>}
@@ -152,13 +153,14 @@ export function OrdersPage({ response, state, message, now, reload, loadMore, lo
         { label: "Venue order", value: (row) => row.venue_order_id ?? "UNAVAILABLE" },
         { label: "Pair", value: (row) => row.pair.toUpperCase() },
         { label: "Side", value: (row) => row.side.toUpperCase() },
-        { label: "Quantity", value: (row) => row.desired_qty },
-        { label: "Filled", value: (row) => row.filled_qty },
+        { label: "Quantity", value: (row) => row.desired_qty, numeric: true },
+        { label: "Filled", value: (row) => row.filled_qty, numeric: true },
         { label: "State", value: (row) => row.state === "UNKNOWN" ? <span className="order-unknown">UNKNOWN · venue truth unresolved</span> : row.state },
       ]} rows={view.data} rowKey={(row) => row.internal_order_id} emptyLabel="No order records were returned." />
       <div className="table-footer"><span>{view.total === null ? "Total count unavailable" : `${view.data.length} of ${view.total} orders`}</span>
         {canLoadMore && <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Loading…" : "Load more orders"}</Button>}
       </div>
+      {message && <div className="read-notice is-critical" role="alert">{message}</div>}
     </Evidence>}
   </PageLayout>;
 }
