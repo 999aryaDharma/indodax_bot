@@ -30,6 +30,8 @@ Root instructions here and `.agents/` are shared by Codex and Antigravity. Confi
 
 Read the chosen sprint spec, only the relevant Required Reading, dependency handoffs and affected code. Reuse already-read context; do not reread unchanged global docs or produce a separate plan/claim log for routine work. Start implementation once scope and dependencies are clear. Keep user changes intact; stage explicit owned paths only. Adapt planned filenames to existing equivalents and record actual paths in the handoff. Shared-file ownership and batching follow `.agents/coordination/protocol.md`.
 
+For frontend build or UI implementation tasks, use the Impeccable skill before designing or changing frontend code. Treat `dashboard.pen` as a read-only reference: do not edit it.
+
 ## Correctness and testing
 
 For behavior changes, add or adapt the smallest regression test; demonstrate RED when practical, then GREEN. Missing dependency/import environment alone is not proof of behavior RED. Use fake network/Telegram and temp DB/data. Verify exact units, chronology, costs once, lineage bytes and transactional failure recovery. Run focused checks by default; run the full suite for shared contracts, schemas/migrations, broad refactors or release gates. Never claim skipped checks passed. Record environment, commands/results and source SHA once in the handoff. Docs-only work uses the planning validator when planning/status files change, plus diff-check.
