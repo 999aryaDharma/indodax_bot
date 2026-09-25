@@ -24,6 +24,8 @@ The global `Caveman`, `Ponytail`, and `RTK` tooling is part of the project workf
 
 Use `docs/sprints/sprint-manifest.json` as status/DAG authority. One READY sprint → one owner → one isolated worktree → one independent final reviewer. Verify dependencies DONE and external resource/data/policy gates. Do not equate READY with real-data availability. Imported DONE Tasks1–14 are historical evidence; do not rebuild them without a defect/CR. Task15 untracked WIP on original implementation branch is unverified; inspect before reuse and never overwrite it.
 
+One sprint is one independently reviewable unit, not necessarily one whole agent session. After an implementation owner commits a complete handoff for sprint A, the owner may claim another independent READY sprint while A is under review if the coordinator confirms no dependency or shared-path conflict. Never edit sprint A again until its review returns unless the coordinator explicitly returns it for fixes.
+
 Root instructions here and `.agents/` are shared by Codex and Antigravity. Configure the local tool to read them explicitly; do not assume tool-specific automatic loading behavior. No agent daemon/scheduler is installed by these docs.
 
 ## Work boundaries
@@ -32,11 +34,35 @@ Read only chosen sprint Required Reading, dependency handoffs and actual affecte
 
 ## Correctness and testing
 
-Behavior tests first where code changes: demonstrate targeted RED, implement, GREEN, then refactor. Missing dependency/import environment alone is not proof of behavior RED. Use fake network/Telegram and temp DB/data. Verify exact units, chronology, costs once, lineage bytes and transactional failure recovery. Never invent evidence from a previous SHA. No required skipped tests hidden in PASS; record environment, command, exit and source SHA. Follow `docs/specs/20-testing-strategy.md` for full-suite risk gates. Docs-only work uses planning validator and diff-check.
+Behavior tests first where code changes: demonstrate targeted RED, implement, GREEN, then refactor. Missing dependency/import environment alone is not proof of behavior RED. Use fake network/Telegram and temp DB/data. Verify exact units, chronology, costs once, lineage bytes and transactional failure recovery. Never invent evidence from a previous SHA. No required skipped tests hidden in PASS; record environment, command, exit and source SHA.
+
+Use risk-based verification instead of repeating the largest suite after every small edit:
+
+1. **Focused gate — every behavior change:** targeted RED/GREEN tests, affected lint/static checks, and diff check.
+2. **Affected-subsystem gate — high-risk/shared changes:** relevant integration, negative/failure, persistence/recovery and contract tests.
+3. **Repository/release gate — integration checkpoint or release candidate:** full required suite, security/recovery/release validators. Also run this earlier when a sprint changes shared schemas, ledger/risk/OMS behavior, migrations, public interfaces, central configuration or another contract with broad blast radius.
+
+Follow `docs/specs/20-testing-strategy.md` when it requires a stronger gate. Docs-only work uses planning validator and diff-check.
+
+A regression test is required for a behavioral defect, safety/security invariant, accounting/persistence/state-machine defect or public contract failure. It is not mandatory merely for naming, formatting, comments, docs-only cleanup or another non-behavioral Minor finding.
 
 ## Review and done
 
-Implementation owner self-reviews but cannot final-approve own work. Submit committed SHA and `docs/sprints/handoffs/<ID>-HANDOFF.md`. Reviewer independently checks spec AND quality, attempts sprint-specific negative cases and records Critical/Important/Minor findings. Critical/Important block DONE. Fix only scoped findings, re-review exact new SHA; max five rounds then BLOCKED with preserved evidence. No automatic counter reset by changing agents. If independent reviewer unavailable, state REVIEW pending honestly.
+Implementation owner self-reviews but cannot final-approve own work. Submit committed SHA and `docs/sprints/handoffs/<ID>-HANDOFF.md`.
+
+The first independent review is the single comprehensive review pass for that SHA. The reviewer must inspect the full scoped diff, spec and quality surface and report all currently observable findings together; do not intentionally drip-feed findings across rounds.
+
+Severity policy:
+
+- **Critical:** safety/security, data corruption, wrong accounting/chronology, order/risk/recovery bypass, or another defect that can invalidate system safety. Blocks DONE.
+- **Important:** acceptance/public-contract failure, realistic production failure, missing required behavioral evidence, persistence/state error or material correctness defect. Blocks DONE.
+- **Minor:** cleanup, naming, style, non-critical duplication, optional test/docs polish or micro-optimization. Does not block DONE; record it as follow-up/backlog unless the sprint explicitly makes it an acceptance requirement.
+
+After the first review, freeze the accepted blocking set (Critical + Important) for that reviewed SHA. The implementer fixes all accepted blocking findings in one batch where practical and returns one new SHA.
+
+Re-review is **delta verification**, not a second full audit. It verifies prior blocking findings, their regression evidence and adjacent contracts touched by the fix. A new blocking finding during delta verification is allowed only when it is caused by the fix or is a newly discovered Critical defect that proves the prior acceptance/safety verdict invalid. Unrelated new Important/Minor observations become backlog or a separate change request instead of reopening the sprint.
+
+Normal sprints get one fix cycle after the comprehensive review. Safety/security/accounting/ledger/risk/OMS/reconciliation/migration/shared-contract work may receive one additional emergency fix cycle when the coordinator records why it is necessary. If blocking findings remain after the allowed cycle(s), set BLOCKED and request root-cause/redesign review instead of stacking patches. Changing agents does not reset the cycle count.
 
 Coordinator marks DONE only with evidence and independent PASS, recalculates READY and updates projections. For historical imports, provenance is explicitly qualified and unavailable reviewer identity is never fabricated. No merge/push/deploy unless authorized by task context; branches and commits alone are not remote backups.
 
