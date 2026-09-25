@@ -8,13 +8,33 @@ Inputs: validated sprint manifest, requested portfolio, working-tree ownership a
 
 ## Scheduler rules for a future implementation
 
-Reconcile manifest dependency status once before assignment. Batch READY sprints with DONE dependencies when paths do not overlap; assign one owner per sprint and reserve shared paths to one writer. Keep the current checkout by default; use a worktree only when isolation is needed. A reviewer must differ from implementation authors. Inspect and preserve WIP before reassignment. Avoid lease/heartbeat machinery unless an actual concurrent coordinator needs it.
+Reconcile manifest dependency status before assignment. A claim includes sprint_id, owner_id, reviewer_id, branch/worktree, base_sha, allowed_paths, lease_generation, heartbeat and fix_cycle. Allow one implementation owner per sprint; reserve overlapping paths. A reviewer must differ from implementation author. Lease loss requires inspection/preservation of WIP before reassignment. Fencing prevents stale owner from changing coordinator state.
 
-Schedule one independent review at the end of the implementation batch, with per-sprint acceptance results on the exact batch SHA. On CHANGES_REQUESTED increment the round and return scoped fixes. At five unsuccessful rounds set BLOCKED and preserve evidence. After PASS, recompute readiness once; do not recursively run unrelated optional tracks. Data/compute budget and owner activation remain independent admission checks.
+A sprint is one reviewable unit, not one mandatory agent session. After a committed handoff, the implementation owner may claim a different independent READY sprint while the previous sprint is being reviewed, provided dependency and shared-path locks allow it.
+
+When work reaches REVIEW, schedule one comprehensive independent review for the exact code SHA. The reviewer consolidates all currently observable Critical/Important/Minor findings. Critical + Important form the frozen blocking set; Minor is non-blocking unless acceptance explicitly requires it.
+
+On CHANGES_REQUESTED, return the full frozen blocking set to the owner for one batched fix. The next reviewer action is DELTA_REVIEW: verify those fixes and adjacent contracts touched by them, not another unrestricted audit.
+
+Normal sprint: maximum one fix cycle. Safety/security/accounting/ledger/risk/OMS/reconciliation/migration/shared-contract work may receive one coordinator-authorized emergency second cycle with a recorded reason. If blockers remain after the allowed cycle(s), set BLOCKED, preserve evidence and request root-cause/redesign review. Never reset the cycle by changing agents.
+
+A new blocker discovered during DELTA_REVIEW is accepted only when introduced by the fix or when it is a newly discovered Critical defect that invalidates the previous acceptance/safety verdict. Other new Important/Minor observations are recorded as backlog/change request.
+
+On DONE recompute descendants, never recursively run every unblocked optional track. Data/compute budget and owner activation remain independent admission checks.
+
+## Verification scheduling
+
+Use risk-based checks:
+
+- focused tests/static/diff checks for every change;
+- affected subsystem/negative/recovery checks for high-risk or shared-contract changes;
+- full repository/security/release suite at integration checkpoints or release candidate qualification, and earlier when blast radius requires it.
+
+Do not schedule the largest suite after every local patch by default.
 
 ## Idempotency and audit
 
-Review key = sprint + exact code SHA + reviewer identity. Same report cannot mark a different SHA done. Record only decisions needed to explain ownership, review and status changes. No auto-merge. If no callable agent runner exists, follow workflows manually; documentation is not a claim of background execution.
+Assignment key = sprint + base SHA + claim generation. Review key = sprint + exact code SHA + reviewer identity + review phase. Same report cannot mark a different SHA done. Record all transitions, time and reason. No auto-merge. If no callable agent runner exists, follow workflows manually; documentation is not a claim of background execution.
 
 ## Implementation boundary
 

@@ -2,13 +2,21 @@
 
 Apply this baseline before any workflow-specific step.
 
-1. Check `AGENTS.md`, manifest and `git status` once. Read the chosen sprint, relevant references, dependency handoffs and affected code; reuse context already read.
-2. Batch READY sprints only when dependencies are DONE and paths are independent. Assign one owner per sprint and one writer per shared path. Preserve user WIP (`dashboard.pen`, `DESIGN.md`, unrelated changes); never reset, clean, overwrite or stage it.
-3. Work in the current checkout by default. Use a worktree only when isolation is needed or requested. Start without a separate plan/claim dossier when scope is clear.
-4. Production Main is live. Control-plane tasks are read-only: no live credentials, orders, withdrawals, activation, host changes or runtime DB mutation.
-5. Code: add the smallest behavior regression, show RED when practical, make the root fix, then run focused GREEN and relevant lint/regression checks. Run broad suites for shared contracts, schema/migration or release changes. Docs: validate planning files only when changed and run `git diff --check`.
-6. Commit coherent passing slices promptly. Keep a concise handoff with exact SHA, commands/results, scope, review state and remaining gates. Missing evidence is `REVIEW` or `BLOCKED`, never PASS.
-7. An independent reviewer checks the exact final batch SHA against each sprint's acceptance criteria and risk-specific negative cases. Implementers cannot self-approve or mark `DONE`.
-8. Never bypass dependencies, manufacture status/reviewer identity, expand scope, or merge/push/deploy without explicit authorization. Do not ask again for authorization already given.
+1. Read `AGENTS.md`, the manifest, the chosen sprint/spec, dependency handoffs, and only affected code.
+2. Inspect `git status` and worktrees. Preserve user WIP (`dashboard.pen`, `DESIGN.md`, unrelated changes); never reset, clean, overwrite, or stage another owner's paths.
+3. Confirm one bounded owner, branch/worktree, base SHA, reviewer, dependencies, external gates, and allowed paths. The manifest is the only status authority.
+4. Keep production paper/shadow-only: no credentials, real orders, withdrawals, live activation, uncontrolled network, or runtime database mutation.
+5. Code: write a behavior RED test, implement the smallest root fix, run focused GREEN tests, then the risk-appropriate affected checks. Docs: run planning validator and `git diff --check`.
+6. Verification is risk-based:
+   - focused checks for every change;
+   - affected subsystem/negative/recovery checks for high-risk or shared-contract changes;
+   - full repository/release checks at integration/release checkpoints or earlier when the blast radius is broad.
+   Do not rerun an expensive full suite after every local patch unless the testing strategy or affected contract requires it.
+7. Record exact command, exit, environment, source SHA, changed paths, assumptions, failures, and remaining gates. Missing evidence is `REVIEW` or `BLOCKED`, never PASS.
+8. Implementers stop at acceptance criteria and submit an exact-SHA handoff; they cannot self-approve or mark `DONE`. Reviewers independently falsify spec and quality.
+9. The first review is comprehensive and consolidated. Critical/Important findings block; Minor findings do not block unless explicitly required by acceptance. Accepted blocking findings are fixed as one batch where practical.
+10. Re-review is delta verification of the fix and adjacent touched contracts, not another unrestricted audit. New unrelated Important/Minor observations become backlog/change request.
+11. Normal work gets one fix cycle. Safety/security/accounting/ledger/risk/OMS/reconciliation/migration/shared-contract work may receive one coordinator-authorized emergency second cycle. Persistent failure becomes `BLOCKED` for root redesign.
+12. Never bypass dependencies, manufacture status/reviewer identity, expand scope, or merge/push/deploy without explicit authorization.
 
-Shared stop conditions: unsafe capability, unknown ownership, dirty-path conflict, missing dependency, missing evidence, required external resource, or any test that cannot be reproduced honestly.
+Shared stop conditions: unsafe capability, unknown ownership, dirty-path conflict, missing dependency, missing evidence, required external resource, or any required test that cannot be reproduced honestly.
