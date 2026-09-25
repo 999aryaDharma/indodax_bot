@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.ledger import Position
 from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.control.approval import (
@@ -38,7 +39,12 @@ from indodax_lab.execution.reconciliation import ReconciliationReport
 from indodax_lab.market.gateway import MarketGateway
 from indodax_lab.market.health import UNSAFE_TRADING_STATES, MarketHealthState
 from indodax_lab.market.quality import TickerSnapshot
-from indodax_lab.portfolio.constructor import PortfolioConstructor
+from indodax_lab.portfolio.constructor import (
+    AllocationPolicy,
+    PendingReservation,
+    PortfolioConstructor,
+    PortfolioState,
+)
 from indodax_lab.risk.engine import RiskEngine
 
 logger = logging.getLogger("trading_pipeline")
@@ -78,6 +84,11 @@ class TradingPipeline:
         authority_gate: AuthorityGate | None = None,
         require_execution_snapshot: bool = False,
         release_ref: str = "release_cand_001",
+        allocation_policy: AllocationPolicy | None = None,
+        estimated_fee_rate: Decimal | None = None,
+        fee_precision: int | None = None,
+        quantity_precision: int | None = None,
+        max_risk_amount_by_strategy: Mapping[str, Decimal] | None = None,
     ) -> None:
         self.mode_store = mode_store
         self.mode = mode_store.get_mode() if mode_store is not None else mode
@@ -95,6 +106,11 @@ class TradingPipeline:
         )
         self.require_execution_snapshot = require_execution_snapshot
         self.release_ref = release_ref
+        self.allocation_policy = allocation_policy
+        self.estimated_fee_rate = estimated_fee_rate
+        self.fee_precision = fee_precision
+        self.quantity_precision = quantity_precision
+        self.max_risk_amount_by_strategy = dict(max_risk_amount_by_strategy or {})
 
         # Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter
         if self.mode == ExecutionMode.SHADOW and isinstance(
@@ -277,13 +293,99 @@ class TradingPipeline:
             elif pair not in mark_prices:
                 mark_prices[pair] = Decimal("0")
 
-        # 3. Portfolio constructor translates intents and positions into rebalance intents
-        target_exposures = self.constructor.construct_exposures(
-            intents, current_positions, mark_prices
+        # Adapt this cycle to one typed snapshot; reject conflicting cash authorities.
+        marked_positions = sum(
+            (position.base_qty * mark_prices.get(pair.lower(), Decimal("0"))
+             for pair, position in current_positions.items()),
+            Decimal("0"),
         )
-        rebalance_intents = self.constructor.generate_rebalance_intents(
-            target_exposures, decision_ts=now
-        )
+        cash_balance = current_equity - marked_positions
+        if cash_balance < 0:
+            return PipelineStepReport(
+                mode=self.mode, evaluated_at=now, intents_evaluated=len(intents),
+                approved_count=0, rejected_reasons=("PORTFOLIO_STATE_INVALID",),
+            )
+        nonterminal = self.oms_store.load_nonterminal_orders()
+        reservations: list[PendingReservation] = []
+        for order in nonterminal:
+            remaining = order.desired_qty - order.filled_qty
+            if remaining <= 0:
+                continue
+            price = order.limit_price or mark_prices.get(order.pair.lower())
+            if price is None or price <= 0:
+                return PipelineStepReport(
+                    mode=self.mode, evaluated_at=now, intents_evaluated=len(intents),
+                    approved_count=0, rejected_reasons=("PENDING_ORDER_MARK_MISSING",),
+                )
+            notional = remaining * price
+            fee = (
+                (notional * self.estimated_fee_rate).quantize(
+                    Decimal(10) ** -self.fee_precision
+                )
+                if order.side == OrderSide.BUY
+                and self.estimated_fee_rate is not None
+                and self.fee_precision is not None
+                else Decimal("0")
+            )
+            reservations.append(PendingReservation(
+                order_id=order.internal_order_id,
+                strategy_id="unknown",
+                pair=order.pair,
+                side=order.side,
+                remaining_qty=remaining,
+                reserved_notional=notional,
+                reserved_fee=fee,
+            ))
+        for proposal in self.approval_store.get_pending(now=now):
+            order = proposal.order
+            remaining = order.desired_qty - order.filled_qty
+            if remaining <= 0:
+                continue
+            price = order.limit_price or mark_prices.get(order.pair.lower())
+            if price is None or price <= 0:
+                return PipelineStepReport(
+                    mode=self.mode, evaluated_at=now, intents_evaluated=len(intents),
+                    approved_count=0, rejected_reasons=("PENDING_PROPOSAL_MARK_MISSING",),
+                )
+            notional = remaining * price
+            fee = (
+                (notional * self.estimated_fee_rate).quantize(
+                    Decimal(10) ** -self.fee_precision
+                )
+                if order.side == OrderSide.BUY
+                and self.estimated_fee_rate is not None
+                and self.fee_precision is not None
+                else Decimal("0")
+            )
+            reservations.append(PendingReservation(
+                order_id=f"proposal:{proposal.proposal_id}",
+                strategy_id="unknown",
+                pair=order.pair,
+                side=order.side,
+                remaining_qty=remaining,
+                reserved_notional=notional,
+                reserved_fee=fee,
+            ))
+        try:
+            state = PortfolioState(
+                valuation_currency="IDR",
+                cash_balance=cash_balance,
+                positions=tuple(current_positions.values()),
+                mark_prices=mark_prices,
+                reservations=tuple(reservations),
+                revision=0,
+            )
+            if state.available_cash != available_cash:
+                raise ValueError("PORTFOLIO_CASH_MISMATCH")
+            ordered_intents = self.constructor.construct_orders(
+                intents, state, allocation_policy=self.allocation_policy
+            )
+        except (ValueError, TypeError) as exc:
+            return PipelineStepReport(
+                mode=self.mode, evaluated_at=now, intents_evaluated=len(intents),
+                approved_count=0,
+                rejected_reasons=(str(exc) or "PORTFOLIO_STATE_INVALID",),
+            )
 
         # 4. Assess intents against RiskEngine
         approved_orders: list[OmsOrder] = []
@@ -292,15 +394,18 @@ class TradingPipeline:
         pending_proposals: list[PendingProposal] = []
         kill_switch_tripped = False
 
-        for reb_intent in rebalance_intents:
+        for reb_intent in ordered_intents:
             assessment = self.risk_engine.assess_intent(
                 reb_intent,
-                current_equity=current_equity,
-                current_positions=current_positions,
-                mark_prices=mark_prices,
+                portfolio_state=state,
                 evaluation_time=now,
-                available_cash=available_cash,
                 market_health=market_health,
+                estimated_fee_rate=self.estimated_fee_rate,
+                fee_precision=self.fee_precision,
+                quantity_precision=self.quantity_precision,
+                max_risk_amount=self.max_risk_amount_by_strategy.get(
+                    reb_intent.strategy_id
+                ),
             )
 
             if not assessment.approved:
@@ -319,6 +424,35 @@ class TradingPipeline:
                 created_at=now,
             )
             approved_orders.append(oms_order)
+            reservation_fee = (
+                (assessment.approved_notional * self.estimated_fee_rate).quantize(
+                    Decimal(10) ** -self.fee_precision
+                )
+                if reb_intent.side == OrderSide.BUY
+                and self.estimated_fee_rate is not None
+                and self.fee_precision is not None
+                else Decimal("0")
+            )
+            reservation_risk = self.max_risk_amount_by_strategy.get(
+                reb_intent.strategy_id, Decimal("0")
+            )
+            state = PortfolioState(
+                valuation_currency=state.valuation_currency,
+                cash_balance=state.cash_balance,
+                positions=state.positions,
+                mark_prices=state.mark_prices,
+                reservations=state.reservations + (PendingReservation(
+                    order_id=oms_order.internal_order_id,
+                    strategy_id=reb_intent.strategy_id or "unknown",
+                    pair=reb_intent.pair,
+                    side=reb_intent.side,
+                    remaining_qty=assessment.approved_qty,
+                    reserved_notional=assessment.approved_notional,
+                    reserved_fee=reservation_fee,
+                    reserved_risk=reservation_risk,
+                ),),
+                revision=state.revision + 1,
+            )
 
             # Route by execution mode:
             if self.mode == ExecutionMode.READ_ONLY:

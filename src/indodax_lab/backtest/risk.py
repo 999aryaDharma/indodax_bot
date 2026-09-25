@@ -241,12 +241,14 @@ class PortfolioRiskManager:
         fee_precision: int = 8,
         quantity_precision: int = 8,
         pending_exposure_by_pair: Mapping[str, Decimal] | None = None,
+        pending_sell_qty_by_pair: Mapping[str, Decimal] | None = None,
         max_risk_amount: Decimal | None = None,
     ) -> RiskAssessmentResult:
         """Assess order sizing and enforce loss / drawdown circuit breakers."""
         eval_utc = _ensure_utc(evaluation_time, "evaluation_time")
         price = mark_prices.get(intent.pair, intent.limit_price)
         pending_exposure_by_pair = pending_exposure_by_pair or {}
+        pending_sell_qty_by_pair = pending_sell_qty_by_pair or {}
         values = [current_equity, available_cash, estimated_fee_rate, *mark_prices.values(),
                   *pending_exposure_by_pair.values()]
         if (any(not v.is_finite() or v < 0 for v in values)
@@ -264,7 +266,12 @@ class PortfolioRiskManager:
         # Reductions are evaluated before entry-only circuit breakers.
         if intent.side == OrderSide.SELL:
             pos = current_positions.get(intent.pair)
-            qty = min(intent.desired_qty, pos.base_qty if pos else Decimal("0"))
+            available_qty = max(
+                Decimal("0"),
+                (pos.base_qty if pos else Decimal("0"))
+                - pending_sell_qty_by_pair.get(intent.pair.lower(), Decimal("0")),
+            )
+            qty = min(intent.desired_qty, available_qty)
             qty = qty.quantize(Decimal(10) ** -quantity_precision, rounding=ROUND_DOWN)
             if qty <= 0:
                 return RiskAssessmentResult(approved=False, reason_code="NO_POSITION_TO_SELL")
@@ -342,6 +349,10 @@ class PortfolioRiskManager:
             # Sell reduces exposure, verify against held position
             pos = current_positions.get(intent.pair)
             held_qty = pos.base_qty if pos else Decimal("0")
+            held_qty = max(
+                Decimal("0"),
+                held_qty - pending_sell_qty_by_pair.get(intent.pair.lower(), Decimal("0")),
+            )
             if held_qty <= Decimal("0"):
                 return RiskAssessmentResult(
                     approved=False,

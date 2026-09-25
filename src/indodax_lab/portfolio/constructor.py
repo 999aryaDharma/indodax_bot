@@ -91,6 +91,16 @@ class PendingReservation(BaseModel):
         return self
 
 
+class PortfolioPosition(BaseModel):
+    """Immutable holding copied into a portfolio revision."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pair: str
+    base_qty: Decimal
+    cost_basis: Decimal
+
+
 class PortfolioState(BaseModel):
     """Immutable financial snapshot; cash is ledger cash before pending reservations."""
 
@@ -98,7 +108,7 @@ class PortfolioState(BaseModel):
 
     valuation_currency: str
     cash_balance: Decimal
-    positions: tuple[Position, ...] = ()
+    positions: tuple[PortfolioPosition, ...] = ()
     mark_prices: tuple[tuple[str, Decimal], ...] = ()
     reservations: tuple[PendingReservation, ...] = ()
     revision: int = Field(ge=0, strict=True)
@@ -122,7 +132,15 @@ class PortfolioState(BaseModel):
     @field_validator("positions", mode="before")
     @classmethod
     def normalize_positions(cls, value: Any) -> Any:
-        return tuple(value.values()) if isinstance(value, Mapping) else value
+        rows = tuple(value.values()) if isinstance(value, Mapping) else value
+        if rows is None:
+            return rows
+        return tuple(
+            PortfolioPosition(pair=row.pair, base_qty=row.base_qty, cost_basis=row.cost_basis)
+            if isinstance(row, Position)
+            else row
+            for row in rows
+        )
 
     @field_validator("mark_prices", mode="before")
     @classmethod
@@ -154,6 +172,10 @@ class PortfolioState(BaseModel):
             raise ValueError("MISSING_POSITION_MARK")
         if any(r.side == OrderSide.BUY and r.pair not in marks for r in self.reservations):
             raise ValueError("MISSING_RESERVATION_MARK")
+        held = {pair: position.base_qty for pair, position in positions.items()}
+        for pair, reserved_qty in self.pending_sell_qty_by_pair.items():
+            if reserved_qty > held.get(pair, Decimal("0")):
+                raise ValueError("SELL_RESERVATIONS_EXCEED_POSITION")
         if self.reserved_cash > self.cash_balance:
             raise ValueError("RESERVATIONS_EXCEED_CASH")
         return self
@@ -203,6 +225,16 @@ class PortfolioState(BaseModel):
                     risk.get(reservation.strategy_id, Decimal("0")) + reservation.reserved_risk
                 )
         return risk
+
+    @property
+    def pending_sell_qty_by_pair(self) -> dict[str, Decimal]:
+        quantities: dict[str, Decimal] = {}
+        for reservation in self.reservations:
+            if reservation.side == OrderSide.SELL:
+                quantities[reservation.pair] = (
+                    quantities.get(reservation.pair, Decimal("0")) + reservation.remaining_qty
+                )
+        return quantities
 
     @property
     def equity(self) -> Decimal:
@@ -391,7 +423,15 @@ class PortfolioConstructor:
             )
             selected.append(winner)
         return tuple(
-            sorted(selected, key=lambda item: (item.pair.lower(), item.strategy_id, item.intent_id))
+            sorted(
+                selected,
+                key=lambda item: (
+                    -priorities.get(item.strategy_id, 0),
+                    item.strategy_id,
+                    item.intent_id,
+                    item.pair.lower(),
+                ),
+            )
         )
 
     def generate_rebalance_intents(

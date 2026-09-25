@@ -75,6 +75,10 @@ def pipeline_fixture(tmp_path: Path):
         order_router=order_router,
         approval_store=approval_store,
         autonomous_limits=autonomous_limits,
+        estimated_fee_rate=Decimal("0.003"),
+        fee_precision=8,
+        quantity_precision=8,
+        max_risk_amount_by_strategy={"agent-c07": Decimal("4000")},
     )
 
     return pipeline, fake_venue, oms_store, approval_store, risk_engine, ticker
@@ -164,6 +168,88 @@ def test_pipeline_shadow_mode_routes_to_venue(pipeline_fixture) -> None:
     assert submitted.venue_order_id in fake_venue.orders
 
 
+def test_pipeline_step_uses_typed_state_and_fee_aware_sizing(pipeline_fixture) -> None:
+    pipeline, _, _, _, _, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    intent = SignalIntent(
+        intent_id="sig_fee_aware",
+        decision_ts=NOW,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.2"),
+        limit_price=Decimal("1000000000"),
+        stop_loss=Decimal("990000000"),
+        time_in_force="GTC",
+        strategy_id="agent-c07",
+    )
+
+    report = pipeline.step(
+        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+
+    assert len(report.submitted_orders) == 1
+    order = report.submitted_orders[0]
+    assert order.time_in_force == "GTC"
+    notional = order.desired_qty * Decimal("1000000000")
+    fee = (notional * Decimal("0.003")).quantize(Decimal("0.00000001"))
+    exit_fee = (
+        order.desired_qty * Decimal("990000000") * Decimal("0.003")
+    ).quantize(Decimal("0.00000001"))
+    stop_risk = order.desired_qty * Decimal("10000000") + fee + exit_fee
+    assert stop_risk <= Decimal("4000")
+
+
+def test_pipeline_pending_proposal_reserves_cash_until_decision(pipeline_fixture) -> None:
+    pipeline, _, _, _, _, ticker = pipeline_fixture
+    pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.set_mode(ExecutionMode.MANUAL_APPROVAL)
+    intent = SignalIntent(
+        intent_id="sig_reserve",
+        decision_ts=NOW,
+        pair="btc_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"),
+        limit_price=Decimal("1000000000"),
+        stop_loss=Decimal("990000000"),
+        strategy_id="agent-c07",
+    )
+    first = pipeline.step(
+        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+    assert len(first.pending_proposals) == 1
+
+    second = pipeline.step(
+        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+
+    assert second.approved_count == 0
+    assert second.rejected_reasons == ("PORTFOLIO_CASH_MISMATCH",)
+
+
+def test_pipeline_without_current_fee_evidence_blocks_buy(pipeline_fixture) -> None:
+    pipeline, _, _, _, _, ticker = pipeline_fixture
+    pipeline.estimated_fee_rate = None
+    intent = SignalIntent(
+        intent_id="sig_no_fee", decision_ts=NOW, pair="btc_idr", side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"), limit_price=Decimal("1000000000"),
+    )
+
+    report = pipeline.step(
+        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+
+    assert report.approved_count == 0
+    assert report.rejected_reasons == ("btc_idr:COST_AND_PRECISION_REQUIRED",)
+
+
 def test_pipeline_manual_approval_queues_proposal(pipeline_fixture) -> None:
     pipeline, _, _, approval_store, _, ticker = pipeline_fixture
     pipeline.set_mode(ExecutionMode.SHADOW)
@@ -239,7 +325,7 @@ def test_pipeline_autonomous_limited_success_and_breach(pipeline_fixture) -> Non
     report_breach = pipeline.step(
         [intent_breach],
         current_positions={},
-        available_cash=Decimal("100000000"),
+        available_cash=Decimal("99899700"),
         current_equity=Decimal("100000000"),
         now=NOW,
         ticker_overrides={"btc_idr": ticker},

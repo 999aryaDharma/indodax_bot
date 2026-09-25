@@ -2,8 +2,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from indodax_lab.backtest.costs import OrderRole, OrderSide
+from indodax_lab.backtest.ledger import Position
 from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.portfolio.constructor import AllocationPolicy, PortfolioConstructor, PortfolioState
 
@@ -85,6 +87,40 @@ def test_rp_03_0_explicit_policy_arbitrates_same_pair_deterministically() -> Non
 
     assert constructor.construct_orders((buy, sell), state, policy) == (sell,)
     assert constructor.construct_orders((sell, buy), state, policy) == (sell,)
+
+
+def test_rp_03_0_policy_priority_orders_winners_across_pairs() -> None:
+    timestamp = datetime(2025, 1, 1, tzinfo=UTC)
+    intents = (
+        SignalIntent(intent_id="low", decision_ts=timestamp, pair="btc_idr", side=OrderSide.BUY,
+                     desired_qty=Decimal("1"), strategy_id="low"),
+        SignalIntent(intent_id="high", decision_ts=timestamp, pair="sol_idr", side=OrderSide.BUY,
+                     desired_qty=Decimal("1"), strategy_id="high"),
+    )
+    state = PortfolioState(
+        valuation_currency="IDR", cash_balance=Decimal("10"),
+        mark_prices={"btc_idr": Decimal("1"), "sol_idr": Decimal("1")}, revision=0,
+    )
+    policy = AllocationPolicy(
+        policy_id="priority-v1", version="1", strategy_priorities={"low": 0, "high": 10}
+    )
+
+    result = PortfolioConstructor().construct_orders(intents, state, policy)
+
+    assert [intent.intent_id for intent in result] == ["high", "low"]
+
+
+def test_portfolio_snapshot_detaches_and_freezes_position_inputs() -> None:
+    position = Position(pair="btc_idr", base_qty=Decimal("10"), cost_basis=Decimal("500"))
+    state = PortfolioState(
+        valuation_currency="IDR", cash_balance=Decimal("0"), positions=(position,),
+        mark_prices={"btc_idr": Decimal("100")}, revision=1,
+    )
+    position.base_qty = Decimal("20")
+
+    assert state.equity == Decimal("1000")
+    with pytest.raises(ValidationError):
+        state.positions[0].base_qty = Decimal("20")
 
 
 def test_rp_03_0_construct_orders_rejects_unarbitrated_pair_conflict() -> None:

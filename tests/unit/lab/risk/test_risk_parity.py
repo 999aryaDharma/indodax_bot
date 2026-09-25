@@ -200,3 +200,44 @@ def test_state_entry_rejects_duplicate_financial_authority() -> None:
 
     assert result.approved is False
     assert result.reason_code == "DUPLICATE_PORTFOLIO_STATE"
+
+
+def test_pending_sell_reservation_cannot_sell_inventory_twice() -> None:
+    state = PortfolioState(
+        valuation_currency="IDR",
+        cash_balance=Decimal("100000"),
+        positions=(Position(pair="btc_idr", base_qty=Decimal("10"), cost_basis=Decimal("100000")),),
+        mark_prices={"btc_idr": Decimal("10000")},
+        reservations=(PendingReservation(
+            order_id="sell-1", strategy_id="agent-c07", pair="btc_idr", side=OrderSide.SELL,
+            remaining_qty=Decimal("10"), reserved_notional=Decimal("100000"),
+        ),),
+        revision=2,
+    )
+    sell = SignalIntent(
+        intent_id="sell-2", decision_ts=NOW, pair="btc_idr", side=OrderSide.SELL,
+        desired_qty=Decimal("10"), strategy_id="agent-c07",
+    )
+
+    result = RiskEngine(PortfolioRiskManager(_policy(), state.equity, NOW)).assess_intent(
+        sell, portfolio_state=state, evaluation_time=NOW
+    )
+
+    assert result.approved is False
+    assert result.approved_qty == Decimal("0")
+    assert result.reason_code == "NO_POSITION_TO_SELL"
+
+
+def test_portfolio_rejects_sell_reservations_above_inventory() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="SELL_RESERVATIONS_EXCEED_POSITION"):
+        PortfolioState(
+            valuation_currency="IDR", cash_balance=Decimal("0"),
+            positions=(Position(pair="btc_idr", base_qty=Decimal("1"), cost_basis=Decimal("1")),),
+            mark_prices={"btc_idr": Decimal("1")},
+            reservations=(PendingReservation(
+                order_id="sell-1", strategy_id="agent-c07", pair="btc_idr",
+                side=OrderSide.SELL, remaining_qty=Decimal("2"), reserved_notional=Decimal("2"),
+            ),), revision=1,
+        )

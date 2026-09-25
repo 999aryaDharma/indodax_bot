@@ -388,6 +388,11 @@ class RiskEngine:
             fee_precision=fee_precision,
             quantity_precision=quantity_precision,
             pending_exposure_by_pair=pending_exposure_by_pair,
+            pending_sell_qty_by_pair=(
+                portfolio_state.pending_sell_qty_by_pair
+                if portfolio_state is not None
+                else None
+            ),
             max_risk_amount=max_risk_amount,
         )
 
