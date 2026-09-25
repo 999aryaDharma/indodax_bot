@@ -4,13 +4,41 @@
 
 Before editing, coordinator records sprint ID, owner, branch/worktree, base SHA, requested paths and review owner in a handoff/work log. Claims are exclusive for that sprint. Shared paths (`sprint-manifest.json`, main.py, telegram_bot.py, pyproject.toml, CI, central registry and migrations) need explicit single-writer ownership even when DAG nodes are independent. Actual implementation of a lock service is outside this documentation task.
 
+A sprint is one independently reviewable unit, not necessarily one whole agent session. After an owner commits a complete handoff, that owner may claim another independent READY sprint while the prior sprint is under review when the coordinator confirms there is no dependency or shared-path conflict.
+
 ## Two-agent lifecycle
 
-Implementer claims READY → IN_PROGRESS; commits scoped work → REVIEW with exact SHA packet. Reviewer returns PASS or CHANGES_REQUESTED with reproducible findings. Implementer fixes only those contracts and updates SHA/evidence. Reviewer verifies new diff and affected invariants. Coordinator releases claim and marks DONE only after final PASS. A third person/agent can coordinate; cannot substitute self-review for independent review.
+Default lifecycle:
+
+```text
+READY
+→ IN_PROGRESS
+→ REVIEW
+→ PASS → DONE
+          or
+→ CHANGES_REQUESTED
+→ one batched fix
+→ DELTA_REVIEW
+→ PASS → DONE
+```
+
+The first independent review is comprehensive and must consolidate all observable findings for the exact reviewed SHA. Critical and Important findings form the frozen blocking set; Minor findings are non-blocking follow-up unless the sprint explicitly makes them acceptance requirements.
+
+The implementer fixes the frozen blocking set in one batch where practical and updates SHA/evidence. Re-review is delta verification: verify the frozen findings and adjacent contracts touched by the fix, not another unrestricted sprint audit.
+
+A new blocker during delta review is valid only when it was introduced by the fix or is a newly discovered Critical defect proving the previous acceptance/safety verdict invalid. Unrelated new Important/Minor observations become backlog/change request.
+
+Normal sprint: one fix cycle. Safety/security/accounting/ledger/risk/OMS/reconciliation/migration/shared-contract sprint: coordinator may authorize one emergency second cycle with recorded reason. Exhausted cycles with unresolved blockers → BLOCKED and root-cause/redesign review. Changing owner/reviewer does not reset the cycle count.
+
+Coordinator releases claim and marks DONE only after independent PASS. A third person/agent can coordinate; cannot substitute self-review for independent review.
+
+## Parallel two-agent use
+
+Codex and Antigravity should be staggered where the DAG and path ownership allow it: while reviewer B reviews sprint A, implementer A may claim a different independent READY sprint. Cross-review is allowed; self-approval is not. Shared-file single-writer ownership always overrides theoretical parallelism.
 
 ## Interruptions and conflicts
 
-If owner disappears, preserve dirty worktree and record last heartbeat/time; do not reset/clean. Coordinator may reassign after inspecting state, but new owner resumes from recorded WIP and same fix-round count. Merge conflicts require understanding both intended behaviors and rerunning affected acceptance, never blindly ours/theirs. If dependency changes while work runs, rebase review target deliberately and reverify.
+If owner disappears, preserve dirty worktree and record last heartbeat/time; do not reset/clean. Coordinator may reassign after inspecting state, but new owner resumes from recorded WIP and same fix-cycle count. Merge conflicts require understanding both intended behaviors and rerunning affected acceptance, never blindly ours/theirs. If dependency changes while work runs, rebase review target deliberately and reverify.
 
 ## Status versus artifacts
 
