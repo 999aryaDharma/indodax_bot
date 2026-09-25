@@ -111,6 +111,9 @@ def test_trading_pipeline_execute_approved_proposal(tmp_path: Path) -> None:
         oms_store=oms_store,
         order_router=router,
         approval_store=store,
+        estimated_fee_rate=Decimal("0.003"),
+        fee_precision=8,
+        quantity_precision=8,
     )
 
     order = OmsStateMachine.create(

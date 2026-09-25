@@ -222,14 +222,22 @@ def test_pipeline_pending_proposal_reserves_cash_until_decision(pipeline_fixture
     )
     assert len(first.pending_proposals) == 1
 
+    free_cash = Decimal("99899700")
+    empty = pipeline.step(
+        [], current_positions={}, available_cash=free_cash,
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+    assert empty.rejected_reasons == ()
+
     second = pipeline.step(
-        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        [intent], current_positions={}, available_cash=free_cash,
         current_equity=Decimal("100000000"), now=NOW,
         ticker_overrides={"btc_idr": ticker},
     )
 
-    assert second.approved_count == 0
-    assert second.rejected_reasons == ("PORTFOLIO_CASH_MISMATCH",)
+    assert second.approved_count == 1
+    assert second.rejected_reasons == ()
 
 
 def test_pipeline_without_current_fee_evidence_blocks_buy(pipeline_fixture) -> None:
@@ -536,6 +544,20 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
         at=NOW + timedelta(seconds=1),
         token=token,
     )
+
+    from indodax_lab.control.authority import MissingEvidenceError
+
+    with pytest.raises(MissingEvidenceError, match="MISSING_APPROVED_INTENT_RISK_LINEAGE"):
+        pipeline.execute_approved_proposal(
+            proposal.proposal_id,
+            now=NOW + timedelta(seconds=2),
+            market_snapshot=pipeline.gateway.get_market_snapshot(
+                pair="btc_idr", as_of_utc=NOW + timedelta(seconds=2), ticker_override=ticker
+            ),
+            available_cash=Decimal("100000000"),
+            current_equity=Decimal("100000000"),
+        )
+    pipeline.max_risk_amount_by_strategy = {}
 
     clean_snapshot = pipeline.gateway.get_market_snapshot(
         pair="btc_idr", as_of_utc=NOW + timedelta(seconds=2), ticker_override=ticker

@@ -283,6 +283,8 @@ class RiskEngine:
         fee_precision: int | None = None,
         quantity_precision: int | None = None,
         max_risk_amount: Decimal | None = None,
+        pending_exposure_by_pair: Mapping[str, Decimal] | None = None,
+        pending_sell_qty_by_pair: Mapping[str, Decimal] | None = None,
     ) -> RiskAssessmentResult:
         """Evaluate intent across operational, market health, and financial risk constraints."""
         # 1. Operational kill switch
@@ -318,7 +320,14 @@ class RiskEngine:
         legacy_inputs_supplied = any(value is not None for value in (
             current_equity, current_positions, mark_prices, available_cash
         ))
-        pending_exposure_by_pair: Mapping[str, Decimal] = {}
+        if portfolio_state is not None and (
+            pending_exposure_by_pair is not None or pending_sell_qty_by_pair is not None
+        ):
+            return RiskAssessmentResult(
+                approved=False,
+                reason_code="DUPLICATE_RESERVATION_AUTHORITY",
+                rejection_reason="Pass reservations through PortfolioState only.",
+            )
         if portfolio_state is not None:
             if legacy_inputs_supplied:
                 return RiskAssessmentResult(
@@ -335,6 +344,7 @@ class RiskEngine:
             mark_prices = portfolio_state.mark_prices_by_pair
             available_cash = portfolio_state.available_cash
             pending_exposure_by_pair = portfolio_state.pending_exposure_by_pair
+            pending_sell_qty_by_pair = portfolio_state.pending_sell_qty_by_pair
             if intent.side == OrderSide.BUY and any(
                 value is None for value in (estimated_fee_rate, fee_precision, quantity_precision)
             ):
@@ -354,6 +364,8 @@ class RiskEngine:
                 reason_code="PORTFOLIO_STATE_REQUIRED",
                 rejection_reason="Financial state inputs are incomplete.",
             )
+        pending_exposure_by_pair = pending_exposure_by_pair or {}
+        pending_sell_qty_by_pair = pending_sell_qty_by_pair or {}
 
         if (
             max_risk_amount is not None
@@ -388,11 +400,7 @@ class RiskEngine:
             fee_precision=fee_precision,
             quantity_precision=quantity_precision,
             pending_exposure_by_pair=pending_exposure_by_pair,
-            pending_sell_qty_by_pair=(
-                portfolio_state.pending_sell_qty_by_pair
-                if portfolio_state is not None
-                else None
-            ),
+            pending_sell_qty_by_pair=pending_sell_qty_by_pair,
             max_risk_amount=max_risk_amount,
         )
 

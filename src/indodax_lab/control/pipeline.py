@@ -183,9 +183,8 @@ class TradingPipeline:
                 kill_switch_triggered=True,
             )
 
-        unknown_orders = [
-            o for o in self.oms_store.load_nonterminal_orders() if o.state == OmsOrderState.UNKNOWN
-        ]
+        nonterminal = self.oms_store.load_nonterminal_orders()
+        unknown_orders = [o for o in nonterminal if o.state == OmsOrderState.UNKNOWN]
         if unknown_orders:
             logger.critical(
                 "TradingPipeline: Found %d unresolved UNKNOWN orders in OMS. Tripping kill switch.",
@@ -272,7 +271,13 @@ class TradingPipeline:
         mark_prices: dict[str, Decimal] = dict(mark_prices_override or {})
         market_health = MarketHealthState.HEALTHY
 
-        pairs_to_check = {i.pair.lower() for i in intents} | {p.lower() for p in current_positions}
+        pending_proposals = self.approval_store.get_pending(now=now)
+        pairs_to_check = (
+            {i.pair.lower() for i in intents}
+            | {p.lower() for p in current_positions}
+            | {order.pair.lower() for order in nonterminal}
+            | {proposal.order.pair.lower() for proposal in pending_proposals}
+        )
         for pair in pairs_to_check:
             ticker_override = ticker_overrides.get(pair) if ticker_overrides else None
             try:
@@ -305,7 +310,6 @@ class TradingPipeline:
                 mode=self.mode, evaluated_at=now, intents_evaluated=len(intents),
                 approved_count=0, rejected_reasons=("PORTFOLIO_STATE_INVALID",),
             )
-        nonterminal = self.oms_store.load_nonterminal_orders()
         reservations: list[PendingReservation] = []
         for order in nonterminal:
             remaining = order.desired_qty - order.filled_qty
@@ -336,8 +340,11 @@ class TradingPipeline:
                 reserved_notional=notional,
                 reserved_fee=fee,
             ))
-        for proposal in self.approval_store.get_pending(now=now):
+        nonterminal_ids = {order.internal_order_id for order in nonterminal}
+        for proposal in pending_proposals:
             order = proposal.order
+            if order.internal_order_id in nonterminal_ids:
+                continue
             remaining = order.desired_qty - order.filled_qty
             if remaining <= 0:
                 continue
@@ -574,6 +581,7 @@ class TradingPipeline:
         market_snapshot: Any | None = None,
         max_slippage_bps: int = 100,
         current_positions: Mapping[str, Position] | None = None,
+        mark_prices: Mapping[str, Decimal] | None = None,
         available_cash: Decimal | None = None,
         current_equity: Decimal | None = None,
         reconciliation_report: ReconciliationReport | None = None,
@@ -673,7 +681,57 @@ class TradingPipeline:
                 "provide execution_snapshot or available_cash"
             )
 
-        pos: Mapping[str, Any] = pos_raw if pos_raw is not None else (current_positions or {})
+        source_positions = pos_raw if pos_raw is not None else (current_positions or {})
+        pos: Mapping[str, Any] = {
+            pair.lower(): position for pair, position in source_positions.items()
+        }
+        if order.side == OrderSide.BUY and any(
+            value is None
+            for value in (self.estimated_fee_rate, self.fee_precision, self.quantity_precision)
+        ):
+            raise MissingEvidenceError("MISSING_COST_AND_PRECISION_FOR_PROPOSAL_RECHECK")
+        if order.side == OrderSide.BUY and self.max_risk_amount_by_strategy:
+            raise MissingEvidenceError("MISSING_APPROVED_INTENT_RISK_LINEAGE")
+
+        risk_marks = dict(mark_prices or {})
+        risk_marks[order.pair.lower()] = snapshot.last_price
+        for pair, position in pos.items():
+            normalized_pair = pair.lower()
+            if position.base_qty > 0 and normalized_pair not in risk_marks:
+                position_snapshot = self.gateway.get_market_snapshot(
+                    pair=normalized_pair, as_of_utc=exec_now
+                )
+                risk_marks[normalized_pair] = position_snapshot.last_price
+
+        pending_exposure: dict[str, Decimal] = {}
+        pending_sell_qty: dict[str, Decimal] = {}
+        seen_order_ids = {order.internal_order_id}
+        reserved_orders = list(self.oms_store.load_nonterminal_orders())
+        reserved_orders.extend(
+            proposal.order for proposal in self.approval_store.get_pending(now=exec_now)
+        )
+        for reserved_order in reserved_orders:
+            if reserved_order.internal_order_id in seen_order_ids:
+                continue
+            seen_order_ids.add(reserved_order.internal_order_id)
+            remaining = reserved_order.desired_qty - reserved_order.filled_qty
+            if remaining <= 0:
+                continue
+            pair = reserved_order.pair.lower()
+            reference_price = reserved_order.limit_price or risk_marks.get(pair)
+            if reference_price is None or reference_price <= 0:
+                market = self.gateway.get_market_snapshot(pair=pair, as_of_utc=exec_now)
+                reference_price = market.last_price
+                risk_marks[pair] = reference_price
+            if reference_price <= 0:
+                raise MissingEvidenceError(f"MISSING_PENDING_ORDER_MARK:{pair}")
+            if reserved_order.side == OrderSide.BUY:
+                pending_exposure[pair] = (
+                    pending_exposure.get(pair, Decimal("0")) + remaining * reference_price
+                )
+            else:
+                pending_sell_qty[pair] = pending_sell_qty.get(pair, Decimal("0")) + remaining
+
         intent = SignalIntent(
             intent_id=f"exec_{proposal.proposal_id}",
             decision_ts=exec_now,
@@ -686,10 +744,15 @@ class TradingPipeline:
             intent,
             current_equity=eq,
             current_positions=pos,
-            mark_prices={order.pair: snapshot.last_price},
+            mark_prices=risk_marks,
             evaluation_time=exec_now,
             available_cash=cash,
             market_health=snapshot.health.state,
+            estimated_fee_rate=self.estimated_fee_rate,
+            fee_precision=self.fee_precision,
+            quantity_precision=self.quantity_precision,
+            pending_exposure_by_pair=pending_exposure,
+            pending_sell_qty_by_pair=pending_sell_qty,
         )
         if not assessment.approved:
             raise RuntimeError(f"POST_APPROVAL_RISK_REJECTED:{assessment.reason_code}")
