@@ -116,6 +116,11 @@ Research/operator consumer invokes the declared interface on verified inputs. It
 
 PortfolioConstructor.construct_orders(intents,state,allocation_policy)->tuple[SignalIntent,...]; RiskEngine.assess_intent retains existing result type with explicit cost/precision parameters. PortfolioState supplies Decimal cash, positions, marks, reservations and revision.
 
+For guarded proposal execution, the authoritative `ExecutionSnapshot` records pending
+cash reservations by OMS order ID. The authority gate may release only the exact
+approved order's reserve for its recheck; other reservations remain deducted. A
+missing or mismatched reservation remains fail-closed.
+
 Decimal accounting, UTC availability, immutable identities, exactly-once effects and separate execution authority follow CONTRACTS.md/ADR-002. Simulator assumptions cannot redefine accounting.
 
 ## Architecture / Design Contract

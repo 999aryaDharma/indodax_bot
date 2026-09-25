@@ -85,7 +85,7 @@ class PermitAlreadyUsedError(InvalidPermitError):
 
 
 class ExecutionSnapshot(BaseModel):
-    """Authoritative point-in-time state evidence required for venue write authorization."""
+    """Authoritative state for writes; cash is net of order-ID keyed reserve amounts."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -98,6 +98,7 @@ class ExecutionSnapshot(BaseModel):
     current_equity: Decimal
     positions: dict[str, Decimal] = Field(default_factory=dict)
     mark_prices: dict[str, Decimal] = Field(default_factory=dict)
+    cash_reservations: dict[str, Decimal] = Field(default_factory=dict)
     market_healthy: bool = True
     clock_healthy: bool = True
     reconciliation_healthy: bool = True
@@ -144,6 +145,20 @@ class ExecutionSnapshot(BaseModel):
             result[pair_key] = _ensure_finite_decimal(Decimal(str(val)), f"mark_prices[{pair_key}]")
         return result
 
+    @field_validator("cash_reservations", mode="before")
+    @classmethod
+    def _normalize_cash_reservations(cls, value: Any) -> dict[str, Decimal]:
+        if not isinstance(value, (dict, Mapping)):
+            return {}
+        result: dict[str, Decimal] = {}
+        for order_id, amount in value.items():
+            identity = str(order_id).strip()
+            parsed = _ensure_finite_decimal(Decimal(str(amount)), "cash_reservation")
+            if not identity or parsed < 0:
+                raise ValueError("INVALID_CASH_RESERVATION")
+            result[identity] = parsed
+        return result
+
     def compute_digest(self) -> str:
         """Compute deterministic canonical digest of execution snapshot."""
         payload = {
@@ -156,6 +171,9 @@ class ExecutionSnapshot(BaseModel):
             "current_equity": self.current_equity,
             "positions": {k: self.positions[k] for k in sorted(self.positions.keys())},
             "mark_prices": {k: self.mark_prices[k] for k in sorted(self.mark_prices.keys())},
+            "cash_reservations": {
+                k: self.cash_reservations[k] for k in sorted(self.cash_reservations.keys())
+            },
             "market_healthy": self.market_healthy,
             "clock_healthy": self.clock_healthy,
             "reconciliation_healthy": self.reconciliation_healthy,
@@ -325,10 +343,18 @@ class AuthorityGate:
 
             if "BUY" in side_str:
                 required_cash = order.desired_qty * eval_price
-                if required_cash > execution_snapshot.available_cash:
+                target_reservation = execution_snapshot.cash_reservations.get(
+                    order.internal_order_id, Decimal("0")
+                )
+                if target_reservation and target_reservation < required_cash:
+                    raise ReapprovalRequiredError(
+                        "INVALID_TARGET_CASH_RESERVATION: reservation is below approved notional"
+                    )
+                available_for_order = execution_snapshot.available_cash + target_reservation
+                if required_cash > available_for_order:
                     raise ReapprovalRequiredError(
                         f"INSUFFICIENT_CASH_AFTER_APPROVAL: "
-                        f"required {required_cash} > available {execution_snapshot.available_cash}"
+                        f"required {required_cash} > available {available_for_order}"
                     )
             elif "SELL" in side_str:
                 held_qty = execution_snapshot.positions.get(order_pair, Decimal("0"))

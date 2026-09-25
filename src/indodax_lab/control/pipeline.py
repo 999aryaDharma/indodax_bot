@@ -688,9 +688,17 @@ class TradingPipeline:
             )
 
         source_positions = pos_raw if pos_raw is not None else (current_positions or {})
-        pos: Mapping[str, Any] = {
-            pair.lower(): position for pair, position in source_positions.items()
-        }
+        pos: dict[str, Position] = {}
+        for pair, value in source_positions.items():
+            normalized_pair = pair.lower()
+            if isinstance(value, Position):
+                pos[normalized_pair] = value
+            else:
+                pos[normalized_pair] = Position(
+                    pair=normalized_pair,
+                    base_qty=Decimal(str(value)),
+                    cost_basis=Decimal("0"),
+                )
         if order.side == OrderSide.BUY and any(
             value is None
             for value in (self.estimated_fee_rate, self.fee_precision, self.quantity_precision)
@@ -699,8 +707,15 @@ class TradingPipeline:
         if order.side == OrderSide.BUY and self.max_risk_amount_by_strategy:
             raise MissingEvidenceError("MISSING_APPROVED_INTENT_RISK_LINEAGE")
 
-        risk_marks = dict(mark_prices or {})
+        risk_marks = dict(execution_snapshot.mark_prices) if execution_snapshot else {}
+        risk_marks.update(mark_prices or {})
         risk_marks[order.pair.lower()] = snapshot.last_price
+        if execution_snapshot is not None:
+            own_cash_reservation = execution_snapshot.cash_reservations.get(
+                order.internal_order_id
+            )
+            if own_cash_reservation is not None:
+                cash += own_cash_reservation
         for pair, position in pos.items():
             normalized_pair = pair.lower()
             if position.base_qty > 0 and normalized_pair not in risk_marks:
@@ -733,13 +748,13 @@ class TradingPipeline:
                 raise MissingEvidenceError(f"MISSING_PENDING_ORDER_MARK:{pair}")
             if reserved_order.side == OrderSide.BUY:
                 if reserved_order.internal_order_id == order.internal_order_id:
-                    # available_cash is net of every pipeline reservation; release
-                    # only this proposal's reserve for its own execution recheck.
-                    cash += remaining * reference_price
-                    if self.estimated_fee_rate is not None and self.fee_precision is not None:
-                        cash += (remaining * reference_price * self.estimated_fee_rate).quantize(
-                            Decimal(10) ** -self.fee_precision
-                        )
+                    if execution_snapshot is None:
+                        # Legacy cash follows the net-of-reservations contract.
+                        cash += remaining * reference_price
+                        if self.estimated_fee_rate is not None and self.fee_precision is not None:
+                            cash += (
+                                remaining * reference_price * self.estimated_fee_rate
+                            ).quantize(Decimal(10) ** -self.fee_precision)
                     continue
                 pending_exposure[pair] = (
                     pending_exposure.get(pair, Decimal("0")) + remaining * reference_price

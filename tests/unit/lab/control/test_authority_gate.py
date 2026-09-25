@@ -82,6 +82,7 @@ def make_valid_snapshot(
     equity: Decimal = Decimal("100000000"),
     positions: dict[str, Decimal] | None = None,
     mark_prices: dict[str, Decimal] | None = None,
+    cash_reservations: dict[str, Decimal] | None = None,
     rec_healthy: bool = True,
     rec_time: datetime | None = None,
     clock_healthy: bool = True,
@@ -97,6 +98,7 @@ def make_valid_snapshot(
         current_equity=equity,
         positions=positions if positions is not None else {"btc_idr": Decimal("0.5")},
         mark_prices=mark_prices if mark_prices is not None else {"btc_idr": Decimal("1000000000")},
+        cash_reservations=cash_reservations or {},
         market_healthy=market_healthy,
         clock_healthy=clock_healthy,
         reconciliation_healthy=rec_healthy,
@@ -279,6 +281,20 @@ def test_pm_01_2() -> None:
             approval=approval,
             now=NOW,
         )
+
+    # A snapshot may release only the exact approved order's own reserved cash.
+    fully_reserved_snapshot = make_valid_snapshot(
+        cash=Decimal("0"),
+        cash_reservations={order.internal_order_id: Decimal("50000000")},
+    )
+    permit = gate.authorize(
+        order=order,
+        execution_snapshot=fully_reserved_snapshot,
+        release_ref=RELEASE_REF,
+        approval=approval,
+        now=NOW,
+    )
+    assert permit.order_internal_id == order.internal_order_id
 
     # 3. For a SELL order: position decreased after approval
     sell_order = make_test_order(

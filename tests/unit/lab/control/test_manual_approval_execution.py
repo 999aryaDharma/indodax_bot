@@ -18,6 +18,7 @@ from indodax_lab.control.approval import (
     generate_approval_token,
     verify_approval_token,
 )
+from indodax_lab.control.authority import ExecutionSnapshot
 from indodax_lab.control.mode import ExecutionMode
 from indodax_lab.control.pipeline import TradingPipeline
 from indodax_lab.execution.fake_venue import FakeVenueAdapter
@@ -125,6 +126,17 @@ def test_trading_pipeline_execute_approved_proposal(tmp_path: Path) -> None:
         limit_price=Decimal("1000000000"),
         created_at=NOW,
     )
+    oms_store.create_order(order, event_id="evt_init_ord_pipe_exec")
+    other_order = OmsStateMachine.create(
+        internal_order_id="ord_other_pending",
+        client_order_id="cl_other_pending",
+        pair="eth_idr",
+        side=OrderSide.BUY,
+        desired_qty=Decimal("0.01"),
+        limit_price=Decimal("1000000"),
+        created_at=NOW,
+    )
+    oms_store.create_order(other_order, event_id="evt_init_ord_other_pending")
     prop = store.propose(order, at=NOW, ttl_seconds=300)
 
     # Attempting execution before operator approval fails
@@ -144,13 +156,29 @@ def test_trading_pipeline_execute_approved_proposal(tmp_path: Path) -> None:
     )
     gateway = MarketGateway()
     snapshot = gateway.get_market_snapshot("btc_idr", as_of_utc=NOW, ticker_override=ticker)
+    execution_snapshot = ExecutionSnapshot(
+        snapshot_id="snap_manual_execution",
+        created_at=NOW,
+        ledger_revision=3,
+        oms_revision=4,
+        risk_revision=2,
+        available_cash=Decimal("4977929970"),
+        current_equity=Decimal("5000000000"),
+        positions={"eth_idr": Decimal("2")},
+        mark_prices={"btc_idr": Decimal("1000000000"), "eth_idr": Decimal("1000000")},
+        cash_reservations={
+            "ord_pipe_exec": Decimal("20060000"),
+            "ord_other_pending": Decimal("10030"),
+        },
+        reconciliation_scope="btc_idr",
+        reconciliation_time=NOW,
+    )
 
     result_order = pipeline.execute_approved_proposal(
         prop.proposal_id,
         at=NOW,
         market_snapshot=snapshot,
-        current_equity=Decimal("5000000000"),   # 5B IDR authoritative equity
-        available_cash=Decimal("5000000000"),   # 5B IDR authoritative cash
+        execution_snapshot=execution_snapshot,
     )
 
     # Order was acknowledged/filled via router
