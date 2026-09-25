@@ -6,7 +6,7 @@ Status: DONE
 
 Priority: P0 | Type: data | Domain: simulation | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `/root` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/cost-01-time-valid-exchange-cost-schedules`
 

@@ -20,6 +20,4 @@ Independent verification on this exact SHA:
 - The reviewer did not rerun the full suite. Owner full suite: 998 passed, 2
   platform skips, 3 warnings; this remains owner-reported evidence.
 
-COST-01 remains REVIEW, not DONE: the complete authoritative fee matrix and
-effective boundaries are still unverified. No live fee claims or trading
-activation are allowed.
+Superseded disposition: this review predates the owner-approved capability/data-gate split and the independent close-out review recorded in `COST-01-HANDOFF.md`. COST-01 is DONE for schedule lookup and fail-closed behavior. The complete authoritative fee matrix and effective boundaries remain unverified; this blocks affected fee-based net-performance claims and promotion, not downstream implementation. No live fee claims or trading activation are allowed.
