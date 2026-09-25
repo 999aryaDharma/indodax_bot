@@ -78,7 +78,6 @@ def pipeline_fixture(tmp_path: Path):
         estimated_fee_rate=Decimal("0.003"),
         fee_precision=8,
         quantity_precision=8,
-        max_risk_amount_by_strategy={"agent-c07": Decimal("4000")},
     )
 
     return pipeline, fake_venue, oms_store, approval_store, risk_engine, ticker
@@ -171,6 +170,7 @@ def test_pipeline_shadow_mode_routes_to_venue(pipeline_fixture) -> None:
 def test_pipeline_step_uses_typed_state_and_fee_aware_sizing(pipeline_fixture) -> None:
     pipeline, _, _, _, _, ticker = pipeline_fixture
     pipeline.set_mode(ExecutionMode.SHADOW)
+    pipeline.max_risk_amount_by_strategy = {"agent-c07": Decimal("4000")}
     intent = SignalIntent(
         intent_id="sig_fee_aware",
         decision_ts=NOW,
@@ -199,6 +199,25 @@ def test_pipeline_step_uses_typed_state_and_fee_aware_sizing(pipeline_fixture) -
     ).quantize(Decimal("0.00000001"))
     stop_risk = order.desired_qty * Decimal("10000000") + fee + exit_fee
     assert stop_risk <= Decimal("4000")
+
+
+def test_pipeline_blocks_unmapped_strategy_when_stop_risk_policy_is_active(pipeline_fixture) -> None:
+    pipeline, _, _, _, _, ticker = pipeline_fixture
+    pipeline.max_risk_amount_by_strategy = {"agent-c07": Decimal("4000")}
+    intent = SignalIntent(
+        intent_id="sig_unmapped", decision_ts=NOW, pair="btc_idr", side=OrderSide.BUY,
+        desired_qty=Decimal("0.0001"), limit_price=Decimal("1000000000"),
+        stop_loss=Decimal("990000000"), strategy_id="unknown-agent",
+    )
+
+    report = pipeline.step(
+        [intent], current_positions={}, available_cash=Decimal("100000000"),
+        current_equity=Decimal("100000000"), now=NOW,
+        ticker_overrides={"btc_idr": ticker},
+    )
+
+    assert report.approved_count == 0
+    assert report.rejected_reasons == ("btc_idr:MISSING_STRATEGY_RISK_POLICY",)
 
 
 def test_pipeline_pending_proposal_reserves_cash_until_decision(pipeline_fixture) -> None:
@@ -534,6 +553,7 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
         created_at=NOW,
         updated_at=NOW,
     )
+    oms_store.create_order(order, event_id="evt_init_ord_hmac_1")
     proposal = approval_store.propose(order, at=NOW, ttl_seconds=300)
 
     # Operator signs approval with valid HMAC token
@@ -547,6 +567,7 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
 
     from indodax_lab.control.authority import MissingEvidenceError
 
+    pipeline.max_risk_amount_by_strategy = {"agent-c07": Decimal("4000")}
     with pytest.raises(MissingEvidenceError, match="MISSING_APPROVED_INTENT_RISK_LINEAGE"):
         pipeline.execute_approved_proposal(
             proposal.proposal_id,
@@ -554,7 +575,7 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
             market_snapshot=pipeline.gateway.get_market_snapshot(
                 pair="btc_idr", as_of_utc=NOW + timedelta(seconds=2), ticker_override=ticker
             ),
-            available_cash=Decimal("100000000"),
+            available_cash=Decimal("99899700"),
             current_equity=Decimal("100000000"),
         )
     pipeline.max_risk_amount_by_strategy = {}
@@ -568,7 +589,7 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
         proposal.proposal_id,
         now=NOW + timedelta(seconds=2),
         market_snapshot=clean_snapshot,
-        available_cash=Decimal("100000000"),
+        available_cash=Decimal("99899700"),
         current_equity=Decimal("100000000"),
     )
     assert submitted.internal_order_id == "ord_hmac_1"
@@ -601,6 +622,6 @@ def test_pipeline_execute_approved_proposal_with_hmac_and_risk_recheck(
             prop_huge.proposal_id,
             now=NOW + timedelta(seconds=2),
             market_snapshot=clean_snapshot,
-            available_cash=Decimal("500000"),
+            available_cash=Decimal("399700"),
             current_equity=Decimal("100000000"),
         )

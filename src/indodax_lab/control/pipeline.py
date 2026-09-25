@@ -402,6 +402,14 @@ class TradingPipeline:
         kill_switch_tripped = False
 
         for reb_intent in ordered_intents:
+            strategy_risk_budget = self.max_risk_amount_by_strategy.get(
+                reb_intent.strategy_id
+            )
+            if reb_intent.side == OrderSide.BUY and self.max_risk_amount_by_strategy and (
+                not reb_intent.strategy_id or strategy_risk_budget is None
+            ):
+                rejected_reasons.append(f"{reb_intent.pair}:MISSING_STRATEGY_RISK_POLICY")
+                continue
             assessment = self.risk_engine.assess_intent(
                 reb_intent,
                 portfolio_state=state,
@@ -410,9 +418,7 @@ class TradingPipeline:
                 estimated_fee_rate=self.estimated_fee_rate,
                 fee_precision=self.fee_precision,
                 quantity_precision=self.quantity_precision,
-                max_risk_amount=self.max_risk_amount_by_strategy.get(
-                    reb_intent.strategy_id
-                ),
+                max_risk_amount=strategy_risk_budget,
             )
 
             if not assessment.approved:
@@ -705,7 +711,7 @@ class TradingPipeline:
 
         pending_exposure: dict[str, Decimal] = {}
         pending_sell_qty: dict[str, Decimal] = {}
-        seen_order_ids = {order.internal_order_id}
+        seen_order_ids: set[str] = set()
         reserved_orders = list(self.oms_store.load_nonterminal_orders())
         reserved_orders.extend(
             proposal.order for proposal in self.approval_store.get_pending(now=exec_now)
@@ -726,10 +732,21 @@ class TradingPipeline:
             if reference_price <= 0:
                 raise MissingEvidenceError(f"MISSING_PENDING_ORDER_MARK:{pair}")
             if reserved_order.side == OrderSide.BUY:
+                if reserved_order.internal_order_id == order.internal_order_id:
+                    # available_cash is net of every pipeline reservation; release
+                    # only this proposal's reserve for its own execution recheck.
+                    cash += remaining * reference_price
+                    if self.estimated_fee_rate is not None and self.fee_precision is not None:
+                        cash += (remaining * reference_price * self.estimated_fee_rate).quantize(
+                            Decimal(10) ** -self.fee_precision
+                        )
+                    continue
                 pending_exposure[pair] = (
                     pending_exposure.get(pair, Decimal("0")) + remaining * reference_price
                 )
             else:
+                if reserved_order.internal_order_id == order.internal_order_id:
+                    continue
                 pending_sell_qty[pair] = pending_sell_qty.get(pair, Decimal("0")) + remaining
 
         intent = SignalIntent(
