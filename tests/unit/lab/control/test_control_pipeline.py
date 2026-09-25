@@ -201,7 +201,9 @@ def test_pipeline_step_uses_typed_state_and_fee_aware_sizing(pipeline_fixture) -
     assert stop_risk <= Decimal("4000")
 
 
-def test_pipeline_blocks_unmapped_strategy_when_stop_risk_policy_is_active(pipeline_fixture) -> None:
+def test_pipeline_blocks_unmapped_strategy_when_stop_risk_policy_is_active(
+    pipeline_fixture,
+) -> None:
     pipeline, _, _, _, _, ticker = pipeline_fixture
     pipeline.max_risk_amount_by_strategy = {"agent-c07": Decimal("4000")}
     intent = SignalIntent(
