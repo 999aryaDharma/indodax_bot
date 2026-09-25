@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: CHANGES_REQUESTED
 
 Priority: P0 | Type: data | Domain: labels | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `Antigravity` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/label-01-execution-aligned-net-return-labels`
 
@@ -194,10 +194,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **LABEL-01-AC0** Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [ ] **LABEL-01-AC0** Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama. Independent review on `8ecd154f466776a59dfeda38204b40d558efdf8d` found current raw-open-price calculation can return VALID when the shared simulator rejects the order for insufficient depth; see handoff.
 - [ ] **LABEL-01-AC1** Entry sebelum decision ditolak. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **LABEL-01-AC2** Horizon tidak lengkap tidak menjadi label nol. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-01-AC3** Cost schedule atau fill unavailable menghasilkan excluded sample. Evidence: mapped test, exact command/exit and target SHA.
+- [ ] **LABEL-01-AC3** Cost schedule atau fill unavailable menghasilkan excluded sample. Existing test proves unavailable costs exclude; it does not prove unavailable fills exclude. Independent reviewer reproduced zero-depth bars returning VALID while simulator returns INSUFFICIENT_DEPTH; see handoff.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

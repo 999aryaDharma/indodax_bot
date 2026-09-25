@@ -71,7 +71,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 - FEAT-02 — Golden technical and liquidity transforms [DONE; CORE]
 - FEAT-03 — As-of market context [DONE; CORE]
-- SIM-03 — Deterministic replay judge [REVIEW; CORE]
+- SIM-03 — Deterministic replay judge [DONE; CORE]
 - RP-03 — Shared portfolio sizing and risk semantics [DONE; CORE]
 - UI-02 — Read-only Production operational pages [DONE; CORE]
 - API-07 — Tailscale-authenticated Production read composition [DONE; CORE]
@@ -85,7 +85,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 10
 
 - EVAL-01 — Immutable experiment registry [REVIEW; CORE]
-- LABEL-01 — Execution-aligned net return labels [REVIEW; CORE]
+- LABEL-01 — Execution-aligned net return labels [CHANGES_REQUESTED; CORE]
 - LOB-01 — Forward book dataset eligibility [DONE; EXPERIMENTAL]
 - STRAT-01 — Declarative strategy protocol [REVIEW; CORE]
 

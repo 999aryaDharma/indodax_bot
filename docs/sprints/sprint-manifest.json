@@ -2308,14 +2308,14 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/LABEL-01-execution-aligned-net-return-labels.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "CHANGES_REQUESTED",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/label-01-execution-aligned-net-return-labels",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "Unverified historical tariff intervals remain excluded from labels and block affected net-performance claims/promotion. Current independent review also requires true simulator fill alignment and supported canonical execution configuration before DONE."
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency FEAT-04 supplies: snapshot IDs + registry hash -> features manifest, ordered columns, row_ready_at, eligibility.\n- Dependency SIM-01 supplies: SignalIntent + market + schedule -> REJECTED/PARTIAL/FILLED; next-open, precision, SL_FIRST, latency.",
+      "current_context": "Independent review at 8ecd154f466776a59dfeda38204b40d558efdf8d found AC0/AC3 do not use ConservativeExecutionSimulator and may emit VALID with unavailable liquidity; canonical YAML execution_model_version is rejected. AC1/AC2 pass. Owner selected candidate-specific per-sample sizing; change-control design/schema and lineage contract must be approved before remediation.",
       "unlocks": [
         "LABEL-02"
       ],
@@ -2331,42 +2331,43 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review_changes_requested",
         "path": "docs/sprints/handoffs/LABEL-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "8ecd154f466776a59dfeda38204b40d558efdf8d",
+        "code_target": "8ecd154f466776a59dfeda38204b40d558efdf8d",
+        "review": "Independent reviewer /root/docs_review: CHANGES_REQUESTED; two Important findings. Repro proves zero-depth candles still produce VALID label while ConservativeExecutionSimulator rejects INSUFFICIENT_DEPTH. Canonical YAML conservative_v1 is rejected by NetReturnConfig. AC1/AC2 pass; focused label suite 21 passed but misses unavailable-fill coverage."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "LABEL-01-AC0",
           "test_case": "test_label_01_valid_contract",
           "behavior": "Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "LABEL-01-AC1",
           "test_case": "test_label_01_contract_1",
           "behavior": "Entry sebelum decision ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "LABEL-01-AC2",
           "test_case": "test_label_01_contract_2",
           "behavior": "Horizon tidak lengkap tidak menjadi label nol",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "LABEL-01-AC3",
           "test_case": "test_label_01_contract_3",
           "behavior": "Cost schedule atau fill unavailable menghasilkan excluded sample",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         }
       ],
       "risk_level": "high",
       "context_complexity": "high",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "CHANGES_REQUESTED: current open-price proxy can claim VALID without simulator fills; canonical execution model is unsupported. Owner selected candidate-specific sample sizing; change-control design remains before implementation remediation.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6038,21 +6039,25 @@
         "src/indodax_lab/backtest/engine.py",
         "src/indodax_lab/backtest/result.py",
         "src/indodax_lab/cli/run_backtest.py",
-        "tests/integration/lab/test_backtest_golden.py"
+        "tests/integration/lab/test_backtest_golden.py",
+        "tests/unit/lab/backtest/test_judge_remediation.py",
+        "tests/unit/lab/backtest/test_accounting_failure_atomicity.py",
+        "tests/unit/lab/cli/test_run_backtest_report.py",
+        "docs/sprints/simulation/SIM-03-deterministic-replay-judge.md"
       ],
       "type": "integration",
       "tier": "CORE",
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/SIM-03-deterministic-replay-judge.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-03-deterministic-replay-judge",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "No Production activation. Historical cost evidence and candidate qualification remain separate; synthetic fixtures prove simulator mechanics only and are not Indodax tariff or profitability evidence."
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency SIM-02 supplies: equity + open risk + intent + versioned risk policy -> approved size or reasoned rejection.\n- Dependency DATA-06 supplies: Typed loaders -> recomputed sentry decisions -> fixed cutoff -> immutable snapshot with 45 source references.",
+      "current_context": "Implementation and acceptance criteria independently reviewed PASS on exact repository SHA 8ecd154f466776a59dfeda38204b40d558efdf8d. Current manifest dependencies SIM-02 and DATA-06 are DONE. Historical fee qualification and Production activation remain separate gates.",
       "unlocks": [
         "SIM-04",
         "STRAT-01"
@@ -6068,42 +6073,43 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/SIM-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "8ecd154f466776a59dfeda38204b40d558efdf8d",
+        "code_target": "8ecd154f466776a59dfeda38204b40d558efdf8d",
+        "review": "Independent reviewer /root/docs_review PASS at exact repository SHA 8ecd154f466776a59dfeda38204b40d558efdf8d; no Critical/Important findings. Independent focused suite: 84 passed (LABEL 21, SIM-03 63). AC0-AC3 and replay failure/recovery negative cases passed. Documentation provenance corrections recorded in handoff."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "SIM-03-AC0",
           "test_case": "test_sim_03_valid_contract",
           "behavior": "Replay market memproduksi fill, posting dan equity identik pada input identik",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-03-AC1",
           "test_case": "test_sim_03_contract_1",
           "behavior": "Dua replay memberi posting exact dan metrics sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-03-AC2",
           "test_case": "test_sim_03_contract_2",
           "behavior": "Crash sebelum publish tidak menghasilkan run sukses",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-03-AC3",
           "test_case": "test_sim_03_contract_3",
           "behavior": "Independent ledger tidak dijumlah sebagai modal bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
       "context_complexity": "high",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "Implementation, acceptance evidence and independent review PASS are complete for the capability; this does not verify current/historical Indodax costs, profitability, promotion or Production activation.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

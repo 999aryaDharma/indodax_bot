@@ -22,9 +22,7 @@
   the single-wallet hypothetical pooled quantity (`0.00097725`). The test cost
   fixture is explicitly labeled synthetic and not INDODAX evidence; it exercises
   deterministic fee arithmetic only and does not satisfy COST-01.
-- Current manifest dependencies (2026-09-25): LED-01 and DATA-06 DONE; SIM-01 and
-  SIM-02 REVIEW; COST-01 REVIEW. Earlier dependency claims and AC rows below are
-  historical evidence only and do not indicate current readiness.
+- That paragraph recorded a prior branch snapshot and is superseded. The current authoritative manifest lists SIM-02 and DATA-06 as SIM-03 dependencies; both are DONE.
 - Verification on this code SHA: `rtk pytest
   tests/integration/lab/test_backtest_golden.py
   tests/unit/lab/backtest/test_risk.py
@@ -39,15 +37,14 @@
 - Independent review: PASS by `/root/sim01_final_review` and `/root/sim01_review`
   on exact commit `76aaac2d7d8f550ffbee9aa2e85aebc3d9aa6e50` (code parent
   `7464acda6150de86fd12777022db91a06278526a`); no Critical or Important findings.
-  SIM-03 remains REVIEW because SIM-01 and SIM-02 remain REVIEW behind COST-01;
-  dependency statuses remain unchanged.
+  Historical disposition at that review point; superseded by current manifest dependencies SIM-02 and DATA-06, both DONE, and final independent closeout below.
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: SIM-03 — Deterministic replay judge
 - Implementation agent: Antigravity
-- Independent reviewer: `/root/sim01_final_review`, `/root/sim01_review` (re-review pending)
+- Independent reviewers: `/root/sim01_final_review`, `/root/sim01_review`; final closeout reviewer: `/root/docs_review`
 - Branch / worktree: `feat/sim-03-deterministic-replay-judge`
 - Base SHA: `a7fc0c7`
 - Code target: `feat(sim-03): deterministic replay judge`
@@ -74,13 +71,13 @@ Status: REVIEW
 ## Acceptance evidence
 | AC ID | Test / artifact | Command | Exit/result | Source SHA |
 |---|---|---|---|---|
-| SIM-03-AC0 (RED) | `test_sim_03_valid_contract` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| SIM-03-AC0 (RED) | `test_sim_03_valid_contract` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (import failure; not behavioral RED evidence) | `working tree` |
 | SIM-03-AC0 (GREEN) | `test_sim_03_valid_contract` | `python -m pytest tests/integration/lab/test_backtest_golden.py::test_sim_03_valid_contract` | Exit 0 (Passed, end-to-end replay produces valid BacktestResult) | `d423650` |
-| SIM-03-AC1 (RED) | `test_sim_03_contract_1` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| SIM-03-AC1 (RED) | `test_sim_03_contract_1` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (import failure; not behavioral RED evidence) | `working tree` |
 | SIM-03-AC1 (GREEN) | `test_sim_03_contract_1` | `python -m pytest tests/integration/lab/test_backtest_golden.py::test_sim_03_contract_1` | Exit 0 (Passed, two replays yield bitwise identical postings_hash and metrics) | `d423650` |
-| SIM-03-AC2 (RED) | `test_sim_03_contract_2` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| SIM-03-AC2 (RED) | `test_sim_03_contract_2` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (import failure; not behavioral RED evidence) | `working tree` |
 | SIM-03-AC2 (GREEN) | `test_sim_03_contract_2` | `python -m pytest tests/integration/lab/test_backtest_golden.py::test_sim_03_contract_2` | Exit 0 (Passed, crash before publish leaves no published run) | `d423650` |
-| SIM-03-AC3 (RED) | `test_sim_03_contract_3` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (`ModuleNotFoundError`) | `working tree` |
+| SIM-03-AC3 (RED) | `test_sim_03_contract_3` | `python -m pytest tests/integration/lab/test_backtest_golden.py` | Exit 1 (import failure; not behavioral RED evidence) | `working tree` |
 | SIM-03-AC3 (GREEN) | `test_sim_03_contract_3` | `python -m pytest tests/integration/lab/test_backtest_golden.py::test_sim_03_contract_3` | Exit 0 (Passed, independent ledgers are isolated and never pooled) | `d423650` |
 
 All 4 tests in `tests/integration/lab/test_backtest_golden.py` passed (0.44s).
@@ -91,7 +88,7 @@ Relevant lab suite verification (44 passed, 2 skipped across backtest, risk, exe
 - Quality verdict: PASS (strictly deterministic, Decimal precision, UTC-aware, fail-closed atomic file output).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: final PASS by `/root/docs_review` on exact repository SHA `8ecd154f466776a59dfeda38204b40d558efdf8d`; no Critical/Important findings. Independent focused suite: 84 passed (LABEL 21, SIM-03 63).
 
 ## Deviations and known risks
 - Deviations: None.
@@ -103,4 +100,9 @@ Relevant lab suite verification (44 passed, 2 skipped across backtest, risk, exe
 - Affected engine change SHA: `260fd066fc46171cece30ca38f7fa0b055f1dabb` (`src/indodax_lab/backtest/engine.py` and `tests/unit/lab/backtest/test_judge_remediation.py`). Replay sizing selects maker fee basis at synchronous order creation and taker fee basis at the execution event, regardless of whether a limit price is present.
 - Independent review: `/root/sim01_final_review`, PASS scoped to the replay fee-timing change and cash-safety regression; this is not a full SIM-03 acceptance review.
 - Verification on the reviewed tree: the focused combined command recorded in the SIM-01 recovery addendum → 67 passed, including `tests/integration/lab/test_backtest_golden.py`.
-- Gate: SIM-03 remains REVIEW; this scoped review does not replace full acceptance review, and dependency status is not DONE.
+- Historical gate at that review point: SIM-03 remained REVIEW because that scoped review did not replace the full acceptance review. Superseded by the final independent PASS and current dependency closeout below.
+
+
+## Final coordinator closeout (2026-09-25)
+
+The current manifest dependencies are SIM-02 and DATA-06; both are DONE. `/root/docs_review` independently reviewed exact repository SHA `8ecd154f466776a59dfeda38204b40d558efdf8d` and returned PASS with no Critical/Important implementation findings. AC0-AC3 and negative replay, atomic publication, and ledger isolation cases passed. Minor handoff corrections: stale dependency claims and import failures are now qualified as historical, not behavioral RED evidence. Synthetic costs and this closeout do not verify Indodax tariff history, profitability, promotion, or Production activation.

@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: simulation | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `Antigravity` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/sim-03-deterministic-replay-judge`
 
@@ -194,22 +194,22 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **SIM-03-AC0** Replay market memproduksi fill, posting dan equity identik pada input identik. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **SIM-03-AC1** Dua replay memberi posting exact dan metrics sama. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SIM-03-AC2** Crash sebelum publish tidak menghasilkan run sukses. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SIM-03-AC3** Independent ledger tidak dijumlah sebagai modal bersama. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **SIM-03-AC0** Replay market memproduksi fill, posting dan equity identik pada input identik. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **SIM-03-AC1** Dua replay memberi posting exact dan metrics sama. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **SIM-03-AC2** Crash sebelum publish tidak menghasilkan run sukses. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **SIM-03-AC3** Independent ledger tidak dijumlah sebagai modal bersama. Evidence: mapped test, exact command/exit and target SHA.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updates manifest and regenerates status/waves only after review PASS.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

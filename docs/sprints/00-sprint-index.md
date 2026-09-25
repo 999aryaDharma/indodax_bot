@@ -26,7 +26,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | FEAT-02 | Golden technical and liquidity transforms | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-02-golden-technical-and-liquidity-transforms.md) |
 | FEAT-03 | As-of market context | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-03-as-of-market-context.md) |
 | FEAT-04 | Immutable feature materialization | features | P0 | data | FEAT-02, FEAT-03 | DONE | [Spec](features\FEAT-04-immutable-feature-materialization.md) |
-| LABEL-01 | Execution-aligned net return labels | labels | P0 | data | FEAT-04, SIM-01 | REVIEW | [Spec](labels\LABEL-01-execution-aligned-net-return-labels.md) |
+| LABEL-01 | Execution-aligned net return labels | labels | P0 | data | FEAT-04, SIM-01 | CHANGES_REQUESTED | [Spec](labels\LABEL-01-execution-aligned-net-return-labels.md) |
 | LABEL-02 | Triple barrier outcomes | labels | P0 | data | LABEL-01 | REVIEW | [Spec](labels\LABEL-02-triple-barrier-outcomes.md) |
 | SPLIT-01 | Sealed purged chronological folds | labels | P0 | safety | LABEL-02 | REVIEW | [Spec](labels\SPLIT-01-sealed-purged-chronological-folds.md) |
 | TRAIN-01 | Verified training dataset assembly | labels | P0 | data | SPLIT-01, FEAT-04 | REVIEW | [Spec](labels\TRAIN-01-verified-training-dataset-assembly.md) |
@@ -65,7 +65,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | LED-01 | Balanced research postings | simulation | P0 | safety | COST-01, BASE-04 | DONE | [Spec](simulation\LED-01-balanced-research-postings.md) |
 | SIM-01 | Conservative execution simulator | simulation | P0 | feature | COST-01, BAR-01 | DONE | [Spec](simulation\SIM-01-conservative-execution-simulator.md) |
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | DONE | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |
-| SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | REVIEW | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
+| SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | DONE | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
 | SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | REVIEW | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
 | C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C01-01-donchian-breakout.md) |
 | C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
