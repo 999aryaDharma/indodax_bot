@@ -30,11 +30,11 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P0 | Type: integration | Domain: runtime-parity | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `/root` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/rp-03-shared-portfolio-sizing-and-risk-semantics`
 
@@ -247,15 +247,15 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
-- [ ] **RP-03-AC4** Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority. Evidence: `test_rp_03_program_4` at exact implementation SHA.
+- [x] **RP-03-AC4** Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority. Evidence: `test_rp_03_program_4_strategy_stop_distance_caps_requested_risk` at `a87562a8ceb4a4f953520c65bae781ec4506a49f`.
 
-- [ ] **RP-03-AC0** Two same-pair opposing intents never silently last-win. Evidence: named test on exact committed SHA.
+- [x] **RP-03-AC0** Two same-pair opposing intents never silently last-win. Evidence: `test_rp_03_0_opposing_same_pair_intents_do_not_silently_last_win` at `a87562a8ceb4a4f953520c65bae781ec4506a49f`.
 
-- [ ] **RP-03-AC1** Limit/TIF/role/exit lineage survives construction. Evidence: named test on exact committed SHA.
+- [x] **RP-03-AC1** Limit/TIF/role/exit lineage survives construction. Evidence: `test_rp_03_1_construct_orders_preserves_intent_metadata` at `a87562a8ceb4a4f953520c65bae781ec4506a49f`.
 
-- [ ] **RP-03-AC2** Same state/intent/cost yields exact same approved quantity in each runtime. Evidence: named test on exact committed SHA.
+- [x] **RP-03-AC2** Same state/intent/cost yields exact same approved quantity in each runtime. Evidence: `test_rp_03_2_same_portfolio_cost_and_intent_match_backtest_quantity` at `a87562a8ceb4a4f953520c65bae781ec4506a49f`.
 
-- [ ] **RP-03-AC3** Pending exposure and fees cannot be spent twice. Evidence: named test on exact committed SHA.
+- [x] **RP-03-AC3** Pending exposure and fees cannot be spent twice. Evidence: `test_rp_03_3_pending_notional_and_fee_reduce_cash_and_exposure_once` at `a87562a8ceb4a4f953520c65bae781ec4506a49f`.
 
 ## Definition of Done
 

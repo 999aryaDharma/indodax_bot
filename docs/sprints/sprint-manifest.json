@@ -9373,25 +9373,32 @@
         "Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority"
       ],
       "files": [
+        "src/indodax_lab/backtest/risk.py",
+        "src/indodax_lab/control/pipeline.py",
+        "src/indodax_lab/control/authority.py",
         "src/indodax_lab/portfolio/constructor.py",
         "src/indodax_lab/risk/engine.py",
-        "src/indodax_lab/backtest/risk.py",
+        "tests/unit/lab/control/test_control_pipeline.py",
+        "tests/unit/lab/control/test_manual_approval_execution.py",
+        "tests/unit/lab/control/test_authority_gate.py",
         "tests/unit/lab/portfolio/test_intent_semantics.py",
-        "tests/unit/lab/risk/test_risk_parity.py"
+        "tests/unit/lab/risk/test_risk_parity.py",
+        "docs/decisions/CR-RP-03-execution-cash-reservation-evidence.md",
+        "docs/sprints/runtime-parity/RP-03-shared-portfolio-sizing-and-risk-semantics.md"
       ],
       "type": "integration",
       "tier": "CORE",
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/runtime-parity/RP-03-shared-portfolio-sizing-and-risk-semantics.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "/root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/rp-03-shared-portfolio-sizing-and-risk-semantics",
       "external_gates": [
-        "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
+        "No Production activation. Snapshot producers must populate authoritative cash_reservations; fee evidence and strategy/stop-lineage persistence must be qualified before applicable live execution. PM-08 and venue qualification remain separate gates."
       ],
-      "current_context": "PortfolioConstructor drops intent metadata and overwrites same-pair intents; risk caller semantics differ.",
+      "current_context": "Capability implemented and independently reviewed PASS at code SHA a87562a8ceb4a4f953520c65bae781ec4506a49f. Snapshot producer reservation evidence, fee qualification, downstream strategy/stop-lineage persistence and Production/venue qualification remain external gates; no activation implied.",
       "unlocks": [
         "RP-04",
         "RW6-01",
@@ -9415,37 +9422,44 @@
       "acceptance_test_mapping": [
         {
           "criterion": "RP-03-AC0",
-          "test_case": "test_rp_03_0",
+          "test_case": "test_rp_03_0_opposing_same_pair_intents_do_not_silently_last_win",
           "behavior": "Two same-pair opposing intents never silently last-win",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "RP-03-AC1",
-          "test_case": "test_rp_03_1",
+          "test_case": "test_rp_03_1_construct_orders_preserves_intent_metadata",
           "behavior": "Limit/TIF/role/exit lineage survives construction",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "RP-03-AC2",
-          "test_case": "test_rp_03_2",
+          "test_case": "test_rp_03_2_same_portfolio_cost_and_intent_match_backtest_quantity",
           "behavior": "Same state/intent/cost yields exact same approved quantity in each runtime",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "RP-03-AC3",
-          "test_case": "test_rp_03_3",
+          "test_case": "test_rp_03_3_pending_notional_and_fee_reduce_cash_and_exposure_once",
           "behavior": "Pending exposure and fees cannot be spent twice",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "RP-03-AC4",
-          "test_case": "test_rp_03_program_4",
+          "test_case": "test_rp_03_program_4_strategy_stop_distance_caps_requested_risk",
           "behavior": "Expose risk sizing inputs for strategy ownership stop distance and pending reservations without duplicate cash authority",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
-      "complexity": "L"
+      "complexity": "L",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/RP-03-HANDOFF.md",
+        "source_commit": "a87562a8ceb4a4f953520c65bae781ec4506a49f",
+        "code_target": "a87562a8ceb4a4f953520c65bae781ec4506a49f",
+        "review": "Independent reviewer /root/docs_review PASS on exact code SHA a87562a8ceb4a4f953520c65bae781ec4506a49f; no Critical/Important findings. Full suite 1,083 passed, 2 platform skips; focused authority/manual/control 21 passed; Ruff and diff-check passed. Production activation and external qualification gates remain."
+      }
     },
     {
       "id": "PM-01",
