@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: CHANGES_REQUESTED
 
 Priority: P0 | Type: feature | Domain: strategies | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `Antigravity` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/strat-01-declarative-strategy-protocol`
 

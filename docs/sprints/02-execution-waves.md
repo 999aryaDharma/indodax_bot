@@ -79,7 +79,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 9
 
 - FEAT-04 — Immutable feature materialization [DONE; CORE]
-- SIM-04 — Net-cost risk and capacity metrics [REVIEW; CORE]
+- SIM-04 — Net-cost risk and capacity metrics [CHANGES_REQUESTED; CORE]
 - UI-09 — Same-origin Production API access [DONE; CORE]
 
 ## Wave 10
@@ -87,7 +87,7 @@ None. Verify external gates and shared-file ownership before claim.
 - EVAL-01 — Immutable experiment registry [REVIEW; CORE]
 - LABEL-01 — Execution-aligned net return labels [CHANGES_REQUESTED; CORE]
 - LOB-01 — Forward book dataset eligibility [DONE; EXPERIMENTAL]
-- STRAT-01 — Declarative strategy protocol [REVIEW; CORE]
+- STRAT-01 — Declarative strategy protocol [CHANGES_REQUESTED; CORE]
 
 ## Wave 11
 

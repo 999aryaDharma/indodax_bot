@@ -6144,14 +6144,14 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/SIM-04-net-cost-risk-and-capacity-metrics.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "CHANGES_REQUESTED",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-04-net-cost-risk-and-capacity-metrics",
       "external_gates": [
-        "No additional portfolio activation gate; data/policy validity still applies."
+        "Empirical spread and regime/universe-tier evidence must be supplied before those grouped metrics are reported as available. Historical fee matrix verification remains required for affected net metrics/promotions. This sprint does not currently provide deposit/withdrawal flow-adjusted returns or Production qualification."
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency SIM-03 supplies: market -> pending fills -> barriers -> decision -> risk -> orders -> mark; stable event/pair/order sort.",
+      "current_context": "Independent review on e3f1af8d232c1bf43fdf325922c96376bb542bc0 found: empty spread coverage treated as zero; missing equity curve defaults drawdown to zero and CLI repeats ending equity at all historic transactions; breakeven closes omitted from trade counts; regime/tier breakdowns absent. AC2 fee accounting passes.",
       "unlocks": [
         "EVAL-01",
         "REPORT-01"
@@ -6167,42 +6167,43 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review_changes_requested",
         "path": "docs/sprints/handoffs/SIM-04-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
+        "code_target": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
+        "review": "Independent reviewer /root/docs_review CHANGES_REQUESTED with four Important findings. Focused tests: 8 passed, but existing tests miss the reproduced failures. See handoff for exact repros. No empirical spread, flow-adjusted PnL, cost verification or production qualification is claimed."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "SIM-04-AC0",
           "test_case": "test_sim_04_valid_contract",
           "behavior": "Report menghitung performa dari ledger dan menunjukkan batas data serta kapasitas",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "SIM-04-AC1",
           "test_case": "test_sim_04_contract_1",
           "behavior": "No-trade dan zero-loss PF menghasilkan undefined beralasan",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "SIM-04-AC2",
           "test_case": "test_sim_04_contract_2",
           "behavior": "Fee tidak dikurangi dua kali dari net cash equity",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "SIM-04-AC3",
           "test_case": "test_sim_04_contract_3",
           "behavior": "Missing spread tidak dilaporkan sebagai biaya nol",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         }
       ],
       "risk_level": "high",
       "context_complexity": "high",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "CHANGES_REQUESTED: accurate path equity/drawdown, closed breakeven trade accounting, unavailable empty spread coverage, and explicit regime/tier breakdown are incomplete.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7997,14 +7998,14 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/STRAT-01-declarative-strategy-protocol.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "CHANGES_REQUESTED",
+      "implementation_owner": "Antigravity",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/strat-01-declarative-strategy-protocol",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency SIM-03 supplies: market -> pending fills -> barriers -> decision -> risk -> orders -> mark; stable event/pair/order sort.\n- Dependency FEAT-04 supplies: snapshot IDs + registry hash -> features manifest, ordered columns, row_ready_at, eligibility.",
+      "current_context": "Independent review on e3f1af8d232c1bf43fdf325922c96376bb542bc0 found registered strategy specs remain mutable, closure/default state is omitted from logic hash, and nonempty DecisionFrames may omit causal columns or accept NaT. AC0/AC1 pass; AC2/AC3 incomplete.",
       "unlocks": [
         "C01-01",
         "C02-01",
@@ -8037,42 +8038,43 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review_changes_requested",
         "path": "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
+        "code_target": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
+        "review": "Independent reviewer /root/docs_review CHANGES_REQUESTED with three Important findings. Focused tests: 8 passed, but negative probes reproduced mutable spec, closure collision and missing/NaT causal evidence. See handoff for repros."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "STRAT-01-AC0",
           "test_case": "test_strat_01_valid_contract",
           "behavior": "Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "STRAT-01-AC1",
           "test_case": "test_strat_01_contract_1",
           "behavior": "Unknown config ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "STRAT-01-AC2",
           "test_case": "test_strat_01_contract_2",
           "behavior": "Future atau ineligible row tidak masuk DecisionFrame",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "STRAT-01-AC3",
           "test_case": "test_strat_01_contract_3",
           "behavior": "Parameter atau logic change memerlukan versi baru",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "CHANGES_REQUESTED"
         }
       ],
       "risk_level": "medium",
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.",
+      "implementation_status_note": "CHANGES_REQUESTED: freeze registered identity and callable behavior; require valid nonmissing point-in-time eligibility/availability evidence.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

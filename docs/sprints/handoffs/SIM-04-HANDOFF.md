@@ -1,11 +1,11 @@
 # SIM-04 handoff
 
-Status: REVIEW
+Status: CHANGES_REQUESTED
 
 ## Identity
 - Sprint ID: SIM-04 — Net-cost risk and capacity metrics
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review`
 - Branch / worktree: `feat/sim-04-net-cost-risk-and-capacity-metrics`
 - Base SHA: `ae87a72`
 - Code target: `feat(sim-04): net-cost risk and capacity metrics`
@@ -53,3 +53,14 @@ Combined suite verification (55 passed across backtest, risk, execution, ledger,
 - Deviations: None.
 - Unresolved issues / blockers: None for SIM-04.
 - Next unlocked capabilities: EVAL-01, REPORT-01.
+
+
+## Independent review findings (2026-09-25)
+
+Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf325922c96376bb542bc0` and returned CHANGES_REQUESTED. Independent command `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/backtest/test_metrics.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 8 passed in 1.07s; negative probes reproduced the findings.
+
+- Important — empty spread map `{}` reports `spread_status=AVAILABLE` and `spread_cost=0`; AC3 requires unavailable data to stay unavailable. Reviewer passed `{}` and reproduced the false zero.
+- Important — missing equity observations default drawdown to zero; CLI also emits the final ledger equity for every historic transaction timestamp. Repro produced a flat 10,277,700 curve and zero drawdown despite a 211,800 decline. AC0 requires observed path metrics.
+- Important — completed breakeven gross-PnL trades do not increment trade_count because trade_count is win_count+loss_count. A flat-price 1-unit buy/sell paying 1 fee each is reported as NO_TRADES despite two fills and -2 net PnL.
+- Important — output lacks by_regime and by_tier metrics despite the task contract requiring year/regime/tier/asset. Missing classification must be explicitly unavailable; do not fabricate groups.
+- Passing boundary: fee equity is not double-subtracted. Flow-adjusted performance is not present in ResearchLedger and remains unqualified/out of this sprint unless a scoped change request is approved.

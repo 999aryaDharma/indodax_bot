@@ -66,7 +66,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SIM-01 | Conservative execution simulator | simulation | P0 | feature | COST-01, BAR-01 | DONE | [Spec](simulation\SIM-01-conservative-execution-simulator.md) |
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | DONE | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |
 | SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | DONE | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
-| SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | REVIEW | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
+| SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | CHANGES_REQUESTED | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
 | C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C01-01-donchian-breakout.md) |
 | C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
@@ -88,7 +88,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | S07-01 | Small cap rotation | strategies | P1 | feature | C04-01, S01-01 | PLANNED | [Spec](strategies\S07-01-small-cap-rotation.md) |
 | S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | PLANNED | [Spec](strategies\S08-01-passive-mean-reversion.md) |
 | S09-01 | Tail risk abstention | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\S09-01-tail-risk-abstention.md) |
-| STRAT-01 | Declarative strategy protocol | strategies | P0 | feature | SIM-03, FEAT-04 | REVIEW | [Spec](strategies\STRAT-01-declarative-strategy-protocol.md) |
+| STRAT-01 | Declarative strategy protocol | strategies | P0 | feature | SIM-03, FEAT-04 | CHANGES_REQUESTED | [Spec](strategies\STRAT-01-declarative-strategy-protocol.md) |
 | UNIV-01 | Point-in-time investable universe | universe | P0 | data | DATA-04, DATA-05 | DONE | [Spec](universe\UNIV-01-point-in-time-investable-universe.md) |
 | QA-01 | Wave 1 tournament checkpoint | verification | P0 | quality | JOB-03, SHADOW-02, C01-01, C02-01, C03-01, C04-01, C07-01, C10-01, S01-01, S02-01, ML-04 | REVIEW | [Spec](verification\QA-01-wave-1-tournament-checkpoint.md) |
 | QA-02 | Boundary security verification | verification | P0 | security | REPORT-02, AGENT-01, OPS-02 | REVIEW | [Spec](verification\QA-02-boundary-security-verification.md) |

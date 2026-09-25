@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: CHANGES_REQUESTED
 
 Priority: P0 | Type: feature | Domain: simulation | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: `Antigravity` | Independent Reviewer: `/root/docs_review`
 
 Recommended Branch: `feat/sim-04-net-cost-risk-and-capacity-metrics`
 

@@ -1,11 +1,11 @@
 # STRAT-01 handoff
 
-Status: REVIEW
+Status: CHANGES_REQUESTED
 
 ## Identity
 - Sprint ID: STRAT-01 — Declarative strategy protocol
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review`
 - Branch / worktree: `feat/strat-01-declarative-strategy-protocol`
 - Base SHA: `6cf2899`
 - Code target: `feat(strat-01): declarative strategy protocol`
@@ -54,3 +54,13 @@ Combined suite verification (63 passed across backtest, risk, execution, ledger,
 - Deviations: Added test package `__init__.py` markers under `tests/unit/lab/` to resolve pytest import module collision between feature and strategy registries.
 - Unresolved issues / blockers: None for STRAT-01.
 - Next unlocked consumers: C01-01, C07-01, C02-01, C03-01, C04-01, S01-01, S02-01, C05-01, C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01.
+
+
+## Independent review findings (2026-09-25)
+
+Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf325922c96376bb542bc0` and returned CHANGES_REQUESTED. Independent command `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/backtest/test_metrics.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 8 passed in 1.07s; negative probes reproduced the findings.
+
+- Important — RegisteredStrategy retains the caller-owned StrategySpecification and writable callback. Mutating nested `spec.parameters` after registration changes the registered strategy without a version bump.
+- Important — `_compute_logic_hash` ignores closure captures and callable defaults. `factory(1)` and `factory(2)` behave differently but hash identically; same ID/version registration accepts both.
+- Important — nonempty frames may omit `decision_ts`, `row_ready_at`, and `eligible`; direct DecisionFrame also accepts NaT timestamps. AC2 requires causal/eligibility evidence, not optional checks.
+- Passing boundaries: unknown config fields and non-SignalIntent returns are rejected; registered strategy has no fill/ledger authority.
