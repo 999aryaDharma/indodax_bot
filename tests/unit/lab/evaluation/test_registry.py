@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from typing import Any
+
 import pytest
 
 from indodax_lab.evaluation.registry import (
@@ -163,3 +164,50 @@ def test_eval_01_contract_3():
     saved = registry.get_run("run-fixed-01")
     assert saved is not None
     assert saved.metrics["net_profit"] == 100000.0
+
+
+def test_eval_01_rejects_missing_or_self_parent():
+    registry = ExperimentRegistry()
+    with pytest.raises(ValueError, match="MISSING_ANCESTRY_RUN"):
+        registry.record_run(_make_run("orphan", parent_run_id="missing"))
+    with pytest.raises(ValueError, match="RUN_CANNOT_BE_ITS_OWN_PARENT"):
+        _make_run("self", parent_run_id="self")
+
+
+@pytest.mark.parametrize("status", [ExperimentRunStatus.FAILED, ExperimentRunStatus.INVALID_RUN])
+def test_eval_01_non_success_runs_cannot_be_promotable(status):
+    with pytest.raises(ValueError, match="NON_SUCCESS_RUN_CANNOT_BE_PROMOTABLE"):
+        _make_run("bad-promo", status=status, promotable=True)
+
+
+def test_eval_01_detects_persisted_content_tampering():
+    registry = ExperimentRegistry()
+    run = _make_run("tampered")
+    registry.record_run(run)
+    registry._conn.execute(
+        "UPDATE experiment_runs SET metrics_json = ? WHERE run_id = ?",
+        ('{"net_profit":999}', run.run_id),
+    )
+    registry._conn.commit()
+
+    with pytest.raises(ValueError, match="EXPERIMENT_RUN_CONTENT_HASH_MISMATCH"):
+        registry.get_run(run.run_id)
+    with pytest.raises(ValueError, match="EXPERIMENT_RUN_CONTENT_HASH_MISMATCH"):
+        registry.record_run(run)
+
+
+def test_eval_01_detects_persisted_ancestry_cycle():
+    registry = ExperimentRegistry()
+    registry.record_run(_make_run("cycle-a"))
+    registry.record_run(_make_run("cycle-b", parent_run_id="cycle-a"))
+    row = registry._conn.execute(
+        "SELECT * FROM experiment_runs WHERE run_id = ?", ("cycle-a",)
+    ).fetchone()
+    updated = registry._row_to_record(row).model_copy(update={"parent_run_id": "cycle-b"})
+    registry._conn.execute(
+        "UPDATE experiment_runs SET parent_run_id = ?, content_hash = ? WHERE run_id = ?",
+        ("cycle-b", updated.content_digest(), "cycle-a"),
+    )
+
+    with pytest.raises(ValueError, match="RUN_ANCESTRY_CYCLE"):
+        registry.get_ancestry("cycle-a")

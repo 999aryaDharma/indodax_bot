@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from enum import StrEnum
 import hashlib
 import json
-from pathlib import Path
 import sqlite3
+from datetime import datetime, timedelta
+from enum import StrEnum
+from pathlib import Path
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
@@ -58,7 +59,15 @@ class ExperimentRunRecord(BaseModel):
     @model_validator(mode="after")
     def validate_promotable_and_clean(self) -> ExperimentRunRecord:
         if self.is_dirty and self.promotable:
-            raise ValueError("DIRTY_WORKTREE_CANNOT_BE_PROMOTABLE: Dirty worktree cannot produce a promotable run.")
+            raise ValueError(
+                "DIRTY_WORKTREE_CANNOT_BE_PROMOTABLE: Dirty worktree cannot produce a promotable run."
+            )
+        if self.promotable and self.status != ExperimentRunStatus.SUCCESS:
+            raise ValueError(
+                "NON_SUCCESS_RUN_CANNOT_BE_PROMOTABLE: Only successful runs can be promotable."
+            )
+        if self.parent_run_id == self.run_id:
+            raise ValueError("RUN_CANNOT_BE_ITS_OWN_PARENT")
         return self
 
     def content_digest(self) -> str:
@@ -135,19 +144,24 @@ class ExperimentRegistry:
         Rejects duplicate run_id if content differs. Idempotent on identical content.
         """
         digest = run.content_digest()
-        cursor = self._conn.cursor()
-        cursor.execute("SELECT content_hash FROM experiment_runs WHERE run_id = ?", (run.run_id,))
-        row = cursor.fetchone()
+        self._conn.execute("BEGIN IMMEDIATE")
+        try:
+            cursor = self._conn.execute(
+                "SELECT * FROM experiment_runs WHERE run_id = ?", (run.run_id,)
+            )
+            row = cursor.fetchone()
+            if row is not None:
+                existing = self._row_to_record(row)
+                if existing.content_digest() != digest:
+                    raise ValueError(
+                        "DUPLICATE_RUN_KEY_CANNOT_OVERWRITE_DIFFERENT_RESULT: "
+                        f"Run '{run.run_id}' already exists with different contents."
+                    )
+                self._conn.commit()
+                return
 
-        if row is not None:
-            existing_hash = row["content_hash"]
-            if existing_hash != digest:
-                raise ValueError(
-                    f"DUPLICATE_RUN_KEY_CANNOT_OVERWRITE_DIFFERENT_RESULT: Run '{run.run_id}' already exists with different contents."
-                )
-            return
-
-        with self._conn:
+            if run.parent_run_id is not None:
+                self.get_ancestry(run.parent_run_id)
             self._conn.execute(
                 """
                 INSERT INTO experiment_runs (
@@ -179,6 +193,10 @@ class ExperimentRegistry:
                     digest,
                 ),
             )
+            self._conn.commit()
+        except Exception:
+            self._conn.rollback()
+            raise
 
     def get_run(self, run_id: str) -> ExperimentRunRecord | None:
         """Fetch an experiment run by run_id."""
@@ -192,12 +210,16 @@ class ExperimentRegistry:
     def get_ancestry(self, run_id: str) -> list[ExperimentRunRecord]:
         """Return full lineage from the specified run backwards to the root ancestor."""
         chain: list[ExperimentRunRecord] = []
+        seen: set[str] = set()
         curr_id: str | None = run_id
 
         while curr_id is not None:
+            if curr_id in seen:
+                raise ValueError(f"RUN_ANCESTRY_CYCLE:{curr_id}")
+            seen.add(curr_id)
             record = self.get_run(curr_id)
             if record is None:
-                break
+                raise ValueError(f"MISSING_ANCESTRY_RUN:{curr_id}")
             chain.append(record)
             curr_id = record.parent_run_id
 
@@ -243,7 +265,7 @@ class ExperimentRegistry:
         return [self._row_to_record(r) for r in cursor.fetchall()]
 
     def _row_to_record(self, row: sqlite3.Row) -> ExperimentRunRecord:
-        return ExperimentRunRecord(
+        record = ExperimentRunRecord(
             run_id=row["run_id"],
             parent_run_id=row["parent_run_id"],
             candidate_id=row["candidate_id"],
@@ -263,3 +285,6 @@ class ExperimentRegistry:
             created_at=datetime.fromisoformat(row["created_at"]),
             promotable=bool(row["promotable"]),
         )
+        if record.content_digest() != row["content_hash"]:
+            raise ValueError(f"EXPERIMENT_RUN_CONTENT_HASH_MISMATCH:{record.run_id}")
+        return record
