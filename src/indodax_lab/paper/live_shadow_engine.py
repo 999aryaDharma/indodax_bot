@@ -125,6 +125,7 @@ class LiveShadowEngine:
         self.cost_schedule_path = cost_schedule_path
         self.cost_table = load_cost_schedule_table(cost_schedule_path)
         self.initial_cash = initial_cash
+        self.configured_initial_cash = initial_cash
         self.max_positions = max_positions
         self.fixed_risk_pct = fixed_risk_pct
         self.max_cash_per_trade_pct = max_cash_per_trade_pct
@@ -216,9 +217,15 @@ class LiveShadowEngine:
         if not isinstance(ledger_state, dict):
             raise RuntimeError("SHADOW_LEDGER_STATE_MISSING")
         restored_ledger = ResearchLedger.from_dict(ledger_state)
-        if restored_ledger.initial_cash != self.initial_cash:
+        configured_cash = Decimal(
+            str(data.get("configured_initial_cash", data.get("initial_cash")))
+        )
+        if configured_cash != self.configured_initial_cash:
             raise RuntimeError("SHADOW_LEDGER_INITIAL_CASH_MISMATCH")
+        if restored_ledger.initial_cash != Decimal(str(data.get("initial_cash"))):
+            raise RuntimeError("SHADOW_CHECKPOINT_PERIOD_CASH_MISMATCH")
         self.ledger = restored_ledger
+        self.initial_cash = restored_ledger.initial_cash
         self.open_positions = {
             pos_id: ShadowPosition(**p_dict)
             for pos_id, p_dict in data.get("open_positions", {}).items()
@@ -257,6 +264,7 @@ class LiveShadowEngine:
             "schema_version": 3,
             "risk_period_id": self.risk_period_id,
             "initial_cash": str(self.initial_cash),
+            "configured_initial_cash": str(self.configured_initial_cash),
             "available_cash": str(self.available_cash),
             "ledger_state": self.ledger.to_dict(),
             "open_positions": {k: asdict(v) for k, v in self.open_positions.items()},
@@ -311,6 +319,7 @@ class LiveShadowEngine:
         previous_positions = self.open_positions
         previous_risk_manager = self.risk_manager
         previous_audit_log = list(self.audit_log)
+        previous_initial_cash = self.initial_cash
         details = [
             "hard_halt_cleared" if self.risk_manager.is_halted else "no_active_halt"
         ]
@@ -329,10 +338,11 @@ class LiveShadowEngine:
         )
 
         self.ledger = ResearchLedger(
-            initial_cash=self.initial_cash,
+            initial_cash=self.available_cash,
             init_timestamp=now,
         )
         self.open_positions = {}
+        self.initial_cash = self.ledger.initial_cash
         self.risk_period_id = uuid4().hex
         self.risk_manager = PortfolioRiskManager(
             policy=self.risk_policy,
@@ -358,6 +368,7 @@ class LiveShadowEngine:
             self.open_positions = previous_positions
             self.risk_manager = previous_risk_manager
             self.audit_log = previous_audit_log
+            self.initial_cash = previous_initial_cash
             raise
 
     # =========================================================================

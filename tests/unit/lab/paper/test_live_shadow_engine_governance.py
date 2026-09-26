@@ -24,13 +24,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from indodax_lab.backtest.costs import CostScheduleTable
+from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide
+from indodax_lab.backtest.orders import Fill
 from indodax_lab.paper.live_shadow_engine import (
     ClosedTrade,
     LiveShadowEngine,
@@ -215,6 +216,35 @@ def test_shadow_reset_without_authorization_leaves_no_audit_entry(engine) -> Non
 
 
 def test_shadow_new_risk_period_preserves_breaches_and_closed_trades(engine) -> None:
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    engine.ledger.process_fill(
+        Fill(
+            fill_id="loss-buy",
+            order_id="loss-entry",
+            event_id="loss-entry-event",
+            pair="btc_idr",
+            side=OrderSide.BUY,
+            role=OrderRole.TAKER,
+            qty=Decimal("1"),
+            price=Decimal("100"),
+            timestamp=start,
+        )
+    )
+    engine.ledger.process_fill(
+        Fill(
+            fill_id="loss-sell",
+            order_id="loss-exit",
+            event_id="loss-exit-event",
+            pair="btc_idr",
+            side=OrderSide.SELL,
+            role=OrderRole.TAKER,
+            qty=Decimal("1"),
+            price=Decimal("80"),
+            timestamp=start + timedelta(seconds=1),
+        )
+    )
+    remaining_equity = engine.available_cash
+    assert remaining_equity == Decimal("499980.00")
     _trip_hard_halt(engine)
     engine.save_state(
         event_type="RISK_HALT",
@@ -248,6 +278,9 @@ def test_shadow_new_risk_period_preserves_breaches_and_closed_trades(engine) -> 
     engine.reset_portfolio(**_AUTH_KWARGS)
 
     assert engine.risk_period_id != old_period_id
+    assert engine.available_cash == remaining_equity
+    assert engine.initial_cash == remaining_equity
+    assert engine.risk_manager.initial_equity == remaining_equity
     assert [trade.trade_id for trade in engine.closed_trades] == ["closed-before-reset"]
     restarted = LiveShadowEngine(
         state_file=engine.state_file,
