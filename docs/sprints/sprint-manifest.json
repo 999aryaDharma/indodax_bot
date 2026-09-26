@@ -6232,16 +6232,17 @@
       "files": [
         "configs/strategies/C01_v1.yaml",
         "src/indodax_lab/strategies/c01.py",
-        "tests/unit/lab/strategies/test_c01.py"
+        "tests/unit/lab/strategies/test_c01.py",
+        "docs/sprints/handoffs/C01-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "CORE",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C01-01-donchian-breakout.md",
       "priority": "P0",
-      "status": "REVIEW",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Antigravity (original); Codex /root (review remediation)",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c01-01-donchian-breakout",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -6263,35 +6264,35 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/C01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "ce8ce3a3771464de5ed8aa0db7a30845062dcd40",
+        "review": "Independent PASS on corrective SHA; 9 targeted tests and 18 negative probes passed. Nonfinite/oversized ATR, missing/nonfinite lookback data, and incomplete-tail replay findings are closed."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "C01-01-AC0",
           "test_case": "test_c01_01_valid_contract",
           "behavior": "Kandidat C01 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C01-01-AC1",
           "test_case": "test_c01_01_contract_1",
           "behavior": "Current bar tidak ikut previous high",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C01-01-AC2",
           "test_case": "test_c01_01_contract_2",
           "behavior": "Breakout confirmed menghasilkan LONG",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C01-01-AC3",
           "test_case": "test_c01_01_contract_3",
           "behavior": "Incomplete bar menghasilkan FLAT",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "risk_level": "medium",
@@ -7576,7 +7577,10 @@
       "files": [
         "configs/strategies/S04_v1.yaml",
         "src/indodax_lab/strategies/s04.py",
-        "tests/unit/lab/strategies/test_s04.py"
+        "tests/unit/lab/strategies/test_s04.py",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/decisions/CR-S04-order-flow-feature-contract.md",
+        "docs/sprints/handoffs/S04-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXPERIMENTAL",
@@ -7601,39 +7605,39 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S04-order-flow-feature-contract.md"
       ],
-      "current_context": "Implementation is held for owner approval of CR-S04. STRAT-01 supplies the strategy protocol; LOB-01 validates book sessions and tensors. The canonical feature registry does not yet publish the required S04 LOB inputs with event/availability/session/sequence evidence. No feature schema or strategy implementation changes before approval.",
+      "current_context": "Owner-approved S04 lob_v1 row contract and candidate are implemented and independently reviewed. Research defaults: both imbalance values >=0.10, book age <=5s, finite positive close. Real-feed coverage and >=90-day qualification remain external.",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
-        "Owner approval of CR-S04 before feature-schema changes; real Indodax book/trade feed and >=90-day coverage remain qualification gates."
+        "Real Indodax book/trade feed and >=90-day coverage/regime qualification remain external gates."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
         {
           "criterion": "S04-01-AC0",
-          "test_case": "test_s04_01_valid_contract",
+          "test_case": "test_s04_valid_causal_order_flow_emits_candidate_sized_intent",
           "behavior": "Kandidat S04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S04-01-AC1",
-          "test_case": "test_s04_01_contract_1",
+          "test_case": "test_s04_missing_unknown_or_invalid_session_sequence_abstains",
           "behavior": "Sequence gap abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S04-01-AC2",
-          "test_case": "test_s04_01_contract_2",
+          "test_case": "test_s04_stale_or_future_book_timestamps_abstain",
           "behavior": "Stale book abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S04-01-AC3",
-          "test_case": "test_s04_01_contract_3",
+          "test_case": "test_s04_rejects_wrong_version_and_invalid_causal_timestamps",
           "behavior": "Imbalance timestamp setelah decision ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7641,7 +7645,14 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/S04-01-HANDOFF.md",
+        "code_target": "5d54dc41556606c7a83e169ea1d99558a9fe1f71",
+        "source_commit": "5d54dc41556606c7a83e169ea1d99558a9fe1f71",
+        "review": "Independent PASS on exact remediation SHA; 7 targeted tests and 8 delta probes passed. Real Indodax feed and >=90-day coverage remain external qualification gates."
+      }
     },
     {
       "id": "S05-01",

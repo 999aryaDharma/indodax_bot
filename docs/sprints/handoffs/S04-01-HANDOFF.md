@@ -1,12 +1,12 @@
 # S04-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 
 - Sprint ID: S04-01 — Order flow imbalance
 - Implementation owner: Codex `/root`
-- Independent reviewer: `/root/docs_review` (pending)
+- Independent reviewer: `/root/docs_review` — PASS on implementation SHA `5d54dc41556606c7a83e169ea1d99558a9fe1f71`.
 - Branch: `feat/feat-02-finalization`
 - Implementation SHA: `5d54dc41556606c7a83e169ea1d99558a9fe1f71` (initial implementation `8a415f1` plus review remediation)
 - Dependency status: STRAT-01 DONE; LOB-01 DONE
@@ -36,4 +36,4 @@ Status: REVIEW
 
 - Real Indodax book/trade feed and >=90-day coverage/regime qualification remain external; this implementation uses fixtures and makes no profitability or promotion claim.
 - Research strategy only. No Production account, credential, runtime, order, or ledger was accessed or changed.
-- Initial independent review found two Important findings (minimum-notional decimal rounding and timestamps after row decision); both were fixed with regression tests. Re-review is pending on implementation SHA `5d54dc41556606c7a83e169ea1d99558a9fe1f71`.
+- Initial independent review found two Important findings (minimum-notional decimal rounding and timestamps after row decision); both were fixed with regression tests. Re-review PASS on exact implementation SHA `5d54dc41556606c7a83e169ea1d99558a9fe1f71`; reviewer reran 7 tests and 8 direct delta probes, with no remaining Critical/Important findings.

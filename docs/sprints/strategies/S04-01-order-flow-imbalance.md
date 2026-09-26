@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: IN_PROGRESS
+Status: DONE
 
 Priority: P2 | Type: feature | Domain: strategies | Portfolio: EXPERIMENTAL
 
-Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review (PASS)
 
 Recommended Branch: `feat/s04-01-order-flow-imbalance`
 
@@ -199,10 +199,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **S04-01-AC0** Kandidat S04 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **S04-01-AC1** Sequence gap abstain. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **S04-01-AC2** Stale book abstain. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **S04-01-AC3** Imbalance timestamp setelah decision ditolak. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **S04-01-AC0** Candidate-sized intent verified with a public `DecisionFrame` fixture; see S04-01 handoff.
+- [x] **S04-01-AC1** Missing, unknown, and broken sequence evidence abstains; see S04-01 handoff.
+- [x] **S04-01-AC2** Stale book evidence abstains; exactly 5 seconds is accepted under the frozen research default.
+- [x] **S04-01-AC3** Future, naive, or post-decision timestamps are rejected; see S04-01 handoff.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

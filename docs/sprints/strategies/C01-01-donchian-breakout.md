@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: feature | Domain: strategies | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (original), Codex /root (review remediation) | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c01-01-donchian-breakout`
 
@@ -191,10 +191,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **C01-01-AC0** Kandidat C01 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **C01-01-AC1** Current bar tidak ikut previous high. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **C01-01-AC2** Breakout confirmed menghasilkan LONG. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **C01-01-AC3** Incomplete bar menghasilkan FLAT. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **C01-01-AC0** Candidate emits a valid intent; see corrective handoff evidence.
+- [x] **C01-01-AC1** Previous high excludes the current bar.
+- [x] **C01-01-AC2** Confirmed breakout emits LONG; failed volume/invalid inputs abstain.
+- [x] **C01-01-AC3** Incomplete current bars and incomplete lookback evidence abstain without replaying a prior signal.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

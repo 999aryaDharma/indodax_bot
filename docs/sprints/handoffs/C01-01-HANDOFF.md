@@ -1,14 +1,15 @@
 # C01-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: C01-01 — Donchian breakout
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Corrective implementation owner: Codex `/root`
+- Independent reviewer: `/root/docs_review` — PASS on corrective SHA `ce8ce3a3771464de5ed8aa0db7a30845062dcd40`.
 - Branch / worktree: `feat/c01-01-donchian-breakout`
 - Base SHA: `9b0ee0f`
-- Code target: `feat(c01-01): donchian breakout`
+- Code target: corrective commit `ce8ce3a3771464de5ed8aa0db7a30845062dcd40`
 - Evidence SHA relation: `cd48fccd89d5b2bfdec16a221e75d2d07bc3d19f`
 
 ## Files and contracts
@@ -48,9 +49,18 @@ Combined suite verification (76 passed across backtest, risk, execution, ledger,
 - Quality verdict: PASS (pure stateless decision protocol, zero ledger mutation, strict causality, fail-closed volume gate and ATR stop).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: initial evidence was pending; corrective SHA passed independent review with no remaining Critical/Important findings.
 
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for C01-01.
 - Next unlocked consumers: C10-01, QA-01, M05-01.
+
+## Current remediation evidence
+
+- Corrective implementation SHA: `ce8ce3a3771464de5ed8aa0db7a30845062dcd40` (builds on the original implementation and review fixes in `0e2a0ab`).
+- Targeted command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c01.py -q` — 9 passed.
+- Targeted lint: `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/c01.py tests/unit/lab/strategies/test_c01.py` — passed.
+- Added guards/tests for nonfinite or oversized ATR, missing/nonfinite lookback highs and volume, nonfinite current volume, and an ineligible latest row that could otherwise replay a prior breakout.
+- The original evidence above is provenance only; current acceptance evidence is the corrective SHA and focused checks recorded here.
+- Independent review of the corrective SHA: PASS on `ce8ce3a3771464de5ed8aa0db7a30845062dcd40`; 9 tests and 18 independent negative probes passed, with no remaining Critical/Important findings.

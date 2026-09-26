@@ -67,7 +67,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | DONE | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |
 | SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | DONE | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
 | SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | DONE | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
-| C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C01-01-donchian-breakout.md) |
+| C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | DONE | [Spec](strategies\C01-01-donchian-breakout.md) |
 | C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
 | C04-01 | Cross sectional momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C04-01-cross-sectional-momentum.md) |
@@ -82,7 +82,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | S01-01 | Liquidity screened breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S01-01-liquidity-screened-breakout.md) |
 | S02-01 | Squeeze expansion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S02-01-squeeze-expansion.md) |
 | S03-01 | Abnormal volume continuation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S03-01-abnormal-volume-continuation.md) |
-| S04-01 | Order flow imbalance | strategies | P2 | feature | STRAT-01, LOB-01 | IN_PROGRESS | [Spec](strategies\S04-01-order-flow-imbalance.md) |
+| S04-01 | Order flow imbalance | strategies | P2 | feature | STRAT-01, LOB-01 | DONE | [Spec](strategies\S04-01-order-flow-imbalance.md) |
 | S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S05-01-micro-pullback.md) |
 | S06-01 | Post listing maturation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S06-01-post-listing-maturation.md) |
 | S07-01 | Small cap rotation | strategies | P1 | feature | C04-01, S01-01 | PLANNED | [Spec](strategies\S07-01-small-cap-rotation.md) |
