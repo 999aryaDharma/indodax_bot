@@ -1,17 +1,16 @@
 """SQLite WAL durable leased queue implementation (JOB-01).
 
-Contract:
-SQLite WAL local queue: PENDING/RUNNING/SUCCESS/FAILED_RETRYABLE/FAILED_FINAL/BLOCKED_DATA/BLOCKED_POLICY/CANCELLED/STALE.
+Contract: SQLite WAL local queue with terminal, retryable and blocked lifecycle states.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import hashlib
 import json
-from pathlib import Path
+import os
 import sqlite3
-from typing import Sequence
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from indodax_lab.orchestration.jobs import (
     JobDefinition,
@@ -76,6 +75,16 @@ class SqliteJobQueue:
                     error_message TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS job_artifacts (
+                    job_id TEXT PRIMARY KEY REFERENCES jobs(job_id),
+                    artifact_path TEXT NOT NULL,
+                    artifact_hash TEXT NOT NULL,
+                    staged_at TEXT NOT NULL
                 );
                 """
             )
@@ -275,7 +284,8 @@ class SqliteJobQueue:
             ):
                 conn.execute("ROLLBACK;")
                 raise LeaseFencingError(
-                    f"STALE_LEASE_FENCED: worker {worker_id} generation {generation} does not match active lease"
+                    f"STALE_LEASE_FENCED: worker {worker_id} generation {generation} "
+                    "does not match active lease"
                 )
 
             new_expires = (as_of + timedelta(seconds=lease_sec)).isoformat()
@@ -338,17 +348,18 @@ class SqliteJobQueue:
             if not held:
                 conn.execute("ROLLBACK;")
                 raise LeaseFencingError(
-                    f"STALE_LEASE_FENCED: cannot complete job {job_id} for stale worker {worker_id} gen {generation}"
+                    f"STALE_LEASE_FENCED: cannot complete job {job_id} for stale worker "
+                    f"{worker_id} gen {generation}"
                 )
 
             # Invariant: a partial or absent artifact cannot transition to SUCCESS.
             if artifact_path is None:
                 conn.execute("ROLLBACK;")
                 raise PartialArtifactError(
-                    f"ARTIFACT_PATH_REQUIRED: job {job_id} cannot be published as SUCCESS without a "
+                    f"ARTIFACT_PATH_REQUIRED: job {job_id} cannot be published as SUCCESS "
+                    "without a "
                     "result artifact reference"
                 )
-
             p = Path(artifact_path)
             try:
                 if not p.exists() or not p.is_file():
@@ -356,8 +367,16 @@ class SqliteJobQueue:
                 content = p.read_bytes()
                 if len(content) == 0:
                     raise PartialArtifactError(f"ARTIFACT_FILE_EMPTY:{artifact_path}")
+                if (
+                    expected_hash is None
+                    or len(expected_hash) != 64
+                    or any(char not in "0123456789abcdefABCDEF" for char in expected_hash)
+                ):
+                    raise PartialArtifactError(
+                        "ARTIFACT_EXPECTED_HASH_REQUIRED: a complete SHA-256 digest is required"
+                    )
                 actual_hash = hashlib.sha256(content).hexdigest()
-                if expected_hash is not None and actual_hash != expected_hash:
+                if actual_hash != expected_hash.lower():
                     raise PartialArtifactError(
                         f"ARTIFACT_CHECKSUM_MISMATCH: expected {expected_hash}, got {actual_hash}"
                     )
@@ -367,24 +386,104 @@ class SqliteJobQueue:
                     raise
                 raise PartialArtifactError(f"ARTIFACT_UNREADABLE:{artifact_path}:{exc}") from exc
 
-            path_str = str(p)
-            hash_str = actual_hash
+            try:
+                published_path = self._publish_artifact(actual_hash, content)
+            except OSError as exc:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(f"ARTIFACT_PUBLISH_FAILED:{exc}") from exc
+
+            staged = conn.execute(
+                "SELECT artifact_hash FROM job_artifacts WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            if staged and staged[0] != actual_hash:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(
+                    f"ARTIFACT_RETRY_OUTPUT_MISMATCH:{job_id}:"
+                    f"expected {staged[0]}, got {actual_hash}"
+                )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO job_artifacts (
+                    job_id, artifact_path, artifact_hash, staged_at
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (job_id, str(published_path), actual_hash, as_of_iso),
+            )
+            conn.execute("COMMIT;")
+            return self.recover_completed_artifact(
+                job_id, worker_id, generation, as_of=as_of
+            )
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def recover_completed_artifact(
+        self,
+        job_id: str,
+        worker_id: str,
+        generation: int,
+        as_of: datetime | None = None,
+    ) -> JobRecord:
+        """Finalize a verified staged result after a worker/DB crash without rerunning work."""
+        if as_of is None:
+            as_of = datetime.now(UTC)
+        as_of = _ensure_utc(as_of, "as_of")
+        as_of_iso = as_of.isoformat()
+
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            held = conn.execute(
+                """
+                SELECT 1 FROM jobs
+                WHERE job_id = ? AND owner_id = ? AND generation = ?
+                  AND status = ? AND lease_expires_at > ?
+                """,
+                (job_id, worker_id, generation, JobStatus.RUNNING.value, as_of_iso),
+            ).fetchone()
+            if not held:
+                conn.execute("ROLLBACK;")
+                raise LeaseFencingError(
+                    f"STALE_LEASE_FENCED: cannot recover job {job_id} for worker "
+                    f"{worker_id} gen {generation}"
+                )
+
+            staged = conn.execute(
+                "SELECT artifact_path, artifact_hash FROM job_artifacts WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+            if not staged:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(f"ARTIFACT_RECOVERY_NOT_AVAILABLE:{job_id}")
+
+            artifact_path, artifact_hash = staged
+            try:
+                content = Path(artifact_path).read_bytes()
+            except OSError as exc:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(
+                    f"ARTIFACT_STAGED_UNREADABLE:{job_id}"
+                ) from exc
+            if hashlib.sha256(content).hexdigest() != artifact_hash:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(f"ARTIFACT_STAGED_CHECKSUM_MISMATCH:{job_id}")
 
             cursor = conn.execute(
                 """
                 UPDATE jobs
-                SET status = ?,
-                    result_artifact_path = ?,
-                    result_artifact_hash = ?,
-                    error_message = NULL,
-                    updated_at = ?
+                SET status = ?, result_artifact_path = ?, result_artifact_hash = ?,
+                    error_message = NULL, updated_at = ?
                 WHERE job_id = ? AND owner_id = ? AND generation = ? AND status = ?
                   AND lease_expires_at > ?
                 """,
                 (
                     JobStatus.SUCCESS.value,
-                    path_str,
-                    hash_str,
+                    artifact_path,
+                    artifact_hash,
                     as_of_iso,
                     job_id,
                     worker_id,
@@ -393,11 +492,9 @@ class SqliteJobQueue:
                     as_of_iso,
                 ),
             )
-            if cursor.rowcount == 0:
+            if cursor.rowcount != 1:
                 conn.execute("ROLLBACK;")
-                raise LeaseFencingError(
-                    f"STALE_LEASE_FENCED: cannot complete job {job_id} for stale worker {worker_id} gen {generation}"
-                )
+                raise LeaseFencingError(f"STALE_LEASE_FENCED: cannot recover job {job_id}")
             conn.execute("COMMIT;")
             return self.get_job(job_id)
         except Exception:
@@ -406,6 +503,57 @@ class SqliteJobQueue:
             raise
         finally:
             conn.close()
+
+    @property
+    def _artifact_root(self) -> Path:
+        return self.db_path.parent / f"{self.db_path.name}.artifacts"
+
+    def _publish_artifact(self, digest: str, content: bytes) -> Path:
+        """Atomically store/reuse a verified SHA-256-addressed immutable result."""
+        destination = self._artifact_root / digest[:2] / digest
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists():
+            try:
+                existing = destination.read_bytes()
+            except OSError as exc:
+                raise OSError(f"ARTIFACT_STORE_UNREADABLE:{exc}") from exc
+            if hashlib.sha256(existing).hexdigest() != digest:
+                raise OSError(
+                    "ARTIFACT_STORE_CORRUPT: content-addressed object failed verification"
+                )
+            return destination
+
+        # The queue's SQLite write lock serializes publication for this store.
+        # A deterministic temporary path is overwritten after a crash; os.replace
+        # makes the digest path visible only after the complete bytes are durable.
+        temporary = destination.with_name(destination.name + ".tmp")
+        try:
+            with temporary.open("wb") as artifact:
+                artifact.write(content)
+                artifact.flush()
+                os.fsync(artifact.fileno())
+            os.replace(temporary, destination)
+        except OSError:
+            temporary.unlink(missing_ok=True)
+            raise
+        return destination
+
+    def read_result_artifact(self, job_id: str) -> bytes:
+        """Read a successful output only after verifying its persisted digest."""
+        job = self.get_job(job_id)
+        if (
+            job.status != JobStatus.SUCCESS
+            or not job.result_artifact_path
+            or not job.result_artifact_hash
+        ):
+            raise PartialArtifactError(f"RESULT_ARTIFACT_UNAVAILABLE:{job_id}")
+        try:
+            content = Path(job.result_artifact_path).read_bytes()
+        except OSError as exc:
+            raise PartialArtifactError(f"ARTIFACT_PUBLISHED_UNREADABLE:{job_id}") from exc
+        if hashlib.sha256(content).hexdigest() != job.result_artifact_hash:
+            raise PartialArtifactError(f"ARTIFACT_PUBLISHED_CHECKSUM_MISMATCH:{job_id}")
+        return content
 
     def fail_job(
         self,

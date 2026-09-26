@@ -1,16 +1,16 @@
 """Unit tests for JOB-01 Durable leased jobs and SQLite WAL local queue."""
 
-from datetime import UTC, datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
-from pathlib import Path
 import sqlite3
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
 import pytest
 
 from indodax_lab.orchestration.jobs import (
     JobDefinition,
-    JobRecord,
     JobStatus,
     LeaseFencingError,
     PartialArtifactError,
@@ -133,6 +133,7 @@ def test_job_01_contract_2(tmp_path: Path) -> None:
         "worker_2",
         generation=2,
         artifact_path=artifact_file2,
+        expected_hash=hashlib.sha256(b"worker_2_valid_result").hexdigest(),
         as_of=t_stale + timedelta(seconds=5),
     )
     assert completed.status == JobStatus.SUCCESS
@@ -187,7 +188,7 @@ def test_job_01_contract_3(tmp_path: Path) -> None:
             "worker_1",
             generation=1,
             artifact_path=corrupt_file,
-            expected_hash="expected_hash_that_does_not_match",
+            expected_hash=hashlib.sha256(b"different expected complete result").hexdigest(),
             as_of=now,
         )
     rec = queue.get_job("job_partial")
@@ -325,6 +326,123 @@ def test_complete_job_cannot_publish_success_without_a_result_artifact(tmp_path:
     assert record.result_artifact_hash is None
 
 
+def test_complete_job_requires_expected_digest_for_complete_artifact(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("missing_digest"))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=now)
+    assert claimed is not None
+    artifact = tmp_path / "partial.bin"
+    artifact.write_bytes(b"prefix of an interrupted output")
+
+    with pytest.raises(PartialArtifactError, match="ARTIFACT_EXPECTED_HASH_REQUIRED"):
+        queue.complete_job(
+            "missing_digest", "worker_1", claimed.generation,
+            artifact_path=artifact, as_of=now,
+        )
+
+    assert queue.get_job("missing_digest").status == JobStatus.RUNNING
+
+
+def test_completion_publishes_content_addressed_copy_not_worker_path(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("immutable_output"))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=now)
+    assert claimed is not None
+    source = tmp_path / "worker-output.bin"
+    content = b"complete immutable artifact"
+    source.write_bytes(content)
+    digest = hashlib.sha256(content).hexdigest()
+
+    completed = queue.complete_job(
+        "immutable_output", "worker_1", claimed.generation,
+        artifact_path=source, expected_hash=digest, as_of=now,
+    )
+
+    assert completed.result_artifact_path != str(source)
+    assert Path(completed.result_artifact_path).read_bytes() == content
+    source.write_bytes(b"stale worker changed its local output")
+    assert Path(completed.result_artifact_path).read_bytes() == content
+    assert queue.read_result_artifact("immutable_output") == content
+
+
+def test_commit_crash_recovers_staged_artifact_without_recomputation(
+    tmp_path: Path, monkeypatch
+) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("recover_artifact", lease_duration_seconds=10))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    first = queue.claim_job("worker_1", as_of=now)
+    assert first is not None
+    source = tmp_path / "output.bin"
+    content = b"completed output survives db commit crash"
+    source.write_bytes(content)
+    digest = hashlib.sha256(content).hexdigest()
+    connect = queue._connect
+    commit_state = {"count": 0}
+
+    class FailSecondCommit:
+        def __init__(self, connection):
+            self.connection = connection
+            self.commits = 0
+
+        @property
+        def in_transaction(self):
+            return self.connection.in_transaction
+
+        def execute(self, sql, *args):
+            if sql == "COMMIT;":
+                commit_state["count"] += 1
+            if sql == "COMMIT;" and commit_state["count"] == 2:
+                raise sqlite3.OperationalError("injected commit crash")
+            return self.connection.execute(sql, *args)
+
+        def close(self):
+            self.connection.close()
+
+    monkeypatch.setattr(queue, "_connect", lambda: FailSecondCommit(connect()))
+    with pytest.raises(sqlite3.OperationalError, match="injected commit crash"):
+        queue.complete_job(
+            "recover_artifact", "worker_1", first.generation,
+            artifact_path=source, expected_hash=digest, as_of=now,
+        )
+    monkeypatch.setattr(queue, "_connect", connect)
+    assert queue.get_job("recover_artifact").status == JobStatus.RUNNING
+
+    retry_time = now + timedelta(seconds=11)
+    second = queue.claim_job("worker_2", as_of=retry_time)
+    assert second is not None and second.generation == first.generation + 1
+    completed = queue.recover_completed_artifact(
+        "recover_artifact", "worker_2", second.generation, as_of=retry_time,
+    )
+
+    stored = Path(completed.result_artifact_path)
+    assert completed.status == JobStatus.SUCCESS
+    assert stored.read_bytes() == content
+    assert len(list((tmp_path / "queue.db.artifacts").rglob(digest))) == 1
+
+
+def test_read_result_artifact_rejects_tampering(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("tampered_output"))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=now)
+    assert claimed is not None
+    source = tmp_path / "output.bin"
+    content = b"verified output"
+    source.write_bytes(content)
+    completed = queue.complete_job(
+        "tampered_output", "worker_1", claimed.generation,
+        artifact_path=source, expected_hash=hashlib.sha256(content).hexdigest(), as_of=now,
+    )
+    published = Path(completed.result_artifact_path)
+    published.write_bytes(b"tampered")
+
+    with pytest.raises(PartialArtifactError, match="ARTIFACT_PUBLISHED_CHECKSUM_MISMATCH"):
+        queue.read_result_artifact("tampered_output")
+
+
 def test_fenced_worker_is_fenced_before_artifact_inspection(tmp_path: Path) -> None:
     """JOB-01-AC2: lease fencing is authoritative and is checked before the artifact.
 
@@ -396,6 +514,7 @@ def test_successful_completion_clears_the_takeover_marker(tmp_path: Path) -> Non
         "live_worker",
         generation=replacement.generation,
         artifact_path=artifact,
+        expected_hash=hashlib.sha256(b"recovered_result_payload").hexdigest(),
         as_of=expired + timedelta(seconds=5),
     )
     assert completed.status == JobStatus.SUCCESS
@@ -409,4 +528,3 @@ def test_first_claim_carries_no_takeover_marker(tmp_path: Path) -> None:
     claimed = queue.claim_job("worker_1", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
     assert claimed is not None
     assert claimed.error_message is None
-
