@@ -84,6 +84,8 @@ def test_c11_rejects_parameters_above_frozen_allocation_caps():
         ("max_pair_fraction", "1"),
         ("max_pair_fraction", "Infinity"),
         ("min_notional_idr", "0"),
+        ("min_notional_idr", "1"),
+        ("min_notional_idr", "9999"),
     ):
         invalid = spec.model_copy(
             update={"parameters": spec.parameters | {key: value}}

@@ -46,7 +46,7 @@ def c11_decide(
         or pair_fraction <= 0
         or pair_fraction > Decimal("0.25")
         or not min_notional.is_finite()
-        or min_notional <= 0
+        or min_notional < Decimal("10000")
     ):
         raise ValueError("INVALID_C11_ALLOCATION_PARAMETERS")
     pair_cap = cash * pair_fraction
