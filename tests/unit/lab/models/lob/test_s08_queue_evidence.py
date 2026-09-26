@@ -59,6 +59,35 @@ def test_s08_valid_queue_evidence_preserves_typed_lineage_and_units() -> None:
     assert queue_evidence_failure_reason(evidence, _policy(), decision_time=NOW) is None
 
 
+def test_s08_default_queue_freshness_is_five_seconds_fail_closed() -> None:
+    policy = QueueEvidencePolicy(
+        policy_id="research-queue-freshness",
+        version="1.0.0",
+        approved_by="project-owner",
+        approval_ref="CR-S08",
+        source_id="fixture-lob",
+        source_version="fixture-v1",
+    )
+    assert policy.max_evidence_age_seconds == Decimal("5")
+    fresh = QueueEvidence.model_validate(
+        _evidence(
+            event_at=NOW - timedelta(seconds=7),
+            available_at=NOW - timedelta(seconds=6),
+            observed_at=NOW - timedelta(seconds=5),
+        )
+    )
+    stale = QueueEvidence.model_validate(
+        _evidence(
+            event_at=NOW - timedelta(seconds=7),
+            available_at=NOW - timedelta(seconds=6),
+            observed_at=NOW - timedelta(milliseconds=5001),
+        )
+    )
+
+    assert queue_evidence_failure_reason(fresh, policy, decision_time=NOW) is None
+    assert queue_evidence_failure_reason(stale, policy, decision_time=NOW) == "QUEUE_EVIDENCE_STALE"
+
+
 @pytest.mark.parametrize(
     ("updates", "expected"),
     [

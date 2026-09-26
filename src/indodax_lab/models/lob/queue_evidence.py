@@ -22,7 +22,7 @@ def _nonblank(value: str, field: str) -> str:
 
 
 class QueueEvidencePolicy(BaseModel):
-    """Explicitly approved freshness policy; no operational default is implied."""
+    """Versioned Research freshness policy, defaulting to the owner-approved 5s limit."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -32,9 +32,12 @@ class QueueEvidencePolicy(BaseModel):
     approval_ref: str = Field(min_length=1)
     source_id: str = Field(min_length=1)
     source_version: str = Field(min_length=1)
-    max_evidence_age_seconds: Decimal = Field(gt=0)
+    max_evidence_age_seconds: Decimal = Field(default=Decimal("5"), gt=0)
 
-    @field_validator("policy_id", "version", "approved_by", "approval_ref", "source_id", "source_version", mode="before")
+    @field_validator(
+        "policy_id", "version", "approved_by", "approval_ref", "source_id", "source_version",
+        mode="before",
+    )
     @classmethod
     def require_nonblank_identity(cls, value: str, info) -> str:
         return _nonblank(value, info.field_name)
