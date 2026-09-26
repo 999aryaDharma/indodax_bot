@@ -6,10 +6,11 @@ Status: DELTA_REVIEW
 
 - Sprint ID: C11-01 — Volatility allocation
 - Implementation agent: Codex
-- Independent reviewer: `/root/docs_review` (first review CHANGES_REQUESTED; delta review pending)
+- Independent reviewer: `/root/docs_review` (first and second reviews CHANGES_REQUESTED; final delta review pending)
 - Branch: `feat/feat-02-finalization`
 - Initial review SHA: `56c6e055cafbf01cc20d2c4c09f72dcdecacce8c`
 - Delta review SHA: `46c2abcf7b9a104a8f399877a6727be3722e5c47`
+- Final delta review SHA: `b75dfe6b7ddba903c5ae0ac5e2ac7a93560cb176`
 - Environment: Windows, Python 3.12.13, `C:/Users/User/miniconda3/envs/ML/python.exe`
 
 ## Files and contract
@@ -43,3 +44,4 @@ Status: DELTA_REVIEW
 - Simulator caller remains responsible for supplying fresh unreserved cash; no simulator orchestration caller currently supplies it automatically.
 - Candidate is research-only and not activated or qualified for trading.
 - First independent review found 3 Important findings; all were reproduced RED, fixed, and covered by regressions. Delta review requested for `46c2abcf7b9a104a8f399877a6727be3722e5c47`; keep sprint in REVIEW until PASS.
+- Second review found the strategy minimum could be lowered below the venue's Rp10.000 floor. Regression reproduced RED; configuration now rejects any minimum below Rp10.000. Final delta review requested for `b75dfe6b7ddba903c5ae0ac5e2ac7a93560cb176`.
