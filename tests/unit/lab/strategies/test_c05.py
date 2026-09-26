@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pandas as pd
+import pytest
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.contracts.decision import SignalIntent
@@ -84,6 +85,27 @@ def test_c05_01_contract_2_expansion_gives_intent():
 def test_c05_01_contract_3_degenerate_range_abstains():
     df = _rows()
     df.loc[df.index[-1], ["high", "low"]] = 100.0
+    frame = create_decision_frame(df, as_of=df["decision_ts"].max())
+
+    assert c05_decide(frame, load_c05_specification()) == []
+
+
+@pytest.mark.parametrize(
+    ("column", "row", "value"),
+    [
+        ("low", -1, -1.0),
+        ("high", 0, float("inf")),
+        ("close", 0, 0.0),
+        ("high", 0, 99.0),
+    ],
+)
+def test_c05_invalid_consumed_ohlc_abstains(column, row, value):
+    df = _rows()
+    row_index = df.index[row]
+    if column == "high" and value == 99.0:
+        df.loc[row_index, ["high", "low"]] = [value, 100.0]
+    else:
+        df.loc[row_index, column] = value
     frame = create_decision_frame(df, as_of=df["decision_ts"].max())
 
     assert c05_decide(frame, load_c05_specification()) == []

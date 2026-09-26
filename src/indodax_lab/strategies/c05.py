@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
+
+import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.contracts.decision import SignalIntent
@@ -40,17 +43,33 @@ def c05_decide(
         if len(rows) < required:
             continue
 
-        baseline = rows.iloc[-required:-contraction_bars - 1]
-        contraction = rows.iloc[-contraction_bars - 1:-1]
         current = rows.iloc[-1]
         needed = ("high", "low", "close", "atr_14")
         if any(column not in rows or rows[column].isna().any() for column in needed):
             continue
 
-        baseline_range = (baseline["high"] - baseline["low"]).mean()
-        contraction_range = (contraction["high"] - contraction["low"]).mean()
-        current_range = float(current["high"] - current["low"])
-        close = float(current["close"])
+        market = rows.loc[:, ("high", "low", "close")].apply(
+            pd.to_numeric, errors="coerce"
+        )
+        market_values = market.to_numpy().ravel()
+        if not all(math.isfinite(float(value)) and float(value) > 0 for value in market_values):
+            continue
+        if (
+            market["high"].lt(market["low"]).any()
+            or market["close"].lt(market["low"]).any()
+            or market["close"].gt(market["high"]).any()
+        ):
+            continue
+
+        baseline_market = market.iloc[-required:-contraction_bars - 1]
+        contraction_market = market.iloc[-contraction_bars - 1:-1]
+        current_market = market.iloc[-1]
+        baseline_range = (baseline_market["high"] - baseline_market["low"]).mean()
+        contraction_range = (
+            contraction_market["high"] - contraction_market["low"]
+        ).mean()
+        current_range = float(current_market["high"] - current_market["low"])
+        close = float(current_market["close"])
         atr = float(current["atr_14"])
         if (
             baseline_range <= 0
@@ -58,13 +77,14 @@ def c05_decide(
             or current_range <= 0
             or close <= 0
             or atr <= 0
+            or not math.isfinite(atr)
         ):
             continue
         if contraction_range > baseline_range * contraction_ratio:
             continue
         if current_range < contraction_range * expansion_ratio:
             continue
-        if close <= float(contraction["high"].max()):
+        if close <= float(contraction_market["high"].max()):
             continue
 
         stop = close - atr_multiplier * atr
