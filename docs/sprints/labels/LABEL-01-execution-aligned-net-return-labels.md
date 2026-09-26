@@ -14,7 +14,7 @@ Requirements: FR-07 | Legacy tasks: 16
 
 External gates: Unknown/unverified historical tariff intervals remain excluded and block affected net-performance claims/promotion. This sprint does not qualify full strategy PnL or production fills.
 
-Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+Implementation artifacts named below are implemented on the current review candidate; independent exact-SHA review is pending. Sprint status remains CHANGES_REQUESTED until reviewer PASS is recorded in the manifest.
 
 ## Goal
 
@@ -132,7 +132,7 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-First establish LABEL-01-AC0: candidate-specific `SignalIntent` is priced through the shared simulator at entry and fixed horizon exit, and net return derives from actual fills/costs. Use a minimal valid fixture, independent expected output, and a behavioral failing assertion before implementation.
+LABEL-01-AC0 is implemented: candidate-specific `SignalIntent` is priced through the shared simulator at entry and fixed horizon exit, and net return derives from actual fills/costs. Baseline review reproduced zero-depth bars yielding VALID while the simulator rejected the fill; regression coverage now exercises missing liquidity against the shared simulator.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `LABEL-01-AC1`, prove candidate bundle/intent/sample lineage and decision-time match; reject mismatches. Write a mapped test and observe behavioral RED, then GREEN.
@@ -198,10 +198,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **LABEL-01-AC0** `net_return_candidate_horizon_v2` binds candidate-specific sizing/identity and measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL. Independent review at `8ecd154f466776a59dfeda38204b40d558efdf8d` found raw-open-price labels can be VALID when simulator rejects insufficient depth; see handoff.
+- [ ] **LABEL-01-AC0** `net_return_candidate_horizon_v2` binds candidate-specific sizing/identity and measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL. Evidence: `test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills`.
 - [ ] **LABEL-01-AC1** Candidate bundle, intent, pair, strategy, sample and decision-time lineage match; mismatches reject/exclude before output. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **LABEL-01-AC2** Horizon tidak lengkap tidak menjadi label nol. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-01-AC3** Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry may be included only if actual filled quantity is fully exited. Independent review reproduced zero-depth bars returning VALID while simulator returns INSUFFICIENT_DEPTH; see handoff.
+- [ ] **LABEL-01-AC3** Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry may be included only if actual filled quantity is fully exited. Evidence: v2 missing/unverified-cost, missing-liquidity, partial-entry, partial-exit and incomplete-horizon tests.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

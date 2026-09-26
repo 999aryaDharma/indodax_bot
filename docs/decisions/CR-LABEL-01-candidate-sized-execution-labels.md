@@ -1,6 +1,6 @@
 # CR-LABEL-01 — Candidate-sized execution labels
 
-Status: PROPOSED — owner approved the direction on 2026-09-25; written specification review pending.
+Status: ACCEPTED — owner approved the design and written specification on 2026-09-26.
 
 ## Problem
 
@@ -36,8 +36,9 @@ Disable v2 materialization/consumption and return to the last explicitly approve
 
 ## Validation / gates
 
-Before implementation, update and review the LABEL-01 sprint and dataset contracts. Implementation must test candidate/intent lineage, candidate-specific quantity, shared entry and exit fills, no fill, incomplete exit, fee provenance and fixed-horizon semantics; demonstrate behavioral RED/GREEN and obtain independent review on the exact SHA. Keep LABEL-01 `CHANGES_REQUESTED` until every AC passes review.
+Owner approved implementation on 2026-09-26 after reviewing the written specification. Implementation must test candidate/intent lineage, candidate-specific quantity, shared entry and exit fills, no fill, incomplete exit, fee provenance and fixed-horizon semantics; obtain independent review on the exact SHA. Keep LABEL-01 in review until every AC passes.
 
 ## Owner confirmation
 
-2026-09-25: owner selected candidate strategy quantity per sample and approved this design direction, including simulator-based BUY/exit-horizon labeling, exclusion of missing/incomplete fills, and outcome semantics distinct from SL/TP PnL. Written spec review remains pending before implementation.
+2026-09-25: owner selected candidate strategy quantity per sample and approved this design direction, including simulator-based BUY/exit-horizon labeling, exclusion of missing/incomplete fills, and outcome semantics distinct from SL/TP PnL.
+2026-09-26: owner explicitly approved the written LABEL-01 specification and authorized implementation.

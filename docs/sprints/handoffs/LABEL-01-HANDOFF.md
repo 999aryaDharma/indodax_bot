@@ -60,3 +60,15 @@ AC1 and AC2 pass. Independent focused label tests: 21 passed, but passing tests 
 - Deviation: implementation is currently an open-price research proxy, not the shared execution simulator required by AC0/AC3.
 - Unresolved issues: two Important findings remain open (fill-model alignment/fill-unavailable exclusion; unsupported canonical execution model).
 - LABEL-02 remains unavailable until LABEL-01 returns to DONE.
+
+## Approved change-control implementation candidate (2026-09-26)
+
+- Owner approved the written design and implementation after review: [CR-LABEL-01](../../decisions/CR-LABEL-01-candidate-sized-execution-labels.md). Existing `net_return_v1` path is unchanged; candidate labels use separate `net_return_candidate_horizon_v2` identity and config.
+- Code commit: `3f2623b884a5066cdbaf8a27f85e517c03fa9885` (`feat(label-01): add candidate horizon execution labels`).
+- Actual surface: `CandidateHorizonSample`, `CandidateHorizonConfig`, `CandidateHorizonLabel`, `load_candidate_horizon_config`, `build_candidate_horizon_label(s)` in `src/indodax_lab/labels/returns.py`, exported by the labels package. Simulator is injected and version-pinned to `causal-bar-proxy-v2`.
+- Contract: candidate bundle plus frozen BUY intent and matching strategy/pair/decision lineage; actual strategy-sized BUY and exact-horizon TAKER SELL go through `ConservativeExecutionSimulator`. Return is based on actual fill quantities/prices/fees. Partial entry is recorded only when fully exited. Missing fills, unverified costs, incomplete horizon or incomplete exit are EXCLUDED with stable reasons. SL/TP are not triggered.
+- AC evidence: `test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills`; `test_candidate_horizon_v2_closes_actual_partial_entry_quantity`; `test_candidate_horizon_v2_excludes_missing_entry_or_incomplete_horizon`; `test_candidate_horizon_v2_rejects_lineage_and_excludes_partial_exit`; `test_candidate_horizon_v2_excludes_unverified_fee_schedule`; `test_candidate_horizon_config_loads_as_separate_version`.
+- Focused check: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/labels/test_returns.py tests/unit/lab/cli/test_run_backtest_report.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 41 passed.
+- Full check on combined code HEAD `3f2623b884a5066cdbaf8a27f85e517c03fa9885`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,103 passed, 2 platform-specific skipped, 4 warnings. Planning validator -> PASS (134 nodes, 264 edges, no cycles); `rtk git diff --check` -> PASS.
+- Baseline behavioral RED evidence is the prior independent review on `8ecd154f466776a59dfeda38204b40d558efdf8d`, which reproduced zero-depth inputs marked VALID despite simulator rejection. The corrected missing-liquidity regression is GREEN on this candidate.
+- Independent exact-code-SHA review is pending. Status remains CHANGES_REQUESTED; LABEL-02 stays locked until reviewer PASS and manifest update.

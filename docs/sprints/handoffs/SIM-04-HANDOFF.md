@@ -64,3 +64,12 @@ Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf
 - Important — completed breakeven gross-PnL trades do not increment trade_count because trade_count is win_count+loss_count. A flat-price 1-unit buy/sell paying 1 fee each is reported as NO_TRADES despite two fills and -2 net PnL.
 - Important — output lacks by_regime and by_tier metrics despite the task contract requiring year/regime/tier/asset. Missing classification must be explicitly unavailable; do not fabricate groups.
 - Passing boundary: fee equity is not double-subtracted. Flow-adjusted performance is not present in ResearchLedger and remains unqualified/out of this sprint unless a scoped change request is approved.
+
+## Remediation candidate (2026-09-26)
+
+- Code commit: `389d9163fc103530d33ea724662c7ce4dfaa2e60` (`fix(sim-04): retain latest market-time equity mark`).
+- Finding corrected: delayed older bars no longer replace a newer observed mark. Cash/ledger postings still replay by availability; the mark is selected by market close timestamp.
+- Regression: `test_late_older_bar_does_not_replace_newer_equity_mark`.
+- Focused check: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/cli/test_run_backtest_report.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 14 passed (the command includes STRAT-01 checks).
+- Full check on combined code HEAD `3f2623b884a5066cdbaf8a27f85e517c03fa9885`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,103 passed, 2 platform-specific skipped, 4 warnings.
+- Independent review of the remediation commit is pending. Keep status CHANGES_REQUESTED until reviewer PASS and manifest update.

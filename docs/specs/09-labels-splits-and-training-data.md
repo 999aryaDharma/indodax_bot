@@ -21,7 +21,15 @@ No real-money execution, no silent evaluator policy changes, and no direct mutat
 
 ### LABEL-01 — Execution-aligned net return labels
 
-candidate bundle + sample + candidate `SignalIntent` + horizon -> shared-simulator entry/exit fills, gross/net return, costs and label_available_at.
+`net_return_v1` remains immutable historical output. The approved candidate-sized contract is a separate `net_return_candidate_horizon_v2` materialization:
+
+```text
+candidate bundle + sample-specific BUY SignalIntent + horizon
+  -> shared-simulator entry fill + horizon SELL fill
+  -> actual filled quantity, fees, net return, label_available_at
+```
+
+Use `SignalIntent.desired_qty` without a fixed-size fallback or silent rescaling. The target closes actual entry-filled quantity at the exact horizon bar using the shared simulator; no fill, incomplete horizon, unknown cost, or incomplete exit is EXCLUDED with a reason. Candidate stop-loss/take-profit are not triggered by this horizon target, which is not full-strategy PnL. Bind bundle, strategy, sample, pair, intent and decision-time lineage. The supported simulator version is `causal-bar-proxy-v2`; bar-proxy evidence does not certify live venue fills.
 
 Acceptance boundary:
 - Candidate, intent, pair, strategy, sample and decision-time lineage must match; entry before decision is rejected.
