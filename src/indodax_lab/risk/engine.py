@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.ledger import Position
@@ -23,6 +23,10 @@ from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.execution.oms import OmsOrder, OmsStateMachine
 from indodax_lab.market.health import UNSAFE_TRADING_STATES, MarketHealthState
 from indodax_lab.portfolio.constructor import PortfolioState
+from indodax_lab.risk.research_tail_risk import (
+    ResearchTailRiskEvidence,
+    ResearchTailRiskPolicy,
+)
 
 logger = logging.getLogger("risk_engine")
 
@@ -54,6 +58,8 @@ class RiskEngine:
         kill_switch_path: Path | None = None,
         throttle_history_path: Path | None = None,
         reset_confirmation_secret: bytes | str | None = None,
+        research_tail_risk_required: bool = False,
+        research_tail_risk_policy: ResearchTailRiskPolicy | Mapping[str, Any] | None = None,
     ) -> None:
         self.risk_manager = risk_manager
         self.max_orders_per_minute = max_orders_per_minute
@@ -66,6 +72,17 @@ class RiskEngine:
             if isinstance(reset_confirmation_secret, str)
             else reset_confirmation_secret
         )
+        self.research_tail_risk_required = research_tail_risk_required
+        if isinstance(research_tail_risk_policy, Mapping):
+            self.research_tail_risk_policy = ResearchTailRiskPolicy.model_validate(
+                research_tail_risk_policy
+            )
+        elif research_tail_risk_policy is None or isinstance(
+            research_tail_risk_policy, ResearchTailRiskPolicy
+        ):
+            self.research_tail_risk_policy = research_tail_risk_policy
+        else:
+            raise TypeError("RESEARCH_TAIL_POLICY_INVALID")
         self._manual_kill_switch: bool = False
         self._order_timestamps: list[datetime] = []
         self._used_nonces: set[str] = set()
@@ -285,6 +302,8 @@ class RiskEngine:
         max_risk_amount: Decimal | None = None,
         pending_exposure_by_pair: Mapping[str, Decimal] | None = None,
         pending_sell_qty_by_pair: Mapping[str, Decimal] | None = None,
+        research_tail_risk_evidence: ResearchTailRiskEvidence | Mapping[str, Any] | None = None,
+        research_risk_period_id: str | None = None,
     ) -> RiskAssessmentResult:
         """Evaluate intent across operational, market health, and financial risk constraints."""
         # 1. Operational kill switch
@@ -293,6 +312,19 @@ class RiskEngine:
                 approved=False,
                 reason_code="KILL_SWITCH_ACTIVE",
                 rejection_reason="Operational kill switch is engaged.",
+            )
+
+        tail_risk_rejection = self._research_tail_risk_rejection(
+            intent,
+            evaluation_time=evaluation_time,
+            evidence=research_tail_risk_evidence,
+            risk_period_id=research_risk_period_id,
+        )
+        if tail_risk_rejection is not None:
+            return RiskAssessmentResult(
+                approved=False,
+                reason_code=tail_risk_rejection,
+                rejection_reason=tail_risk_rejection,
             )
 
         # 2. Market health gate (fail closed if unsafe)
@@ -410,6 +442,65 @@ class RiskEngine:
             self._save_throttle_history()
 
         return result
+
+    def _research_tail_risk_rejection(
+        self,
+        intent: SignalIntent,
+        *,
+        evaluation_time: datetime,
+        evidence: ResearchTailRiskEvidence | Mapping[str, Any] | None,
+        risk_period_id: str | None,
+    ) -> str | None:
+        """Return a fail-closed reason for opted-in Research BUYs; never gates SELLs."""
+        if intent.side != OrderSide.BUY:
+            return None
+        policy = self.research_tail_risk_policy
+        if policy is None and not self.research_tail_risk_required:
+            return None
+        if policy is None:
+            return "RESEARCH_TAIL_POLICY_MISSING"
+        if not policy.is_approved_and_complete:
+            return "RESEARCH_TAIL_POLICY_UNAPPROVED"
+        if evidence is None:
+            return "RESEARCH_TAIL_EVIDENCE_MISSING"
+        if not risk_period_id:
+            return "RESEARCH_TAIL_RISK_PERIOD_MISSING"
+        if evaluation_time.tzinfo is None or evaluation_time.utcoffset() != timedelta(0):
+            return "RESEARCH_TAIL_EVALUATION_TIME_INVALID"
+        try:
+            if isinstance(evidence, Mapping):
+                item = ResearchTailRiskEvidence.model_validate(evidence)
+            elif isinstance(evidence, ResearchTailRiskEvidence):
+                item = evidence
+            else:
+                return "RESEARCH_TAIL_EVIDENCE_INVALID"
+        except ValidationError:
+            return "RESEARCH_TAIL_EVIDENCE_INVALID"
+        if (
+            item.risk_period_id != risk_period_id
+            or item.pair != intent.pair.lower()
+            or item.decision_ts != intent.decision_ts
+        ):
+            return "RESEARCH_TAIL_EVIDENCE_PERIOD_MISMATCH"
+        if (
+            item.source_id != policy.evidence_source_id
+            or item.source_version != policy.evidence_source_version
+        ):
+            return "RESEARCH_TAIL_EVIDENCE_LINEAGE_MISMATCH"
+        if not (
+            item.event_at <= item.available_at <= intent.decision_ts <= evaluation_time
+        ):
+            return "RESEARCH_TAIL_EVIDENCE_NOT_CAUSAL"
+        age = (intent.decision_ts - item.available_at).total_seconds()
+        if age > policy.max_evidence_age_seconds:
+            return "RESEARCH_TAIL_EVIDENCE_STALE"
+        if item.pump_gap_fraction is None or item.amihud_24_1h is None:
+            return "RESEARCH_TAIL_EVIDENCE_INCOMPLETE"
+        if item.pump_gap_fraction > policy.max_pump_gap_fraction:
+            return "RESEARCH_TAIL_PUMP_GAP_BREACH"
+        if item.amihud_24_1h > policy.max_amihud_24_1h:
+            return "RESEARCH_TAIL_ILLIQUIDITY_BREACH"
+        return None
 
     def create_oms_order_from_assessment(
         self,

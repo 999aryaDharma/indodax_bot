@@ -9,6 +9,10 @@ from indodax_lab.risk.engine import (
     KillSwitchTriggeredError,
     RiskEngine,
 )
+from indodax_lab.risk.research_tail_risk import (
+    ResearchTailRiskEvidence,
+    ResearchTailRiskPolicy,
+)
 
 __all__ = [
     "KillSwitchTriggeredError",
@@ -16,4 +20,6 @@ __all__ = [
     "RiskAssessmentResult",
     "RiskEngine",
     "RiskPolicy",
+    "ResearchTailRiskEvidence",
+    "ResearchTailRiskPolicy",
 ]
