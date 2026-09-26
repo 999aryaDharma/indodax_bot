@@ -7135,7 +7135,8 @@
         "docs/decisions/CR-C11-simulator-cash-context.md",
         "docs/decisions/ADR-013-simulator-cash-context.md",
         "docs/implementation/CONTRACTS.md",
-        "docs/sprints/strategies/C11-01-volatility-allocation.md"
+        "docs/sprints/strategies/C11-01-volatility-allocation.md",
+        "docs/sprints/handoffs/C11-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
@@ -7157,7 +7158,7 @@
         "docs/decisions/CR-C11-simulator-cash-context.md",
         "docs/decisions/ADR-013-simulator-cash-context.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.\n\nOwner approved CR-C11 on 2026-09-26. ADR-013 adds optional Decimal available_cash_idr; C11 abstains if missing/zero, requires two valid volatility pairs, caps deployment at 50% cash and 25% per pair, and observes Rp10,000 minimum notional. Implementation is pending independent review; Production/live account sourcing is prohibited.",
+      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.\n\nOwner approved CR-C11 on 2026-09-26. ADR-013 adds optional Decimal available_cash_idr; C11 abstains if missing/zero, requires two valid volatility pairs, caps deployment at 50% cash and 25% per pair, and observes Rp10,000 minimum notional. Implementation is pending independent review; Production/live account sourcing is prohibited.\n\nFinal independent delta review PASS on code SHA b75dfe6b7ddba903c5ae0ac5e2ac7a93560cb176. Focused checks pass (40 local, 8 independently rerun); full suite recorded 1 unrelated failure in already-dirty C04 paths. Simulator caller integration and activation remain external gates.",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
       ],
@@ -7165,30 +7166,30 @@
       "acceptance_test_mapping": [
         {
           "criterion": "C11-01-AC0",
-          "test_case": "test_c11_01_valid_contract",
+          "test_case": "test_c11_candidate_sized_inverse_volatility_respects_cash_and_pair_caps",
           "behavior": "Kandidat C11 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C11-01-AC1",
-          "test_case": "test_c11_01_contract_1",
+          "test_case": "test_c11_excludes_zero_and_nonfinite_volatility_and_requires_two_pairs",
           "behavior": "Zero volatility tidak mendapat infinite weight",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C11-01-AC2",
-          "test_case": "test_c11_01_contract_2",
+          "test_case": "test_c11_candidate_sized_inverse_volatility_respects_cash_and_pair_caps; test_c11_respects_indodax_minimum_notional; test_c11_rechecks_minimum_after_decimal_quantity_rounding",
           "behavior": "Sum allocation tidak melebihi cash",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C11-01-AC3",
-          "test_case": "test_c11_01_contract_3",
+          "test_case": "test_c11_missing_cash_abstains; test_c11_excludes_missing_volatility_without_crashing",
           "behavior": "Small universe fallback explicit",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7196,7 +7197,14 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/C11-01-HANDOFF.md",
+        "code_target": "b75dfe6b7ddba903c5ae0ac5e2ac7a93560cb176",
+        "source_commit": "b75dfe6b7ddba903c5ae0ac5e2ac7a93560cb176",
+        "review": "Independent delta review PASS; final independent C11 test rerun 8 passed. Local focused tests 40 passed; full suite 1,154 passed, 2 skipped, one unrelated failure in concurrently dirty C04 files."
+      }
     },
     {
       "id": "C12-01",

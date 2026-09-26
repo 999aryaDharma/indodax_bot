@@ -77,7 +77,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | C08-01 | Multi timeframe confirmation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C08-01-multi-timeframe-confirmation.md) |
 | C09-01 | VWAP deviation reversion | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C09-01-vwap-deviation-reversion.md) |
 | C10-01 | Regime ensemble | strategies | P0 | feature | C01-01, C07-01 | REVIEW | [Spec](strategies\C10-01-regime-ensemble.md) |
-| C11-01 | Volatility allocation | strategies | P1 | feature | STRAT-01 | REVIEW | [Spec](strategies\C11-01-volatility-allocation.md) |
+| C11-01 | Volatility allocation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C11-01-volatility-allocation.md) |
 | C12-01 | Relative strength rotation | strategies | P1 | feature | C04-01 | PLANNED | [Spec](strategies\C12-01-relative-strength-rotation.md) |
 | S01-01 | Liquidity screened breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S01-01-liquidity-screened-breakout.md) |
 | S02-01 | Squeeze expansion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S02-01-squeeze-expansion.md) |
