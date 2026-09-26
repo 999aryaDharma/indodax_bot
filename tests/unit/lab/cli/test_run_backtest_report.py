@@ -130,6 +130,7 @@ def test_late_older_bar_does_not_replace_newer_equity_mark() -> None:
 
     curve = _build_ledger_equity_curve(ledger, [bar(0, 1, "100"), bar(2, 3, "110"), bar(1, 4, "90")])
     assert curve[-1] == (start + timedelta(minutes=4), Decimal("1010"))
+    assert len({timestamp for timestamp, _ in curve}) == len(curve)
 
 
 def test_cli_atomic_writer_preserves_existing_tmp_target(

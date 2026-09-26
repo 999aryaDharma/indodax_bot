@@ -109,10 +109,14 @@ def _build_ledger_equity_curve(
     latest_marks: dict[str, tuple[datetime, Decimal]] = {}
     curve: list[tuple[datetime, Decimal]] = []
 
-    for bar in sorted(bars, key=lambda item: item.available_at):
+    bars_by_availability: dict[datetime, list[MarketBar]] = {}
+    for bar in bars:
+        bars_by_availability.setdefault(bar.available_at, []).append(bar)
+
+    for available_at in sorted(bars_by_availability):
         while (
             transaction_index < len(transactions)
-            and transactions[transaction_index][1].timestamp <= bar.available_at
+            and transactions[transaction_index][1].timestamp <= available_at
         ):
             tx = transactions[transaction_index][1]
             cash += sum(
@@ -123,18 +127,21 @@ def _build_ledger_equity_curve(
                 quantities[tx.pair] = quantities.get(tx.pair, Decimal("0")) + tx.base_qty_delta
             transaction_index += 1
 
-        previous = latest_marks.get(bar.pair)
-        if previous is None or bar.close_time > previous[0]:
-            latest_marks[bar.pair] = (bar.close_time, bar.close)
+        for bar in bars_by_availability[available_at]:
+            previous = latest_marks.get(bar.pair)
+            if previous is None or bar.close_time > previous[0]:
+                latest_marks[bar.pair] = (bar.close_time, bar.close)
 
-        # The CLI replays one pair. If another asset is held, this bar cannot value it.
-        if any(qty > 0 and pair != bar.pair for pair, qty in quantities.items()):
+        held_pairs = [pair for pair, qty in quantities.items() if qty > 0]
+        if any(pair not in latest_marks for pair in held_pairs):
             continue
-        mark = latest_marks.get(bar.pair)
-        if mark is None:
+        if not held_pairs and not latest_marks:
             continue
-        equity = cash + quantities.get(bar.pair, Decimal("0")) * mark[1]
-        curve.append((bar.available_at, equity))
+        equity = cash + sum(
+            (quantities.get(pair, Decimal("0")) * mark[1] for pair, mark in latest_marks.items()),
+            Decimal("0"),
+        )
+        curve.append((available_at, equity))
 
     return curve
 
