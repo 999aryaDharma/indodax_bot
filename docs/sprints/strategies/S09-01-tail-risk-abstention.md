@@ -51,7 +51,7 @@ No mandatory dependent sprint.
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
-- Existing boundary mismatch: this strategy contract is stateless, while S09 requires exposure and persistent breach history. CR-S09 proposes Research-only integration at the existing risk authority; approval is pending. The pump-gap producer is not registered. Do not implement a second risk authority or touch Production/runtime state.
+- CR-S09 Research-only risk-authority boundary is owner-approved (2026-09-27). Use the existing Research risk authority, preserve breach periods across separately approved resets, block new BUYs on unknown/stale data or a breach, and leave eligible protective exits available. Numeric pump-gap threshold and data-age limit remain unresolved; no risk evaluation/activation before a versioned policy and pump-gap producer/provenance are defined. Do not add a second risk authority or touch Production/runtime state.
 
 ## In Scope
 

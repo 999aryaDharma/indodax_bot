@@ -336,6 +336,19 @@ realized_spread_bps, sequence_gap_flag
 
 Snapshot frequency, depth levels, aggregation window, and latency are part of feature version. `sequence_gap_flag=true` makes the row ineligible rather than becoming a predictive input.
 
+For S04-01, the owner-approved `lob_v1` decision row additionally carries the following typed evidence. These values are not part of `tabular_bar_v1`; consumers must pin `feature_set_id=lob_v1` and its version. They may be used only after their source window passes the LOB session/sequence gate.
+
+| Field | Type / unit | Rule |
+|---|---|---|
+| `book_imbalance_l5` | float64, normalized [-1, 1] | Top-five-level depth imbalance, available at decision. |
+| `trade_imbalance_10s` | float64, normalized [-1, 1] | Signed public-trade imbalance over trailing 10 seconds, available at decision. |
+| `book_event_ts` | UTC timestamp | Source book event time; must be <= `decision_ts` and no older than 5 seconds for S04 research default. |
+| `book_available_at` | UTC timestamp | Ingestion/availability time for that book evidence; must be <= `decision_ts`. |
+| `book_session_id` | string | Non-empty source session identity; window cannot cross sessions. |
+| `book_sequence_contiguous` | bool | Must be exactly true; false/missing/unknown makes the row ineligible. |
+
+S04's research hypothesis requires both normalized imbalance values >= 0.10, a positive finite close, and valid causal evidence. Invalid or missing values abstain; they are never substituted with zero. These thresholds are not profitability evidence. Real Indodax feed capture and >=90-day qualification remain external gates.
+
 ## 8. Availability dan anti-leakage
 
 ### 8.1 Closed-bar rule

@@ -55,7 +55,7 @@ New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
 - Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.
-- The current bar simulator and TLOB fill-probability model do not prove observed per-order queue position. CR-S08 defines the missing queue evidence and promotion boundary; owner approval is pending. No schema or strategy implementation changes before approval.
+- The current bar simulator and TLOB fill-probability model do not prove observed per-order queue position. CR-S08 boundary is owner-approved (2026-09-27): versioned queue evidence is required at simulation/promotion, and missing, unknown, stale, future-dated, or sequence-invalid evidence blocks promotion. No numeric freshness threshold was approved; queue qualification remains blocked until a versioned limit is frozen. Partial-cancel accounting stays in the existing OMS/ledger. Real queue reconstruction remains an external gate.
 
 ## In Scope
 

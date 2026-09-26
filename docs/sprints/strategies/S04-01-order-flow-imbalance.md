@@ -54,7 +54,7 @@ New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
 - Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.
-- The canonical registry does not yet expose the S04 LOB inputs with event/availability/session/sequence evidence. CR-S04 proposes an additive versioned `lob_v1` input contract. Owner approval is pending; no input-schema change or strategy implementation may precede approval.
+- CR-S04 is owner-approved (2026-09-27). Use only the additive versioned `lob_v1` row inputs: `book_imbalance_l5`, `trade_imbalance_10s`, `book_event_ts`, `book_available_at`, `book_session_id`, and `book_sequence_contiguous`. Default research gates are both imbalances >= 0.10, book event age <= 5 seconds, and positive finite close. Missing/invalid evidence abstains. Real Indodax feed and >=90-day qualification remain external gates.
 
 ## In Scope
 

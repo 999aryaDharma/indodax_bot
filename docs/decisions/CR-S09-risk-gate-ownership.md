@@ -1,6 +1,6 @@
 # CR-S09 — Tail-risk gate ownership and breach history
 
-Status: PENDING OWNER APPROVAL
+Status: ACCEPTED — owner approved boundary on 2026-09-27; numeric risk policy remains unresolved.
 
 ## Problem
 
@@ -30,4 +30,4 @@ Before implementation, validate the revised owning interface, source/provenance 
 
 ## Decision
 
-Owner approval: pending.
+Owner approval: Research-only ownership and behavior boundary accepted on 2026-09-27. Use the existing Research risk authority; preserve breach periods across separately approved resets; block new BUYs on unknown/stale data or a breach while allowing eligible protective exits. No numeric pump-gap threshold or data-age limit was approved. Risk evaluation and activation remain blocked until a versioned policy and pump-gap producer/provenance are defined; do not infer values from Production policy. No Production/runtime changes.

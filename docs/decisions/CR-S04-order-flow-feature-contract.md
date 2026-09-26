@@ -1,6 +1,6 @@
 # CR-S04 — Order flow decision inputs
 
-Status: PENDING OWNER APPROVAL
+Status: ACCEPTED — owner approved on 2026-09-27.
 
 ## Problem
 
@@ -31,4 +31,4 @@ Tests must cover valid aligned book/trade inputs, exact imbalance thresholds, mi
 
 ## Decision
 
-Owner approval: pending.
+Owner approval: accepted on 2026-09-27. Implement the versioned research inputs and gates above. The 0.10 imbalance thresholds and 5-second maximum book age are research defaults only; real-feed coverage and >=90-day qualification remain external gates.

@@ -1,6 +1,6 @@
 # CR-S08 — Queue evidence and promotion boundary
 
-Status: PENDING OWNER APPROVAL
+Status: ACCEPTED — owner approved boundary on 2026-09-27; numeric freshness policy remains unresolved.
 
 ## Problem
 
@@ -30,4 +30,4 @@ Before implementation, approve the exact queue fields, unknown/freshness behavio
 
 ## Decision
 
-Owner approval: pending.
+Owner approval: boundary accepted on 2026-09-27. Queue evidence must carry the fields and fail-closed states above; unknown or stale evidence blocks promotion. No numeric freshness threshold was approved. Until a versioned threshold is separately frozen, queue qualification and promotion remain blocked; do not infer a limit from another feature contract. Partial-cancel accounting remains in the existing OMS/ledger.

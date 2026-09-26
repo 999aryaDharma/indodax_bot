@@ -1,0 +1,22 @@
+strategy_id: "S04"
+version: "1.0.0"
+family: "order_flow_imbalance"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  feature_set_id: "lob_v1"
+  feature_set_version: "1.0.0"
+  min_book_imbalance_l5: 0.10
+  min_trade_imbalance_10s: 0.10
+  max_book_age_seconds: 5
+  target_notional_idr: "10000"
+  stop_loss_pct: "0.02"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Research-only aligned order-flow imbalance candidate; external LOB qualification required"
