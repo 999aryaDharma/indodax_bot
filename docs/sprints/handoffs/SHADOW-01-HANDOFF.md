@@ -4,12 +4,13 @@ Status: REVIEW
 
 ## Identity
 - Sprint ID: SHADOW-01 — Auditable forward paper decisions
-- Implementation agent: Antigravity
+- Implementation owner (tunggal): OpenCode / opencode/muse-spark-1.3-contributor-free (fix cycle)
+- Prior implementation: Antigravity (`edc5bca`); this fix cycle owns only the delta below
 - Independent reviewer: UNASSIGNED (pending independent review)
-- Branch / worktree: `feat/shadow-01-auditable-forward-paper-decisions`
-- Base SHA: `9a82926`
-- Code target: `feat(shadow-01): auditable forward paper decisions`
-- Evidence SHA relation: `edc5bca`
+- Branch / worktree: `fix/shadow-01-remediation` (isolated worktree; base `feat/shadow-01-auditable-forward-paper-decisions` @ `4a9729e`)
+- Base SHA: `4a9729e`
+- Code target: `fix(shadow-01): decision persistence + bundle hash wiring`
+- Evidence SHA relation: (fix commit SHA, recorded on commit)
 
 ## Files and contracts
 - Actual files (spec listed `contracts.py`, `runner.py`, `test_shadow_replay.py`; runner/integration out of AC scope):
@@ -21,7 +22,9 @@ Status: REVIEW
   - Immutable decision before outcome: `PaperDecisionStore.record_decision()` stores decision with `status=PENDING` before any market outcome (SHADOW-01-AC0).
   - Telegram failure durability: `notify_telegram(telegram_error=...)` records error reason but leaves `status=PENDING`; decision is NOT deleted or voided (SHADOW-01-AC1).
   - Staleness guard: `feature_snapshot_age_seconds > max_staleness_seconds` raises `StaleDataError` fail-closed (SHADOW-01-AC2).
-  - Hash mismatch guard: `bundle_hash != expected_bundle_hash` raises `ModelMismatchError` fail-closed (SHADOW-01-AC2).
+  - Hash mismatch guard: resolved expected hash (`expected_bundle_hash` override, else wired `bundle_registry[candidate_id]`) mismatch raises `ModelMismatchError` fail-closed (SHADOW-01-AC2).
+  - Bundle hash wiring (fix delta): `PaperDecisionStore(bundle_registry=...)` maps `candidate_id` -> authoritative bundle hash (ML-04 identity); registry unavailability fails closed.
+  - Durability (fix delta): `save_snapshot(path)` / `load_snapshot(path)` persist decisions to SQLite with per-row sha256 and atomic replace; tampered snapshots raise `ValueError(CORRUPT_DECISION_SNAPSHOT)` instead of loading silently; duplicate guard survives restore.
   - Manual intent isolation: `is_manual_intent=True` decisions preserved as paper-only; `mark_as_ground_truth()` raises `ValueError(MANUAL_INTENT_NOT_GROUND_TRUTH)` (SHADOW-01-AC3).
   - Idempotency guard: Duplicate `decision_id` raises `DuplicateDecisionError`.
 - Deviation note: `runner.py` and `tests/integration/lab/test_shadow_replay.py` (planned) are integration-layer components outside the four ACs. Actual paths recorded here.
@@ -41,14 +44,20 @@ Status: REVIEW
 | SHADOW-01-AC3 (RED) | `test_shadow_01_contract_3` | `python -m pytest tests/unit/lab/paper/test_forward_decisions.py` | Exit 1 (ModuleNotFoundError) | `working tree` |
 | SHADOW-01-AC3 (GREEN) | `test_shadow_01_contract_3` | `python -m pytest tests/unit/lab/paper/test_forward_decisions.py::test_shadow_01_contract_3` | Exit 0 (Passed, is_manual_intent preserved; mark_as_ground_truth raises MANUAL_INTENT_NOT_GROUND_TRUTH) | `edc5bca` |
 
-All 5 tests in `tests/unit/lab/paper/test_forward_decisions.py` passed (0.37s).
-Full lab suite verification: 169 passed across strategies, features, labels, evaluation, backtest, orchestration, operations, training materialization, retention, models, reporting, and paper.
+All 8 tests in `tests/unit/lab/paper/test_forward_decisions.py` passed (5 AC + 3 remediation).
+
+## Fix cycle delta (this commit)
+| Finding | Test (RED→GREEN) | Command | Exit/result |
+|---|---|---|---|
+| No persistence (in-memory only) | `test_shadow_01_persisted_recovery` | `python -m pytest tests/unit/lab/paper/test_forward_decisions.py` | RED (AttributeError: no `save_snapshot`) → GREEN (8 passed) |
+| Hash not wired (caller-supplied only) | `test_shadow_01_hash_wired_to_bundle_registry` | same | RED (TypeError: no `bundle_registry`) → GREEN |
+| Tamper loads silently | `test_shadow_01_corrupt_snapshot_fails_closed` | same | RED → GREEN |
 
 ## Review
 - Spec verdict: PASS (meets all functional requirements of SHADOW-01 and docs/specs/14-shadow-portfolios-and-promotion.md).
 - Quality verdict: PASS (immutable decision before outcome, Telegram-failure durability, staleness/hash fail-closed guards, manual intent isolation, idempotency guard, no real-money execution, no HTTP in domain layer).
 - Findings: None.
-- Self-review: completed by implementation owner (Antigravity).
+- Self-review: completed by fix owner (OpenCode); diff scoped to `paper/contracts.py`, `test_forward_decisions.py`, `SHADOW-01-HANDOFF.md`.
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
 ## Deviations and known risks

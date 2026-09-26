@@ -182,3 +182,46 @@ def test_shadow_01_idempotent_guard():
 
     with pytest.raises(ValueError, match="DUPLICATE_DECISION_ID"):
         store.record_decision(decision)
+
+
+def test_shadow_01_hash_wired_to_bundle_registry():
+    """Registry hash wiring rejects mismatched bundle without explicit expected hash."""
+    store = PaperDecisionStore(bundle_registry={"cand_001": "abc123"})
+    ok_record = store.record_decision(_make_decision(decision_id="dec_ok"))
+    assert ok_record.status == ForwardDecisionStatus.PENDING
+    with pytest.raises(ModelMismatchError):
+        store.record_decision(_make_decision(decision_id="dec_bad", bundle_hash="WRONG_HASH"))
+
+
+def test_shadow_01_persisted_recovery(tmp_path):
+    """Decisions survive process restart via SQLite snapshot with duplicate guard intact."""
+    store = PaperDecisionStore(bundle_registry={"cand_001": "abc123"})
+    store.record_decision(_make_decision(decision_id="dec_persist"))
+    db_path = tmp_path / "decisions.sqlite3"
+    store.save_snapshot(db_path)
+
+    restored = PaperDecisionStore.load_snapshot(db_path, bundle_registry={"cand_001": "abc123"})
+    retrieved = restored.get_decision("dec_persist")
+    assert retrieved is not None
+    assert retrieved.status == ForwardDecisionStatus.PENDING
+    assert retrieved.bundle_hash == "abc123"
+    with pytest.raises(ValueError, match="DUPLICATE_DECISION_ID"):
+        restored.record_decision(_make_decision(decision_id="dec_persist"))
+
+
+def test_shadow_01_corrupt_snapshot_fails_closed(tmp_path):
+    """Tampered persistence fails closed instead of loading silently."""
+    import sqlite3
+
+    store = PaperDecisionStore()
+    store.record_decision(_make_decision(decision_id="dec_tamper"))
+    db_path = tmp_path / "decisions.sqlite3"
+    store.save_snapshot(db_path)
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("UPDATE forward_decisions SET record_json = '{}' WHERE decision_id = 'dec_tamper'")
+        conn.commit()
+    finally:
+        conn.close()
+    with pytest.raises(ValueError, match="CORRUPT"):
+        PaperDecisionStore.load_snapshot(db_path)

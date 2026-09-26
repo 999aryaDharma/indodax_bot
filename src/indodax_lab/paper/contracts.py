@@ -15,7 +15,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+import hashlib
+import json
+import os
+from pathlib import Path
+import sqlite3
+from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -103,19 +108,45 @@ class ManualIntentRecord(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# PaperDecisionStore — in-memory guarded store
+# PaperDecisionStore — guarded store with registry hash wiring + durability
 # ---------------------------------------------------------------------------
 
 
 class PaperDecisionStore:
-    """In-memory store for forward paper decisions with staleness and hash guards.
+    """Store for forward paper decisions with staleness and hash guards.
 
-    Designed to be dependency-injected; real persistence adapters use the same interface.
-    No real-money execution, no HTTP, no external I/O in this pure domain layer.
+    Hash wiring: ``bundle_registry`` maps ``candidate_id`` to the authoritative
+    model bundle hash (ML-04 bundle identity). When present it is consulted on
+    every ``record_decision`` so a mismatched ``bundle_hash`` is rejected even
+    when the caller supplies no explicit ``expected_bundle_hash``.
+
+    Durability: the store is in-memory for decision latency, with explicit
+    SQLite snapshots (``save_snapshot``/``load_snapshot``) as the crash-recovery
+    boundary. Corrupt snapshots fail closed.
+
+    No real-money execution, no HTTP, no external I/O in the decision path.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        bundle_registry: dict[str, str] | Callable[[str], str | None] | None = None,
+    ) -> None:
         self._decisions: dict[str, ForwardDecisionRecord] = {}
+        self._bundle_registry = bundle_registry
+
+    def _expected_hash_for(self, candidate_id: str) -> str | None:
+        registry = self._bundle_registry
+        if registry is None:
+            return None
+        if callable(registry):
+            try:
+                return registry(candidate_id)
+            except Exception as exc:
+                raise ModelMismatchError(
+                    f"BUNDLE_REGISTRY_UNAVAILABLE: cannot resolve bundle hash for "
+                    f"candidate '{candidate_id}'. Entry rejected fail-closed."
+                ) from exc
+        return registry.get(candidate_id)
 
     def record_decision(
         self,
@@ -126,8 +157,9 @@ class PaperDecisionStore:
 
         Args:
             decision: The ``ForwardDecision`` to store.
-            expected_bundle_hash: If provided, the stored ``bundle_hash`` must match this
-                value. Mismatch raises ``ModelMismatchError`` (SHADOW-01-AC2).
+            expected_bundle_hash: Explicit override. When omitted, the wired
+                ``bundle_registry`` is consulted for ``decision.candidate_id``.
+                Mismatch raises ``ModelMismatchError`` (SHADOW-01-AC2).
 
         Returns:
             A ``ForwardDecisionRecord`` with ``status=PENDING``.
@@ -135,7 +167,7 @@ class PaperDecisionStore:
         Raises:
             DuplicateDecisionError: If ``decision.decision_id`` already exists (idempotency guard).
             StaleDataError: If ``feature_snapshot_age_seconds > max_staleness_seconds`` (SHADOW-01-AC2).
-            ModelMismatchError: If ``expected_bundle_hash`` is provided and does not match (SHADOW-01-AC2).
+            ModelMismatchError: If the resolved expected hash does not match (SHADOW-01-AC2).
         """
         # Idempotency guard
         if decision.decision_id in self._decisions:
@@ -152,11 +184,14 @@ class PaperDecisionStore:
                 "Entry blocked to prevent decisions on outdated market information."
             )
 
-        # AC2: Bundle hash mismatch check
-        if expected_bundle_hash is not None and decision.bundle_hash != expected_bundle_hash:
+        # AC2: Bundle hash check, wired to registry when no explicit override
+        expected = expected_bundle_hash
+        if expected is None:
+            expected = self._expected_hash_for(decision.candidate_id)
+        if expected is not None and decision.bundle_hash != expected:
             raise ModelMismatchError(
                 f"MODEL_HASH_MISMATCH: Decision bundle_hash='{decision.bundle_hash}' "
-                f"does not match expected_bundle_hash='{expected_bundle_hash}'. "
+                f"does not match expected_bundle_hash='{expected}'. "
                 "Entry rejected to prevent decisions from a mismatched or stale model version."
             )
 
@@ -253,3 +288,96 @@ class PaperDecisionStore:
                 "be designated as authoritative ground truth. Outcomes must be observed from "
                 "market events, not operator overrides."
             )
+
+    # ------------------------------------------------------------------
+    # Durability boundary (crash recovery)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _snapshot_schema(conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS forward_decisions (
+                decision_id TEXT PRIMARY KEY,
+                record_json TEXT NOT NULL,
+                sha256 TEXT NOT NULL
+            )
+            """
+        )
+
+    def save_snapshot(self, path: Path | str) -> Path:
+        """Persist all stored decisions to SQLite atomically.
+
+        Each row carries a sha256 over its canonical JSON; the file is written
+        to a temp sibling then atomically replaced so a crash never leaves a
+        half-written snapshot visible.
+        """
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = target.parent / f"{target.name}.tmp.{os.getpid()}"
+        if tmp_path.exists():
+            tmp_path.unlink()
+        conn = sqlite3.connect(str(tmp_path), timeout=30)
+        try:
+            self._snapshot_schema(conn)
+            with conn:
+                for record in self._decisions.values():
+                    canonical = json.dumps(
+                        record.model_dump(mode="json"),
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        ensure_ascii=False,
+                    )
+                    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+                    conn.execute(
+                        "INSERT OR REPLACE INTO forward_decisions(decision_id, record_json, sha256)"
+                        " VALUES (?, ?, ?)",
+                        (record.decision_id, canonical, digest),
+                    )
+        finally:
+            conn.close()
+        with tmp_path.open("r+b") as stream:
+            os.fsync(stream.fileno())
+        os.replace(tmp_path, target)
+        return target
+
+    @classmethod
+    def load_snapshot(
+        cls,
+        path: Path | str,
+        bundle_registry: dict[str, str] | Callable[[str], str | None] | None = None,
+    ) -> PaperDecisionStore:
+        """Restore a store from a SQLite snapshot, failing closed on corruption."""
+        source = Path(path)
+        if not source.is_file():
+            raise FileNotFoundError(f"DECISION_SNAPSHOT_NOT_FOUND:{source}")
+        store = cls(bundle_registry=bundle_registry)
+        conn = sqlite3.connect(str(source), timeout=30)
+        try:
+            try:
+                rows = conn.execute(
+                    "SELECT decision_id, record_json, sha256 FROM forward_decisions"
+                ).fetchall()
+            except sqlite3.Error as exc:
+                raise ValueError(f"CORRUPT_DECISION_SNAPSHOT: unreadable snapshot: {exc}") from exc
+            for decision_id, record_json, stored_digest in rows:
+                actual = hashlib.sha256(record_json.encode("utf-8")).hexdigest()
+                if actual != stored_digest:
+                    raise ValueError(
+                        f"CORRUPT_DECISION_SNAPSHOT: hash mismatch for decision '{decision_id}'"
+                    )
+                try:
+                    payload = json.loads(record_json)
+                    record = ForwardDecisionRecord.model_validate(payload)
+                except Exception as exc:
+                    raise ValueError(
+                        f"CORRUPT_DECISION_SNAPSHOT: invalid record '{decision_id}': {exc}"
+                    ) from exc
+                if record.decision_id != decision_id:
+                    raise ValueError(
+                        f"CORRUPT_DECISION_SNAPSHOT: key/row id mismatch '{decision_id}'"
+                    )
+                store._decisions[decision_id] = record
+        finally:
+            conn.close()
+        return store
