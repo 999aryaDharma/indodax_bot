@@ -93,8 +93,9 @@ def evaluate_run(
     metrics = run.metrics or {}
 
     # 1. Run Validity Gates (INVALID_RUN checks)
-    # EVAL-02-AC1: High score does not conceal unknown costs
-    is_cost_verified = metrics.get("cost_model_verified", True)
+    # EVAL-02-AC1: High score does not conceal unknown costs (fail-closed:
+    # cost_model_verified must be explicitly True; missing/False/unknown -> INVALID_RUN)
+    is_cost_verified = metrics.get("cost_model_verified") is True
     if not is_cost_verified or not run.cost_schedule_hash or run.cost_schedule_hash.lower() == "unknown":
         failed_gates.append("COST_MODEL_VERIFIED")
         reasons.append("COST_MODEL_UNKNOWN")
@@ -183,10 +184,13 @@ def evaluate_run(
     else:
         passed_gates.append("DRAWDOWN_GATE")
 
-    # 3. Outcome classification
+    # 3. Outcome classification (spec 11: valid risk breach => HARD_FAIL,
+    # never softened to NEAR_MISS by a high score)
     if failed_gates:
         # Check if near miss (e.g. sample size passed, positive sharpe, but marginally below threshold)
         if "INSUFFICIENT_SAMPLE_SIZE" in reasons:
+            outcome = EvaluationOutcome.HARD_FAIL
+        elif "DRAWDOWN_EXCEEDS_THRESHOLD" in reasons:
             outcome = EvaluationOutcome.HARD_FAIL
         elif sharpe > 0.0 and profit_factor >= 1.0:
             outcome = EvaluationOutcome.NEAR_MISS

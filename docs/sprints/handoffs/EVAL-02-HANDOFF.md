@@ -49,7 +49,33 @@ Combined suite verification (92 passed across backtest, risk, execution, ledger,
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Blocking-fix batch (implementer, fix/eval-02-blocking)
+
+Accepted blocking findings fixed in this batch (one commit):
+
+1. Risk breach softened to NEAR_MISS — `evaluate_run` classified a drawdown
+   breach with high Sharpe/PF as NEAR_MISS. Per spec 11
+   (valid risk breach => HARD_FAIL) the classifier now forces HARD_FAIL when
+   `DRAWDOWN_EXCEEDS_THRESHOLD` is present. Regression:
+   `test_eval_02_risk_breach_is_hard_fail`. RED before: NEAR_MISS;
+   GREEN after: HARD_FAIL.
+2. Cost gate defaulted open — `metrics.get("cost_model_verified", True)`
+   treated a missing flag as verified (PASS). Now fail-closed: only an
+   explicit `True` passes; missing/False/unknown => INVALID_RUN with
+   `COST_MODEL_UNKNOWN`. Regression:
+   `test_eval_02_cost_flag_defaults_fail_closed`. RED before: PASS;
+   GREEN after: INVALID_RUN.
+3. PBO non-deterministic — `compute_pbo` used unseeded `np.random.choice`,
+   so identical matrices gave different PBO (observed 0.25 vs 0.875).
+   Now uses `np.random.default_rng(seed)` with `seed: int = 7` (backward
+   compatible optional param). Regression: `test_eval_02_pbo_is_deterministic`.
+   RED before: 0.25 vs 0.875; GREEN after: equal, ESTIMATED.
+
+Focused gate: `python -m pytest tests/unit/lab/evaluation/test_gates.py -q`
+=> 7 passed. Affected subsystem: `tests/unit/lab/evaluation/` => 15 passed.
+EVAL-01 untouched.
+
 ## Deviations and known risks
-- Deviations: None.
-- Unresolved issues / blockers: None for EVAL-02.
+- Deviations: None beyond the blocking fixes above.
+- Unresolved issues / blockers: None for EVAL-02 after this batch.
 - Next unlocked consumers: EVAL-03.

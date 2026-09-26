@@ -67,8 +67,12 @@ def compute_deflated_sharpe_ratio(
 
 def compute_pbo(
     matrix_returns: Sequence[Sequence[float]] | None,
+    seed: int = 7,
 ) -> tuple[float | None, str]:
     """Calculate Probability of Backtest Overfitting (PBO) via CSCV when eligible.
+
+    The CSCV resampling uses a seeded RNG so repeated evaluation of the same
+    matrix is deterministic (same inputs -> same PBO).
 
     Returns:
         (pbo_value, status): (None, "NOT_ESTIMABLE") if matrix unprovided/inadequate,
@@ -87,9 +91,10 @@ def compute_pbo(
     # Combinatorially partition and compute rank degradation
     # For now, if matrix is given with sufficient shape:
     # Estimate probability that in-sample best underperforms median out-of-sample
+    rng = np.random.default_rng(seed)
     logits = []
     for _ in range(min(16, n_parts)):
-        is_idx = np.random.choice(n_parts, subsets, replace=False)
+        is_idx = rng.choice(n_parts, subsets, replace=False)
         oos_idx = np.array([i for i in range(n_parts) if i not in is_idx])
 
         is_perf = np.mean(mat[is_idx], axis=0)

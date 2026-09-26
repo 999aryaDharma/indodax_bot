@@ -140,3 +140,59 @@ def test_eval_02_contract_3() -> None:
     multi_result = evaluate_multi_seed_runs(runs, policy, seed_selection="median")
     assert multi_result.finalist_metric["sharpe_ratio"] == 1.1
     assert multi_result.finalist_metric["sharpe_ratio"] != 2.5
+
+
+def test_eval_02_risk_breach_is_hard_fail() -> None:
+    """Blocking fix: valid risk breach (drawdown over policy max) => HARD_FAIL.
+
+    A high Sharpe/profit-factor must never soften a risk breach into NEAR_MISS.
+    """
+    policy = EvaluationPolicy()
+    run = _build_test_run(
+        sharpe=1.8,
+        profit_factor=1.5,
+        trade_count=50,
+        max_drawdown=0.50,
+        cost_model_verified=True,
+    )
+    result = evaluate_run(run, policy)
+    assert result.outcome == EvaluationOutcome.HARD_FAIL
+    assert "DRAWDOWN_EXCEEDS_THRESHOLD" in result.reasons
+
+
+def test_eval_02_cost_flag_defaults_fail_closed() -> None:
+    """Blocking fix: missing cost_model_verified flag => INVALID_RUN.
+
+    Unknown/absent cost evidence must fail closed, never default to verified.
+    """
+    policy = EvaluationPolicy()
+    run = _build_test_run(
+        sharpe=5.0,
+        profit_factor=3.5,
+        trade_count=50,
+    )
+    metrics = {k: v for k, v in run.metrics.items() if k != "cost_model_verified"}
+    run_missing_flag = run.model_copy(update={"metrics": metrics})
+    result = evaluate_run(run_missing_flag, policy)
+    assert result.outcome == EvaluationOutcome.INVALID_RUN
+    assert "COST_MODEL_UNKNOWN" in result.reasons
+
+
+def test_eval_02_pbo_is_deterministic() -> None:
+    """Blocking fix: repeated PBO evaluation of the same matrix is deterministic."""
+    from indodax_lab.evaluation.statistics import compute_pbo
+
+    matrix = [
+        [0.01, -0.02, 0.015, 0.005, -0.01],
+        [0.02, 0.01, -0.005, 0.012, 0.003],
+        [-0.01, 0.02, 0.01, -0.004, 0.008],
+        [0.005, -0.008, 0.02, 0.01, -0.002],
+        [0.012, 0.004, -0.01, 0.02, 0.006],
+        [-0.005, 0.015, 0.008, -0.01, 0.012],
+        [0.008, -0.003, 0.012, 0.006, -0.008],
+        [0.015, 0.009, -0.006, 0.011, 0.004],
+    ]
+    first, first_status = compute_pbo(matrix)
+    second, second_status = compute_pbo(matrix)
+    assert first_status == "ESTIMATED"
+    assert first == second
