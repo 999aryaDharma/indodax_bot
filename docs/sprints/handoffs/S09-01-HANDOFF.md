@@ -6,7 +6,7 @@ Status: IN_PROGRESS — implementation slices reviewed; full acceptance and exte
 
 - Sprint: S09-01 — Research tail-risk gate and breach history
 - Implementation owner: Codex /root
-- Independent reviewer: `/root/docs_review` (scoped correction PASS at final implementation SHA; S09 remains incomplete on external gates)
+- Independent reviewer: `/root/docs_review` (PASS for implemented S09 slice at final source SHA; S09 remains IN_PROGRESS on external gates)
 - Branch: `feat/feat-02-finalization`
 - Risk-period history code SHA: `da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7`
 - Opt-in Research gate code SHA: `75e2d587b3b47894e2ee37e27283f5a1c3211c6f` (supersedes `13b67ca37e24487f3be3f1153480b088cddc3583` and `cafd1fdfab3a57a2a2092b20aa33c6ab2ef933d8`)
@@ -54,6 +54,7 @@ Status: IN_PROGRESS — implementation slices reviewed; full acceptance and exte
 - Review round 1 at `cafd1fdfab3a57a2a2092b20aa33c6ab2ef933d8`: CHANGES_REQUESTED for malformed decimal values escaping validation (`"bad"`, `{}`, `True`); reviewer reproduced the issue.
 - Corrected both evidence measurements and policy thresholds. Invalid values now become Pydantic validation errors; evidence rejects with `RESEARCH_TAIL_EVIDENCE_INVALID`, while malformed policy prevents engine construction.
 - Review round 2 at exact code SHA `75e2d587b3b47894e2ee37e27283f5a1c3211c6f`: PASS for the scoped correction; no remaining Critical/Important finding in the correction. Reviewer inspection confirmed reset/history behavior but could not run persistence tests because of temporary-directory permission errors. The exact-SHA owner full suite above passed, including those repository tests.
+- Overall implemented-slice review at exact source SHA `75e2d587b3b47894e2ee37e27283f5a1c3211c6f`: PASS across AC0-AC3; reviewer combined full source review at `cafd1fd` with correction review at `75e2d58`. Reviewer independently ran 12 gate tests at `cafd1fd` and inspected corrective tests at `75e2d58`; reviewer did not independently reproduce the full suite.
 - This scoped PASS does not clear S09's external producer/policy and runtime wiring gates; sprint remains IN_PROGRESS.
 
 ## External gates / risks
