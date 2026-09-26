@@ -10,6 +10,7 @@ from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import create_decision_frame
 from indodax_lab.strategies.c02 import c02_decide, load_c02_specification
 from indodax_lab.strategies.registry import StrategyRegistry
+import indodax_lab.strategies.c02 as c02_module
 
 
 def _build_c02_bars(
@@ -207,6 +208,19 @@ def test_builtin_registration_executes_its_bound_c02_specification():
     assert intent.pair == "eth_idr"
     assert intent.desired_qty == Decimal("0.003")
     assert intent.stop_loss == intent.limit_price - Decimal("4500000")
+
+
+def test_builtin_registration_pins_the_registered_implementation(monkeypatch):
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c02_specification()
+    registry = StrategyRegistry()
+    registered = registry.register_builtin(spec)
+    frame = create_decision_frame(_build_c02_bars(as_of=as_of), as_of=as_of)
+    monkeypatch.setattr(c02_module, "c02_decide", lambda *_args: [])
+
+    assert len(registered.decide(frame)) == 1
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register_builtin(spec)
 
 
 def test_c02_01_contract_1():

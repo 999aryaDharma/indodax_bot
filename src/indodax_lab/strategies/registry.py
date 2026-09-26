@@ -98,12 +98,10 @@ class StrategyRegistry:
         """Register an allowlisted seed component using its statically bound function."""
         implementation = builtin_strategy_implementation(specification.strategy_id)
         bound_specification = specification.model_copy(deep=True)
-        component_id = implementation.component_id
+        decide_fn = implementation.decide_fn
 
         def decide(frame: DecisionFrame) -> list[SignalIntent]:
-            return builtin_strategy_implementation(component_id).decide_fn(
-                frame, bound_specification
-            )
+            return decide_fn(frame, bound_specification)
 
         return self.register(bound_specification, decide)
 

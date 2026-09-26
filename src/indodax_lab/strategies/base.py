@@ -29,6 +29,16 @@ def _ensure_utc(dt: datetime, field_name: str) -> datetime:
 
 def _stable_value(value: Any) -> Any:
     """Canonicalize strategy captures; reject state whose identity cannot be pinned."""
+    if inspect.isfunction(value):
+        return {
+            "type": _type_identity(value),
+            "module": value.__module__,
+            "qualname": value.__qualname__,
+            "code": _code_identity(value.__code__),
+            "defaults": _stable_value(value.__defaults__),
+            "kwdefaults": _stable_value(value.__kwdefaults__),
+            "closure": _stable_value(tuple(cell.cell_contents for cell in value.__closure__ or ())),
+        }
     if isinstance(value, BaseModel):
         return {
             "type": _type_identity(value),
