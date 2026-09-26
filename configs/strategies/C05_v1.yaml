@@ -1,0 +1,21 @@
+strategy_id: "C05"
+version: "1.0.0"
+family: "volatility_breakout"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  baseline_bars: 20
+  contraction_bars: 5
+  contraction_ratio: 0.7
+  expansion_ratio: 1.5
+  atr_multiplier: 2.0
+  desired_qty: "0.1"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Prior range contraction followed by range expansion breakout with ATR stop"
