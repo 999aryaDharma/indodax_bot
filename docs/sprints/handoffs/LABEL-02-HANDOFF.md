@@ -50,7 +50,23 @@ Combined suite verification (72 passed across backtest, risk, execution, ledger,
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Blocking-fix batch (implementer, fix/label-02-blocking)
+
+Accepted blocking finding fixed in this batch (one commit):
+
+- Interior bar gap silently trusted — a touch observed after missing bars
+  inside the horizon returned VALID (RED observed: gap at 12:00, touch at
+  13:00 => VALID outcome 1). The outcome loop now tracks continuous coverage
+  from entry and returns EXCLUDED/`INTERIOR_BAR_GAP` fail-closed when the
+  next bar opens after coverage ends. A touch resolved before any gap keeps
+  its VALID outcome (gap after the fact is irrelevant).
+  Regressions: `test_label_02_interior_gap_is_excluded`,
+  `test_label_02_touch_before_gap_stands`. GREEN after: EXCLUDED/None.
+
+Focused gate: `tests/unit/lab/labels/test_triple_barrier.py` => 7 passed.
+Affected subsystem: `tests/unit/lab/labels/` => 47 passed.
+
 ## Deviations and known risks
-- Deviations: None.
-- Unresolved issues / blockers: None for LABEL-02.
+- Deviations: None beyond the blocking fix above.
+- Unresolved issues / blockers: None for LABEL-02 after this batch.
 - Next unlocked consumers: SPLIT-01, D03-01.

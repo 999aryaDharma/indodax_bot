@@ -217,3 +217,70 @@ def test_label_02_concurrency_weights():
     # Since they overlap, each has concurrency > 1, so weight < 1.0
     assert weights["s1"] < Decimal("1.0")
     assert weights["s2"] < Decimal("1.0")
+
+
+def test_label_02_interior_gap_is_excluded():
+    """Blocking fix: missing bars inside the horizon => EXCLUDED, never a touch."""
+    decision_ts = datetime(2024, 6, 1, 10, 0, tzinfo=UTC)
+    config = TripleBarrierConfig(
+        label_set_id="triple_barrier",
+        version="1.0.0",
+        pt_multiplier=Decimal("2.0"),
+        sl_multiplier=Decimal("1.5"),
+        vertical_horizon=timedelta(hours=5),
+    )
+
+    # 12:00 bar missing; 13:00 bar would touch the upper barrier — unseen
+    # price action in between means the touch cannot be trusted.
+    bars = [
+        _make_bar(datetime(2024, 6, 1, 10, 0, tzinfo=UTC), 100000000, 100500000, 99500000, 100000000),
+        _make_bar(datetime(2024, 6, 1, 11, 0, tzinfo=UTC), 100000000, 101000000, 99800000, 100800000),
+        _make_bar(datetime(2024, 6, 1, 13, 0, tzinfo=UTC), 100800000, 102500000, 100500000, 102200000),
+        _make_bar(datetime(2024, 6, 1, 14, 0, tzinfo=UTC), 102200000, 103000000, 101900000, 102800000),
+    ]
+
+    label = build_triple_barrier_label(
+        sample_id="s_interior_gap",
+        pair="btc_idr",
+        decision_ts=decision_ts,
+        decision_volatility=Decimal("0.01"),
+        bars=bars,
+        config=config,
+    )
+
+    assert label.status == "EXCLUDED"
+    assert label.outcome is None
+    assert label.first_touch is None
+    assert label.exclusion_reason == "INTERIOR_BAR_GAP"
+
+
+def test_label_02_touch_before_gap_stands():
+    """Touch resolved before any gap keeps its VALID outcome (gap is after the fact)."""
+    decision_ts = datetime(2024, 6, 1, 10, 0, tzinfo=UTC)
+    config = TripleBarrierConfig(
+        label_set_id="triple_barrier",
+        version="1.0.0",
+        pt_multiplier=Decimal("2.0"),
+        sl_multiplier=Decimal("1.5"),
+        vertical_horizon=timedelta(hours=5),
+    )
+
+    bars = [
+        _make_bar(datetime(2024, 6, 1, 10, 0, tzinfo=UTC), 100000000, 100500000, 99500000, 100000000),
+        # Upper barrier touched at 11:00, before the 12:00 gap
+        _make_bar(datetime(2024, 6, 1, 11, 0, tzinfo=UTC), 100000000, 102500000, 99800000, 102200000),
+        _make_bar(datetime(2024, 6, 1, 13, 0, tzinfo=UTC), 102200000, 103000000, 101900000, 102800000),
+    ]
+
+    label = build_triple_barrier_label(
+        sample_id="s_touch_before_gap",
+        pair="btc_idr",
+        decision_ts=decision_ts,
+        decision_volatility=Decimal("0.01"),
+        bars=bars,
+        config=config,
+    )
+
+    assert label.status == "VALID"
+    assert label.first_touch == BarrierTouch.UPPER
+    assert label.outcome == 1
