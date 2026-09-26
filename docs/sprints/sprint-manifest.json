@@ -7720,15 +7720,18 @@
       "files": [
         "configs/strategies/S06_v1.yaml",
         "src/indodax_lab/strategies/s06.py",
-        "tests/unit/lab/strategies/test_s06.py"
+        "src/indodax_lab/strategies/__init__.py",
+        "tests/unit/lab/strategies/test_s06.py",
+        "docs/sprints/strategies/S06-01-post-listing-maturation.md",
+        "docs/sprints/handoffs/S06-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S06-01-post-listing-maturation.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/s06-01-post-listing-maturation",
       "requirements": [
         "FR-08"
@@ -7738,40 +7741,44 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/research/dataset-feature-contracts.md",
+        "configs/features/tabular_bar_v1.yaml",
+        "docs/sprints/handoffs/STRAT-01-HANDOFF.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.",
+      "current_context": "S06 contract implemented and independently reviewed. Candidate consumes registered log_listing_age_days, log_ret_24_1h, bar_completeness_24_1h, atr_pct_14_1h plus causal close; defaults are minimum age 180 days, maximum 24h log return 0.25, minimum completeness 0.95, positive momentum, 2 ATR stop, and Rp10,000 target. Point-in-time listed_at delivery to the feature materializer remains an external qualification gate; missing values abstain.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler"
+        "Portfolio backlog activation by owner; not in default scheduler",
+        "Verify PIT listed_at reaches the feature materializer; missing listing age must abstain and blocks meaningful strategy qualification."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
         {
           "criterion": "S06-01-AC0",
-          "test_case": "test_s06_01_valid_contract",
+          "test_case": "test_s06_valid_post_listing_momentum_intent",
           "behavior": "Kandidat S06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S06-01-AC1",
-          "test_case": "test_s06_01_contract_1",
+          "test_case": "test_s06_rejects_initial_listing_spike_and_age_below_boundary",
           "behavior": "Initial listing spike ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S06-01-AC2",
-          "test_case": "test_s06_01_contract_2",
+          "test_case": "test_s06_accepts_exact_minimum_age_and_history_boundaries",
           "behavior": "Age boundary memakai available listing evidence",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S06-01-AC3",
-          "test_case": "test_s06_01_contract_3",
+          "test_case": "test_s06_unknown_listing_age_and_incomplete_history_abstain",
           "behavior": "Unknown listing date abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7779,7 +7786,14 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/S06-01-HANDOFF.md",
+        "code_target": "faeac7a939862b37f0057d0fbb82072b3fe7ef5f",
+        "source_commit": "faeac7a939862b37f0057d0fbb82072b3fe7ef5f",
+        "review": "Independent PASS on implementation and follow-up deltas; 157 focused strategy/feature tests passed, including 7 S06 tests; Ruff and public export smoke check passed. Point-in-time listing producer remains an external qualification gate."
+      }
     },
     {
       "id": "S07-01",
