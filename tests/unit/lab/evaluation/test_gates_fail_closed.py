@@ -36,7 +36,7 @@ from indodax_lab.evaluation.statistics import (
 )
 
 
-def _run(**metric_overrides: Any) -> ExperimentRunRecord:
+def _run(run_id: str = "run_failclosed", **metric_overrides: Any) -> ExperimentRunRecord:
     """A strong, fully verified run; ``metric_overrides`` replaces individual metrics."""
     metrics: dict[str, Any] = {
         "sharpe_ratio": 1.8,
@@ -47,7 +47,7 @@ def _run(**metric_overrides: Any) -> ExperimentRunRecord:
     }
     metrics.update(metric_overrides)
     return ExperimentRunRecord(
-        run_id="run_failclosed",
+        run_id=run_id,
         candidate_id="c01_donchian",
         candidate_version="1.0.0",
         family="breakout",
@@ -83,6 +83,13 @@ def test_eval_02_absent_cost_verification_fails_closed() -> None:
 def test_eval_02_only_an_explicit_true_verifies_costs(flag: Any) -> None:
     """EVAL-02-F1: only a literal verified flag satisfies the cost gate."""
     result = evaluate_run(_run(cost_model_verified=flag), EvaluationPolicy())
+    assert result.outcome == EvaluationOutcome.INVALID_RUN
+    assert "COST_MODEL_UNKNOWN" in result.reasons
+
+
+def test_eval_02_whitespace_unknown_cost_hash_fails_closed() -> None:
+    run = _run().model_copy(update={"cost_schedule_hash": " UNKNOWN "})
+    result = evaluate_run(run, EvaluationPolicy())
     assert result.outcome == EvaluationOutcome.INVALID_RUN
     assert "COST_MODEL_UNKNOWN" in result.reasons
 
@@ -212,6 +219,15 @@ def test_eval_02_dsr_is_not_estimated_from_non_finite_returns() -> None:
     assert status == "NOT_ESTIMABLE"
 
 
+@pytest.mark.parametrize("returns", [None, ["invalid"] * 40, [[0.1] * 40]])
+def test_eval_02_dsr_malformed_returns_are_not_estimable(returns: Any) -> None:
+    dsr, status = compute_deflated_sharpe_ratio(
+        sharpe_ratio=1.2, trial_count=5, returns=returns
+    )
+    assert dsr is None
+    assert status == "NOT_ESTIMABLE"
+
+
 # --- EVAL-02-F5: the multi-seed aggregate must carry honest cost evidence ---
 
 _MULTI_SEED_SHARPE = [2.5, 0.8, 1.2, 0.4, 1.1]
@@ -251,6 +267,118 @@ def test_eval_02_multi_seed_mixing_cost_schedules_is_invalid() -> None:
     result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
 
     assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+
+
+def test_eval_02_multi_seed_rejects_failed_seed() -> None:
+    runs = _seed_runs()
+    runs[0] = runs[0].model_copy(update={"status": ExperimentRunStatus.FAILED})
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert any("RUN_FAILED_TECHNICAL" in reason for reason in result.reasons)
+
+
+def test_eval_02_multi_seed_rejects_missing_seed_metric() -> None:
+    runs = _seed_runs()
+    runs[0] = runs[0].model_copy(
+        update={"metrics": {k: v for k, v in runs[0].metrics.items() if k != "max_drawdown"}}
+    )
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert any("max_drawdown" in reason for reason in result.reasons)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("candidate_id", "different-candidate"),
+        ("candidate_version", "2.0.0"),
+        ("dataset_hash", "different-dataset"),
+        ("config_hash", "different-config"),
+        ("execution_hash", "different-execution"),
+    ],
+)
+def test_eval_02_multi_seed_rejects_mixed_experiment_identity(field: str, value: str) -> None:
+    runs = _seed_runs()
+    runs[1] = runs[1].model_copy(update={field: value})
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert any("MULTI_SEED_IDENTITY_MISMATCH" in reason for reason in result.reasons)
+
+
+def test_eval_02_multi_seed_rejects_missing_candidate_identity() -> None:
+    runs = _seed_runs()
+    runs[0] = runs[0].model_copy(update={"candidate_id": "  "})
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert any("MULTI_SEED_IDENTITY_MISSING:candidate_id" in r for r in result.reasons)
+
+
+def test_eval_02_multi_seed_rejects_duplicate_run_ids() -> None:
+    runs = _seed_runs()
+    runs[1] = runs[1].model_copy(update={"run_id": runs[0].run_id})
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert "MULTI_SEED_DUPLICATE_RUN_ID" in result.reasons
+
+
+def test_eval_02_multi_seed_requires_run_ids() -> None:
+    runs = _seed_runs()
+    runs[0] = runs[0].model_copy(update={"run_id": "  "})
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.INVALID_RUN
+    assert "MULTI_SEED_RUN_ID_REQUIRED" in result.reasons
+
+
+@pytest.mark.parametrize(
+    "policy_values",
+    [
+        {"max_drawdown_pct": float("nan")},
+        {"max_drawdown_pct": float("inf")},
+        {"max_drawdown_pct": 1.01},
+        {"max_drawdown_pct": -0.01},
+        {"min_profit_factor": float("nan")},
+        {"min_sharpe_ratio": float("inf")},
+        {"min_trade_count": 0},
+        {"seed_aggregation_method": "best"},
+        {"require_verified_cost_model": False},
+    ],
+)
+def test_eval_02_invalid_gate_policy_is_rejected(policy_values: dict[str, Any]) -> None:
+    with pytest.raises(ValueError):
+        EvaluationPolicy(**policy_values)
+
+
+@pytest.mark.parametrize(
+    "matrix",
+    [
+        [[float("nan"), 1.0]] * 4,
+        [[float("inf"), 1.0]] * 4,
+        [[1.0, 2.0], [3.0], [4.0, 5.0], [6.0, 7.0]],
+    ],
+)
+def test_eval_02_pbo_rejects_nonfinite_or_ragged_data(matrix: list[list[float]]) -> None:
+    assert compute_pbo(matrix) == (None, "NOT_ESTIMABLE")
+
+
+def test_eval_02_pbo_can_count_underperforming_one_of_two_candidates() -> None:
+    matrix = [[10.0, 0.0], [10.0, 0.0], [-9.0, 0.0], [-9.0, 0.0]]
+
+    pbo, status = compute_pbo(matrix)
+
+    assert status == "ESTIMATED"
+    assert pbo is not None and pbo > 0.0
 
 
 # Actor for every line this file contributes to review evidence:

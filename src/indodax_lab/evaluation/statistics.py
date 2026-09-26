@@ -7,7 +7,9 @@ metrics + policy + trial family -> DSR/PBO when eligible, or honest NOT_ESTIMABL
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
+from numbers import Integral
+
 import numpy as np
 from scipy import stats
 
@@ -24,30 +26,46 @@ def compute_deflated_sharpe_ratio(
         (dsr_value, status): (None, "NOT_ESTIMABLE") if inputs inadequate,
                              (float, "ESTIMATED") if valid.
     """
-    if trial_count < 2 or len(returns) < 30:
+    if isinstance(trial_count, bool) or not isinstance(trial_count, Integral) or trial_count < 2:
         return None, "NOT_ESTIMABLE"
 
     # EVAL-02-F4: a non-finite Sharpe or return sample makes every downstream moment
     # non-finite, and the final `max(0.0, min(1.0, x))` clamp turns NaN into 1.0 -- i.e. a
     # maximum-confidence DSR. Refuse to estimate rather than report full confidence.
+    try:
+        sharpe_ratio = float(sharpe_ratio)
+    except (TypeError, ValueError):
+        return None, "NOT_ESTIMABLE"
     if not math.isfinite(sharpe_ratio):
         return None, "NOT_ESTIMABLE"
 
-    arr = np.asarray(returns, dtype=float)
-    if not np.all(np.isfinite(arr)):
+    try:
+        arr = np.asarray(returns, dtype=float)
+    except (TypeError, ValueError):
         return None, "NOT_ESTIMABLE"
-    t_len = len(arr)
+    if arr.ndim != 1 or arr.size < 30 or not np.all(np.isfinite(arr)):
+        return None, "NOT_ESTIMABLE"
+    t_len = arr.size
 
     # Compute higher moments
     std_val = float(np.std(arr, ddof=1))
-    if std_val <= 1e-9:
+    if not math.isfinite(std_val) or std_val <= 1e-9:
         return None, "NOT_ESTIMABLE"
 
     skew = float(stats.skew(arr))
     kurt = float(stats.kurtosis(arr, fisher=False))  # Pearson kurtosis (normal = 3.0)
+    if not math.isfinite(skew) or not math.isfinite(kurt):
+        return None, "NOT_ESTIMABLE"
 
     # Variance of Sharpe ratios across trials
-    if sharpe_variance is None or sharpe_variance <= 0.0:
+    if sharpe_variance is not None:
+        try:
+            sharpe_variance = float(sharpe_variance)
+        except (TypeError, ValueError):
+            return None, "NOT_ESTIMABLE"
+        if not math.isfinite(sharpe_variance) or sharpe_variance < 0.0:
+            return None, "NOT_ESTIMABLE"
+    if sharpe_variance is None or sharpe_variance == 0.0:
         sharpe_variance = 0.5  # reasonable empirical default if cross-trial var unprovided
 
     # Expected maximum Sharpe under null hypothesis (Bailey & López de Prado 2014)
@@ -94,12 +112,22 @@ def compute_pbo(
         (pbo_value, status): (None, "NOT_ESTIMABLE") if matrix unprovided/inadequate,
                              (float, "ESTIMATED") if valid.
     """
-    if matrix_returns is None or len(matrix_returns) < 4:
+    if (
+        matrix_returns is None
+        or isinstance(seed, bool)
+        or not isinstance(seed, Integral)
+        or seed < 0
+    ):
         return None, "NOT_ESTIMABLE"
 
     # CSCV estimation when partitioned returns matrix exists
-    mat = np.asarray(matrix_returns, dtype=float)
-    if mat.shape[0] < 4 or mat.shape[1] < 2:
+    try:
+        mat = np.asarray(matrix_returns, dtype=float)
+    except (TypeError, ValueError):
+        return None, "NOT_ESTIMABLE"
+    if mat.ndim != 2 or mat.shape[0] < 4 or mat.shape[1] < 2:
+        return None, "NOT_ESTIMABLE"
+    if not np.all(np.isfinite(mat)):
         return None, "NOT_ESTIMABLE"
 
     n_parts = mat.shape[0]
@@ -117,7 +145,7 @@ def compute_pbo(
         oos_perf = np.mean(mat[oos_idx], axis=0)
 
         best_is = int(np.argmax(is_perf))
-        oos_ranks = stats.rankdata(oos_perf) / len(oos_perf)
+        oos_ranks = stats.rankdata(oos_perf) / (len(oos_perf) + 1.0)
         logits.append(1.0 if oos_ranks[best_is] < 0.5 else 0.0)
 
     pbo = float(np.mean(logits))
