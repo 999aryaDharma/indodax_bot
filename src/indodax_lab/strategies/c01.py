@@ -6,8 +6,10 @@ Previous N-bar high breakout with volume gate; ATR stop -> versioned LONG/FLAT i
 
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
+
 import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
@@ -56,21 +58,56 @@ def c01_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
             continue
 
         curr_close = float(curr_row["close"])
+        if not math.isfinite(curr_close) or curr_close <= 0:
+            continue
 
         # C01-01-AC1: Previous N completed bars EXCLUDING current decision bar (-1)
         prev_window = p_df.iloc[-lookback_bars - 1 : -1]
-        prev_n_high = float(prev_window["high"].max())
+        try:
+            prev_n_high = float(prev_window["high"].max())
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not math.isfinite(prev_n_high) or prev_n_high <= 0:
+            continue
 
-        # Volume gate
-        vol_col = "base_volume" if "base_volume" in p_df.columns else "volume"
-        curr_vol = float(curr_row.get(vol_col, 0.0))
-        avg_vol = float(prev_window[vol_col].mean()) if vol_col in prev_window.columns else 0.0
+        # Volume gate (fail-closed): unknown/zero average volume never passes.
+        if "base_volume" in p_df.columns:
+            vol_col = "base_volume"
+        elif "volume" in p_df.columns:
+            vol_col = "volume"
+        else:
+            continue
+        curr_vol_raw = curr_row.get(vol_col)
+        if curr_vol_raw is None or pd.isna(curr_vol_raw):
+            continue
+        try:
+            curr_vol = float(curr_vol_raw)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(curr_vol):
+            continue
+        try:
+            avg_vol = float(pd.to_numeric(prev_window[vol_col], errors="coerce").mean())
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not math.isfinite(avg_vol) or avg_vol <= 0:
+            continue
 
         # C01-01-AC2: Breakout confirmed if close > prev_n_high and curr_vol >= avg_vol * volume_mult
         if curr_close > prev_n_high and curr_vol >= (avg_vol * volume_mult):
-            # Price-denominated ATR stop loss
-            atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
-            stop_loss = max(0.0, curr_close - atr_mult * atr_val)
+            # Price-denominated ATR stop loss (fail-closed on unknown/nonpositive ATR).
+            atr_raw = curr_row.get("atr_14", curr_row.get("atr"))
+            if atr_raw is None or pd.isna(atr_raw):
+                continue
+            try:
+                atr_val = float(atr_raw)
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(atr_val) or atr_val <= 0:
+                continue
+            stop_loss = curr_close - atr_mult * atr_val
+            if not math.isfinite(stop_loss) or stop_loss <= 0 or stop_loss >= curr_close:
+                continue
 
             intent = SignalIntent(
                 intent_id=f"c01_{pair}_{int(frame.as_of.timestamp())}",
