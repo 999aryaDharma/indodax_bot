@@ -48,6 +48,14 @@ Full lab suite verification: 144 passed across strategies, features, labels, eva
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Fix batch (blocking: exact/allowlist objective guard + hard caps)
+- Finding: substring guard (`"test" in obj`) false-positives on `inner_val_latest_sharpe` and caps (`max_trials`/`max_revisions`) not enforced.
+- Fix: `src/indodax_lab/models/tuning.py` — `SearchSpace` now requires `inner_` prefix + token-exact `sealed`/`test`/`outer` rejection (`re.split`); `TrialBudget` enforces `1<=max_trials<=30`, `0<=max_revisions<=1` fail-closed.
+- Regression: `tests/unit/lab/models/test_ml03_allowlist_caps.py`
+  - RED (behavioral): `test_ml03_allowlist_permits_inner_latest_objective` + `test_ml03_caps_enforced` failed pre-fix (false rejection + DID NOT RAISE).
+  - GREEN: `python -m pytest tests/unit/lab/models/test_tuning_budget.py tests/unit/lab/models/test_ml03_allowlist_caps.py -q` → 8 passed.
+- Minor backlog: none new.
+
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for ML-03.

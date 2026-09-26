@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 import hashlib
 import json
+import re
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -52,14 +53,19 @@ class SearchSpace(BaseModel):
     target_objective: str
 
     def __init__(self, **data: Any) -> None:
-        obj = str(data.get("target_objective", "")).strip().lower()
-        forbidden_terms = ["sealed_test", "outer_test", "test", "sealed"]
-        for term in forbidden_terms:
-            if term in obj:
-                raise SealedTestObjectiveForbiddenError(
-                    f"SEALED_TEST_OBJECTIVE_FORBIDDEN: Objective '{data.get('target_objective')}' references "
-                    f"forbidden partition keyword '{term}'. Search objectives must target inner validation only."
-                )
+        raw_obj = str(data.get("target_objective", ""))
+        obj = raw_obj.strip().lower()
+        tokens = [t for t in re.split(r"[^a-z0-9]+", obj) if t]
+        if not obj.startswith("inner_"):
+            raise SealedTestObjectiveForbiddenError(
+                f"SEALED_TEST_OBJECTIVE_FORBIDDEN: Objective '{raw_obj}' is not an inner-validation "
+                "objective. Search objectives must target inner validation only (prefix 'inner_')."
+            )
+        if "sealed" in tokens or "test" in tokens or "outer" in tokens:
+            raise SealedTestObjectiveForbiddenError(
+                f"SEALED_TEST_OBJECTIVE_FORBIDDEN: Objective '{raw_obj}' references forbidden partition "
+                "token ('sealed'/'test'/'outer'). Search objectives must target inner validation only."
+            )
         super().__init__(**data)
 
     def space_hash(self) -> str:
@@ -83,6 +89,20 @@ class TrialBudget(BaseModel):
     max_revisions: int = 1
     consumed_trials: int = 0
     revision_count: int = 0
+
+    @model_validator(mode="after")
+    def _enforce_hard_caps(self) -> "TrialBudget":
+        if not (1 <= self.max_trials <= 30):
+            raise ValueError(
+                f"TRIAL_BUDGET_CAP_EXCEEDED: max_trials={self.max_trials} must be within 1..30 (ADR-003)."
+            )
+        if not (0 <= self.max_revisions <= 1):
+            raise ValueError(
+                f"REVISION_BUDGET_CAP_EXCEEDED: max_revisions={self.max_revisions} must be within 0..1 (ADR-003)."
+            )
+        if self.consumed_trials < 0 or self.revision_count < 0:
+            raise ValueError("BUDGET_COUNTERS_MUST_BE_NON_NEGATIVE")
+        return self
 
     @property
     def remaining_trials(self) -> int:
