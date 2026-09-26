@@ -107,3 +107,8 @@ def test_s08_queue_report_is_bound_to_promotion_digest() -> None:
 
     with pytest.raises(ValueError, match="PROMOTION_APPROVAL_EVIDENCE_MISMATCH"):
         ChampionRegistry("baseline", "1").evaluate_promotion(changed, approval)
+
+
+def test_s08_queue_qualification_report_rejects_blank_identity() -> None:
+    with pytest.raises(ValueError):
+        _queue_report(candidate_id="   ")

@@ -151,7 +151,7 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
     oms_store = OmsStore(db_path)
     venue = DeterministicFakeVenue()
     router = OrderRouter(oms_store=oms_store, venue=venue)
-    ledger = ResearchLedger(initial_cash=Decimal("100000000"), init_timestamp=NOW)
+    ledger = ResearchLedger(initial_cash=Decimal("200000000"), init_timestamp=NOW)
     ingester = VenueFillIngester(ledger=ledger, oms_store=oms_store)
 
     order = OmsStateMachine.create(
@@ -164,6 +164,8 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
         created_at=NOW,
     )
     oms_store.create_order(order, event_id="evt_init_d3")
+    initial_reserved = Decimal("100100000")  # 100M notional plus 0.1% fee reserve
+    ledger.reserve_cash(order.client_order_id, initial_reserved)
     ack_order = router.submit_order(order, now=NOW)
     assert ack_order.state == OmsOrderState.ACKNOWLEDGED
 
@@ -198,6 +200,13 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
 
     filled_from_history = oms_store.load_order(order.internal_order_id)
     assert filled_from_history is not None
+    remaining_qty = filled_from_history.desired_qty - filled_from_history.filled_qty
+    assert remaining_qty == Decimal("0.05")
+    remaining_reservation = remaining_qty * order.limit_price * Decimal("1.001")
+    with ledger.allocation_lock:
+        assert ledger.release_reservation(order.client_order_id) == initial_reserved
+        ledger.reserve_cash(order.client_order_id, remaining_reservation)
+
     assert filled_from_history.state == OmsOrderState.PARTIALLY_FILLED
     assert filled_from_history.average_fill_price == Decimal("1000000000")
     cancelled_after_reconcile = router.resolve_unknown_order(
@@ -206,11 +215,21 @@ def test_drill_3_cancel_fill_race_under_partial_fill(tmp_path: Path) -> None:
     )
     assert cancelled_after_reconcile.state == OmsOrderState.CANCELLED
     assert cancelled_after_reconcile.filled_qty == Decimal("0.05")
+    assert (
+        cancelled_after_reconcile.desired_qty - cancelled_after_reconcile.filled_qty
+        == Decimal("0.05")
+    )
+
+    with ledger.allocation_lock:
+        released_on_cancel = ledger.release_reservation(order.client_order_id)
 
     # Verify ledger cash and position
-    assert ledger.cash == Decimal("49950000")  # 100M - 50.05M
+    assert released_on_cancel == Decimal("50050000")
+    assert ledger.reservations == {}
+    assert ledger.available_cash == ledger.cash == Decimal("149950000")  # 200M - 50.05M
     pos = ledger.get_position("btc_idr")
     assert pos.base_qty == Decimal("0.05")
+    assert ledger.transactions[-1].is_balanced
 
 
 def test_drill_4_backward_clock_jump_fails_closed(tmp_path: Path) -> None:

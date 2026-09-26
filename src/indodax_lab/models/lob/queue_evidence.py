@@ -15,6 +15,12 @@ def _utc(value: datetime, field: str) -> datetime:
     return value
 
 
+def _nonblank(value: str, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"NONBLANK_{field.upper()}_REQUIRED")
+    return value.strip()
+
+
 class QueueEvidencePolicy(BaseModel):
     """Explicitly approved freshness policy; no operational default is implied."""
 
@@ -27,6 +33,11 @@ class QueueEvidencePolicy(BaseModel):
     source_id: str = Field(min_length=1)
     source_version: str = Field(min_length=1)
     max_evidence_age_seconds: Decimal = Field(gt=0)
+
+    @field_validator("policy_id", "version", "approved_by", "approval_ref", "source_id", "source_version", mode="before")
+    @classmethod
+    def require_nonblank_identity(cls, value: str, info) -> str:
+        return _nonblank(value, info.field_name)
 
 
 class QueueEvidence(BaseModel):
@@ -54,9 +65,14 @@ class QueueEvidence(BaseModel):
     @field_validator("pair", mode="before")
     @classmethod
     def normalize_pair(cls, value: str) -> str:
-        if not isinstance(value, str):
-            raise ValueError("QUEUE_PAIR_STRING_REQUIRED")
-        return value.strip().lower()
+        return _nonblank(value, "pair").lower()
+
+    @field_validator("session_id", "source_id", "source_version", mode="before")
+    @classmethod
+    def require_nonblank_source_identity(cls, value: str | None, info) -> str | None:
+        return None if value is None and info.field_name == "session_id" else _nonblank(
+            value, info.field_name
+        )
 
     @field_validator("event_at", "available_at", "observed_at")
     @classmethod
@@ -98,6 +114,11 @@ class QueueQualificationReport(BaseModel):
     future_count: int = Field(ge=0)
     sequence_invalid_count: int = Field(ge=0)
     max_observed_age_seconds: Decimal = Field(ge=0)
+
+    @field_validator("report_id", "candidate_id", "candidate_version", mode="before")
+    @classmethod
+    def require_nonblank_report_identity(cls, value: str, info) -> str:
+        return _nonblank(value, info.field_name)
 
     @model_validator(mode="after")
     def counts_fit_sample_total(self) -> QueueQualificationReport:

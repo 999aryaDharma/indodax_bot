@@ -64,6 +64,17 @@ def test_s08_invalid_or_missing_market_evidence_abstains() -> None:
     spec = load_s08_specification()
     assert s08_decide(_frame(book_sequence_contiguous=False), spec) == []
     assert s08_decide(_frame(book_available_at=AS_OF + timedelta(seconds=1)), spec) == []
+    assert (
+        s08_decide(
+            _frame(
+                book_event_ts=AS_OF - timedelta(seconds=1),
+                book_available_at=AS_OF - timedelta(seconds=10),
+            ),
+            spec,
+        )
+        == []
+    )
+    assert s08_decide(_frame(row_ready_at=AS_OF - timedelta(seconds=1)), spec) == []
     assert s08_decide(_frame(book_session_id=None), spec) == []
     assert s08_decide(_frame(book_imbalance_l5=None), spec) == []
     assert s08_decide(_frame(spread_bps=100.0), spec) == []

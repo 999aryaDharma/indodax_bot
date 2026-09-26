@@ -132,6 +132,21 @@ def test_s08_queue_policy_requires_explicit_approval_and_freshness_limit() -> No
         QueueEvidencePolicy.model_validate(policy)
 
 
+@pytest.mark.parametrize("field", ["approved_by", "approval_ref", "policy_id", "source_id"])
+def test_s08_queue_policy_rejects_blank_identity_and_approval(field: str) -> None:
+    policy = _policy().model_dump()
+    policy[field] = "   "
+
+    with pytest.raises(ValidationError):
+        QueueEvidencePolicy.model_validate(policy)
+
+
+@pytest.mark.parametrize("session_id", ["", "   "])
+def test_s08_known_evidence_rejects_blank_session_identity(session_id: str) -> None:
+    with pytest.raises(ValidationError):
+        QueueEvidence.model_validate(_evidence(session_id=session_id))
+
+
 def test_s08_known_queue_evidence_requires_complete_causal_fields() -> None:
     with pytest.raises(ValidationError):
         QueueEvidence.model_validate(_evidence(sequence_contiguous=None))

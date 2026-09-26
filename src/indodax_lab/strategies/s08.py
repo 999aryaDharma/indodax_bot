@@ -92,6 +92,7 @@ def s08_decide(
             event_at is None
             or available_at is None
             or row_ready_at is None
+            or event_at > available_at
             or event_at > frame.as_of
             or available_at > frame.as_of
             or available_at > row_ready_at
