@@ -1,6 +1,7 @@
 """Unit tests for JOB-01 Durable leased jobs and SQLite WAL local queue."""
 
 import hashlib
+import os
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -462,6 +463,56 @@ def test_recovery_after_intent_commit_publishes_existing_worker_artifact(
     )
     assert recovered.status == JobStatus.SUCCESS
     assert queue.read_result_artifact("recover_before_publish") == content
+
+
+def test_concurrent_same_digest_publishers_use_independent_temporary_files(
+    tmp_path: Path, monkeypatch
+) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    content = b"same complete output from two jobs"
+    digest = hashlib.sha256(content).hexdigest()
+    replacement_barrier = threading.Barrier(2)
+    replace = os.replace
+
+    def synchronized_replace(
+        source: str | os.PathLike[str], target: str | os.PathLike[str]
+    ) -> None:
+        replacement_barrier.wait(timeout=5)
+        replace(source, target)
+
+    monkeypatch.setattr("indodax_lab.orchestration.queue.os.replace", synchronized_replace)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        paths = list(pool.map(lambda _: queue._publish_artifact(digest, content), range(2)))
+
+    assert paths[0] == paths[1]
+    assert paths[0].read_bytes() == content
+    assert not list(paths[0].parent.glob("*.tmp"))
+
+
+def test_queue_migrates_prior_staged_artifact_table_without_data_loss(tmp_path: Path) -> None:
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    queue.submit_job(_build_test_job("legacy_staged"))
+    with queue._connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO job_artifacts (job_id, artifact_path, artifact_hash, staged_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            ("legacy_staged", "legacy.bin", "a" * 64, "2025-06-01T12:00:00+00:00"),
+        )
+        conn.execute("ALTER TABLE job_artifacts DROP COLUMN source_path;")
+
+    migrated = SqliteJobQueue(db_path)
+    with migrated._connect() as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(job_artifacts);")}
+        row = conn.execute(
+            "SELECT source_path, artifact_path, artifact_hash FROM job_artifacts WHERE job_id = ?",
+            ("legacy_staged",),
+        ).fetchone()
+
+    assert "source_path" in columns
+    assert row == (None, "legacy.bin", "a" * 64)
 
 
 def test_read_result_artifact_rejects_tampering(tmp_path: Path) -> None:

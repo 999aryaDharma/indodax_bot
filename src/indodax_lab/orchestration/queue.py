@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -545,18 +546,24 @@ class SqliteJobQueue:
                 )
             return destination
 
-        # The queue's SQLite write lock serializes publication for this store.
-        # A deterministic temporary path is overwritten after a crash; os.replace
-        # makes the digest path visible only after the complete bytes are durable.
-        temporary = destination.with_name(destination.name + ".tmp")
+        # Each publisher owns its temp file; atomic replace safely converges
+        # concurrent identical digests on the same object path.
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{digest}.", suffix=".tmp", dir=destination.parent
+        )
+        temporary = Path(temporary_name)
         try:
-            with temporary.open("wb") as artifact:
+            with os.fdopen(descriptor, "wb") as artifact:
                 artifact.write(content)
                 artifact.flush()
                 os.fsync(artifact.fileno())
             os.replace(temporary, destination)
         except OSError:
             temporary.unlink(missing_ok=True)
+            if destination.exists():
+                existing = destination.read_bytes()
+                if hashlib.sha256(existing).hexdigest() == digest:
+                    return destination
             raise
         return destination
 
