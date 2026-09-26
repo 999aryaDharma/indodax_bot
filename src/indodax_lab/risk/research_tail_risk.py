@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, DecimalException
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -13,6 +13,16 @@ def _ensure_utc(value: datetime, field_name: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() != timedelta(0):
         raise ValueError(f"UTC_TIMEZONE_AWARE_REQUIRED:{field_name}")
     return value
+
+
+def _parse_nonnegative_decimal(value: Any, error_code: str) -> Decimal:
+    try:
+        result = Decimal(str(value))
+    except (DecimalException, TypeError, ValueError) as exc:
+        raise ValueError(error_code) from exc
+    if not result.is_finite() or result < 0:
+        raise ValueError(error_code)
+    return result
 
 
 class ResearchTailRiskPolicy(BaseModel):
@@ -50,10 +60,7 @@ class ResearchTailRiskPolicy(BaseModel):
     def parse_nonnegative_threshold(cls, value: Any) -> Decimal | None:
         if value is None:
             return None
-        result = Decimal(str(value))
-        if not result.is_finite() or result < 0:
-            raise ValueError("NON_NEGATIVE_FINITE_THRESHOLD_REQUIRED")
-        return result
+        return _parse_nonnegative_decimal(value, "NON_NEGATIVE_FINITE_THRESHOLD_REQUIRED")
 
     @property
     def is_approved_and_complete(self) -> bool:
@@ -115,7 +122,4 @@ class ResearchTailRiskEvidence(BaseModel):
     def parse_optional_measurement(cls, value: Any) -> Decimal | None:
         if value is None:
             return None
-        result = Decimal(str(value))
-        if not result.is_finite() or result < 0:
-            raise ValueError("NON_NEGATIVE_FINITE_EVIDENCE_REQUIRED")
-        return result
+        return _parse_nonnegative_decimal(value, "NON_NEGATIVE_FINITE_EVIDENCE_REQUIRED")

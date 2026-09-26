@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from pydantic import ValidationError
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
@@ -171,6 +172,34 @@ def test_research_tail_gate_checks_freshness_at_assessment_time() -> None:
 
     assert not result.approved
     assert result.reason_code == "RESEARCH_TAIL_EVIDENCE_STALE"
+
+
+@pytest.mark.parametrize("field", ["pump_gap_fraction", "amihud_24_1h"])
+@pytest.mark.parametrize("value", ["bad", {}, True])
+def test_research_tail_gate_rejects_malformed_numeric_evidence(
+    field: str, value: object
+) -> None:
+    engine = RiskEngine(
+        risk_manager=_risk_manager(),
+        research_tail_risk_policy=_policy(),
+    )
+
+    result = _assess(engine, evidence=_evidence(**{field: value}))
+
+    assert not result.approved
+    assert result.reason_code == "RESEARCH_TAIL_EVIDENCE_INVALID"
+
+
+@pytest.mark.parametrize("field", ["max_pump_gap_fraction", "max_amihud_24_1h"])
+@pytest.mark.parametrize("value", ["bad", {}, True])
+def test_research_tail_policy_rejects_malformed_thresholds(
+    field: str, value: object
+) -> None:
+    policy = _policy()
+    policy[field] = value
+
+    with pytest.raises(ValidationError):
+        RiskEngine(risk_manager=_risk_manager(), research_tail_risk_policy=policy)
 
 
 @pytest.mark.parametrize(
