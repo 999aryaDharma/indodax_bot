@@ -48,6 +48,11 @@ Full lab suite verification: 179 passed across strategies, features, labels, eva
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Fix batch (blocking: robust tail-target guard)
+- Finding: exact-match guard allowed my_target, Tail-Target, TAIL TARGET variants.
+- Fix: src/indodax_lab/models/m04_quantile_risk.py — normalized substring check for all forbidden keywords.
+- Regression: tests/unit/lab/models/test_m04_tail_guard.py (8 variants) — RED 3 DID NOT RAISE pre-fix, GREEN 13 passed with test_m04_quantile_risk.py.
+
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for M04-01.

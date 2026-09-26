@@ -50,6 +50,13 @@ FORBIDDEN_FEATURE_KEYWORDS = {
 }
 
 
+def _normalize_feature_name(value: str) -> str:
+    norm = value.strip().lower().replace("-", "_").replace(" ", "_").replace("/", "_")
+    while "__" in norm:
+        norm = norm.replace("__", "_")
+    return norm.strip("_")
+
+
 class M04Config(BaseModel):
     """Configuration for M04 Quantile Risk Regression."""
 
@@ -141,8 +148,8 @@ class M04QuantileTrainer:
         """
         # AC3: Check for tail target or label leakage in features
         for col in feature_names:
-            col_lower = col.strip().lower()
-            if col_lower in FORBIDDEN_FEATURE_KEYWORDS or "tail_target" in col_lower:
+            norm = _normalize_feature_name(col)
+            if any(kw in norm for kw in FORBIDDEN_FEATURE_KEYWORDS):
                 raise TailTargetLeakageError(
                     f"TAIL_TARGET_LEAKAGE: Feature '{col}' contains target or tail information. "
                     "Tail target must not be used as an input feature (M04-01-AC3)."
