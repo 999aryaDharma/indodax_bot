@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: safety | Domain: labels | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (implementation); Codex /root (review remediation) | Independent Reviewer: /root/docs_review (PASS)
 
 Recommended Branch: `feat/split-01-sealed-purged-chronological-folds`
 
@@ -45,7 +45,7 @@ EVAL-03, TRAIN-01
 
 ## Current Context
 
-New capability; dependencies must be DONE before implementation.
+LABEL-02 is DONE. Independent review at `0f431959fb470390317e09d9e7709a5351c07a63` passed after rejecting malformed chronology/exposure intervals and updating D03's synthetic label availability to remain causal. Owner-side affected suite: 58 passed.
 
 - Dependency LABEL-02 supplies: entry + decision-time volatility + barrier config -> first_touch, label_end_ts, MAE/MFE, concurrency weight.
 
@@ -144,7 +144,7 @@ Positive contract: **SPLIT-01-AC0**, `test_split_01_valid_contract` — Fold ass
 |---|---|---|
 | SPLIT-01-AC1 | `test_split_01_contract_1` | Sample melewati boundary dipurge |
 | SPLIT-01-AC2 | `test_split_01_contract_2` | Embargo minimal max horizon |
-| SPLIT-01-AC3 | `test_split_01_contract_3` | Tahun yang pernah dilihat tidak diklaim sealed kembali |
+| SPLIT-01-AC3 | `test_split_01_contract_3`; `test_split_01_rejects_reversed_prior_exposure_interval`; SampleRecord chronology regressions | Previously exposed periods and malformed temporal evidence cannot receive sealed/trainable assignments |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -192,22 +192,22 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **SPLIT-01-AC0** Fold assignment memisahkan train validation dan sealed test tanpa overlap label. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **SPLIT-01-AC1** Sample melewati boundary dipurge. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SPLIT-01-AC2** Embargo minimal max horizon. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SPLIT-01-AC3** Tahun yang pernah dilihat tidak diklaim sealed kembali. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **SPLIT-01-AC0** Fold assignment separates train, validation and sealed test without label overlap; public contract regression passes.
+- [x] **SPLIT-01-AC1** Samples crossing a fold boundary are purged.
+- [x] **SPLIT-01-AC2** Embargo defaults on and is at least the maximum horizon; opt-out requires a reason bound into identity.
+- [x] **SPLIT-01-AC3** Previously exposed periods cannot be resealed; malformed exposure periods and sample chronology are rejected.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria map to evidence; no required test was skipped silently.
+- [x] Focused and affected regression checks pass; no persistence/schema migration required.
+- [x] No unrelated capability or policy relaxation was introduced.
+- [x] Handoff records the embargo opt-out audit identity and temporal validation rules.
+- [x] Self-review and handoff contain exact code SHA, environment, commands and risks.
+- [x] Independent reviewer PASS at the exact code SHA; no unresolved Critical/Important findings.
+- [ ] Coordinator reconciles the shared manifest and regenerates projections after concurrent status edits are resolved.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

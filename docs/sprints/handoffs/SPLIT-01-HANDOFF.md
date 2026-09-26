@@ -1,11 +1,11 @@
 # SPLIT-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: SPLIT-01 — Sealed purged chronological folds
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review` (PASS at exact remediation SHA `0f431959fb470390317e09d9e7709a5351c07a63`)
 - Branch / worktree: `feat/split-01-sealed-purged-chronological-folds`
 - Base SHA: `5732d28`
 - Code target: `feat(split-01): sealed purged chronological folds`
@@ -103,3 +103,16 @@ Combined suite verification (100 passed across backtest, risk, execution, ledger
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the repository rule "no shared SQLite WAL across hosts" combined with the new `BEGIN IMMEDIATE` discipline in EVAL-03 means the two changes should be re-checked together for host-isolation interaction, but that verification requires a multi-host environment this batch does not have. Listed for the coordinator rather than asserted as verified.
+
+## Independent review remediation — temporal evidence validation
+
+- First independent review target: `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`. The reviewer found malformed exposure intervals and impossible sample chronology could otherwise receive normal/sealed assignments.
+- Remediation SHA: `0f431959fb470390317e09d9e7709a5351c07a63` (`fix(split-01): reject impossible temporal evidence`).
+- `SampleRecord` now enforces `decision_ts <= label_end_ts <= label_available_at` when availability is present; missing availability still reaches the existing explicit EXCLUDED assignment.
+- Exposure-history intervals must have UTC endpoints and positive duration before any overlap decision; reversed or zero-length periods fail with `EXPOSURE_INTERVAL_MUST_PRECEDE_END`.
+- The D03 common-fold caller now sets synthetic horizon label availability to `label_end_ts`, not `decision_ts`, so its input satisfies causal chronology.
+- First-review cross-batch note about `test_generated_fold_cutoffs_exclude_delayed_labels_from_training` is resolved in the pinned tree: the integration fixture explicitly opts out of embargo with a content-addressed reason because it tests delayed-label purge, while embargo behavior is covered in SPLIT unit/integration tests.
+- RED: `tests/unit/lab/labels/test_splits_fail_closed.py` had 3 failures (both chronology checks and reversed exposure were accepted). GREEN: `tests/unit/lab/labels/test_splits.py tests/unit/lab/labels/test_splits_fail_closed.py tests/unit/lab/labels/test_splits_integration_compat.py tests/integration/lab/test_training_materialization.py tests/unit/lab/models/test_d03_01.py` -> **58 passed**.
+- `git diff --check` passed. Ruff reports pre-existing lint findings in the touched modules; no clean lint claim is made.
+- Independent final review: **PASS** at exact remediation SHA `0f431959fb470390317e09d9e7709a5351c07a63`; no remaining Critical/Important findings. Reviewer independently ran 25 split tests; owner ran the 58-test combined gate above. The multi-host EVAL-03/SPLIT interaction remains an external verification gate, not an offline code acceptance claim.
+- The earlier reviewer note that the delayed-label integration fixture conflicted with the safer embargo default is closed by its existing named, content-addressed opt-out; the test file is unchanged at the reviewed code SHA.
