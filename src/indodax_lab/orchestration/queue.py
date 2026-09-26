@@ -82,12 +82,18 @@ class SqliteJobQueue:
                 """
                 CREATE TABLE IF NOT EXISTS job_artifacts (
                     job_id TEXT PRIMARY KEY REFERENCES jobs(job_id),
+                    source_path TEXT,
                     artifact_path TEXT NOT NULL,
                     artifact_hash TEXT NOT NULL,
                     staged_at TEXT NOT NULL
                 );
                 """
             )
+            artifact_columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(job_artifacts);")
+            }
+            if "source_path" not in artifact_columns:
+                conn.execute("ALTER TABLE job_artifacts ADD COLUMN source_path TEXT;")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);")
 
     def submit_job(self, job_def: JobDefinition) -> JobRecord:
@@ -386,31 +392,31 @@ class SqliteJobQueue:
                     raise
                 raise PartialArtifactError(f"ARTIFACT_UNREADABLE:{artifact_path}:{exc}") from exc
 
-            try:
-                published_path = self._publish_artifact(actual_hash, content)
-            except OSError as exc:
-                conn.execute("ROLLBACK;")
-                raise PartialArtifactError(f"ARTIFACT_PUBLISH_FAILED:{exc}") from exc
-
             staged = conn.execute(
-                "SELECT artifact_hash FROM job_artifacts WHERE job_id = ?", (job_id,)
+                "SELECT artifact_path, artifact_hash FROM job_artifacts WHERE job_id = ?",
+                (job_id,),
             ).fetchone()
-            if staged and staged[0] != actual_hash:
+            if staged and staged[1] != actual_hash:
                 conn.execute("ROLLBACK;")
                 raise PartialArtifactError(
                     f"ARTIFACT_RETRY_OUTPUT_MISMATCH:{job_id}:"
-                    f"expected {staged[0]}, got {actual_hash}"
+                    f"expected {staged[1]}, got {actual_hash}"
                 )
+            published_path = Path(staged[0]) if staged else self._artifact_path(actual_hash)
             conn.execute(
                 """
                 INSERT OR IGNORE INTO job_artifacts (
-                    job_id, artifact_path, artifact_hash, staged_at
+                    job_id, source_path, artifact_path, artifact_hash, staged_at
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (job_id, str(published_path), actual_hash, as_of_iso),
+                (job_id, str(p), str(published_path), actual_hash, as_of_iso),
             )
             conn.execute("COMMIT;")
+            try:
+                self._publish_artifact(actual_hash, content)
+            except OSError as exc:
+                raise PartialArtifactError(f"ARTIFACT_PUBLISH_FAILED:{exc}") from exc
             return self.recover_completed_artifact(
                 job_id, worker_id, generation, as_of=as_of
             )
@@ -453,16 +459,24 @@ class SqliteJobQueue:
                 )
 
             staged = conn.execute(
-                "SELECT artifact_path, artifact_hash FROM job_artifacts WHERE job_id = ?",
+                """
+                SELECT source_path, artifact_path, artifact_hash
+                FROM job_artifacts WHERE job_id = ?
+                """,
                 (job_id,),
             ).fetchone()
             if not staged:
                 conn.execute("ROLLBACK;")
                 raise PartialArtifactError(f"ARTIFACT_RECOVERY_NOT_AVAILABLE:{job_id}")
 
-            artifact_path, artifact_hash = staged
+            source_path, artifact_path, artifact_hash = staged
             try:
-                content = Path(artifact_path).read_bytes()
+                try:
+                    content = Path(artifact_path).read_bytes()
+                except OSError:
+                    if source_path is None:
+                        raise
+                    content = Path(source_path).read_bytes()
             except OSError as exc:
                 conn.execute("ROLLBACK;")
                 raise PartialArtifactError(
@@ -471,6 +485,11 @@ class SqliteJobQueue:
             if hashlib.sha256(content).hexdigest() != artifact_hash:
                 conn.execute("ROLLBACK;")
                 raise PartialArtifactError(f"ARTIFACT_STAGED_CHECKSUM_MISMATCH:{job_id}")
+            try:
+                self._publish_artifact(artifact_hash, content)
+            except OSError as exc:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(f"ARTIFACT_PUBLISH_FAILED:{exc}") from exc
 
             cursor = conn.execute(
                 """
@@ -508,9 +527,12 @@ class SqliteJobQueue:
     def _artifact_root(self) -> Path:
         return self.db_path.parent / f"{self.db_path.name}.artifacts"
 
+    def _artifact_path(self, digest: str) -> Path:
+        return self._artifact_root / digest[:2] / digest
+
     def _publish_artifact(self, digest: str, content: bytes) -> Path:
         """Atomically store/reuse a verified SHA-256-addressed immutable result."""
-        destination = self._artifact_root / digest[:2] / digest
+        destination = self._artifact_path(digest)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists():
             try:

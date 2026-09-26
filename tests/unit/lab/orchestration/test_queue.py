@@ -381,6 +381,7 @@ def test_commit_crash_recovers_staged_artifact_without_recomputation(
     digest = hashlib.sha256(content).hexdigest()
     connect = queue._connect
     commit_state = {"count": 0}
+    publish = queue._publish_artifact
 
     class FailSecondCommit:
         def __init__(self, connection):
@@ -401,14 +402,22 @@ def test_commit_crash_recovers_staged_artifact_without_recomputation(
         def close(self):
             self.connection.close()
 
+    def publish_then_remove_source(artifact_hash: str, artifact_content: bytes) -> Path:
+        stored_path = publish(artifact_hash, artifact_content)
+        source.unlink(missing_ok=True)
+        return stored_path
+
     monkeypatch.setattr(queue, "_connect", lambda: FailSecondCommit(connect()))
+    monkeypatch.setattr(queue, "_publish_artifact", publish_then_remove_source)
     with pytest.raises(sqlite3.OperationalError, match="injected commit crash"):
         queue.complete_job(
             "recover_artifact", "worker_1", first.generation,
             artifact_path=source, expected_hash=digest, as_of=now,
         )
     monkeypatch.setattr(queue, "_connect", connect)
+    monkeypatch.setattr(queue, "_publish_artifact", publish)
     assert queue.get_job("recover_artifact").status == JobStatus.RUNNING
+    assert not source.exists()
 
     retry_time = now + timedelta(seconds=11)
     second = queue.claim_job("worker_2", as_of=retry_time)
@@ -421,6 +430,38 @@ def test_commit_crash_recovers_staged_artifact_without_recomputation(
     assert completed.status == JobStatus.SUCCESS
     assert stored.read_bytes() == content
     assert len(list((tmp_path / "queue.db.artifacts").rglob(digest))) == 1
+
+
+def test_recovery_after_intent_commit_publishes_existing_worker_artifact(
+    tmp_path: Path, monkeypatch
+) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("recover_before_publish"))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=now)
+    assert claimed is not None
+    source = tmp_path / "source.bin"
+    content = b"finished output before queue object publish"
+    source.write_bytes(content)
+    digest = hashlib.sha256(content).hexdigest()
+    publish = queue._publish_artifact
+
+    def fail_publish(artifact_hash: str, artifact_content: bytes) -> Path:
+        raise OSError("injected crash after durable output intent")
+
+    monkeypatch.setattr(queue, "_publish_artifact", fail_publish)
+    with pytest.raises(PartialArtifactError, match="ARTIFACT_PUBLISH_FAILED"):
+        queue.complete_job(
+            "recover_before_publish", "worker_1", claimed.generation,
+            artifact_path=source, expected_hash=digest, as_of=now,
+        )
+    monkeypatch.setattr(queue, "_publish_artifact", publish)
+
+    recovered = queue.recover_completed_artifact(
+        "recover_before_publish", "worker_1", claimed.generation, as_of=now,
+    )
+    assert recovered.status == JobStatus.SUCCESS
+    assert queue.read_result_artifact("recover_before_publish") == content
 
 
 def test_read_result_artifact_rejects_tampering(tmp_path: Path) -> None:
