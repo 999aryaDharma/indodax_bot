@@ -9,17 +9,18 @@ Checksum atau availability mismatch memblokir output.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import math
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Sequence, Literal
+from typing import Any, Literal, Sequence
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from indodax_lab.labels.splits import FoldAssignment, SampleRole, SplitManifest
+from indodax_lab.labels.splits import SampleRole, SplitManifest
 
 
 def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
@@ -323,7 +324,21 @@ def materialize_training_dataset(
         raise ArtifactIntegrityError("SPLIT_TOTAL_COUNT_MISMATCH")
     feature_digest = _content_digest(features_df)
     label_digest = _content_digest(labels_df)
-    split_digest = _content_digest(split_df)
+    split_rows_digest = _content_digest(split_df)
+    split_digest_source = json.dumps(
+        {
+            "domain": "training-split-content-v2",
+            "assignments": split_rows_digest,
+            "split_id": split_manifest.split_id,
+            "policy_id": split_manifest.policy_id,
+            "policy_version": split_manifest.policy_version,
+            "policy_content_sha256": split_manifest.policy_content_sha256,
+            "role_counts": sample_counts_by_role,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    split_digest = hashlib.sha256(split_digest_source.encode()).hexdigest()
     id_source = json.dumps({
         "domain": "training-dataset-v2", "features": feature_digest, "labels": label_digest,
         "split": split_digest, "policy_id": split_manifest.policy_id,
