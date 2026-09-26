@@ -1,8 +1,12 @@
-"""CLI entrypoint for assembling verified training datasets (TRAIN-01)."""
+"""CLI entrypoint for assembling verified training datasets (TRAIN-01).
+
+Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+"""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -11,6 +15,11 @@ import pandas as pd
 
 from indodax_lab.labels.materializer import materialize_training_dataset
 from indodax_lab.labels.splits import SplitManifest
+
+
+def _parquet_sha256(df: pd.DataFrame) -> str:
+    """Compute canonical parquet SHA256 for a DataFrame."""
+    return hashlib.sha256(df.to_parquet()).hexdigest()
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -51,6 +60,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     split_manifest_data = json.loads(args.splits.read_text(encoding="utf-8"))
     split_manifest = SplitManifest.model_validate(split_manifest_data)
 
+    # Compute input checksums for content-addressed artifact identity (TRAIN-01)
+    features_checksum = _parquet_sha256(features_df)
+    labels_checksum = _parquet_sha256(labels_df)
+
     artifact = materialize_training_dataset(
         features_df=features_df,
         labels_df=labels_df,
@@ -60,11 +73,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         dataset_snapshot_id=args.dataset_snapshot_id,
         feature_registry_version=args.feature_registry_version,
         cost_schedule_id=args.cost_schedule_id,
+        features_checksum=features_checksum,
+        labels_checksum=labels_checksum,
     )
 
     if args.dry_run:
         print(f"[DRY-RUN] Verified training dataset assembled: {artifact.manifest.dataset_id}")
         print(f"Role counts: {artifact.manifest.sample_counts_by_role}")
+        print(f"Features checksum: {features_checksum}")
+        print(f"Labels checksum: {labels_checksum}")
         return 0
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +89,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     manifest_path.write_text(artifact.manifest.model_dump_json(indent=2), encoding="utf-8")
     artifact.data.to_parquet(args.output)
     print(f"[SUCCESS] Wrote training dataset to {args.output}")
+    print(f"Dataset ID: {artifact.manifest.dataset_id}")
+    print(f"Features checksum: {artifact.manifest.features_content_sha256}")
+    print(f"Labels checksum: {artifact.manifest.labels_content_sha256}")
     return 0
 
 
