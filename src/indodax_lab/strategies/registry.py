@@ -97,7 +97,15 @@ class StrategyRegistry:
     def register_builtin(self, specification: StrategySpecification) -> RegisteredStrategy:
         """Register an allowlisted seed component using its statically bound function."""
         implementation = builtin_strategy_implementation(specification.strategy_id)
-        return self.register(specification, implementation.decide_fn)
+        bound_specification = specification.model_copy(deep=True)
+        component_id = implementation.component_id
+
+        def decide(frame: DecisionFrame) -> list[SignalIntent]:
+            return builtin_strategy_implementation(component_id).decide_fn(
+                frame, bound_specification
+            )
+
+        return self.register(bound_specification, decide)
 
     def get(self, strategy_id: str, version: str) -> RegisteredStrategy | None:
         """Retrieve registered strategy by strategy_id and semantic version."""

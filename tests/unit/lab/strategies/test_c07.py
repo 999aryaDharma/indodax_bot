@@ -9,6 +9,7 @@ from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import create_decision_frame
 from indodax_lab.strategies.c07 import c07_decide, load_c07_specification
+from indodax_lab.strategies.registry import StrategyRegistry
 
 
 def _build_c07_features(
@@ -82,6 +83,30 @@ def test_c07_01_valid_contract():
     assert intent.desired_qty > Decimal("0")
     assert intent.stop_loss is not None
     assert intent.limit_price is not None
+
+
+def test_builtin_registration_executes_its_bound_c07_specification():
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c07_specification().model_copy(
+        update={
+            "strategy_id": "BTC-C07",
+            "parameters": {
+                "bb_std": 2.0,
+                "rsi_oversold": 30.0,
+                "adx_trend_threshold": 0.25,
+                "atr_multiplier": 1.5,
+                "desired_qty": "0.003",
+            },
+        }
+    )
+    frame = create_decision_frame(
+        _build_c07_features(as_of=as_of, pair="btc_idr"), as_of=as_of
+    )
+
+    intent = StrategyRegistry().register_builtin(spec).decide(frame)[0]
+
+    assert intent.strategy_id == "BTC-C07"
+    assert intent.desired_qty == Decimal("0.003")
 
 
 def test_c07_01_contract_1():

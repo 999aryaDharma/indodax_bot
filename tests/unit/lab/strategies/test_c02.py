@@ -9,6 +9,7 @@ from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import create_decision_frame
 from indodax_lab.strategies.c02 import c02_decide, load_c02_specification
+from indodax_lab.strategies.registry import StrategyRegistry
 
 
 def _build_c02_bars(
@@ -186,6 +187,26 @@ def test_c02_01_valid_contract():
     assert intent.stop_loss is not None
     assert intent.limit_price is not None
     assert intent.stop_loss < intent.limit_price
+
+
+def test_builtin_registration_executes_its_bound_c02_specification():
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c02_specification().model_copy(
+        update={
+            "strategy_id": "ETH-C02",
+            "parameters": {"atr_multiplier": 3.0, "desired_qty": "0.003"},
+        }
+    )
+    frame = create_decision_frame(
+        _build_c02_bars(as_of=as_of, pair="eth_idr"), as_of=as_of
+    )
+
+    intent = StrategyRegistry().register_builtin(spec).decide(frame)[0]
+
+    assert intent.strategy_id == "ETH-C02"
+    assert intent.pair == "eth_idr"
+    assert intent.desired_qty == Decimal("0.003")
+    assert intent.stop_loss == intent.limit_price - Decimal("4500000")
 
 
 def test_c02_01_contract_1():
