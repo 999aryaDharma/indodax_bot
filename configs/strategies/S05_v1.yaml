@@ -1,0 +1,21 @@
+strategy_id: "S05"
+version: "1.0.0"
+family: "micro_pullback"
+universe_tier: "small_cap"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  min_impulse_log_return: 0.05
+  min_pullback_log_return: -0.015
+  max_pullback_log_return: -0.001
+  max_spread_bps: 25.0
+  atr_multiplier: 2.0
+  target_notional_idr: "10000"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Small-cap pullback within a positive 12h impulse with a spread ceiling"
