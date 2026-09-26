@@ -8055,7 +8055,7 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "CR-S09 Research-only risk-authority boundary is approved. Partial implementation at code SHA 3b678e9ba4ad8a9e655869616157ddf9fb2e67c3 adds durable risk-period IDs, preserves closed trades/breach events, rejects reset with open positions, and restores in-memory state on checkpoint failure. AC0/AC1/AC3 remain incomplete. Numeric pump-gap threshold/evidence age and producer/provenance remain unresolved; no S09 evaluation or qualification until frozen. No Production/runtime changes.",
+      "current_context": "CR-S09 Research-only risk-authority boundary is approved. Partial implementation at code SHA da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 adds durable risk-period IDs, preserves closed trades/breach events, rejects reset with open positions, rolls back on checkpoint failure, and starts approved periods from actual remaining cash rather than refilling seed capital. Genesis capital and period opening equity are stored separately and validated on restart. Focused shadow checks: 22 passed; full suite: 1548 passed, 2 platform skips. AC0/AC1/AC3 remain incomplete. Numeric pump-gap threshold/evidence age and producer/provenance remain unresolved; no S09 evaluation or qualification until frozen. No Production/runtime changes.",
       "external_gates": [
         "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
         "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
@@ -8078,7 +8078,7 @@
         {
           "criterion": "S09-01-AC2",
           "test_case": "test_shadow_new_risk_period_preserves_breaches_and_closed_trades; test_shadow_risk_period_reset_requires_closed_portfolio; test_shadow_failed_period_reset_restores_in_memory_state",
-          "behavior": "New risk period requires separate explicit operator approval, requires positions to be closed, and preserves prior breach-period and closed-trade records across restart.",
+          "behavior": "New risk period requires separate explicit operator approval, requires positions to be closed, starts from remaining equity, and preserves prior breach-period and closed-trade records across restart.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {

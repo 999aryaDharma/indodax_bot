@@ -57,7 +57,7 @@ New capability; dependencies must be DONE before implementation.
 
 - Research-only gate uses the existing risk authority; no second risk engine or Production integration.
 - Unknown/stale risk evidence and a configured risk breach block new BUY exposure; eligible protective exits remain available through the registered path.
-- A separately authorized new risk period starts only after positions are closed and preserves prior breach-period records and closed trades across restart/reset.
+- A separately authorized new risk period starts only after positions are closed, uses reconciled remaining equity as its opening capital, and preserves prior breach-period records and closed trades across restart/reset.
 - Define the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -76,7 +76,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 0. **S09-01-FR0:** Research gate integrates with the existing risk authority and never creates alpha intents or orders.
 1. **S09-01-FR1:** Unknown/stale data or configured breach blocks new BUY exposure; eligible protective exits remain available.
-2. **S09-01-FR2:** Risk-period reset requires separate explicit operator approval, no open positions, and preserves prior breach history.
+2. **S09-01-FR2:** Risk-period reset requires separate explicit operator approval, no open positions, uses remaining portfolio equity as opening capital, and preserves prior breach history.
 3. **S09-01-FR3:** Missing policy thresholds or pump-gap provenance fail closed and block qualification.
 
 ## Domain Rules / Invariants
@@ -127,7 +127,7 @@ First establish S09-01-AC0: Research-only integration through the existing risk 
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `S09-01-AC1`, prove unknown/stale and configured breach inputs block new BUY while eligible registered exits remain allowed.
-3. For `S09-01-AC2`, prove separately authorized period reset survives restart and preserves the old period's breach records.
+3. For `S09-01-AC2`, prove separately authorized reset after all positions close starts from remaining equity, survives restart and preserves the old period's breach and trade records.
 4. For `S09-01-AC3`, prove absent policy/provenance fails closed and cannot produce qualification evidence.
 5. Integrate through the public boundary using actual output of dependency fixture; verify the declared contract and failure outcome rather than mock call counts alone.
 6. Run the relevant tests below, inspect diff and record output/exit/source SHA. Refactor only after the contract remains green.
@@ -140,7 +140,7 @@ Positive contract: **S09-01-AC0**, mapped test through the existing Research ris
 | Acceptance | Planned test identity / map to existing equivalent | Assertion |
 |---|---|---|
 | S09-01-AC1 | Map actual regression tests | Unknown/stale and breached inputs block new BUY; registered exits stay eligible |
-| S09-01-AC2 | `test_shadow_new_risk_period_preserves_breaches_and_closed_trades`, `test_shadow_risk_period_reset_requires_closed_portfolio`, `test_shadow_failed_period_reset_restores_in_memory_state` | Authorized reset after positions close creates a new period and preserves prior breach/trade history after restart; failed persistence restores old state |
+| S09-01-AC2 | `test_shadow_new_risk_period_preserves_breaches_and_closed_trades`, `test_shadow_risk_period_reset_requires_closed_portfolio`, `test_shadow_failed_period_reset_restores_in_memory_state` | Authorized reset after positions close starts from remaining equity, preserves prior breach/trade history after restart, and restores old state after failed persistence |
 | S09-01-AC3 | Map actual policy/provenance tests | Missing policy/provenance fails closed; no qualification output |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
@@ -191,7 +191,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 - [ ] **S09-01-AC0** Research gate integrates with the existing risk authority and cannot create orders or alpha intents.
 - [ ] **S09-01-AC1** Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available.
-- [ ] **S09-01-AC2** New risk period requires separate explicit operator approval, requires positions to be closed, and preserves prior breach-period and closed-trade records across restart.
+- [ ] **S09-01-AC2** New risk period requires separate explicit operator approval, requires positions to be closed, starts from remaining equity, and preserves prior breach-period and closed-trade records across restart.
 - [ ] **S09-01-AC3** Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
