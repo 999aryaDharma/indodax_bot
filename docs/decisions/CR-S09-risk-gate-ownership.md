@@ -31,3 +31,5 @@ Before implementation, validate the revised owning interface, source/provenance 
 ## Decision
 
 Owner approval: Research-only ownership and behavior boundary accepted on 2026-09-27. Use the existing Research risk authority; preserve breach periods across separately approved resets; block new BUYs on unknown/stale data or a breach while allowing eligible protective exits. No numeric pump-gap threshold or data-age limit was approved. Risk evaluation and activation remain blocked until a versioned policy and pump-gap producer/provenance are defined; do not infer values from Production policy. No Production/runtime changes.
+
+Implementation may proceed on the Research boundary and durable period/history semantics. Until the policy and producer gates above are satisfied, the gate must fail closed for new BUY evaluation; it must not substitute zero, borrow a Production threshold, or claim S09 qualification. Existing protective SELL/exit processing stays available through the registered Research risk/execution path.

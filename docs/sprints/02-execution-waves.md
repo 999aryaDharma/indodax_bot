@@ -111,7 +111,7 @@ None. Verify external gates and shared-file ownership before claim.
 - S05-01 — Micro pullback [DONE; EXTENSION]
 - S06-01 — Post listing maturation [DONE; EXTENSION]
 - S08-01 — Passive mean reversion [IN_PROGRESS; EXPERIMENTAL]
-- S09-01 — Tail risk abstention [IN_PROGRESS; EXTENSION]
+- S09-01 — Research tail-risk gate and breach history [IN_PROGRESS; EXTENSION]
 - RW2-01 — Durable versioned strategy registry [DONE; CORE]
 
 ## Wave 12

@@ -135,7 +135,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 - [S06-01 — Post listing maturation](strategies\S06-01-post-listing-maturation.md) — EXTENSION; Kandidat S06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
 - [S07-01 — Small cap rotation](strategies\S07-01-small-cap-rotation.md) — EXTENSION; Kandidat S07 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
 - [S08-01 — Passive mean reversion](strategies\S08-01-passive-mean-reversion.md) — EXPERIMENTAL; Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
-- [S09-01 — Tail risk abstention](strategies\S09-01-tail-risk-abstention.md) — EXTENSION; Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
+- [S09-01 — Research tail-risk gate and breach history](strategies\S09-01-tail-risk-abstention.md) — EXTENSION; Integrate a Research-only tail-risk gate through the existing risk authority; preserve breach periods and keep eligible exits available.
 - [STRAT-01 — Declarative strategy protocol](strategies\STRAT-01-declarative-strategy-protocol.md) — CORE; Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger.
 
 ## universe

@@ -8012,23 +8012,21 @@
     },
     {
       "id": "S09-01",
-      "title": "Tail risk abstention",
+      "title": "Research tail-risk gate and breach history",
       "domain": "strategies",
       "legacy_tasks": [],
       "dependencies": [
         "STRAT-01"
       ],
-      "goal": "Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
-      "contract": "Available pump gap and illiquidity state blocks new risk -> versioned LONG/FLAT intent, never direct orders.",
+      "goal": "Integrate a Research-only tail-risk gate through the existing risk authority; preserve breach periods and keep eligible exits available.",
+      "contract": "Unknown/stale or breached evidence blocks new BUY exposure. Missing versioned policy or pump-gap provenance fails closed; no order authority or Production integration.",
       "checks": [
-        "Unknown data quality fail closed",
-        "Existing exposure ditangani registered exit policy",
-        "Gate reset tidak menghapus historical breach"
+        "Existing Research risk authority is used; no parallel risk engine or order authority",
+        "Unknown/stale or configured breach blocks new BUY exposure while eligible protective exits remain available",
+        "Separately approved risk-period reset preserves prior breach records across restart",
+        "Missing/unapproved thresholds or pump-gap provenance fail closed and block qualification"
       ],
       "files": [
-        "configs/strategies/S09_v1.yaml",
-        "src/indodax_lab/strategies/s09.py",
-        "tests/unit/lab/strategies/test_s09.py",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
       "type": "feature",
@@ -8053,35 +8051,36 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "Implementation is held for owner approval of CR-S09. Current Strategy/DecisionFrame boundary is stateless; S09 acceptance requires existing exposure, durable breach history and approved reset semantics. The proposed Research-only integration uses the existing risk authority and preserves historical periods. The pump-gap producer is not registered. No Production/runtime changes before approval.",
+      "current_context": "Owner approved the Research-only risk-authority boundary on 2026-09-27. Implementation may proceed on integration and durable period/history semantics. Numeric pump-gap threshold and evidence-age limit plus registered producer/provenance are unresolved; until frozen in a versioned Research policy, BUY evaluation fails closed and S09 is not qualification eligible. Eligible exits remain available. No Production/runtime changes.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler",
-        "Owner approval of CR-S09; register and qualify point-in-time pump-gap provenance before candidate qualification. Production activation is excluded."
+        "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
+        "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
+        "Production activation is excluded"
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
         {
           "criterion": "S09-01-AC0",
-          "test_case": "test_s09_01_valid_contract",
-          "behavior": "Kandidat S09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
+          "test_case": "Research risk-authority integration contract",
+          "behavior": "Research gate integrates with the existing risk authority and cannot create orders or alpha intents.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "S09-01-AC1",
-          "test_case": "test_s09_01_contract_1",
-          "behavior": "Unknown data quality fail closed",
+          "test_case": "Risk gate and exit-path regressions",
+          "behavior": "Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "S09-01-AC2",
-          "test_case": "test_s09_01_contract_2",
-          "behavior": "Existing exposure ditangani registered exit policy",
+          "test_case": "Risk-period persistence and reset authorization regressions",
+          "behavior": "New risk period requires separate explicit operator approval and preserves prior breach-period records across restart.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
           "criterion": "S09-01-AC3",
-          "test_case": "test_s09_01_contract_3",
-          "behavior": "Gate reset tidak menghapus historical breach",
+          "test_case": "Policy/provenance fail-closed regressions",
+          "behavior": "Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
