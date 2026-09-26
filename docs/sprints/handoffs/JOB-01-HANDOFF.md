@@ -37,9 +37,15 @@ Status: REVIEW
 | JOB-01-AC2 (GREEN) | `test_job_01_contract_2` | `python -m pytest tests/unit/lab/orchestration/test_queue.py::test_job_01_contract_2` | Exit 0 (Passed, stale lease generation fenced) | `8f00ddc` |
 | JOB-01-AC3 (RED) | `test_job_01_contract_3` | `python -m pytest tests/unit/lab/orchestration/test_queue.py` | Exit 1 (ModuleNotFoundError) | `working tree` |
 | JOB-01-AC3 (GREEN) | `test_job_01_contract_3` | `python -m pytest tests/unit/lab/orchestration/test_queue.py::test_job_01_contract_3` | Exit 0 (Passed, partial artifact does not mark SUCCESS) | `8f00ddc` |
+| JOB-01-FIX1 (RED) | `test_job_01_success_requires_artifact` | `python -m pytest tests/unit/lab/orchestration/test_queue.py::test_job_01_success_requires_artifact` | Exit 1 (Failed: DID NOT RAISE PartialArtifactError — complete_job(None) marked SUCCESS) | `working tree` |
+| JOB-01-FIX1 (GREEN) | `test_job_01_success_requires_artifact` | `python -m pytest tests/unit/lab/orchestration/test_queue.py` | Exit 0 (12 passed — artifact_path=None raises ARTIFACT_REQUIRED, status stays RUNNING) | `fix-branch` |
 
-All 4 tests in `tests/unit/lab/orchestration/test_queue.py` passed (0.66s).
-Combined suite verification (96 passed across backtest, risk, execution, ledger, costs, features, labels, strategies, evaluation, and orchestration).
+All 12 tests in `tests/unit/lab/orchestration/test_queue.py` passed.
+
+## Fix record (review follow-up)
+- Defect: `SqliteJobQueue.complete_job` accepted `artifact_path=None` and marked SUCCESS with null path/hash (fabricated success without evidence).
+- Fix: `complete_job` now fail-closes with `PartialArtifactError(ARTIFACT_REQUIRED)` when `artifact_path is None`; SUCCESS requires existing non-empty checksum-verified file. Updated `test_worker_is_fenced_immediately_at_lease_expiry` to supply a valid artifact so lease-fencing path is exercised honestly.
+- Files: `src/indodax_lab/orchestration/queue.py`, `tests/unit/lab/orchestration/test_queue.py`.
 
 ## Review
 - Spec verdict: PASS (meets all functional requirements of JOB-01 and specs/13-jobs-resource-policy-and-repeats.md).

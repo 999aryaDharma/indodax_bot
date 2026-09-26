@@ -194,6 +194,25 @@ def test_job_01_contract_3(tmp_path: Path) -> None:
     assert rec.status == JobStatus.RUNNING
 
 
+def test_job_01_success_requires_artifact(tmp_path: Path) -> None:
+    """JOB-01 regression: SUCCESS is fail-closed without a verified artifact."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("job_no_artifact"))
+    now = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=now)
+    assert claimed is not None
+
+    with pytest.raises(PartialArtifactError, match="ARTIFACT_REQUIRED"):
+        queue.complete_job(
+            "job_no_artifact",
+            "worker_1",
+            generation=claimed.generation,
+            artifact_path=None,
+            as_of=now + timedelta(seconds=5),
+        )
+    assert queue.get_job("job_no_artifact").status == JobStatus.RUNNING
+
+
 def test_expired_running_job_cannot_exceed_attempt_budget(tmp_path: Path) -> None:
     queue = SqliteJobQueue(tmp_path / "queue.db")
     queue.submit_job(_build_test_job("one-shot", max_attempts=1))
@@ -237,8 +256,10 @@ def test_worker_is_fenced_immediately_at_lease_expiry(tmp_path: Path) -> None:
 
     with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
         queue.heartbeat("expires", "old", claim.generation, as_of=expired)
+    artifact = tmp_path / "expires.bin"
+    artifact.write_bytes(b"expired_lease_result")
     with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
-        queue.complete_job("expires", "old", claim.generation, as_of=expired)
+        queue.complete_job("expires", "old", claim.generation, artifact_path=artifact, as_of=expired)
 
     replacement = queue.claim_job("new", as_of=expired)
     assert replacement is not None

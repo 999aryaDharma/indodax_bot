@@ -301,21 +301,22 @@ class SqliteJobQueue:
         path_str = None
         hash_str = expected_hash
 
-        # Invariant: Partial or corrupted artifact cannot transition to SUCCESS
-        if artifact_path is not None:
-            p = Path(artifact_path)
-            if not p.exists() or not p.is_file():
-                raise PartialArtifactError(f"ARTIFACT_FILE_NOT_FOUND:{artifact_path}")
-            content = p.read_bytes()
-            if len(content) == 0:
-                raise PartialArtifactError(f"ARTIFACT_FILE_EMPTY:{artifact_path}")
-            actual_hash = hashlib.sha256(content).hexdigest()
-            if expected_hash is not None and actual_hash != expected_hash:
-                raise PartialArtifactError(
-                    f"ARTIFACT_CHECKSUM_MISMATCH: expected {expected_hash}, got {actual_hash}"
-                )
-            path_str = str(p)
-            hash_str = actual_hash
+        # Invariant: SUCCESS requires a verified, non-empty, checksum-valid artifact.
+        if artifact_path is None:
+            raise PartialArtifactError("ARTIFACT_REQUIRED: complete_job needs artifact_path")
+        p = Path(artifact_path)
+        if not p.exists() or not p.is_file():
+            raise PartialArtifactError(f"ARTIFACT_FILE_NOT_FOUND:{artifact_path}")
+        content = p.read_bytes()
+        if len(content) == 0:
+            raise PartialArtifactError(f"ARTIFACT_FILE_EMPTY:{artifact_path}")
+        actual_hash = hashlib.sha256(content).hexdigest()
+        if expected_hash is not None and actual_hash != expected_hash:
+            raise PartialArtifactError(
+                f"ARTIFACT_CHECKSUM_MISMATCH: expected {expected_hash}, got {actual_hash}"
+            )
+        path_str = str(p)
+        hash_str = actual_hash
 
         conn = self._connect()
         try:
