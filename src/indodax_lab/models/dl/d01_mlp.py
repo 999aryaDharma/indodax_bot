@@ -13,12 +13,106 @@ import copy
 from datetime import UTC, datetime
 import hashlib
 import json
+import random
 from pathlib import Path
 from typing import Any
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 from sklearn.metrics import brier_score_loss, log_loss
+
+BEST_CHECKPOINT_FILENAME = "best_checkpoint.json"
+
+
+def _tensor_to_json(value: Any) -> Any:
+    """Recursively convert torch tensors inside optimizer state to JSON-safe payloads."""
+    torch = require_torch()
+    if torch.is_tensor(value):
+        return {
+            "__tensor__": True,
+            "dtype": str(value.dtype).replace("torch.", ""),
+            "shape": list(value.shape),
+            "data": value.detach().cpu().tolist(),
+        }
+    if isinstance(value, dict):
+        return {str(k): _tensor_to_json(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_tensor_to_json(v) for v in value]
+    return value
+
+
+def _json_to_tensor(payload: Any) -> Any:
+    """Recursively rebuild torch tensors serialized by _tensor_to_json."""
+    torch = require_torch()
+    if isinstance(payload, dict) and payload.get("__tensor__") is True:
+        dtype = getattr(torch, payload["dtype"])
+        return torch.tensor(payload["data"], dtype=dtype).reshape(payload["shape"])
+    if isinstance(payload, dict):
+        restored: dict[Any, Any] = {}
+        for k, v in payload.items():
+            restored[int(k) if k.lstrip("-").isdigit() else k] = _json_to_tensor(v)
+        return restored
+    if isinstance(payload, list):
+        return [_json_to_tensor(v) for v in payload]
+    return payload
+
+
+def _serialize_model_state(state_dict: Any) -> dict[str, Any]:
+    torch = require_torch()
+    return {
+        k: _tensor_to_json(v.detach().cpu()) if torch.is_tensor(v) else v
+        for k, v in state_dict.items()
+    }
+
+
+def _capture_rng_state(seed: int) -> dict[str, Any]:
+    """Snapshot torch/numpy/python RNG state so resume reproduces the exact trajectory."""
+    torch = require_torch()
+    numpy_state = np.random.get_state()
+    python_state = random.getstate()
+    snapshot: dict[str, Any] = {
+        "seed": seed,
+        "torch_rng": torch.get_rng_state().cpu().tolist(),
+        "numpy_rng": {
+            "kind": numpy_state[0],
+            "state": numpy_state[1].tolist(),
+            "pos": int(numpy_state[2]),
+            "has_gauss": int(numpy_state[3]),
+            "cached_gaussian": float(numpy_state[4]),
+        },
+        "python_rng": {
+            "version": int(python_state[0]),
+            "state": list(python_state[1]),
+            "gauss_next": python_state[2],
+        },
+    }
+    if torch.cuda.is_available():
+        snapshot["cuda_rng"] = [g.cpu().tolist() for g in torch.cuda.get_rng_state_all()]
+    return snapshot
+
+
+def _restore_rng_state(snapshot: dict[str, Any]) -> None:
+    """Restore torch/numpy/python RNG state captured by _capture_rng_state."""
+    torch = require_torch()
+    torch.set_rng_state(torch.tensor(snapshot["torch_rng"], dtype=torch.uint8))
+    numpy_rng = snapshot["numpy_rng"]
+    np.random.set_state(
+        (
+            numpy_rng["kind"],
+            np.asarray(numpy_rng["state"], dtype=np.uint32),
+            int(numpy_rng["pos"]),
+            int(numpy_rng["has_gauss"]),
+            float(numpy_rng["cached_gaussian"]),
+        )
+    )
+    python_rng = snapshot["python_rng"]
+    random.setstate(
+        (int(python_rng["version"]), tuple(python_rng["state"]), python_rng["gauss_next"])
+    )
+    if "cuda_rng" in snapshot and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all(
+            [torch.tensor(g, dtype=torch.uint8) for g in snapshot["cuda_rng"]]
+        )
 
 from indodax_lab.models.dl.checkpoint import (
     NeuralTrainingCheckpoint,
@@ -181,6 +275,7 @@ class D01MLPTrainer:
         # Set seeds
         torch.manual_seed(self.config.seed)
         np.random.seed(self.config.seed)
+        random.seed(self.config.seed)
 
         self._feature_names = list(X_train.columns)
         input_dim = len(self._feature_names)
@@ -225,15 +320,35 @@ class D01MLPTrainer:
         if resume_from is not None:
             checkpoint = load_checkpoint(resume_from, expected_input_hash=input_hash)
             start_epoch = checkpoint.epoch + 1
-            tracker.best_val_loss = checkpoint.best_val_metric
-            tracker.best_epoch = checkpoint.epoch
-            # Restore model weights
+            # Restore latest model weights + optimizer state for exact continuation.
             weights_tensor = {
-                k: torch.tensor(v, dtype=torch.float32)
+                k: _json_to_tensor(v) if isinstance(v, dict) and v.get("__tensor__") is True
+                else (torch.tensor(v, dtype=torch.float32) if isinstance(v, list) else v)
                 for k, v in checkpoint.model_state.items()
             }
             model.load_state_dict(weights_tensor)
-            tracker.best_weights = copy.deepcopy(model.state_dict())
+            optimizer.load_state_dict(_json_to_tensor(checkpoint.optimizer_state))
+            _restore_rng_state(checkpoint.rng_state)
+            # Restore the true best checkpoint (never the interrupted latest weights).
+            best_sidecar = resume_from.parent / BEST_CHECKPOINT_FILENAME
+            if best_sidecar.exists():
+                best_payload = json.loads(best_sidecar.read_text(encoding="utf-8"))
+                if best_payload.get("input_hash") != input_hash:
+                    raise ValueError(
+                        "RESUME_INPUT_MISMATCH: best checkpoint input hash does not match "
+                        "current training data; refusing to resume on altered data."
+                    )
+                tracker.best_val_loss = float(best_payload["best_val_loss"])
+                tracker.best_epoch = int(best_payload["best_epoch"])
+                tracker.patience_counter = int(best_payload.get("patience_counter", 0))
+                tracker.best_weights = copy.deepcopy(
+                    _json_to_tensor(best_payload["best_model_state"])
+                )
+            else:
+                # Legacy checkpoint without best sidecar: fail safe to latest weights.
+                tracker.best_val_loss = checkpoint.best_val_metric
+                tracker.best_epoch = checkpoint.epoch
+                tracker.best_weights = copy.deepcopy(model.state_dict())
 
         # Training loop
         for epoch in range(start_epoch, self.config.max_epochs):
@@ -256,20 +371,31 @@ class D01MLPTrainer:
             # Save latest checkpoint if directory provided
             if checkpoint_dir is not None:
                 checkpoint_dir.mkdir(parents=True, exist_ok=True)
-                ckpt_model_state = {
-                    k: v.cpu().numpy().tolist()
-                    for k, v in model.state_dict().items()
-                }
                 ckpt = NeuralTrainingCheckpoint(
                     epoch=epoch,
                     model_id=self.config.model_id,
                     input_hash=input_hash,
-                    model_state=ckpt_model_state,
-                    optimizer_state={"lr": self.config.learning_rate},
-                    rng_state={"seed": self.config.seed},
+                    model_state=_serialize_model_state(model.state_dict()),
+                    optimizer_state=_tensor_to_json(optimizer.state_dict()),
+                    rng_state=_capture_rng_state(self.config.seed),
                     best_val_metric=tracker.best_val_loss,
                 )
                 save_checkpoint(ckpt, checkpoint_dir / "latest_checkpoint.json")
+                # Persist the true best weights beside the latest checkpoint so
+                # resume restores the best validation model, not interrupted weights.
+                if tracker.best_weights is not None:
+                    best_payload = {
+                        "model_id": self.config.model_id,
+                        "input_hash": input_hash,
+                        "best_epoch": tracker.best_epoch,
+                        "best_val_loss": tracker.best_val_loss,
+                        "patience_counter": tracker.patience_counter,
+                        "best_model_state": _serialize_model_state(tracker.best_weights),
+                    }
+                    best_path = checkpoint_dir / BEST_CHECKPOINT_FILENAME
+                    tmp_best = best_path.with_suffix(best_path.suffix + ".tmp")
+                    tmp_best.write_text(json.dumps(best_payload), encoding="utf-8")
+                    tmp_best.replace(best_path)
 
             # Check interruption simulation
             if interrupt_after_epoch is not None and epoch >= interrupt_after_epoch:

@@ -244,3 +244,87 @@ def test_d01_01_contract_3(tmp_path: Path) -> None:
     assert bundle_resumed is not None
     assert bundle_resumed.best_epoch >= 0
     assert bundle_resumed.best_val_loss <= bundle_initial.best_val_loss
+
+
+def test_d01_01_contract_3_optimizer_state_is_restorable(tmp_path: Path) -> None:
+    """D01-01-AC3 regression: checkpoint must persist real optimizer state, not a stub."""
+    import json
+
+    X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
+    checkpoint_dir = tmp_path / "checkpoints"
+    config = D01MLPConfig(hidden_dims=(16,), max_epochs=4, patience=5, seed=7)
+    trainer = D01MLPTrainer(config=config)
+    trainer.fit(
+        X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val,
+        checkpoint_dir=checkpoint_dir, interrupt_after_epoch=1,
+    )
+    raw = json.loads((checkpoint_dir / "latest_checkpoint.json").read_text(encoding="utf-8"))
+    opt_state = raw["optimizer_state"]
+    # Real torch AdamW state_dict carries per-parameter state + param_groups.
+    assert "state" in opt_state and "param_groups" in opt_state, (
+        f"optimizer_state is a stub without restorable AdamW state: {sorted(opt_state)}"
+    )
+    assert len(opt_state["state"]) > 0, "optimizer state holds no per-parameter entries"
+    assert len(opt_state["param_groups"]) > 0, "optimizer state holds no param groups"
+
+
+def test_d01_01_contract_3_rng_state_is_restorable(tmp_path: Path) -> None:
+    """D01-01-AC3 regression: checkpoint must persist real RNG snapshot, not a seed stub."""
+    import json
+
+    X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
+    checkpoint_dir = tmp_path / "checkpoints"
+    config = D01MLPConfig(hidden_dims=(16,), max_epochs=4, patience=5, seed=7)
+    trainer = D01MLPTrainer(config=config)
+    trainer.fit(
+        X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val,
+        checkpoint_dir=checkpoint_dir, interrupt_after_epoch=1,
+    )
+    raw = json.loads((checkpoint_dir / "latest_checkpoint.json").read_text(encoding="utf-8"))
+    rng_state = raw["rng_state"]
+    assert "torch_rng" in rng_state and "numpy_rng" in rng_state, (
+        f"rng_state is a stub without restorable RNG snapshot: {sorted(rng_state)}"
+    )
+    assert len(rng_state["torch_rng"]) > 0, "torch RNG snapshot is empty"
+    assert len(rng_state["numpy_rng"]) > 0, "numpy RNG snapshot is empty"
+
+
+def test_d01_01_contract_3_resume_preserves_best_weights(tmp_path: Path) -> None:
+    """D01-01-AC3 regression: resume must restore best (not latest) weights.
+
+    The resumed run must converge to the same best validation loss as an
+    uninterrupted run on identical data/config, proving the best checkpoint
+    survived the interruption instead of being overwritten by latest weights.
+    """
+    X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
+    config = D01MLPConfig(
+        hidden_dims=(16,), learning_rate=0.01, batch_size=32,
+        max_epochs=10, patience=5, seed=42,
+    )
+
+    reference = D01MLPTrainer(config=config)
+    bundle_reference = reference.fit(X_train, y_train, X_val, y_val)
+    probs_reference = reference.predict_proba(X_val)
+
+    checkpoint_dir = tmp_path / "checkpoints"
+    interrupted = D01MLPTrainer(config=config)
+    interrupted.fit(
+        X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val,
+        checkpoint_dir=checkpoint_dir, interrupt_after_epoch=3,
+    )
+    resumed = D01MLPTrainer(config=config)
+    bundle_resumed = resumed.fit(
+        X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val,
+        checkpoint_dir=checkpoint_dir,
+        resume_from=checkpoint_dir / "latest_checkpoint.json",
+    )
+    probs_resumed = resumed.predict_proba(X_val)
+
+    assert bundle_resumed.best_val_loss == pytest.approx(bundle_reference.best_val_loss, abs=1e-6), (
+        f"resumed best {bundle_resumed.best_val_loss} != uninterrupted best "
+        f"{bundle_reference.best_val_loss}: best weights were lost on resume"
+    )
+    assert np.allclose(probs_resumed, probs_reference, atol=1e-6), (
+        "resumed model predictions diverge from uninterrupted run: "
+        "optimizer/RNG/best-weights state was not faithfully restored"
+    )
