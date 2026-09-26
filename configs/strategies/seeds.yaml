@@ -1,0 +1,14 @@
+schema_version: v1
+seeds:
+  - strategy_id: BTC-C07
+    version: 1.0.0
+    component_id: C07
+    pair: btc_idr
+  - strategy_id: ETH-C02
+    version: 1.0.0
+    component_id: C02
+    pair: eth_idr
+  - strategy_id: SOL-C02
+    version: 1.0.0
+    component_id: C02
+    pair: sol_idr

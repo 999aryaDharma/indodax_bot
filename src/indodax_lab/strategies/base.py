@@ -6,17 +6,19 @@ import hashlib
 import inspect
 import json
 import math
+from collections.abc import Callable, Sequence
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum
 from types import CodeType
-from typing import Any, Callable, Sequence
+from typing import Any
 
 import pandas as pd
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.contracts.decision import SignalIntent
+from indodax_lab.contracts.identity import canonical_bytes
 
 
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:
@@ -133,6 +135,37 @@ class StrategySpecification(BaseModel):
         """Deterministic SHA256 digest of strategy parameters."""
         raw = json.dumps(self.parameters, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def identity_hash(self) -> str:
+        """Hash every declared field so same-version metadata edits cannot pass."""
+        return hashlib.sha256(canonical_bytes(self)).hexdigest()
+
+
+class DraftRef(BaseModel):
+    """Compare-and-swap handle for one mutable strategy draft revision."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str = Field(min_length=1)
+    revision: int = Field(gt=0)
+    digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class StrategyComponentMetadata(BaseModel):
+    """Declarative, versioned component information for non-executable clients."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    component_id: str
+    family: str
+    metadata_version: str
+    parameter_schema_version: str
+    parameter_schema: dict[str, Any]
+    required_features: tuple[str, ...]
+    required_feature_schema_version: str
+    decision_contract_version: str
+    exit_contract_version: str
+    exit_contract: dict[str, Any]
 
 
 def _validate_frame_evidence(features: pd.DataFrame) -> None:

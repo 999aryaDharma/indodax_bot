@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import copy
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+
 import yaml
 from pydantic import ValidationError
 
@@ -17,12 +19,41 @@ from indodax_lab.strategies.base import (
 )
 
 
+@dataclass(frozen=True)
+class BuiltinStrategyImplementation:
+    component_id: str
+    decide_fn: Callable[[DecisionFrame], list[SignalIntent]]
+    source_path: Path
+
+
+def component_id_for_strategy(strategy_id: str) -> str:
+    """Resolve a built-in component suffix without importing user-provided modules."""
+    if not strategy_id or any(token in strategy_id for token in ("/", "\\", "..", ":")):
+        raise ValueError("UNAPPROVED_STRATEGY_ID")
+    component_id = strategy_id.rsplit("-", 1)[-1]
+    if component_id not in {"C02", "C07"}:
+        raise ValueError(f"UNKNOWN_BUILTIN_STRATEGY_ID:{strategy_id}")
+    return component_id
+
+
+def builtin_strategy_implementation(strategy_id: str) -> BuiltinStrategyImplementation:
+    """Return one of the statically imported seed implementations."""
+    component_id = component_id_for_strategy(strategy_id)
+    if component_id == "C02":
+        from indodax_lab.strategies import c02
+
+        return BuiltinStrategyImplementation(component_id, c02.c02_decide, Path(c02.__file__))
+    from indodax_lab.strategies import c07
+
+    return BuiltinStrategyImplementation(component_id, c07.c07_decide, Path(c07.__file__))
+
+
 class StrategyRegistry:
     """In-memory registry tracking frozen strategy specifications and implementations."""
 
     def __init__(self) -> None:
         self._strategies: dict[tuple[str, str], RegisteredStrategy] = {}
-        self._parameter_hashes: dict[tuple[str, str], str] = {}
+        self._specification_hashes: dict[tuple[str, str], str] = {}
         self._logic_hashes: dict[tuple[str, str], str] = {}
 
     def register(
@@ -36,17 +67,21 @@ class StrategyRegistry:
         parameters or changed logic.
         """
         key = (specification.strategy_id, specification.version)
-        current_param_hash = specification.parameters_hash()
+        current_specification_hash = specification.identity_hash()
         current_logic_hash = _compute_logic_hash(decide_fn)
 
         if key in self._strategies:
-            prev_param_hash = self._parameter_hashes[key]
+            prev_specification_hash = self._specification_hashes[key]
             prev_logic_hash = self._logic_hashes[key]
 
-            if prev_param_hash != current_param_hash or prev_logic_hash != current_logic_hash:
+            if (
+                prev_specification_hash != current_specification_hash
+                or prev_logic_hash != current_logic_hash
+            ):
                 raise ValueError(
-                    f"PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP: Strategy '{specification.strategy_id}' "
-                    f"version '{specification.version}' already registered with different parameters or logic."
+                    "PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP: "
+                    f"Strategy '{specification.strategy_id}' version '{specification.version}' "
+                    "already registered with different parameters or logic."
                 )
             return self._strategies[key]
 
@@ -55,9 +90,14 @@ class StrategyRegistry:
             decide_fn=decide_fn,
         )
         self._strategies[key] = registered
-        self._parameter_hashes[key] = current_param_hash
+        self._specification_hashes[key] = current_specification_hash
         self._logic_hashes[key] = current_logic_hash
         return registered
+
+    def register_builtin(self, specification: StrategySpecification) -> RegisteredStrategy:
+        """Register an allowlisted seed component using its statically bound function."""
+        implementation = builtin_strategy_implementation(specification.strategy_id)
+        return self.register(specification, implementation.decide_fn)
 
     def get(self, strategy_id: str, version: str) -> RegisteredStrategy | None:
         """Retrieve registered strategy by strategy_id and semantic version."""
@@ -82,7 +122,7 @@ class StrategyRegistry:
         yaml_path = Path(path)
         if not yaml_path.exists():
             raise FileNotFoundError(f"STRATEGY_CONFIG_NOT_FOUND: {yaml_path}")
-        with open(yaml_path, "r", encoding="utf-8") as f:
+        with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         if not isinstance(data, dict):
             raise ValueError("INVALID_YAML_ROOT_DICT_REQUIRED")
