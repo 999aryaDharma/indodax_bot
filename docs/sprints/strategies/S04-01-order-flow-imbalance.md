@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: IN_PROGRESS
 
 Priority: P2 | Type: feature | Domain: strategies | Portfolio: EXPERIMENTAL
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/s04-01-order-flow-imbalance`
 
@@ -42,6 +42,11 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `configs/features/tabular_bar_v1.yaml`
+- `docs/research/dataset-feature-contracts.md`
+- `docs/sprints/handoffs/LOB-01-HANDOFF.md`
+- `docs/sprints/handoffs/STRAT-01-HANDOFF.md`
+- `docs/decisions/CR-S04-order-flow-feature-contract.md`
 
 ## Current Context
 
@@ -49,6 +54,7 @@ New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
 - Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.
+- The canonical registry does not yet expose the S04 LOB inputs with event/availability/session/sequence evidence. CR-S04 proposes an additive versioned `lob_v1` input contract. Owner approval is pending; no input-schema change or strategy implementation may precede approval.
 
 ## In Scope
 

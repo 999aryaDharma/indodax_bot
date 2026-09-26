@@ -7583,8 +7583,8 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S04-01-order-flow-imbalance.md",
       "priority": "P2",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/s04-01-order-flow-imbalance",
       "requirements": [
         "FR-08"
@@ -7594,11 +7594,17 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "configs/features/tabular_bar_v1.yaml",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/sprints/handoffs/LOB-01-HANDOFF.md",
+        "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
+        "docs/decisions/CR-S04-order-flow-feature-contract.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.\n- Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.",
+      "current_context": "Implementation is held for owner approval of CR-S04. STRAT-01 supplies the strategy protocol; LOB-01 validates book sessions and tensors. The canonical feature registry does not yet publish the required S04 LOB inputs with event/availability/session/sequence evidence. No feature schema or strategy implementation changes before approval.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler"
+        "Portfolio backlog activation by owner; not in default scheduler",
+        "Owner approval of CR-S04 before feature-schema changes; real Indodax book/trade feed and >=90-day coverage remain qualification gates."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
@@ -7627,7 +7633,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
