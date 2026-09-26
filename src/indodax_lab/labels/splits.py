@@ -102,6 +102,14 @@ class SampleRecord(BaseModel):
             return None
         return _ensure_utc(value, "sample_timestamp")
 
+    @model_validator(mode="after")
+    def validate_label_chronology(self) -> SampleRecord:
+        if self.label_end_ts < self.decision_ts:
+            raise ValueError("LABEL_END_BEFORE_DECISION")
+        if self.label_available_at is not None and self.label_available_at < self.label_end_ts:
+            raise ValueError("LABEL_AVAILABLE_BEFORE_LABEL_END")
+        return self
+
 
 class FoldAssignment(BaseModel):
     """Sample assignment to fold role with purge/embargo rationale."""
@@ -177,11 +185,13 @@ def assign_folds(
     policy_payload["embargo_opt_out_reason"] = embargo_opt_out_reason
     policy_digest = hashlib.sha256(json.dumps(policy_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     if exposure_log:
-        for fold in split_policy.folds:
-            if fold.role == SampleRole.SEALED_TEST:
-                for exp in exposure_log:
-                    exp_start = _ensure_utc(exp["exposed_start"], "exposed_start")
-                    exp_end = _ensure_utc(exp["exposed_end"], "exposed_end")
+        for exp in exposure_log:
+            exp_start = _ensure_utc(exp["exposed_start"], "exposed_start")
+            exp_end = _ensure_utc(exp["exposed_end"], "exposed_end")
+            if exp_start >= exp_end:
+                raise ValueError("EXPOSURE_INTERVAL_MUST_PRECEDE_END")
+            for fold in split_policy.folds:
+                if fold.role == SampleRole.SEALED_TEST:
                     # Check for temporal overlap
                     if fold.start_ts < exp_end and exp_start < fold.end_ts:
                         raise ExposedPeriodViolationError(

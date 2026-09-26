@@ -10,7 +10,7 @@ Guarantees:
 from __future__ import annotations
 
 import copy
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 from typing import Any
@@ -363,14 +363,14 @@ class ResNetLSTMTrainer:
         samples = []
         for i, (decision_ts, pair) in enumerate(zip(decision_ts_list, pairs)):
             # label_end_ts = decision_ts + max_horizon (simplified)
-            from datetime import timedelta
             label_end_ts = decision_ts + timedelta(hours=split_policy.max_horizon_hours)
             samples.append(SampleRecord(
                 sample_id=f"{pair}_{int(decision_ts.timestamp())}",
                 decision_ts=decision_ts,
                 label_end_ts=label_end_ts,
                 pair=pair,
-                label_available_at=decision_ts,  # Labels available at decision time
+                # A horizon label cannot be available before its outcome window ends.
+                label_available_at=label_end_ts,
             ))
         
         # Assign folds using SPLIT-01 assign_folds

@@ -149,5 +149,53 @@ def test_split_01_second_fold_also_gets_an_embargo_window() -> None:
     assert manifest.assignments["s_second"].role == SampleRole.EMBARGOED
 
 
+def test_split_01_rejects_label_end_before_decision_time() -> None:
+    with pytest.raises(ValueError, match="LABEL_END_BEFORE_DECISION"):
+        SampleRecord(
+            sample_id="reversed_label",
+            pair="btc_idr",
+            decision_ts=datetime(2024, 1, 2, tzinfo=UTC),
+            label_end_ts=datetime(2024, 1, 1, tzinfo=UTC),
+            label_available_at=datetime(2024, 1, 3, tzinfo=UTC),
+        )
+
+
+def test_split_01_rejects_label_availability_before_label_end() -> None:
+    with pytest.raises(ValueError, match="LABEL_AVAILABLE_BEFORE_LABEL_END"):
+        SampleRecord(
+            sample_id="early_availability",
+            pair="btc_idr",
+            decision_ts=datetime(2024, 1, 1, tzinfo=UTC),
+            label_end_ts=datetime(2024, 1, 2, tzinfo=UTC),
+            label_available_at=datetime(2024, 1, 1, 12, tzinfo=UTC),
+        )
+
+
+def test_split_01_rejects_reversed_prior_exposure_interval() -> None:
+    policy = SplitPolicy(
+        policy_id="sealed",
+        version="1",
+        folds=[FoldWindow(
+            role=SampleRole.SEALED_TEST,
+            start_ts=datetime(2024, 1, 2, tzinfo=UTC),
+            end_ts=datetime(2024, 1, 4, tzinfo=UTC),
+        )],
+    )
+    sample = SampleRecord(
+        sample_id="sealed_sample",
+        pair="btc_idr",
+        decision_ts=datetime(2024, 1, 2, tzinfo=UTC),
+        label_end_ts=datetime(2024, 1, 2, 1, tzinfo=UTC),
+        label_available_at=datetime(2024, 1, 2, 2, tzinfo=UTC),
+    )
+
+    with pytest.raises(ValueError, match="EXPOSURE_INTERVAL_MUST_PRECEDE_END"):
+        assign_folds([sample], policy, exposure_log=[{
+            "exposed_start": datetime(2024, 1, 4, tzinfo=UTC),
+            "exposed_end": datetime(2024, 1, 3, tzinfo=UTC),
+            "run_id": "bad_period",
+        }])
+
+
 # Actor for every line this file contributes to review evidence:
 # opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
