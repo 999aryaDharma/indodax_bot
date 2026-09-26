@@ -8060,7 +8060,7 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "CR-S09 Research-only boundary is approved. Risk-period reset/history code at da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 preserves closed trades/breach events and starts approved periods from actual remaining cash. Opt-in Research tail-risk contracts at cafd1fdfab3a57a2a2092b20aa33c6ab2ef933d8 use the existing RiskEngine assessment boundary; missing/unapproved policy/evidence, invalid lineage/period, noncausal/stale evidence, and configured breaches block BUY while SELL bypasses this additional gate. The interface creates no intents/orders and default callers are unchanged. AC0/AC1 implementation is unreviewed; AC2 implementation is unreviewed; AC3 fails closed on missing policy/evidence but producer registration and qualification remain external. Evidence freshness is measured at assessment time, including delayed decisions; focused risk suite: 27 passed; full suite: 1560 passed, 2 platform skips, 11 warnings. No agent runtime is wired to the gate. Numeric Research pump-gap/evidence-age limits are unapproved, and no qualified producer/provenance exists; S09 remains IN_PROGRESS and not qualification-eligible. No Production/runtime changes.",
+      "current_context": "CR-S09 Research-only boundary is approved. Risk-period reset/history code at da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 preserves closed trades/breach events and starts approved periods from actual remaining cash. Opt-in Research tail-risk contracts at 75e2d587b3b47894e2ee37e27283f5a1c3211c6f use the existing RiskEngine assessment boundary; missing/unapproved policy/evidence, invalid lineage/period, noncausal/stale evidence, and configured breaches block BUY while SELL bypasses this additional gate. The interface creates no intents/orders and default callers are unchanged. Review round 1 at cafd1fd requested changes for malformed decimal input; round 2 at 75e2d58 passed the correction. AC0/AC1/AC2 implementation reviewed, but runtime wiring/evidence and independent persistence-test environment evidence remain incomplete; AC3 fails closed on missing policy/evidence but producer registration and qualification remain external. Evidence freshness is measured at assessment time, including delayed decisions; risk suite: 39 passed; full suite at 75e2d58: 1572 passed, 2 platform skips, 11 warnings. No agent runtime is wired to the gate. Numeric Research pump-gap/evidence-age limits are unapproved, and no qualified producer/provenance exists; S09 remains IN_PROGRESS and not qualification-eligible. No Production/runtime changes.",
       "external_gates": [
         "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
         "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
@@ -8072,25 +8072,25 @@
           "criterion": "S09-01-AC0",
           "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py::test_research_tail_gate_allows_valid_buy_and_does_not_block_sell",
           "behavior": "Research gate integrates with the existing risk authority and cannot create orders or alpha intents.",
-          "status": "IMPLEMENTED_UNREVIEWED"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S09-01-AC1",
           "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py (missing, invalid, stale and breached evidence cases)",
           "behavior": "Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available.",
-          "status": "IMPLEMENTED_UNREVIEWED_PARTIAL"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S09-01-AC2",
           "test_case": "test_shadow_new_risk_period_preserves_breaches_and_closed_trades; test_shadow_risk_period_reset_requires_closed_portfolio; test_shadow_failed_period_reset_restores_in_memory_state",
           "behavior": "New risk period requires separate explicit operator approval, requires positions to be closed, starts from remaining equity, and preserves prior breach-period and closed-trade records across restart.",
-          "status": "IMPLEMENTED_UNREVIEWED"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S09-01-AC3",
           "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py (missing/unapproved policy and evidence cases)",
           "behavior": "Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred.",
-          "status": "IMPLEMENTED_UNREVIEWED_PARTIAL"
+          "status": "REVIEWED_PARTIAL"
         }
       ],
       "status": "IN_PROGRESS",
