@@ -112,7 +112,7 @@ Detailed domain fields and behavior are specified in `docs/specs/09-labels-split
 
 sample + horizon + fill model -> entry/exit, gross/net return, costs and label_available_at.
 
-Input harus membawa sample, candidate bundle ID, frozen candidate `SignalIntent`, horizon, cost schedule dan versi eksekusi yang didukung. Output memisahkan hasil valid, excluded dengan reason code, blocked, dan error teknis. Nilai unknown tidak boleh dikonversi ke nol. Pin enum/field/unit pada contract test; API baru tidak boleh hanya ditulis sebagai contoh tanpa implementation/test.
+Input harus membawa sample, candidate bundle ID, frozen candidate `SignalIntent`, horizon, cost schedule dan versi eksekusi yang didukung; adapter menyediakan resolver pada immutable registry untuk memastikan relasi bundle/sample/intent. Output menyimpan registration ID dan fee interval ID entry/exit. `label_available_at` mencakup semua source bar yang dipakai sampai horizon. Output memisahkan hasil valid, excluded dengan reason code, blocked, dan error teknis. Nilai unknown tidak boleh dikonversi ke nol. Pin enum/field/unit pada contract test; API baru tidak boleh hanya ditulis sebagai contoh tanpa implementation/test.
 
 ## Data / Persistence Impact
 

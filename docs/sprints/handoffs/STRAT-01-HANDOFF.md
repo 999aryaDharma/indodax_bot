@@ -73,3 +73,11 @@ Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf
 - Focused check: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/cli/test_run_backtest_report.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 14 passed (the command includes SIM-04 checks).
 - Full check on combined code HEAD `3f2623b884a5066cdbaf8a27f85e517c03fa9885`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,103 passed, 2 platform-specific skipped, 4 warnings.
 - Independent review of the remediation commit is pending. Keep status CHANGES_REQUESTED until reviewer PASS and manifest update.
+
+### Typed capture identity remediation
+
+- Code commit: `65291562c270b36111873d7dc2e072bc97824c3e` (`fix(strat-01): type-tag strategy capture identities`).
+- Finding corrected: every supported captured value uses an unambiguous type-tagged encoding; dictionaries, `Decimal`, sets/frozensets, booleans/integers, models, enums, sequences and scalar values cannot alias by serialization shape.
+- Regression: `test_all_capture_types_have_unambiguous_identity` covers `Decimal`/mapping, set/frozenset and bool/int collisions; prior list/tuple and bound-method regressions remain.
+- Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: 1,107 passed, 2 platform-specific skipped, 4 warnings.
+- Independent exact-SHA review remains pending; status stays CHANGES_REQUESTED.

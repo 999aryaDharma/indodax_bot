@@ -9,11 +9,12 @@ Independent review found LABEL-01 can mark a sample valid from raw open prices w
 ## Decision
 
 - Each sample supplies its candidate-generated frozen `SignalIntent` and immutable candidate bundle ID. `desired_qty` is that sample's strategy sizing output. No fixed-size or implicit proxy fallback is permitted.
-- Validate candidate identity, intent strategy, pair, decision time and sample lineage. Reuse identity governed by accepted ADR-006; do not create a parallel identity system.
+- Resolve `(candidate_bundle_id, sample_id)` against the authoritative immutable candidate/sample registry, then match registration ID, candidate bundle, strategy, intent ID, pair and decision time before labeling. Reuse identity governed by accepted ADR-006; do not create a parallel identity system.
 - Simulate the BUY intent and, at the configured horizon after actual entry fill, a SELL for the quantity actually acquired. Use actual shared-simulator fills, fees and execution timestamps/prices in the outcome.
 - No entry fill, no exit fill, or exit quantity that does not fully close acquired quantity yields `EXCLUDED` with a stable reason code. A partial entry may be labeled for actual filled quantity only when the horizon exit fully closes it.
 - The target is the candidate entry's fixed-horizon outcome. It is not full-strategy PnL and does not apply candidate SL/TP before the horizon. SL/TP remain lineage inputs but do not trigger this target.
 - Unknown/unverified historical fee schedules remain excluded. Labels do not qualify promotion when tariff intervals are unverified.
+- Record both the cost schedule set/version and the applied entry/exit fee interval IDs. Availability includes every source bar consulted for the horizon, not only entry and exit bars.
 
 ## Impact and compatibility
 
@@ -21,7 +22,7 @@ This changes sample inputs and label meaning, so it requires a new versioned mat
 
 Pin the v2 execution version to the shared simulator's supported version, currently `causal-bar-proxy-v2`; confirm it against code/tests during implementation. Correct the YAML mismatch by aligning the v2 config to that contract, not by adding an alias with different semantics.
 
-No new dependency, ledger, database, venue access or production behavior is introduced. Accepted ADR-006 already governs immutable candidate identity; no new ADR is needed unless implementation changes a source-of-truth or persistence boundary.
+No new ledger, database, venue access or production behavior is introduced. The implementation receives a resolver backed by the authoritative registry; no new identity source is created. Accepted ADR-006 governs immutable candidate identity; no new ADR is needed unless implementation changes a source-of-truth or persistence boundary.
 
 ## Risks and mitigations
 

@@ -29,7 +29,7 @@ candidate bundle + sample-specific BUY SignalIntent + horizon
   -> actual filled quantity, fees, net return, label_available_at
 ```
 
-Use `SignalIntent.desired_qty` without a fixed-size fallback or silent rescaling. The target closes actual entry-filled quantity at the exact horizon bar using the shared simulator; no fill, incomplete horizon, unknown cost, or incomplete exit is EXCLUDED with a reason. Candidate stop-loss/take-profit are not triggered by this horizon target, which is not full-strategy PnL. Bind bundle, strategy, sample, pair, intent and decision-time lineage. The supported simulator version is `causal-bar-proxy-v2`; bar-proxy evidence does not certify live venue fills.
+Use `SignalIntent.desired_qty` without a fixed-size fallback or silent rescaling. Resolve the bundle/sample association through the authoritative immutable registry and match strategy, intent, pair and decision time. The target closes actual entry-filled quantity at the exact horizon bar using the shared simulator; no fill, incomplete horizon, unknown cost, or incomplete exit is EXCLUDED with a reason. Candidate stop-loss/take-profit are not triggered by this horizon target, which is not full-strategy PnL. Retain entry/exit fee interval IDs; label availability covers every consulted source bar through exit. The supported simulator version is `causal-bar-proxy-v2`; bar-proxy evidence does not certify live venue fills.
 
 Acceptance boundary:
 - Candidate, intent, pair, strategy, sample and decision-time lineage must match; entry before decision is rejected.

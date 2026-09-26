@@ -73,3 +73,11 @@ Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf
 - Focused check: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/cli/test_run_backtest_report.py tests/unit/lab/strategies/test_registry.py -q -p no:cacheprovider` -> 14 passed (the command includes STRAT-01 checks).
 - Full check on combined code HEAD `3f2623b884a5066cdbaf8a27f85e517c03fa9885`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,103 passed, 2 platform-specific skipped, 4 warnings.
 - Independent review of the remediation commit is pending. Keep status CHANGES_REQUESTED until reviewer PASS and manifest update.
+
+### Same-time availability remediation
+
+- Code commit: `e4ca5ad3116bc6c05d44f09ddfb57102015fa007` (`fix(sim-04): consolidate same-time equity observations`).
+- Finding corrected: bars sharing one `available_at` are applied as a group and emit one equity observation; marks still select the greatest market close time.
+- Regression extends `test_late_older_bar_does_not_replace_newer_equity_mark` to assert unique curve timestamps.
+- Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: 1,107 passed, 2 platform-specific skipped, 4 warnings.
+- Independent exact-SHA review remains pending; status stays CHANGES_REQUESTED.
