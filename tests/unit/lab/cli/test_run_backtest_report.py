@@ -109,6 +109,29 @@ def test_equity_curve_replays_cash_and_only_available_bar_marks() -> None:
     ]
 
 
+def test_late_older_bar_does_not_replace_newer_equity_mark() -> None:
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    ledger = ResearchLedger(initial_cash=Decimal("1000"), init_timestamp=start)
+    ledger.process_fill(Fill(
+        fill_id="late-buy", order_id="late-buy", event_id="e1", pair="btc_idr",
+        side=OrderSide.BUY, role=OrderRole.TAKER, price=Decimal("100"),
+        qty=Decimal("1"), fees=Decimal("0"), timestamp=start,
+    ))
+
+    def bar(open_minute: int, available_minute: int, close: str) -> MarketBar:
+        opened = start + timedelta(minutes=open_minute)
+        closed = opened + timedelta(minutes=1)
+        return MarketBar(
+            pair="btc_idr", open_time=opened, close_time=closed,
+            open=Decimal(close), high=Decimal(close), low=Decimal(close),
+            close=Decimal(close), base_volume=Decimal("1"), quote_volume=Decimal("1"),
+            available_at=start + timedelta(minutes=available_minute),
+        )
+
+    curve = _build_ledger_equity_curve(ledger, [bar(0, 1, "100"), bar(2, 3, "110"), bar(1, 4, "90")])
+    assert curve[-1] == (start + timedelta(minutes=4), Decimal("1010"))
+
+
 def test_cli_atomic_writer_preserves_existing_tmp_target(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

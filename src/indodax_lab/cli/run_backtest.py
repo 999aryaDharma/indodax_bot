@@ -106,6 +106,7 @@ def _build_ledger_equity_curve(
     transaction_index = 0
     cash = Decimal("0")
     quantities: dict[str, Decimal] = {}
+    latest_marks: dict[str, tuple[datetime, Decimal]] = {}
     curve: list[tuple[datetime, Decimal]] = []
 
     for bar in sorted(bars, key=lambda item: item.available_at):
@@ -122,10 +123,17 @@ def _build_ledger_equity_curve(
                 quantities[tx.pair] = quantities.get(tx.pair, Decimal("0")) + tx.base_qty_delta
             transaction_index += 1
 
+        previous = latest_marks.get(bar.pair)
+        if previous is None or bar.close_time > previous[0]:
+            latest_marks[bar.pair] = (bar.close_time, bar.close)
+
         # The CLI replays one pair. If another asset is held, this bar cannot value it.
         if any(qty > 0 and pair != bar.pair for pair, qty in quantities.items()):
             continue
-        equity = cash + quantities.get(bar.pair, Decimal("0")) * bar.close
+        mark = latest_marks.get(bar.pair)
+        if mark is None:
+            continue
+        equity = cash + quantities.get(bar.pair, Decimal("0")) * mark[1]
         curve.append((bar.available_at, equity))
 
     return curve
