@@ -19,13 +19,14 @@ Review hardening (ops-shadow batch):
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import hashlib
 import json
-from typing import Any
+from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from indodax_lab.models.lob.queue_evidence import QueueQualificationReport
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -68,6 +69,10 @@ class NoPromotedChampionError(ValueError):
     """Raised when a rollback is requested but no promotion has been recorded."""
 
 
+class QueueEvidencePromotionError(ValueError):
+    """Raised when LOB queue execution lacks complete versioned qualification evidence."""
+
+
 # ---------------------------------------------------------------------------
 # Domain models
 # ---------------------------------------------------------------------------
@@ -103,6 +108,8 @@ class ChallengerEvidence(BaseModel):
     # No default: an evidence package that omits the quality verdict cannot be
     # constructed, so the gate can never silently default to allow.
     outperformance: bool
+    execution_contract: Literal["bar_proxy_v1", "lob_queue_v1"] = "bar_proxy_v1"
+    queue_qualification: QueueQualificationReport | None = None
 
     @field_validator("evaluated_at_utc")
     @classmethod
@@ -122,6 +129,12 @@ class ChallengerEvidence(BaseModel):
                 "closed_trades_count": self.closed_trades_count,
                 "has_policy_breach": self.has_policy_breach,
                 "outperformance": self.outperformance,
+                "execution_contract": self.execution_contract,
+                "queue_qualification": (
+                    self.queue_qualification.model_dump(mode="json")
+                    if self.queue_qualification is not None
+                    else None
+                ),
             }
         )
 
@@ -265,6 +278,18 @@ class ChampionRegistry:
             raise StalePromotionEvidenceError(
                 "FUTURE_PROMOTION_EVIDENCE: Evidence is dated after the promotion decision."
             )
+
+        if challenger.execution_contract == "lob_queue_v1":
+            queue_report = challenger.queue_qualification
+            if queue_report is None:
+                raise QueueEvidencePromotionError("QUEUE_QUALIFICATION_MISSING")
+            failure = queue_report.failure_reason(
+                challenger.candidate_id, challenger.candidate_version
+            )
+            if failure is not None:
+                raise QueueEvidencePromotionError(failure)
+        elif challenger.queue_qualification is not None:
+            raise QueueEvidencePromotionError("QUEUE_REPORT_WITHOUT_LOB_EXECUTION_CONTRACT")
 
         # Sealed pass gate
         if not challenger.is_sealed_pass:

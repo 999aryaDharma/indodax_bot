@@ -15,7 +15,7 @@ Define a versioned `lob_queue_v1` research contract at the execution/promotion b
 - Missing, stale, future-dated, or sequence-invalid queue evidence makes that simulated sample `QUEUE_UNAVAILABLE` and blocks promotion. The strategy may emit an intent only when its market-data gates pass; it cannot mark a fill successful.
 - Partial fill/cancel remains owned by existing OMS/ledger reconciliation. Tests must prove filled quantity, remaining quantity, released reservation and ledger balance from real shared components; do not implement a strategy-local ledger.
 
-Thresholds and freshness limits are versioned research policy defaults and require owner review before implementation. A model-estimated queue fill probability is labeled as a model estimate, never observed queue state.
+Freshness limits require an explicit versioned Research policy; no numeric limit is approved by this CR. The contract and fail-closed boundary may be implemented now, but S08 promotion remains blocked until an owner approves a policy and a qualified producer supplies evidence. A model-estimated queue fill probability is labeled as a model estimate, never observed queue state.
 
 ## Impact
 

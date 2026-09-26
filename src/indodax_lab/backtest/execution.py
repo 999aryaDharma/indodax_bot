@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
+from typing import TYPE_CHECKING, Literal
 
 from indodax_lab.backtest.costs import CostScheduleTable, OrderRole, OrderSide, lookup_cost
 from indodax_lab.backtest.events import ExecutionResult, ExecutionStatus, MarketBar
 from indodax_lab.backtest.orders import Fill
 from indodax_lab.contracts.decision import SignalIntent
+
+if TYPE_CHECKING:
+    from indodax_lab.models.lob.queue_evidence import QueueEvidence, QueueEvidencePolicy
 
 
 class ConservativeExecutionSimulator:
@@ -39,6 +43,9 @@ class ConservativeExecutionSimulator:
         bar: MarketBar,
         *,
         order_created_ts: datetime | None = None,
+        execution_contract: Literal["bar_proxy_v1", "lob_queue_v1"] = "bar_proxy_v1",
+        queue_evidence: QueueEvidence | None = None,
+        queue_policy: QueueEvidencePolicy | None = None,
     ) -> ExecutionResult:
         """Simulate order execution on a subsequent eligible market bar.
 
@@ -49,6 +56,33 @@ class ConservativeExecutionSimulator:
         """
         bar = MarketBar.model_validate(bar.model_dump())
         intent = SignalIntent.model_validate(intent.model_dump())
+        if execution_contract not in {"bar_proxy_v1", "lob_queue_v1"}:
+            return ExecutionResult(
+                intent_id=intent.intent_id,
+                status=ExecutionStatus.REJECTED,
+                reason_code="UNKNOWN_EXECUTION_CONTRACT",
+            )
+        if execution_contract == "lob_queue_v1":
+            from indodax_lab.models.lob.queue_evidence import queue_evidence_failure_reason
+
+            failure = queue_evidence_failure_reason(
+                queue_evidence,
+                queue_policy,
+                decision_time=order_created_ts or intent.decision_ts,
+                expected_pair=intent.pair,
+            )
+            if failure is not None:
+                return ExecutionResult(
+                    intent_id=intent.intent_id,
+                    status=ExecutionStatus.REJECTED,
+                    reason_code=failure,
+                )
+        elif queue_evidence is not None or queue_policy is not None:
+            return ExecutionResult(
+                intent_id=intent.intent_id,
+                status=ExecutionStatus.REJECTED,
+                reason_code="QUEUE_EVIDENCE_WITHOUT_LOB_CONTRACT",
+            )
         if intent.role_preference == OrderRole.MAKER and intent.limit_price is None:
             return ExecutionResult(intent_id=intent.intent_id, status=ExecutionStatus.REJECTED,
                                    reason_code="MAKER_LIMIT_REQUIRED")

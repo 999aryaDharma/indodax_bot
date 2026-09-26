@@ -349,6 +349,20 @@ For S04-01, the owner-approved `lob_v1` decision row additionally carries the fo
 
 S04's research hypothesis requires both normalized imbalance values >= 0.10, a positive finite close, and valid causal evidence. Invalid or missing values abstain; they are never substituted with zero. These thresholds are not profitability evidence. Real Indodax feed capture and >=90-day qualification remain external gates.
 
+### 7.5.1 S08 queue evidence at execution and promotion
+
+`lob_queue_v1` is a separate, versioned execution-evidence contract. It does not extend `lob_v1` strategy features or claim that an estimated fill probability is an observed queue position.
+
+| Evidence | Required fields / rule |
+|---|---|
+| Observation | `pair`, `event_at`, `available_at`, `observed_at` (UTC), `session_id`, `sequence_contiguous`, `source_id`, `source_version`, immutable source SHA-256. |
+| Book context | L5 book imbalance [-1, 1], bid/ask depth within 10 bps in IDR, spread in bps. |
+| Queue | `status=known/unknown`; known rows require `queue_ahead_base_qty` in base-asset units. Unknown, missing, future, sequence-invalid, wrong-pair/source, or stale evidence is unavailable for qualification. |
+| Freshness policy | `QueueEvidencePolicy` pins approver/reference, version, source, and positive maximum age. There is no default age limit; until an owner-approved policy and qualified producer exist, S08 cannot qualify. |
+| Run report | `QueueQualificationReport` pins candidate ID/version, report ID/hash, policy, sample count, failure counts, and maximum observed evidence age. The promotion approval digest includes this report. |
+
+`ConservativeExecutionSimulator` accepts `execution_contract=lob_queue_v1` only with queue evidence and an explicit policy; it validates evidence at quote creation time and rejects unavailable evidence with a reason code. Passing this gate does not establish venue-observed priority or produce a queue-derived fill: the current fill model remains a bar proxy and maker limit touch does not fill. Real queue reconstruction, feed coverage, policy approval, and run qualification remain external gates. Partial fill/cancel accounting remains with the shared OMS/ledger.
+
 ## 8. Availability dan anti-leakage
 
 ### 8.1 Closed-bar rule

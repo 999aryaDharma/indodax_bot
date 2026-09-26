@@ -31,7 +31,7 @@ def component_id_for_strategy(strategy_id: str) -> str:
     if not strategy_id or any(token in strategy_id for token in ("/", "\\", "..", ":")):
         raise ValueError("UNAPPROVED_STRATEGY_ID")
     component_id = strategy_id.rsplit("-", 1)[-1]
-    if component_id not in {"C02", "C07"}:
+    if component_id not in {"C02", "C07", "S08"}:
         raise ValueError(f"UNKNOWN_BUILTIN_STRATEGY_ID:{strategy_id}")
     return component_id
 
@@ -43,6 +43,10 @@ def builtin_strategy_implementation(strategy_id: str) -> BuiltinStrategyImplemen
         from indodax_lab.strategies import c02
 
         return BuiltinStrategyImplementation(component_id, c02.c02_decide, Path(c02.__file__))
+    if component_id == "S08":
+        from indodax_lab.strategies import s08
+
+        return BuiltinStrategyImplementation(component_id, s08.s08_decide, Path(s08.__file__))
     from indodax_lab.strategies import c07
 
     return BuiltinStrategyImplementation(component_id, c07.c07_decide, Path(c07.__file__))
