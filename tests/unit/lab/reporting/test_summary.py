@@ -196,6 +196,41 @@ def test_report_01_contract_3() -> None:
     assert "PROVENANCE_CORRUPT" in comparison_md
 
 
+def test_single_report_rejects_evaluation_from_another_run() -> None:
+    run, evaluation = _build_test_run("run_identity")
+    wrong_evaluation = evaluation.model_copy(update={"run_id": "other_run"})
+
+    with pytest.raises(ValueError, match="EVALUATION_IDENTITY_MISMATCH"):
+        ExperimentSummaryReport.from_run(run, wrong_evaluation)
+
+
+def test_leaderboard_rejects_swapped_evaluation_identities() -> None:
+    run_a, evaluation_a = _build_test_run("run_identity_a", candidate_id="candidate_a")
+    run_b, evaluation_b = _build_test_run("run_identity_b", candidate_id="candidate_b")
+
+    with pytest.raises(ValueError, match="EVALUATION_IDENTITY_MISMATCH"):
+        generate_multi_run_comparison_md(
+            runs=[run_a, run_b],
+            evaluations=[evaluation_b, evaluation_a],
+        )
+
+
+def test_disqualified_runs_render_in_stable_order() -> None:
+    run_a, evaluation_a = _build_test_run(
+        "run_invalid_a", status=ExperimentRunStatus.INVALID_RUN, candidate_id="candidate_a"
+    )
+    run_b, evaluation_b = _build_test_run(
+        "run_invalid_b", status=ExperimentRunStatus.INVALID_RUN, candidate_id="candidate_b"
+    )
+
+    first = generate_multi_run_comparison_md([run_a, run_b], [evaluation_a, evaluation_b])
+    reversed_order = generate_multi_run_comparison_md(
+        [run_b, run_a], [evaluation_b, evaluation_a]
+    )
+
+    assert first == reversed_order
+
+
 def test_report_01_statistical_selection_and_errors() -> None:
     """REPORT-01 edge cases: DSR/PBO rendering, length mismatch, and direct report objects."""
     run, eval_result = _build_test_run("run_stat_eval")

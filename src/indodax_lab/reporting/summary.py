@@ -48,6 +48,19 @@ def _finite_metric(metrics: dict[str, Any], key: str) -> float | None:
     return val if math.isfinite(val) else None
 
 
+def _validate_evaluation_identity(
+    run: ExperimentRunRecord,
+    evaluation: EvaluationResult,
+) -> None:
+    mismatches = []
+    if run.run_id != evaluation.run_id:
+        mismatches.append("run_id")
+    if run.candidate_id != evaluation.candidate_id:
+        mismatches.append("candidate_id")
+    if mismatches:
+        raise ValueError(f"EVALUATION_IDENTITY_MISMATCH:{','.join(mismatches)}")
+
+
 def _format_metric_display(key: str, val: Any) -> str:
     """Format metric value safely, never converting missing/None data to 0.00%."""
     if val is None:
@@ -106,6 +119,7 @@ class ExperimentSummaryReport(BaseModel):
         independent_params: dict[str, Any] | None = None,
     ) -> ExperimentSummaryReport:
         """Create summary report from execution record and evaluation outcome."""
+        _validate_evaluation_identity(run, evaluation)
         shared = {
             "git_sha": run.git_sha,
             "is_dirty": run.is_dirty,
@@ -289,6 +303,7 @@ def generate_multi_run_comparison_md(
     disqualified_entries: list[tuple[ExperimentRunRecord, EvaluationResult]] = []
 
     for run, evaluation in zip(runs, evaluations):
+        _validate_evaluation_identity(run, evaluation)
         is_invalid = (
             run.status == ExperimentRunStatus.INVALID_RUN
             or str(run.status).lower() == "invalid_run"
@@ -299,6 +314,8 @@ def generate_multi_run_comparison_md(
             disqualified_entries.append((run, evaluation))
         else:
             valid_entries.append((run, evaluation))
+
+    disqualified_entries.sort(key=lambda item: (item[0].run_id, item[0].candidate_id))
 
     # Only a run with a real, finite net profit measurement can hold a rank.
     # Ranking a run whose performance was never measured would state a result
