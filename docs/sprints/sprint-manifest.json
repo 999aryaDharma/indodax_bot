@@ -2587,7 +2587,8 @@
       "files": [
         "src/indodax_lab/cli/build_training_dataset.py",
         "src/indodax_lab/labels/materializer.py",
-        "tests/integration/lab/test_training_materialization.py"
+        "tests/integration/lab/test_training_materialization.py",
+        "docs/sprints/handoffs/TRAIN-01-HANDOFF.md"
       ],
       "type": "data",
       "tier": "CORE",
@@ -2596,12 +2597,12 @@
       "priority": "P0",
       "status": "REVIEW",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/train-01-verified-training-dataset-assembly",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency SPLIT-01 supplies: sample IDs + label_end_ts + declared exposure history -> versioned roles, purge and embargo manifest.\n- Dependency FEAT-04 supplies: snapshot IDs + registry hash -> features manifest, ordered columns, row_ready_at, eligibility.",
+      "current_context": "TRAIN-01 remains REVIEW; a corrective split-checksum change is committed at source SHA 7e97539861eda3b1cdbffb159d2f435f730a737b. The split content checksum now binds assignments and policy identity, while the existing v2 dataset ID remains stable for unchanged inputs. Focused checksum tests: 8 passed; full suite: 1548 passed, 2 platform skips. Independent review of the corrective SHA is pending.",
       "unlocks": [
         "ML-01"
       ],

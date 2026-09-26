@@ -95,3 +95,13 @@ Full lab suite verification: 117 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the materializer's checksum identity gap recorded under the Blocked section above is the one TRAIN-01 review finding that this fix cycle could not discharge, and it therefore needs a second cycle with the CLI file added to the ownership list rather than another patch on the current surface.
+
+### Split policy checksum remediation
+
+- Corrective source SHA: `7e97539861eda3b1cdbffb159d2f435f730a737b`.
+- `split_content_sha256` binds canonical assignment rows, split ID, policy ID/version, policy content checksum and role counts. The v2 `dataset_id` construction remains stable for unchanged inputs; it continues to use assignment-row content plus explicit policy identity fields.
+- RED: full suite at pre-fix SHA `3b678e9ba4ad8a9e655869616157ddf9fb2e67c3` failed `test_dataset_id_changes_when_split_policy_changes` because the split manifest checksum ignored policy identity.
+- GREEN focused: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/cli/test_build_training_dataset_checksum.py -q` — 8 passed.
+- GREEN lint: `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check --select I,F401 src/indodax_lab/labels/materializer.py` — passed.
+- GREEN full suite: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q` — 1548 passed, 2 skipped, 11 warnings in 43.01s. Skips are platform-specific `/proc` RSS and Windows symlink capability cases.
+- Independent review of corrective source SHA: pending. Sprint remains REVIEW until an exact-SHA independent PASS.
