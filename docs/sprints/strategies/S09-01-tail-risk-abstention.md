@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: IN_PROGRESS
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/s09-01-tail-risk-abstention`
 
@@ -41,12 +41,17 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/specs/14-shadow-portfolios-and-promotion.md`
+- `docs/research/dataset-feature-contracts.md`
+- `docs/sprints/handoffs/STRAT-01-HANDOFF.md`
+- `docs/decisions/CR-S09-risk-gate-ownership.md`
 
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
+- Existing boundary mismatch: this strategy contract is stateless, while S09 requires exposure and persistent breach history. CR-S09 proposes Research-only integration at the existing risk authority; approval is pending. The pump-gap producer is not registered. Do not implement a second risk authority or touch Production/runtime state.
 
 ## In Scope
 

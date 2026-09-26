@@ -7929,15 +7929,16 @@
       "files": [
         "configs/strategies/S08_v1.yaml",
         "src/indodax_lab/strategies/s08.py",
-        "tests/unit/lab/strategies/test_s08.py"
+        "tests/unit/lab/strategies/test_s08.py",
+        "docs/decisions/CR-S08-queue-evidence.md"
       ],
       "type": "feature",
       "tier": "EXPERIMENTAL",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S08-01-passive-mean-reversion.md",
       "priority": "P2",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/s08-01-passive-mean-reversion",
       "requirements": [
         "FR-08"
@@ -7947,11 +7948,18 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "configs/features/tabular_bar_v1.yaml",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/sprints/handoffs/LOB-01-HANDOFF.md",
+        "docs/sprints/handoffs/SIM-01-HANDOFF.md",
+        "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
+        "docs/decisions/CR-S08-queue-evidence.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.\n- Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.",
+      "current_context": "Implementation is held for owner approval of CR-S08. LOB-01 validates eligible windows but does not publish per-order queue evidence. The bar simulator and TLOB queue model provide fill proxies, not observed queue position. No feature-schema or strategy implementation changes before approval.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler"
+        "Portfolio backlog activation by owner; not in default scheduler",
+        "Owner approval of CR-S08; real Indodax queue reconstruction and book/trade coverage remain external qualification gates."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
@@ -7980,7 +7988,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -8008,15 +8016,16 @@
       "files": [
         "configs/strategies/S09_v1.yaml",
         "src/indodax_lab/strategies/s09.py",
-        "tests/unit/lab/strategies/test_s09.py"
+        "tests/unit/lab/strategies/test_s09.py",
+        "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S09-01-tail-risk-abstention.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/s09-01-tail-risk-abstention",
       "requirements": [
         "FR-08"
@@ -8026,11 +8035,16 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/specs/14-shadow-portfolios-and-promotion.md",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
+        "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.",
+      "current_context": "Implementation is held for owner approval of CR-S09. Current Strategy/DecisionFrame boundary is stateless; S09 acceptance requires existing exposure, durable breach history and approved reset semantics. The proposed Research-only integration uses the existing risk authority and preserves historical periods. The pump-gap producer is not registered. No Production/runtime changes before approval.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler"
+        "Portfolio backlog activation by owner; not in default scheduler",
+        "Owner approval of CR-S09; register and qualify point-in-time pump-gap provenance before candidate qualification. Production activation is excluded."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
@@ -8059,7 +8073,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

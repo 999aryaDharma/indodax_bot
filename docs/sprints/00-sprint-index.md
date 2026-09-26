@@ -86,8 +86,8 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S05-01-micro-pullback.md) |
 | S06-01 | Post listing maturation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S06-01-post-listing-maturation.md) |
 | S07-01 | Small cap rotation | strategies | P1 | feature | C04-01, S01-01 | PLANNED | [Spec](strategies\S07-01-small-cap-rotation.md) |
-| S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | READY | [Spec](strategies\S08-01-passive-mean-reversion.md) |
-| S09-01 | Tail risk abstention | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S09-01-tail-risk-abstention.md) |
+| S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | IN_PROGRESS | [Spec](strategies\S08-01-passive-mean-reversion.md) |
+| S09-01 | Tail risk abstention | strategies | P1 | feature | STRAT-01 | IN_PROGRESS | [Spec](strategies\S09-01-tail-risk-abstention.md) |
 | STRAT-01 | Declarative strategy protocol | strategies | P0 | feature | SIM-03, FEAT-04 | DONE | [Spec](strategies\STRAT-01-declarative-strategy-protocol.md) |
 | UNIV-01 | Point-in-time investable universe | universe | P0 | data | DATA-04, DATA-05 | DONE | [Spec](universe\UNIV-01-point-in-time-investable-universe.md) |
 | QA-01 | Wave 1 tournament checkpoint | verification | P0 | quality | JOB-03, SHADOW-02, C01-01, C02-01, C03-01, C04-01, C07-01, C10-01, S01-01, S02-01, ML-04 | REVIEW | [Spec](verification\QA-01-wave-1-tournament-checkpoint.md) |

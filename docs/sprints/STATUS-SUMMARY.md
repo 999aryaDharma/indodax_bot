@@ -2,6 +2,6 @@
 
 Derived from manifest; historical baseline is retained separately.
 
-{'REVIEW': 52, 'DONE': 54, 'PLANNED': 25, 'IN_PROGRESS': 1, 'READY': 2}
+{'REVIEW': 52, 'DONE': 54, 'PLANNED': 25, 'IN_PROGRESS': 3}
 
-READY: S08-01, S09-01.
+READY: None.
