@@ -76,12 +76,13 @@ def _assess(
     intent: SignalIntent | None = None,
     evidence: dict[str, object] | None = None,
     positions: dict[str, Position] | None = None,
+    evaluation_time: datetime = NOW,
 ):
     kwargs = {
         "current_equity": Decimal("100000000"),
         "current_positions": positions or {},
         "mark_prices": {"btc_idr": Decimal("1000000000")},
-        "evaluation_time": NOW,
+        "evaluation_time": evaluation_time,
         "available_cash": Decimal("100000000"),
         "research_risk_period_id": "period-test-1",
     }
@@ -154,6 +155,22 @@ def test_research_tail_gate_rejects_bad_or_stale_evidence(
 
     assert not result.approved
     assert result.reason_code == reason
+
+
+def test_research_tail_gate_checks_freshness_at_assessment_time() -> None:
+    engine = RiskEngine(
+        risk_manager=_risk_manager(),
+        research_tail_risk_policy=_policy(),
+    )
+
+    result = _assess(
+        engine,
+        evidence=_evidence(),
+        evaluation_time=NOW + timedelta(seconds=121),
+    )
+
+    assert not result.approved
+    assert result.reason_code == "RESEARCH_TAIL_EVIDENCE_STALE"
 
 
 @pytest.mark.parametrize(

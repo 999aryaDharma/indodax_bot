@@ -491,7 +491,7 @@ class RiskEngine:
             item.event_at <= item.available_at <= intent.decision_ts <= evaluation_time
         ):
             return "RESEARCH_TAIL_EVIDENCE_NOT_CAUSAL"
-        age = (intent.decision_ts - item.available_at).total_seconds()
+        age = (evaluation_time - item.available_at).total_seconds()
         if age > policy.max_evidence_age_seconds:
             return "RESEARCH_TAIL_EVIDENCE_STALE"
         if item.pump_gap_fraction is None or item.amihud_24_1h is None:
