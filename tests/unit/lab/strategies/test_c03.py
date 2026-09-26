@@ -191,3 +191,14 @@ def test_c03_stale_or_gapped_window_produces_flat():
         as_of=as_of + timedelta(hours=1),
     )
     assert c03_decide(old_frame, spec) == []
+
+
+def test_c03_hourly_window_accepts_equivalent_timestamp_precisions():
+    spec = load_c03_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    for unit in ("us", "ms", "s"):
+        df = _build_c03_bars(as_of=as_of, trend="positive")
+        for column in ("decision_ts", "row_ready_at"):
+            df[column] = df[column].dt.as_unit(unit)
+        frame = create_decision_frame(df, as_of=as_of)
+        assert len(c03_decide(frame, spec)) == 1

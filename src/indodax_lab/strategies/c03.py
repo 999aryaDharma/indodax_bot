@@ -77,7 +77,7 @@ def c03_decide(
             or timestamps.duplicated().any()
             or (ready_times > timestamps).any()
             or timestamps.iloc[-1] != pd.Timestamp(frame.as_of)
-            or not timestamps.astype("int64")
+            or not timestamps.dt.as_unit("ns").astype("int64")
             .diff()
             .iloc[1:]
             .eq(3_600_000_000_000)
