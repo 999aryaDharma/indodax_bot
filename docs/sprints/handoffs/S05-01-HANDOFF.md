@@ -1,6 +1,6 @@
 # S05-01 handoff
 
-Status: IN_PROGRESS
+Status: DONE
 
 ## Ownership record
 
@@ -8,8 +8,8 @@ Status: IN_PROGRESS
 - Implementation owner: Codex /root
 - Branch/worktree: `feat/feat-02-finalization` (shared checkout; no isolated worktree)
 - Base SHA: `7c8f0ef01f8962aab30af0f18d60c235ed2f54b2`
-- Requested paths: S05 config/source/test, public strategy exports, S05 spec/manifest/projections, this handoff
-- Independent reviewer: `/root/docs_review`
+- Implementation SHA: `096f2bda78434a2529644352bcdf1e61bdbbb5a1`
+- Independent reviewer: `/root/docs_review` — PASS on the exact implementation SHA.
 
 ## Candidate contract
 
@@ -23,6 +23,10 @@ Status: IN_PROGRESS
 - `pytest tests/unit/lab/strategies tests/unit/lab/features/test_registry.py tests/unit/lab/features/test_availability.py tests/integration/lab/test_feature_materialization.py tests/unit/lab/backtest/test_execution.py -q` — 175 passed.
 - Ruff for S05 source, tests and strategy exports — passed.
 - Public package import smoke check (`PYTHONPATH=src`) — passed.
-- Independent review and exact final source SHA: pending.
+- Independent reviewer: 5 tests and 15 additional probes passed; no Critical/Important findings.
+
+## External qualification gate
+
+Verify point-in-time `spread_bps` producer and provenance. Missing spread abstains and blocks candidate qualification/promotion. Portfolio backlog activation remains owner-controlled and outside the default scheduler.
 
 Other pre-existing dirty paths remain outside this sprint and were not staged.

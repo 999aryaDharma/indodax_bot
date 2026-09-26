@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/s05-01-micro-pullback`
 
@@ -41,12 +41,17 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `configs/features/tabular_bar_v1.yaml`
+- `docs/research/dataset-feature-contracts.md`
+- `docs/sprints/handoffs/SIM-01-HANDOFF.md`
+- `docs/sprints/handoffs/STRAT-01-HANDOFF.md`
 
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
+- Candidate defaults: 12h impulse `log_ret_12_1h >= 0.05`, one-hour pullback `-0.015 <= log_ret_1_1h <= -0.001`, maximum spread 25 bps, 2 ATR stop, Rp10,000 target notional. Missing spread abstains; spread producer qualification remains external. Partial quantity is owned by `ConservativeExecutionSimulator`, not the strategy.
 
 ## In Scope
 
@@ -77,7 +82,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Domain Rules / Invariants
 
-Short pullback within liquid impulse with spread-aware timing -> versioned LONG/FLAT intent, never direct orders.
+At `as_of`, require finite `log_ret_12_1h >= min_impulse_log_return`, `min_pullback_log_return <= log_ret_1_1h <= max_pullback_log_return < 0`, finite `0 <= spread_bps <= max_spread_bps`, finite positive close and ATR%, and `atr_pct_14_1h × atr_multiplier < 1`. Missing/unknown inputs abstain. Emit a BUY maker-limit intent at close sized to configured IDR target notional; stop is `close × (1 − atr_pct_14_1h × atr_multiplier)`. Shared execution simulator determines partial fills; strategy never upgrades a partial fill to full size or submits orders.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 

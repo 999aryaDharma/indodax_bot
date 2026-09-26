@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-S04-01, S05-01, S08-01, S09-01. Verify external gates and shared-file ownership before claim.
+S04-01, S08-01, S09-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -108,7 +108,7 @@ S04-01, S05-01, S08-01, S09-01. Verify external gates and shared-file ownership 
 - S02-01 — Squeeze expansion [REVIEW; CORE]
 - S03-01 — Abnormal volume continuation [DONE; EXTENSION]
 - S04-01 — Order flow imbalance [READY; EXPERIMENTAL]
-- S05-01 — Micro pullback [READY; EXTENSION]
+- S05-01 — Micro pullback [DONE; EXTENSION]
 - S06-01 — Post listing maturation [DONE; EXTENSION]
 - S08-01 — Passive mean reversion [READY; EXPERIMENTAL]
 - S09-01 — Tail risk abstention [READY; EXTENSION]

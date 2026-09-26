@@ -83,7 +83,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | S02-01 | Squeeze expansion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S02-01-squeeze-expansion.md) |
 | S03-01 | Abnormal volume continuation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S03-01-abnormal-volume-continuation.md) |
 | S04-01 | Order flow imbalance | strategies | P2 | feature | STRAT-01, LOB-01 | READY | [Spec](strategies\S04-01-order-flow-imbalance.md) |
-| S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S05-01-micro-pullback.md) |
+| S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S05-01-micro-pullback.md) |
 | S06-01 | Post listing maturation | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\S06-01-post-listing-maturation.md) |
 | S07-01 | Small cap rotation | strategies | P1 | feature | C04-01, S01-01 | PLANNED | [Spec](strategies\S07-01-small-cap-rotation.md) |
 | S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | READY | [Spec](strategies\S08-01-passive-mean-reversion.md) |
