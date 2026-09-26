@@ -334,6 +334,10 @@ def evaluate_multi_seed_runs(
             "BEST_SEED_SELECTION_FORBIDDEN: cherry-picking the best seed as finalist "
             "is forbidden by EVAL-02."
         )
+    canonical_selection = "worst" if normalized_selection == "min" else normalized_selection
+    if canonical_selection != policy.seed_aggregation_method:
+        raise ValueError("SEED_AGGREGATION_POLICY_MISMATCH")
+    normalized_selection = canonical_selection
 
     first_run = runs[0]
     run_ids = [run.run_id for run in runs]
@@ -399,12 +403,14 @@ def evaluate_multi_seed_runs(
 
     # Reuse the single-run validity boundary before aggregating. Unknown values,
     # failed runs and policy-invalid inputs must not be replaced with defaults.
+    seed_evaluations: list[EvaluationResult] = []
     for run in runs:
         validation = evaluate_run(run, policy, trial_count=len(runs))
         if validation.outcome == EvaluationOutcome.INVALID_RUN:
             return invalid_result(
                 f"MULTI_SEED_RUN_INVALID:{run.run_id}:{','.join(validation.reasons)}"
             )
+        seed_evaluations.append(validation)
 
     sharpes = [float(r.metrics.get("sharpe_ratio", 0.0)) for r in runs]
     pfs = [float(r.metrics.get("profit_factor", 0.0)) for r in runs]
@@ -464,12 +470,23 @@ def evaluate_multi_seed_runs(
     )
 
     eval_res = evaluate_run(rep_run, policy, trial_count=len(runs))
+    drawdown_breaches = [
+        result.run_id
+        for result in seed_evaluations
+        if "DRAWDOWN_EXCEEDS_THRESHOLD" in result.reasons
+    ]
+    overall_outcome = (
+        EvaluationOutcome.HARD_FAIL if drawdown_breaches else eval_res.outcome
+    )
+    reasons = list(eval_res.reasons)
+    if drawdown_breaches:
+        reasons.append("MULTI_SEED_DRAWDOWN_EXCEEDS_THRESHOLD:" + ",".join(drawdown_breaches))
 
     return MultiSeedEvaluationResult(
         candidate_id=first_run.candidate_id,
         seed_runs=[r.run_id for r in runs],
         aggregation_method=normalized_selection,
         finalist_metric=finalist_metric,
-        overall_outcome=eval_res.outcome,
-        reasons=eval_res.reasons,
+        overall_outcome=overall_outcome,
+        reasons=reasons,
     )

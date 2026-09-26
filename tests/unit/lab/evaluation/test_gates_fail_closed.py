@@ -279,6 +279,36 @@ def test_eval_02_multi_seed_rejects_failed_seed() -> None:
     assert any("RUN_FAILED_TECHNICAL" in reason for reason in result.reasons)
 
 
+def test_eval_02_multi_seed_median_cannot_hide_drawdown_breach() -> None:
+    runs = _seed_runs()
+    runs[0] = runs[0].model_copy(
+        update={"metrics": {**runs[0].metrics, "max_drawdown": 0.90}}
+    )
+
+    result = evaluate_multi_seed_runs(runs, EvaluationPolicy())
+
+    assert result.overall_outcome == EvaluationOutcome.HARD_FAIL
+    assert any("DRAWDOWN_EXCEEDS_THRESHOLD" in reason for reason in result.reasons)
+
+
+def test_eval_02_multi_seed_override_cannot_change_policy_method() -> None:
+    with pytest.raises(ValueError, match="SEED_AGGREGATION_POLICY_MISMATCH"):
+        evaluate_multi_seed_runs(
+            _seed_runs(),
+            EvaluationPolicy(seed_aggregation_method="worst"),
+            seed_selection="median",
+        )
+
+
+def test_eval_02_multi_seed_uses_versioned_policy_method_by_default() -> None:
+    result = evaluate_multi_seed_runs(
+        _seed_runs(), EvaluationPolicy(seed_aggregation_method="worst")
+    )
+
+    assert result.aggregation_method == "worst"
+    assert result.overall_outcome == EvaluationOutcome.NEAR_MISS
+
+
 def test_eval_02_multi_seed_rejects_missing_seed_metric() -> None:
     runs = _seed_runs()
     runs[0] = runs[0].model_copy(
