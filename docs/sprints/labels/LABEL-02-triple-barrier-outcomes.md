@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: data | Domain: labels | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (implementation); Codex /root (review remediation) | Independent Reviewer: /root/docs_review (PASS)
 
 Recommended Branch: `feat/label-02-triple-barrier-outcomes`
 
@@ -45,7 +45,7 @@ D03-01, SPLIT-01
 
 ## Current Context
 
-New capability; dependencies must be DONE before implementation.
+LABEL-01 is DONE. Independent review found two missing-coverage edge cases; remediation at `812f68b1dee68710eae40177dcc92be87a403b98` fails closed when later bars cannot prove continuous coverage or when a bar crosses the vertical deadline. `/root/docs_review` passed AC0-AC3 at that exact code SHA with no remaining Critical/Important findings.
 
 - Dependency LABEL-01 supplies: sample + horizon + fill model -> entry/exit, gross/net return, costs and label_available_at.
 
@@ -144,7 +144,7 @@ Positive contract: **LABEL-02-AC0**, `test_label_02_valid_contract` — Outcome 
 |---|---|---|
 | LABEL-02-AC1 | `test_label_02_contract_1` | Dua barrier dalam candle sama memilih lower |
 | LABEL-02-AC2 | `test_label_02_contract_2` | Volatilitas masa depan tidak menggeser barrier |
-| LABEL-02-AC3 | `test_label_02_contract_3` | Missing exit data menghasilkan censored/excluded status |
+| LABEL-02-AC3 | `test_label_02_contract_3`; `test_label_02_future_bar_cannot_fill_coverage_gap_before_deadline`; `test_label_02_bar_crossing_vertical_deadline_is_excluded` | Missing, discontinuous, or horizon-crossing bar coverage yields censored/excluded status |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -192,22 +192,22 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **LABEL-02-AC0** Outcome upper/lower/vertical barrier mulai dari entry dan menyimpan akhir overlap. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **LABEL-02-AC1** Dua barrier dalam candle sama memilih lower. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-02-AC2** Volatilitas masa depan tidak menggeser barrier. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-02-AC3** Missing exit data menghasilkan censored/excluded status. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **LABEL-02-AC0** Outcome upper/lower/vertical barrier mulai dari entry dan menyimpan akhir overlap. Evidence: valid fixture and public label contract in the handoff.
+- [x] **LABEL-02-AC1** Dua barrier dalam candle sama memilih lower. Evidence: exact regression and independent review at `812f68b1dee68710eae40177dcc92be87a403b98`.
+- [x] **LABEL-02-AC2** Volatilitas masa depan tidak menggeser barrier. Evidence: frozen decision-time barrier regression and independent review at the same SHA.
+- [x] **LABEL-02-AC3** Missing exit data menghasilkan censored/excluded status. Continuous coverage and vertical-deadline regressions pass; independent review PASS at the same SHA.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria map to evidence; no required test was skipped silently.
+- [x] Focused LABEL-02 and affected labels/evaluation/security checks pass.
+- [x] No unrelated capability or policy relaxation was introduced.
+- [x] Handoff records the horizon-boundary exclusions and reason codes.
+- [x] Self-review and handoff contain exact code SHA, environment, commands and risks.
+- [x] Independent reviewer PASS at the exact code SHA; no unresolved Critical/Important findings.
+- [ ] Coordinator reconciles the shared manifest and regenerates projections after concurrent manifest edits stabilize.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

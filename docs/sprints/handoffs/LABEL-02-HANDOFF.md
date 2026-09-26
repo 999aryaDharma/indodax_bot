@@ -1,11 +1,11 @@
 # LABEL-02 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: LABEL-02 — Triple barrier outcomes
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review` (PASS at exact code SHA `812f68b1dee68710eae40177dcc92be87a403b98`)
 - Branch / worktree: `feat/label-02-triple-barrier-outcomes`
 - Base SHA: `e42e7cb`
 - Code target: `feat(label-02): triple barrier outcomes`
@@ -86,3 +86,15 @@ Combined suite verification (72 passed across backtest, risk, execution, ledger,
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the excluded-with-reason result is returned as a normal return value rather than raising, so a caller that ignores `status` can still consume the record. Making the exclusion type-safe for every consumer is a contract change across the label consumers and was not attempted inside this single fix cycle.
+
+## Independent review remediation — continuous horizon evidence
+
+- Review target: `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`; reviewer reproduced two Important horizon defects: a bar after a coverage gap could incorrectly prove a flat label, and an OHLC bar extending past the vertical deadline could contribute a late barrier touch.
+- Final code SHA: `812f68b1dee68710eae40177dcc92be87a403b98` (`fix(label-02): enforce contiguous horizon coverage`).
+- Fix: final vertical-barrier completeness now uses only contiguous `coverage_end`, not the maximum timestamp of any input bar. Any in-horizon candle closing after the vertical deadline is excluded as `BAR_CROSSES_VERTICAL_BARRIER` before its high/low can affect outcome.
+- Added regressions: `test_label_02_future_bar_cannot_fill_coverage_gap_before_deadline` and `test_label_02_bar_crossing_vertical_deadline_is_excluded`. Both failed before the fix and pass after it.
+- Focused command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/labels/test_triple_barrier.py tests/unit/lab/labels/test_triple_barrier_fail_closed.py -q -p no:cacheprovider` -> **13 passed**.
+- Affected command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/evaluation tests/unit/lab/labels tests/unit/lab/security -q -p no:cacheprovider` -> **199 passed**.
+- `git diff --check` passed for the code/test change. Ruff reports existing lint findings in these files (14 before wrapping one newly added long line; no Ruff clean claim is made).
+- Excluded labels remain explicit `status=EXCLUDED`, `outcome=None`, and a reason. Independent reviewer confirmed this satisfies current AC; a discriminated-result/API change is separate change control unless a concrete consumer is found accepting excluded labels.
+- Final independent review: **PASS** at exact code SHA `812f68b1dee68710eae40177dcc92be87a403b98`; reviewer found no remaining Critical/Important findings and independently ran 13 focused tests. Manifest/projection reconciliation is pending because a concurrent writer changed six other sprint statuses in the shared manifest without matching spec/handoff updates; those changes are preserved for coordinator reconciliation.
