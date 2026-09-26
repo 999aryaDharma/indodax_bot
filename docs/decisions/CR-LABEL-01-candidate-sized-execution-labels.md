@@ -9,7 +9,7 @@ Independent review found LABEL-01 can mark a sample valid from raw open prices w
 ## Decision
 
 - Each sample supplies its candidate-generated frozen `SignalIntent` and immutable candidate bundle ID. `desired_qty` is that sample's strategy sizing output. No fixed-size or implicit proxy fallback is permitted.
-- Resolve `(candidate_bundle_id, sample_id)` against the authoritative immutable candidate/sample registry, then match registration ID, candidate bundle, strategy, intent ID, pair and decision time before labeling. Reuse identity governed by accepted ADR-006; do not create a parallel identity system.
+- Resolve `(candidate_bundle_id, sample_id)` against the authoritative immutable candidate/sample registry, preserve its registration ID in output, and match bundle, strategy, intent ID, pair and decision time before labeling. Reuse identity governed by accepted ADR-006; do not create a parallel identity system.
 - Simulate the BUY intent and, at the configured horizon after actual entry fill, a SELL for the quantity actually acquired. Use actual shared-simulator fills, fees and execution timestamps/prices in the outcome.
 - No entry fill, no exit fill, or exit quantity that does not fully close acquired quantity yields `EXCLUDED` with a stable reason code. A partial entry may be labeled for actual filled quantity only when the horizon exit fully closes it.
 - The target is the candidate entry's fixed-horizon outcome. It is not full-strategy PnL and does not apply candidate SL/TP before the horizon. SL/TP remain lineage inputs but do not trigger this target.

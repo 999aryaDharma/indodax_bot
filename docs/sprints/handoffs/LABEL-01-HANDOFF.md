@@ -76,7 +76,7 @@ AC1 and AC2 pass. Independent focused label tests: 21 passed, but passing tests 
 ### Registry lineage, availability and fee provenance remediation
 
 - Code commit: `b177691d19713b901d3a4f2f1b8a5d38779efe0a` (`fix(label-01): validate sample lineage and provenance`).
-- Public label builder now requires `resolve_registration(bundle_id, sample_id)` and compares the resolved immutable registry record's registration ID, bundle, strategy, sample, intent, pair and decision timestamp. An unresolved bundle/sample is rejected before simulation. The resolver is an injected trusted adapter; this sprint adds no parallel candidate registry or storage.
+- Public label builder now requires `resolve_registration(bundle_id, sample_id)`, compares the resolved immutable registry record's bundle, strategy, sample, intent, pair and decision timestamp, and retains its registration ID in output. An unresolved bundle/sample is rejected before simulation. The resolver is an injected trusted adapter; this sprint adds no parallel candidate registry or storage.
 - V2 rows retain `registration_id`, the schedule-set ID/version, and separate applied entry/exit fee interval IDs. `label_available_at` is the maximum availability of every source bar consulted through the horizon exit.
 - Regressions cover unknown bundle, sample/intent identity mismatch, delayed intermediate source, and the actual applied entry/exit intervals.
 - Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,107 passed, 2 platform-specific skipped, 4 warnings.
