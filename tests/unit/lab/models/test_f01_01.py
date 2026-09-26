@@ -110,3 +110,22 @@ def test_f01_01_contract_3() -> None:
     result = gate.verify_provenance(provenance=provenance, weight_bytes=weights)
     assert result.status == FoundationArtifactStatus.VERIFIED
     assert result.checksum_verified is True
+
+
+def test_f01_01_empty_revision_rejected_fail_closed() -> None:
+    """F01-01 regression: empty/blank revision must never verify (fail-closed)."""
+    dummy_weights = b"mock_foundation_weights_empty_revision"
+    computed_sha = hashlib.sha256(dummy_weights).hexdigest()
+    gate = FoundationProvenanceGate()
+
+    for bad_revision in ("", "   "):
+        with pytest.raises(ValueError, match="REVISION"):
+            provenance = FoundationModelProvenance(
+                model_name="chronos-t5-small",
+                revision=bad_revision,
+                expected_sha256=computed_sha,
+                license_spdx="Apache-2.0",
+                release_date=datetime(2024, 3, 1, 0, 0, tzinfo=UTC),
+                training_cutoff_date=datetime(2024, 1, 1, 0, 0, tzinfo=UTC),
+            )
+            gate.verify_provenance(provenance=provenance, weight_bytes=dummy_weights)

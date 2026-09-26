@@ -81,6 +81,15 @@ class FoundationModelProvenance(BaseModel):
                 raise ValueError("UTC_AWARE_DATETIME_REQUIRED")
         return v
 
+    @field_validator("revision", mode="after")
+    @classmethod
+    def validate_revision(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError(
+                "MISSING_REVISION: Foundation model revision must be a non-empty immutable identifier"
+            )
+        return v
+
 
 class VerificationResult(BaseModel):
     """Outcome of foundation model provenance and byte integrity check."""
@@ -114,6 +123,12 @@ class FoundationProvenanceGate:
         weight_path: Path | None = None,
     ) -> VerificationResult:
         """Verify provenance metadata and raw byte checksum."""
+        # 0. Revision identity check (fail-closed: empty revision never verifies)
+        if not provenance.revision or not provenance.revision.strip():
+            raise ValueError(
+                "MISSING_REVISION: Foundation model revision must be a non-empty immutable identifier"
+            )
+
         # 1. License check
         if provenance.license_spdx not in self.approved_licenses:
             raise IncompatibleLicenseError(

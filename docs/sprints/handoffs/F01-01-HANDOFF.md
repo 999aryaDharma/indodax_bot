@@ -52,3 +52,14 @@ Full lab suite verification: 243 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for F01-01.
 - Next unlocked consumers: F01-02.
+
+## Fix cycle — empty revision fail-closed (2026-09-26)
+- Finding F01-01: `revision=""` / blank constructed successfully and `verify_provenance` returned `VERIFIED` (spec `15-deep-learning-and-provenance.md`: "Missing revision/hash/license rejects load").
+- Fix owner: opencode/muse-spark-1.3-contributor-free | Branch: `fix/f01-01-revision-empty` | Base SHA: `fa6d4b5` | Worktree: `.worktrees/fix-f01-01` (main checkout untouched).
+- Files:
+  - `src/indodax_lab/models/foundation/provenance.py` — `validate_revision` field_validator (reject empty/blank with `MISSING_REVISION`) + defensive fail-closed check at top of `verify_provenance`.
+  - `tests/unit/lab/models/test_f01_01.py` — regression `test_f01_01_empty_revision_rejected_fail_closed` ("" and "   " must raise `ValueError` match `REVISION` at construct or verify).
+- TDD RED→GREEN:
+  - RED: `python -m pytest tests/unit/lab/models/test_f01_01.py::test_f01_01_empty_revision_rejected_fail_closed -q` → Exit 1 (`Failed: DID NOT RAISE ValueError`); plus direct repro `verify_provenance(revision="")` → `STATUS= verified`.
+  - GREEN: `python -m pytest tests/unit/lab/models/test_f01_01.py -q` → Exit 0, 5 passed.
+- Scope: L01-01 untouched. No push. Lint: ruff unavailable in host (capability gap, `python -m ruff` → No module named ruff); diff check clean via `git diff --stat`.
