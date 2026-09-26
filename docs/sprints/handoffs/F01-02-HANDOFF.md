@@ -51,3 +51,14 @@ Full lab suite verification: 251 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for F01-02.
 - Next unlocked consumers: Research comparison complete.
+
+## Fix cycle — cutoff-unknown bypass closed (2026-09-26)
+- Finding F01-02: `_validate_timestamps` returned early when `training_cutoff_date is None`, so `run_zero_shot`/`run_frozen_probe`/`run_bounded_adapter` accepted sealed evaluations on unknown-cutoff models (bypass of AC3 / F01-01 promotion block).
+- Fix owner: opencode/muse-spark-1.3-contributor-free | Branch: `fix/f01-02-cutoff-unknown` | Base SHA: `fa6d4b5` | Worktree: `.worktrees/fix-f01-02` (main checkout untouched).
+- Files:
+  - `src/indodax_lab/models/foundation/f01_kronos.py` — `_validate_timestamps` now raises `ContaminatedDatesClaimError(CONTAMINATED_DATES_FORBIDDEN: Unknown training cutoff...)` fail-closed instead of `return`.
+  - `tests/unit/lab/models/test_f01_02.py` — regression `test_f01_02_unknown_cutoff_blocks_sealed_claim`.
+- TDD RED→GREEN:
+  - RED: new test → Exit 1 (`Failed: DID NOT RAISE ContaminatedDatesClaimError`); direct repro with cutoff None → `ZERO_SHOT_OK`.
+  - GREEN: `python -m pytest tests/unit/lab/models/test_f01_02.py -q` → Exit 0, 5 passed.
+- Scope: F01-01 files untouched from this worktree; L01-01 untouched. No push.

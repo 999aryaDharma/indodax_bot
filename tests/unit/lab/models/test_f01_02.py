@@ -170,3 +170,23 @@ def test_f01_02_contract_3() -> None:
     # Attempting to claim benchmark on contaminated dates must fail
     with pytest.raises(ContaminatedDatesClaimError, match="CONTAMINATED_DATES_FORBIDDEN"):
         adapter.run_zero_shot(test_x=test_x, test_y=test_y, test_timestamps=contaminated_ts)
+
+
+def test_f01_02_unknown_cutoff_blocks_sealed_claim() -> None:
+    """F01-02 regression: unknown cutoff must block sealed evaluation fail-closed."""
+    from indodax_lab.models.foundation.provenance import FoundationModelProvenance
+
+    provenance_unknown = FoundationModelProvenance(
+        model_name="external-blackbox-model",
+        revision="r12",
+        expected_sha256="ab" * 32,
+        license_spdx="MIT",
+        release_date=datetime(2024, 6, 1, 0, 0, tzinfo=UTC),
+        training_cutoff_date=None,
+    )
+    test_x, test_y, test_ts = _generate_synthetic_foundation_features(
+        n_samples=20, start_dt=datetime(2024, 7, 1, 0, 0, tzinfo=UTC)
+    )
+    adapter = StagedFoundationAdapter(provenance=provenance_unknown)
+    with pytest.raises(ContaminatedDatesClaimError, match="CONTAMINATED_DATES_FORBIDDEN"):
+        adapter.run_zero_shot(test_x=test_x, test_y=test_y, test_timestamps=test_ts)

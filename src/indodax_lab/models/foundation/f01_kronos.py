@@ -108,7 +108,10 @@ class StagedFoundationAdapter:
     def _validate_timestamps(self, timestamps: list[datetime]) -> None:
         """Validate that all test observations strictly occur after training cutoff."""
         if self.provenance.training_cutoff_date is None:
-            return
+            raise ContaminatedDatesClaimError(
+                "CONTAMINATED_DATES_FORBIDDEN: Unknown training cutoff; sealed benchmark "
+                "claims are blocked fail-closed until cutoff is declared."
+            )
 
         cutoff = self.provenance.training_cutoff_date
         for ts in timestamps:
