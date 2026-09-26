@@ -8027,7 +8027,10 @@
         "Missing/unapproved thresholds or pump-gap provenance fail closed and block qualification"
       ],
       "files": [
-        "docs/decisions/CR-S09-risk-gate-ownership.md"
+        "src/indodax_lab/paper/live_shadow_engine.py",
+        "tests/unit/lab/paper/test_live_shadow_engine_governance.py",
+        "docs/decisions/CR-S09-risk-gate-ownership.md",
+        "docs/sprints/handoffs/S09-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
@@ -8051,7 +8054,7 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "Owner approved the Research-only risk-authority boundary on 2026-09-27. Implementation may proceed on integration and durable period/history semantics. Numeric pump-gap threshold and evidence-age limit plus registered producer/provenance are unresolved; until frozen in a versioned Research policy, BUY evaluation fails closed and S09 is not qualification eligible. Eligible exits remain available. No Production/runtime changes.",
+      "current_context": "CR-S09 Research-only risk-authority boundary is approved. Partial implementation at code SHA 3b678e9ba4ad8a9e655869616157ddf9fb2e67c3 adds durable risk-period IDs, preserves closed trades/breach events, rejects reset with open positions, and restores in-memory state on checkpoint failure. AC0/AC1/AC3 remain incomplete. Numeric pump-gap threshold/evidence age and producer/provenance remain unresolved; no S09 evaluation or qualification until frozen. No Production/runtime changes.",
       "external_gates": [
         "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
         "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
@@ -8073,8 +8076,8 @@
         },
         {
           "criterion": "S09-01-AC2",
-          "test_case": "Risk-period persistence and reset authorization regressions",
-          "behavior": "New risk period requires separate explicit operator approval and preserves prior breach-period records across restart.",
+          "test_case": "test_shadow_new_risk_period_preserves_breaches_and_closed_trades; test_shadow_risk_period_reset_requires_closed_portfolio; test_shadow_failed_period_reset_restores_in_memory_state",
+          "behavior": "New risk period requires separate explicit operator approval, requires positions to be closed, and preserves prior breach-period and closed-trade records across restart.",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {
