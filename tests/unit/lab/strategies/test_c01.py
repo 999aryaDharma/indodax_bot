@@ -2,12 +2,12 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pandas as pd
-import pytest
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
-from indodax_lab.strategies.base import DecisionFrame, StrategySpecification, create_decision_frame
+from indodax_lab.strategies.base import create_decision_frame
 from indodax_lab.strategies.c01 import c01_decide, load_c01_specification
 
 
@@ -62,7 +62,7 @@ def _build_test_bars(
 
 
 def test_c01_01_valid_contract():
-    """C01-01-AC0: Kandidat C01 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama."""
+    """C01-01-AC0: Emit a valid intent for the shared baseline judge."""
     spec = load_c01_specification()
     assert spec.strategy_id == "C01"
     assert spec.family == "breakout"
@@ -92,7 +92,7 @@ def test_c01_01_contract_1():
     spec = load_c01_specification()
     # 25 bars. Bars 0..23 have high = 101,000,000.
     # Bar 24 (current) has high = 105,000,000 and close = 102,000,000.
-    # If current bar WERE included in previous high, threshold would be 105m and close 102m would NOT breakout.
+    # Including the current high would make the 102m close fail the 105m threshold.
     # Because current bar is NOT included, threshold is 101m and close 102m DOES breakout!
     df = _build_test_bars(n_bars=25, breakout_on_last=True)
     # Set current bar high very high
@@ -103,7 +103,7 @@ def test_c01_01_contract_1():
     frame = create_decision_frame(df, as_of=as_of)
 
     intents = c01_decide(frame, spec)
-    assert len(intents) == 1, "Breakout should be confirmed because current bar high must not be in threshold"
+    assert len(intents) == 1, "Current bar high must not enter the breakout threshold"
     assert intents[0].side == OrderSide.BUY
 
 
@@ -289,3 +289,33 @@ def test_c01_atr_missing_or_zero_produces_flat():
     
     # Must produce FLAT when ATR == 0
     assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"
+
+
+def test_c01_nonfinite_or_oversized_atr_produces_flat():
+    spec = load_c01_specification()
+    for atr in (float("nan"), float("inf"), 100_000_000.0):
+        df = _build_test_bars(n_bars=25)
+        df.loc[df.index[-1], "atr_14"] = atr
+        frame = create_decision_frame(df, as_of=df["decision_ts"].max())
+        assert c01_decide(frame, spec) == []
+
+
+def test_c01_missing_lookback_and_nonfinite_volume_produce_flat():
+    spec = load_c01_specification()
+    for column, row_index, value in (
+        ("high", 10, float("nan")),
+        ("base_volume", 10, float("nan")),
+        ("base_volume", 24, float("inf")),
+    ):
+        df = _build_test_bars(n_bars=25)
+        df.loc[row_index, column] = value
+        frame = create_decision_frame(df, as_of=df["decision_ts"].max())
+        assert c01_decide(frame, spec) == []
+
+
+def test_c01_incomplete_latest_row_does_not_replay_prior_breakout():
+    spec = load_c01_specification()
+    df = _build_test_bars(n_bars=26, incomplete_last=True)
+    df.loc[24, ["close", "high", "base_volume"]] = [103_000_000.0, 104_000_000.0, 200.0]
+    frame = create_decision_frame(df, as_of=df["decision_ts"].max())
+    assert c01_decide(frame, spec) == []
