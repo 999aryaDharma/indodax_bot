@@ -30,10 +30,26 @@ def c11_decide(
     params = spec.parameters
     volatility_feature = str(params.get("volatility_feature", "rv_24_1h"))
     price_feature = str(params.get("price_feature", "close"))
-    min_pairs = int(params.get("minimum_valid_pairs", 2))
-    deployment = Decimal(str(params.get("deployment_fraction", "0.50")))
-    pair_cap = cash * Decimal(str(params.get("max_pair_fraction", "0.25")))
-    min_notional = Decimal(str(params.get("min_notional_idr", "10000")))
+    try:
+        min_pairs = int(params.get("minimum_valid_pairs", 2))
+        deployment = Decimal(str(params.get("deployment_fraction", "0.50")))
+        pair_fraction = Decimal(str(params.get("max_pair_fraction", "0.25")))
+        min_notional = Decimal(str(params.get("min_notional_idr", "10000")))
+    except (DecimalException, TypeError, ValueError) as exc:
+        raise ValueError("INVALID_C11_ALLOCATION_PARAMETERS") from exc
+    if (
+        min_pairs < 2
+        or not deployment.is_finite()
+        or deployment <= 0
+        or deployment > Decimal("0.50")
+        or not pair_fraction.is_finite()
+        or pair_fraction <= 0
+        or pair_fraction > Decimal("0.25")
+        or not min_notional.is_finite()
+        or min_notional <= 0
+    ):
+        raise ValueError("INVALID_C11_ALLOCATION_PARAMETERS")
+    pair_cap = cash * pair_fraction
     pool = cash * deployment
 
     candidates: list[tuple[str, Decimal, Decimal]] = []
@@ -44,7 +60,7 @@ def c11_decide(
         try:
             rv = Decimal(str(row[volatility_feature]))
             price = Decimal(str(row[price_feature]))
-        except (KeyError, TypeError, ValueError):
+        except (DecimalException, KeyError, TypeError, ValueError):
             continue
         if not rv.is_finite() or rv <= 0 or not price.is_finite() or price <= 0:
             continue
@@ -71,7 +87,8 @@ def c11_decide(
                 quantity = quantity.next_minus()
         except DecimalException:
             continue
-        if quantity <= 0:
+        notional = quantity * price
+        if quantity <= 0 or notional < min_notional or notional > allocation:
             continue
         intents.append(
             SignalIntent(
@@ -84,5 +101,5 @@ def c11_decide(
                 strategy_id=spec.strategy_id,
             )
         )
-        remaining -= quantity * price
+        remaining -= notional
     return intents
