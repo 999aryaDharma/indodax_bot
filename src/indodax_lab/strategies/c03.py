@@ -6,8 +6,10 @@ Positive lookback return with volatility target and cash fallback -> versioned L
 
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
+
 import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
@@ -57,9 +59,18 @@ def c03_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         curr_close = float(curr_row["close"])
         start_close = float(start_row["close"])
+        if (
+            not math.isfinite(curr_close)
+            or not math.isfinite(start_close)
+            or curr_close <= 0
+            or start_close <= 0
+        ):
+            continue
 
-        # Lookback momentum return
+        # Lookback momentum return (fail-closed: degenerate start already excluded)
         mom_return = (curr_close - start_close) / start_close
+        if not math.isfinite(mom_return):
+            continue
 
         # C03-01-AC1: Negative momentum remains cash
         if mom_return <= 0.0:
@@ -70,7 +81,7 @@ def c03_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         realized_vol = float(pct_changes.std(ddof=1))
 
         # C03-01-AC2: Zero volatility gives reject
-        if realized_vol <= 0.0 or pd.isna(realized_vol):
+        if realized_vol <= 0.0 or pd.isna(realized_vol) or not math.isfinite(realized_vol):
             continue
 
         # Volatility-targeted sizing: scale inversely to realized volatility
@@ -79,8 +90,18 @@ def c03_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         if desired_qty <= Decimal("0"):
             continue
 
-        atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
-        stop_loss = max(0.0, curr_close - atr_mult * atr_val)
+        atr_raw = curr_row.get("atr_14", curr_row.get("atr"))
+        if atr_raw is None or pd.isna(atr_raw):
+            continue
+        try:
+            atr_val = float(atr_raw)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(atr_val) or atr_val <= 0:
+            continue
+        stop_loss = curr_close - atr_mult * atr_val
+        if not math.isfinite(stop_loss) or stop_loss <= 0 or stop_loss >= curr_close:
+            continue
 
         intent = SignalIntent(
             intent_id=f"c03_{pair}_{int(frame.as_of.timestamp())}",
