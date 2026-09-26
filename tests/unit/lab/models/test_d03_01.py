@@ -166,3 +166,114 @@ def test_d03_01_contract_3() -> None:
     assert utility_comp.sample_count == 6
     assert isinstance(utility_comp.model_net_utility, float)
     assert utility_comp.cost_basis_evaluated == 0.0040
+
+
+def _build_fold_fixture(n_samples: int = 12):
+    """Build sample records + SPLIT-01 policy aligned to synthetic sequence rows."""
+    from datetime import timedelta
+
+    from indodax_lab.labels.splits import (
+        FoldWindow,
+        SampleRecord,
+        SampleRole,
+        SplitPolicy,
+    )
+
+    base = datetime(2024, 1, 1, tzinfo=UTC)
+    records: list[SampleRecord] = []
+    for i in range(n_samples):
+        decision_ts = base + timedelta(hours=i * 12)
+        # Boundary crosser at i == 5: label resolves past the TRAIN fold end -> PURGED.
+        if i == 5:
+            label_end = base + timedelta(days=6)
+            available = base + timedelta(days=6)
+        else:
+            label_end = decision_ts + timedelta(hours=6)
+            available = decision_ts + timedelta(hours=8)
+        records.append(
+            SampleRecord(
+                sample_id=f"d03_sample_{i:03d}",
+                decision_ts=decision_ts,
+                label_end_ts=label_end,
+                pair="BTC_IDR",
+                label_available_at=available,
+            )
+        )
+    policy = SplitPolicy(
+        policy_id="d03-common",
+        version="1",
+        max_horizon_hours=24,
+        embargo_hours=24,
+        folds=[
+            FoldWindow(
+                role=SampleRole.TRAIN,
+                start_ts=base,
+                end_ts=base + timedelta(days=4),
+            ),
+            FoldWindow(
+                role=SampleRole.VALIDATION,
+                start_ts=base + timedelta(days=4),
+                end_ts=base + timedelta(days=8),
+            ),
+        ],
+    )
+    return records, policy
+
+
+def test_d03_01_contract_3_common_folds_used() -> None:
+    """D03-01-AC3 regression: evaluation must consume common SPLIT-01 folds.
+
+    Boundary-crossing samples are PURGED by the shared fold assigner and never
+    enter the cost-aware utility; the surviving VALIDATION slice is evaluated
+    under the common cost basis.
+    """
+    inputs, masks, targets = _generate_synthetic_sequences(n_samples=12)
+    records, policy = _build_fold_fixture(n_samples=12)
+
+    config = ResNetLSTMConfig(
+        input_dim=4, conv_channels=(8,), lstm_hidden_dim=8,
+        max_epochs=4, patience=2,
+    )
+    trainer = ResNetLSTMTrainer(config=config)
+    trainer.fit(
+        train_inputs=inputs[:8], train_masks=masks[:8], train_targets=targets[:8],
+        val_inputs=inputs[8:], val_masks=masks[8:], val_targets=targets[8:],
+    )
+
+    cost_basis = CostBasis(estimated_round_trip_cost=0.0040, safety_margin=0.0015)
+    mapper = CostAwareExecutionMapper(cost_basis=cost_basis)
+    fold_eval = trainer.evaluate_on_common_folds(
+        inputs=inputs, masks=masks, targets=targets,
+        samples=records, split_policy=policy, mapper=mapper,
+    )
+
+    assert fold_eval.purged_count == 1, "boundary crosser must be purged by common folds"
+    assert fold_eval.validation_count > 0
+    assert fold_eval.evaluated_sample_count == fold_eval.validation_count
+    assert "d03_sample_005" not in fold_eval.evaluated_sample_ids
+    assert fold_eval.cost_basis_evaluated == 0.0040
+    assert fold_eval.split_id != ""
+    assert fold_eval.policy_id == "d03-common"
+
+
+def test_d03_01_contract_3_compute_budget_logged() -> None:
+    """D03-01-AC3 regression: fitted bundle must log parameter + compute budget."""
+    inputs, masks, targets = _generate_synthetic_sequences(n_samples=20)
+
+    config = ResNetLSTMConfig(
+        input_dim=4, conv_channels=(8,), lstm_hidden_dim=8,
+        max_epochs=4, patience=2,
+    )
+    trainer = ResNetLSTMTrainer(config=config)
+    bundle = trainer.fit(
+        train_inputs=inputs[:14], train_masks=masks[:14], train_targets=targets[:14],
+        val_inputs=inputs[14:], val_masks=masks[14:], val_targets=targets[14:],
+    )
+
+    budget = bundle.compute_budget
+    assert budget.total_trainable_parameters == bundle.total_parameters > 0
+    assert budget.estimated_flops_per_sequence > 0
+    assert budget.channels == [8]
+    assert budget.kernel_size == 3
+    assert budget.lstm_hidden_dim == 8
+    assert budget.seq_len == inputs.shape[1]

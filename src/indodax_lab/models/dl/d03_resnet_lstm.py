@@ -26,6 +26,12 @@ from indodax_lab.models.execution_mapper import (
     ForecastPayload,
     PayoffStructure,
 )
+from indodax_lab.labels.splits import (
+    SampleRecord,
+    SampleRole,
+    SplitPolicy,
+    assign_folds,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +94,41 @@ class ResNetLSTMUtilityComparison(BaseModel):
     evaluated_at_utc: datetime
 
 
+class ResNetLSTMComputeBudgetSummary(BaseModel):
+    """Parameter and compute budget summary for the ResNet LSTM challenger."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    total_trainable_parameters: int
+    estimated_flops_per_sequence: int
+    num_conv_blocks: int
+    channels: list[int]
+    kernel_size: int
+    lstm_hidden_dim: int
+    lstm_layers: int
+    seq_len: int
+
+
+class ResNetLSTMFoldEvaluation(BaseModel):
+    """Cost-aware utility bound to a common SPLIT-01 fold manifest."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    split_id: str
+    policy_id: str
+    policy_version: str
+    train_count: int
+    validation_count: int
+    sealed_test_count: int
+    purged_count: int
+    embargoed_count: int
+    evaluated_sample_ids: list[str]
+    evaluated_sample_count: int
+    model_net_utility: float
+    cost_basis_evaluated: float
+    evaluated_at_utc: datetime
+
+
 class ResNetLSTMTrainedBundle(BaseModel):
     """Immutable bundle containing trained weights and configuration."""
 
@@ -97,6 +138,7 @@ class ResNetLSTMTrainedBundle(BaseModel):
     total_parameters: int
     best_epoch: int
     best_val_loss: float
+    compute_budget: ResNetLSTMComputeBudgetSummary
     bundle_hash: str
     fitted_at_utc: datetime
 
@@ -203,6 +245,41 @@ class ResNetLSTMModel:
 
                 return self.head(rep).squeeze(-1)
 
+            def get_compute_budget_summary(self, seq_len: int) -> Any:
+                total_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+                # Estimated FLOPs per sequence (multiply-accumulate counted as 2 FLOPs):
+                # - residual temporal conv blocks over seq_len steps (plus 1x1
+                #   residual projection when channels change);
+                # - unidirectional LSTM gates per step per layer;
+                # - single-logit readout head.
+                flops = 0
+                in_ch = config.input_dim
+                for ch in config.conv_channels:
+                    flops += 2 * in_ch * ch * config.kernel_size * seq_len
+                    if in_ch != ch:
+                        flops += 2 * in_ch * ch * seq_len
+                    in_ch = ch
+                lstm_in = in_ch
+                for _ in range(config.lstm_layers):
+                    flops += (
+                        2 * 4 * (lstm_in * config.lstm_hidden_dim + config.lstm_hidden_dim**2)
+                        + 2 * 4 * config.lstm_hidden_dim
+                    ) * seq_len
+                    lstm_in = config.lstm_hidden_dim
+                flops += 2 * config.lstm_hidden_dim
+
+                return ResNetLSTMComputeBudgetSummary(
+                    total_trainable_parameters=total_params,
+                    estimated_flops_per_sequence=flops,
+                    num_conv_blocks=len(config.conv_channels),
+                    channels=list(config.conv_channels),
+                    kernel_size=config.kernel_size,
+                    lstm_hidden_dim=config.lstm_hidden_dim,
+                    lstm_layers=config.lstm_layers,
+                    seq_len=seq_len,
+                )
+
         return _ResNetLSTMModelModule()
 
 
@@ -285,12 +362,14 @@ class ResNetLSTMTrainer:
         self._model = model
 
         total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        compute_budget = model.get_compute_budget_summary(seq_len=train_inputs.shape[1])
 
         hash_payload = {
             "config": self.config.model_dump(mode="json"),
             "best_epoch": tracker.best_epoch,
             "best_val_loss": tracker.best_val_loss,
             "total_params": total_params,
+            "compute_budget": compute_budget.model_dump(mode="json"),
         }
         bundle_hash = hashlib.sha256(json.dumps(hash_payload, sort_keys=True).encode("utf-8")).hexdigest()
 
@@ -299,6 +378,7 @@ class ResNetLSTMTrainer:
             total_parameters=total_params,
             best_epoch=tracker.best_epoch,
             best_val_loss=tracker.best_val_loss,
+            compute_budget=compute_budget,
             bundle_hash=bundle_hash,
             fitted_at_utc=datetime.now(UTC),
         )
@@ -368,5 +448,55 @@ class ResNetLSTMTrainer:
             sample_count=len(inputs),
             model_net_utility=net_utility,
             cost_basis_evaluated=cost,
+            evaluated_at_utc=datetime.now(UTC),
+        )
+
+    def evaluate_on_common_folds(
+        self,
+        inputs: np.ndarray,
+        masks: np.ndarray | None,
+        targets: np.ndarray,
+        samples: list[SampleRecord],
+        split_policy: SplitPolicy,
+        mapper: CostAwareExecutionMapper,
+    ) -> ResNetLSTMFoldEvaluation:
+        """Evaluate cost-aware utility on the VALIDATION slice of common SPLIT-01 folds.
+
+        Rows are aligned to ``samples`` by position; the shared ``assign_folds``
+        manifest decides roles, so boundary-crossing (PURGED) and embargoed rows
+        never enter the utility. Fails closed when no clean VALIDATION row survives.
+        """
+        if len(samples) != len(inputs):
+            raise ValueError(
+                f"SAMPLE_COUNT_MISMATCH: {len(samples)} sample records != {len(inputs)} input rows"
+            )
+        manifest = assign_folds(samples, split_policy)
+        index_by_id = {s.sample_id: i for i, s in enumerate(samples)}
+        # Keep only rows the shared manifest marks VALIDATION; PURGED, EMBARGOED,
+        # EXCLUDED and other roles never enter the utility.
+        evaluated_ids = [
+            sid for sid, assignment in manifest.assignments.items()
+            if assignment.role == SampleRole.VALIDATION and sid in index_by_id
+        ]
+        if not evaluated_ids:
+            raise ValueError("NO_CLEAN_VALIDATION_ROWS: common folds purged every validation sample")
+        rows = [index_by_id[sid] for sid in evaluated_ids]
+        sub_inputs = inputs[rows]
+        sub_masks = masks[rows] if masks is not None else None
+        sub_targets = targets[rows]
+        utility = self.evaluate_cost_aware_utility(sub_inputs, sub_masks, sub_targets, mapper)
+        return ResNetLSTMFoldEvaluation(
+            split_id=manifest.split_id,
+            policy_id=manifest.policy_id,
+            policy_version=manifest.policy_version,
+            train_count=manifest.train_count,
+            validation_count=manifest.validation_count,
+            sealed_test_count=manifest.sealed_test_count,
+            purged_count=manifest.purged_count,
+            embargoed_count=manifest.embargoed_count,
+            evaluated_sample_ids=evaluated_ids,
+            evaluated_sample_count=len(evaluated_ids),
+            model_net_utility=utility.model_net_utility,
+            cost_basis_evaluated=utility.cost_basis_evaluated,
             evaluated_at_utc=datetime.now(UTC),
         )
