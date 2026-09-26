@@ -100,30 +100,47 @@ def s04_decide(
 
         event_ts = _utc_timestamp(row.get("book_event_ts"))
         available_at = _utc_timestamp(row.get("book_available_at"))
-        if event_ts is None or available_at is None:
+        decision_ts = _utc_timestamp(row.get("decision_ts"))
+        row_ready_at = _utc_timestamp(row.get("row_ready_at"))
+        if (
+            event_ts is None
+            or available_at is None
+            or decision_ts is None
+            or row_ready_at is None
+        ):
             continue
         as_of = pd.Timestamp(frame.as_of)
-        age_seconds = (as_of - event_ts).total_seconds()
+        age_seconds = (decision_ts - event_ts).total_seconds()
         if (
             age_seconds < 0
             or age_seconds > max_age
+            or decision_ts != as_of
+            or event_ts > decision_ts
             or available_at < event_ts
-            or available_at > as_of
+            or available_at > decision_ts
+            or available_at > row_ready_at
         ):
             continue
 
         try:
             price = Decimal(str(close))
             quantity = target_notional / price
+            if quantity * price < target_notional:
+                quantity = quantity.next_plus()
             stop_loss = price * (Decimal(1) - stop_loss_pct)
         except DecimalException:
             continue
-        if not price.is_finite() or not quantity.is_finite() or stop_loss <= 0:
+        if (
+            not price.is_finite()
+            or not quantity.is_finite()
+            or quantity * price < target_notional
+            or stop_loss <= 0
+        ):
             continue
         intents.append(
             SignalIntent(
                 intent_id=f"s04_{pair}_{int(frame.as_of.timestamp())}",
-                decision_ts=frame.as_of,
+                decision_ts=decision_ts.to_pydatetime(),
                 pair=pair,
                 side=OrderSide.BUY,
                 desired_qty=quantity,

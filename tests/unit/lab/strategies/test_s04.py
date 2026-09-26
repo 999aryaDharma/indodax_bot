@@ -40,6 +40,11 @@ def test_s04_valid_causal_order_flow_emits_candidate_sized_intent():
     assert intent.strategy_id == "S04"
 
 
+def test_s04_decimal_sizing_never_rounds_below_minimum_notional():
+    intent, = s04_decide(_frame(close=3))
+    assert intent.desired_qty * intent.limit_price >= Decimal("10000")
+
+
 def test_s04_imbalance_thresholds_are_inclusive():
     assert len(s04_decide(_frame(book_imbalance_l5=0.10, trade_imbalance_10s=0.10))) == 1
     assert s04_decide(_frame(book_imbalance_l5=0.0999)) == []
@@ -78,3 +83,14 @@ def test_s04_rejects_wrong_version_and_invalid_causal_timestamps():
         _frame().features, AS_OF, feature_set_id="lob_v1", feature_set_version="2.0.0"
     )
     assert s04_decide(wrong_version) == []
+
+
+def test_s04_rejects_evidence_after_row_decision_even_if_before_frame_as_of():
+    later_as_of = AS_OF + timedelta(seconds=10)
+    row = _frame().features
+    row["decision_ts"] = AS_OF - timedelta(seconds=60)
+    row["row_ready_at"] = AS_OF - timedelta(seconds=60)
+    frame = create_decision_frame(
+        row, later_as_of, feature_set_id="lob_v1", feature_set_version="1.0.0"
+    )
+    assert s04_decide(frame) == []
