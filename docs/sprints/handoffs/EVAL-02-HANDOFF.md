@@ -1,15 +1,15 @@
 # EVAL-02 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: EVAL-02 — Hard gates and selection diagnostics
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review` (PASS at exact SHA `9f9971aed9298a7a50acb9d54a9d2ad529018604`)
 - Branch / worktree: `feat/eval-02-hard-gates-and-selection-diagnostics`
 - Base SHA: `7ae1deb`
 - Code target: `feat(eval-02): hard gates and selection diagnostics`
-- Evidence SHA relation: `efc973257aa9e5d4a6d8a1a6ddc9322652515d2e`
+- Evidence SHA relation: initial implementation `efc973257aa9e5d4a6d8a1a6ddc9322652515d2e`; reviewed remediation `9f9971aed9298a7a50acb9d54a9d2ad529018604`
 
 ## Files and contracts
 - Planned files:
@@ -17,6 +17,8 @@ Status: REVIEW
   - `src/indodax_lab/evaluation/statistics.py` (compute_deflated_sharpe_ratio, compute_pbo)
   - `src/indodax_lab/evaluation/__init__.py` (Package exports)
   - `tests/unit/lab/evaluation/test_gates.py` (Explicit AC0..AC3 test cases)
+  - `tests/unit/lab/evaluation/test_gates_fail_closed.py` (fail-closed and review regressions)
+  - `tests/unit/lab/reporting/test_summary.py` (consumer fixtures carry policy identity)
 - Contract:
   - `metrics + policy + trial family -> INVALID_RUN/HARD_FAIL/NEAR_MISS/REGIME_EDGE/PASS, DSR/PBO when eligible.`
   - Gate versioning and hierarchy: run validity (provenance, clean worktree, verified cost schedule) strictly precedes quality metrics.
@@ -47,12 +49,22 @@ Combined suite verification (92 passed across backtest, risk, execution, ledger,
 - Quality verdict: PASS (validity precedes quality, honest sample sizing, zero cherry-picking, robust DSR/PBO handling).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: PASS at final compatibility SHA `9f9971aed9298a7a50acb9d54a9d2ad529018604`.
 
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for EVAL-02.
 - Next unlocked consumers: EVAL-03.
+
+## Independent review and remediation record
+
+- Round 1 at `541c70154d7cda1ec6790eb8dc267651f36e34c8`: CHANGES_REQUESTED. Findings covered fail-open multi-seed inputs, mixed/duplicate seed identity, non-finite policy thresholds, and invalid/two-candidate PBO behavior.
+- Fix commit `23cc27e5dc149668f0323664754958dea4999a5b`: validates each seed before aggregation; rejects mismatched or duplicate run identity; validates policy thresholds; hardens DSR/PBO input handling and corrects two-candidate ranking.
+- Round 2 at `23cc27e5dc149668f0323664754958dea4999a5b`: CHANGES_REQUESTED. Median/mean could conceal a per-seed drawdown breach, and caller selection could override policy version.
+- Fix commit `c79cd6b2b7f014aaa74c38205e5b61f41138a8b7`: preserves any per-seed drawdown breach as aggregate HARD_FAIL and rejects a selection override conflicting with versioned policy. Reviewer PASS at this exact SHA; focused suite 69 passed.
+- Added `policy_id` and `policy_version` to every single-run and multi-seed verdict so policy decisions are auditable as required by the Observability contract. Commit `f485946c5adb9b8863c6ae841b6dc0da71074e5a`.
+- The first compatibility review found three reporting test constructors missing these required identities. Updated all fixtures explicitly in `9f9971aed9298a7a50acb9d54a9d2ad529018604`; final independent review PASS, with 80 evaluation/reporting checks passed and no remaining Critical/Important findings.
+- Owner verification on the final behavior before formatting-only fixture cleanup: `python -m pytest tests/unit/lab/reporting/test_summary.py tests/unit/lab/evaluation -q -p no:cacheprovider` — 120 passed; Ruff on changed evaluation and reporting test files — passed; `git diff --check` — passed.
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ## Sprint-review fix cycle (CHANGES_REQUESTED)
 

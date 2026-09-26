@@ -1724,22 +1724,26 @@
       "goal": "Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned.",
       "contract": "metrics + policy + trial family -> INVALID_RUN/HARD_FAIL/NEAR_MISS/REGIME_EDGE/PASS, DSR/PBO when eligible.",
       "checks": [
-        "Score tinggi tidak menutupi cost unknown",
-        "Sample kecil menghasilkan insufficient evidence",
-        "Best seed tidak dipilih sebagai hasil finalist"
+        "Unknown, missing, malformed and unverified costs fail closed",
+        "Insufficient samples and invalid seed evidence cannot qualify",
+        "No best-seed selection; seed identities, policy and aggregate risk breaches are validated",
+        "All verdicts include evaluation policy ID and version"
       ],
       "files": [
         "src/indodax_lab/evaluation/gates.py",
         "src/indodax_lab/evaluation/statistics.py",
-        "tests/unit/lab/evaluation/test_gates.py"
+        "src/indodax_lab/evaluation/__init__.py",
+        "tests/unit/lab/evaluation/test_gates.py",
+        "tests/unit/lab/evaluation/test_gates_fail_closed.py",
+        "tests/unit/lab/reporting/test_summary.py"
       ],
       "type": "research",
       "tier": "CORE",
       "spec": "docs/specs/11-evaluation-and-experiment-lifecycle.md",
       "path": "docs/sprints/evaluation/EVAL-02-hard-gates-and-selection-diagnostics.md",
       "priority": "P0",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Antigravity (review remediation: Codex /root)",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/eval-02-hard-gates-and-selection-diagnostics",
       "requirements": [
         "FR-09"
@@ -1751,7 +1755,7 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency EVAL-01 supplies: run_id + parent + git SHA + environment/data/config/cost/execution hashes -> immutable run record.",
+      "current_context": "EVAL-01 dependency DONE. Implementation/remediation at 9f9971aed9298a7a50acb9d54a9d2ad529018604. The evaluator validates single-run evidence before aggregation, rejects mixed/duplicate/missing identity and invalid policy, fails closed on unknown costs and non-finite metrics, preserves any per-seed drawdown breach as HARD_FAIL, prevents policy override, validates DSR/PBO, and records policy_id/policy_version in verdicts. Independent review PASS at exact SHA; owner focused evaluation/reporting suite 120 passed, reviewer evaluation/reporting checks 80 passed. See handoff. EVAL-03 remains gated by its own prerequisites.",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
@@ -1759,36 +1763,36 @@
       "acceptance_test_mapping": [
         {
           "criterion": "EVAL-02-AC0",
-          "test_case": "test_eval_02_valid_contract",
+          "test_case": "tests/unit/lab/evaluation/test_gates.py::test_eval_02_valid_contract",
           "behavior": "Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-02-AC1",
-          "test_case": "test_eval_02_contract_1",
+          "test_case": "tests/unit/lab/evaluation/test_gates_fail_closed.py (cost unknown/missing, metrics and policy validation)",
           "behavior": "Score tinggi tidak menutupi cost unknown",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-02-AC2",
-          "test_case": "test_eval_02_contract_2",
+          "test_case": "tests/unit/lab/evaluation/test_gates.py::test_eval_02_contract_2; fail-closed sample cases",
           "behavior": "Sample kecil menghasilkan insufficient evidence",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-02-AC3",
-          "test_case": "test_eval_02_contract_3",
+          "test_case": "tests/unit/lab/evaluation/test_gates.py::test_eval_02_contract_3; multi-seed review regressions",
           "behavior": "Best seed tidak dipilih sebagai hasil finalist",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_implementation",
         "path": "docs/sprints/handoffs/EVAL-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "9f9971aed9298a7a50acb9d54a9d2ad529018604",
+        "review": "Independent review PASS at exact source SHA; handoff records review rounds and owner/reviewer checks."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: research | Domain: evaluation | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (review remediation: Codex /root) | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/eval-02-hard-gates-and-selection-diagnostics`
 
@@ -141,9 +141,9 @@ Positive contract: **EVAL-02-AC0**, `test_eval_02_valid_contract` — Evaluator 
 
 | Acceptance | Planned test identity / map to existing equivalent | Assertion |
 |---|---|---|
-| EVAL-02-AC1 | `test_eval_02_contract_1` | Score tinggi tidak menutupi cost unknown |
-| EVAL-02-AC2 | `test_eval_02_contract_2` | Sample kecil menghasilkan insufficient evidence |
-| EVAL-02-AC3 | `test_eval_02_contract_3` | Best seed tidak dipilih sebagai hasil finalist |
+| EVAL-02-AC1 | `tests/unit/lab/evaluation/test_gates_fail_closed.py` | Score tinggi tidak menutupi cost unknown |
+| EVAL-02-AC2 | `tests/unit/lab/evaluation/test_gates.py::test_eval_02_contract_2` and fail-closed evaluator cases | Sample kecil menghasilkan insufficient evidence |
+| EVAL-02-AC3 | `tests/unit/lab/evaluation/test_gates.py::test_eval_02_contract_3` and multi-seed review regressions | Best seed tidak dipilih sebagai hasil finalist |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -177,7 +177,7 @@ Record baseline, identify algorithmic hotspot, then propose a versioned threshol
 
 ## Observability
 
-Emit `EVAL-02` scope, input identities, output/run identity, config/policy version and reason code. For each listed guard, tests must assert the diagnostic identifies what was rejected without logging private payloads. Record elapsed/resource observations only outside content-addressed identities.
+Emit `EVAL-02` scope, input identities, output/run identity, config/policy ID and version, and reason code. Evaluator verdicts carry `policy_id` and `policy_version`. For each listed guard, tests must assert the diagnostic identifies what was rejected without logging private payloads. Record elapsed/resource observations only outside content-addressed identities.
 
 ## Migration / Backward Compatibility
 
@@ -191,22 +191,22 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **EVAL-02-AC0** Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **EVAL-02-AC1** Score tinggi tidak menutupi cost unknown. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **EVAL-02-AC2** Sample kecil menghasilkan insufficient evidence. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **EVAL-02-AC3** Best seed tidak dipilih sebagai hasil finalist. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **EVAL-02-AC0** Evaluator memisahkan validitas run dari kualitas strategi dengan gate versioned. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **EVAL-02-AC1** Score tinggi tidak menutupi cost unknown. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **EVAL-02-AC2** Sample kecil menghasilkan insufficient evidence. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **EVAL-02-AC3** Best seed tidak dipilih sebagai hasil finalist. Evidence: mapped test, exact command/exit and target SHA.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updates manifest and regenerates status/waves only after review PASS.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

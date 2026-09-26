@@ -20,7 +20,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | F01-02 | Staged foundation adaptation | deep-learning | P2 | research | F01-01, D01-01 | REVIEW | [Spec](deep-learning\F01-02-staged-foundation-adaptation.md) |
 | G01-01 | Point-in-time graph challenger | deep-learning | P2 | research | D01-01, C04-01 | REVIEW | [Spec](deep-learning\G01-01-point-in-time-graph-challenger.md) |
 | EVAL-01 | Immutable experiment registry | evaluation | P0 | data | SIM-04 | DONE | [Spec](evaluation\EVAL-01-immutable-experiment-registry.md) |
-| EVAL-02 | Hard gates and selection diagnostics | evaluation | P0 | research | EVAL-01 | REVIEW | [Spec](evaluation\EVAL-02-hard-gates-and-selection-diagnostics.md) |
+| EVAL-02 | Hard gates and selection diagnostics | evaluation | P0 | research | EVAL-01 | DONE | [Spec](evaluation\EVAL-02-hard-gates-and-selection-diagnostics.md) |
 | EVAL-03 | Sealed candidate lifecycle | evaluation | P0 | safety | EVAL-02, SPLIT-01 | REVIEW | [Spec](evaluation\EVAL-03-sealed-candidate-lifecycle.md) |
 | FEAT-01 | Versioned feature registry | features | P0 | data | DATA-06 | DONE | [Spec](features\FEAT-01-versioned-feature-registry.md) |
 | FEAT-02 | Golden technical and liquidity transforms | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-02-golden-technical-and-liquidity-transforms.md) |

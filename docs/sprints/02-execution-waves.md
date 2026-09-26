@@ -91,7 +91,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 ## Wave 11
 
-- EVAL-02 — Hard gates and selection diagnostics [REVIEW; CORE]
+- EVAL-02 — Hard gates and selection diagnostics [DONE; CORE]
 - LABEL-02 — Triple barrier outcomes [REVIEW; CORE]
 - JOB-01 — Durable leased jobs [REVIEW; CORE]
 - C01-01 — Donchian breakout [DONE; CORE]
