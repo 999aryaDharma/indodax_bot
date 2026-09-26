@@ -2,8 +2,8 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pandas as pd
-import pytest
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
@@ -59,7 +59,7 @@ def _build_c03_bars(
 
 
 def test_c03_01_valid_contract():
-    """C03-01-AC0: Kandidat C03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama."""
+    """C03-01-AC0: Emit valid intent for comparison on the shared baseline judge."""
     spec = load_c03_specification()
     assert spec.strategy_id == "C03"
     assert spec.family == "time_series_momentum"
@@ -145,3 +145,49 @@ def test_c03_01_contract_3():
     size_2 = intents_2[0].desired_qty
 
     assert size_1 == size_2, "Future return must not leak into or alter sizing"
+
+
+def test_c03_invalid_atr_produces_flat():
+    spec = load_c03_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    for atr in (float("nan"), float("inf"), 0.0, -1.0, 100_000_000.0):
+        df = _build_c03_bars(as_of=as_of, trend="positive")
+        df.loc[df.index[-1], "atr_14"] = atr
+        frame = create_decision_frame(df, as_of=as_of)
+        assert c03_decide(frame, spec) == []
+
+
+def test_c03_invalid_or_incomplete_price_window_produces_flat():
+    spec = load_c03_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    for row_index, close in ((0, 0.0), (10, float("nan")), (10, -1.0)):
+        df = _build_c03_bars(as_of=as_of, trend="positive")
+        df.loc[row_index, "close"] = close
+        frame = create_decision_frame(df, as_of=as_of)
+        assert c03_decide(frame, spec) == []
+
+
+def test_c03_positive_momentum_with_zero_volatility_produces_flat():
+    spec = load_c03_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_c03_bars(as_of=as_of, trend="positive")
+    for index in df.index:
+        price = 100_000_000.0 * (2**index)
+        df.loc[index, ["close", "high", "low"]] = [price, price * 1.01, price * 0.99]
+    frame = create_decision_frame(df, as_of=as_of)
+    assert c03_decide(frame, spec) == []
+
+
+def test_c03_stale_or_gapped_window_produces_flat():
+    spec = load_c03_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+
+    df = _build_c03_bars(as_of=as_of, n_bars=26, trend="positive")
+    frame_with_gap = create_decision_frame(df.drop(index=10), as_of=as_of)
+    assert c03_decide(frame_with_gap, spec) == []
+
+    old_frame = create_decision_frame(
+        _build_c03_bars(as_of=as_of, trend="positive"),
+        as_of=as_of + timedelta(hours=1),
+    )
+    assert c03_decide(old_frame, spec) == []
