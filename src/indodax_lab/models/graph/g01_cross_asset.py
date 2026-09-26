@@ -125,11 +125,21 @@ class PointInTimeGraphBuilder:
         forced_nodes: list[str] | None = None,
     ) -> GraphSnapshot:
         """Construct graph snapshot up to eval_ts without lookahead contamination."""
-        # 1. Reject future data inputs
-        if len(df) > 0 and df["timestamp"].min() > eval_ts:
+        # 1. Required label/feature columns (unknown labels never zero-filled)
+        required_cols = ("timestamp", "asset", "return", "volatility", "momentum", "forward_return")
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise ValueError(
+                f"MISSING_FORWARD_LABEL: Required columns missing {missing}; "
+                f"unknown labels must be rejected, never converted to zero."
+            )
+
+        # 2. Reject any future data inputs (including mixed past+future frames)
+        if len(df) > 0 and df["timestamp"].max() > eval_ts:
             raise FullSampleAdjacencyLeakageError(
-                f"FULL_SAMPLE_LEAKAGE_FORBIDDEN: Provided data strictly starts at "
-                f"{df['timestamp'].min()} which is in the future relative to eval_ts {eval_ts}"
+                f"FULL_SAMPLE_LEAKAGE_FORBIDDEN: Provided frame contains observations beyond "
+                f"eval_ts {eval_ts.isoformat()} (max {df['timestamp'].max()}); "
+                f"mixed past+future frames are rejected, never silently filtered."
             )
 
         # 2. Strict listing cutoff validation
@@ -184,10 +194,18 @@ class PointInTimeGraphBuilder:
             if len(node_data) > 0:
                 last_row = node_data.iloc[-1]
                 latest_features.append([float(last_row[c]) for c in feature_cols])
-                forward_returns.append(float(last_row.get("forward_return", 0.0)))
+                fwd = last_row["forward_return"]
+                if pd.isna(fwd):
+                    raise ValueError(
+                        f"MISSING_FORWARD_LABEL: forward_return is NaN for asset '{node}' "
+                        f"at eval_ts {eval_ts.isoformat()}; unknown labels must be rejected."
+                    )
+                forward_returns.append(float(fwd))
             else:
-                latest_features.append([0.0] * len(feature_cols))
-                forward_returns.append(0.0)
+                raise ValueError(
+                    f"MISSING_FORWARD_LABEL: No observations for eligible asset '{node}' "
+                    f"at eval_ts {eval_ts.isoformat()}; empty nodes must be rejected."
+                )
 
         return GraphSnapshot(
             eval_ts=eval_ts,
@@ -269,10 +287,14 @@ class CrossAssetGNNRanker:
 class GraphBaselineComparator:
     """Evaluates graph benefit against no-edge baseline and naive panel regression."""
 
-    def compare(self, snapshot: GraphSnapshot) -> GraphBaselineComparison:
-        """Benchmark G01 graph against no-edge MLP and panel regression on identical snapshot."""
-        config = PointInTimeGraphConfig(rolling_window=10)
-        ranker = CrossAssetGNNRanker(config=config)
+    def compare(
+        self, snapshot: GraphSnapshot, ranker: CrossAssetGNNRanker
+    ) -> GraphBaselineComparison:
+        """Benchmark G01 graph against no-edge MLP and panel regression on identical snapshot.
+
+        The caller-provided `ranker` (the actual evaluated model instance) scores both
+        the graph and the no-edge (A=I) views so weights cannot silently diverge.
+        """
 
         # 1. Graph model rank scores
         graph_ranks = ranker.rank(snapshot)

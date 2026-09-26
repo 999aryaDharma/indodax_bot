@@ -52,3 +52,14 @@ Full lab suite verification: 255 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for G01-01.
 - Next unlocked consumers: Research comparison complete.
+
+## Fix cycle — mixed frame + actual ranker + missing label (2026-09-26)
+- Findings G01-01: (a) mixed past+future frame silently filtered (`min>eval` only rejected all-future); (b) `GraphBaselineComparator.compare(snapshot)` built an internal ranker instead of scoring with the actual evaluated ranker; (c) missing `forward_return` zero-filled via `.get(...,0.0)` violating "unknown never→zero".
+- Fix owner: opencode/muse-spark-1.3-contributor-free | Branch: `fix/g01-01-mixed-frame-comparator` | Base SHA: `fa6d4b5` | Worktree: `.worktrees/fix-g01-01` (main checkout untouched).
+- Files:
+  - `src/indodax_lab/models/graph/g01_cross_asset.py` — required-columns check (`MISSING_FORWARD_LABEL`) first; `max>eval_ts` rejects any future row including mixed frames (`FULL_SAMPLE_LEAKAGE_FORBIDDEN`); NaN/empty forward labels rejected (no zero-fill); `compare(snapshot, ranker)` uses caller-provided `CrossAssetGNNRanker` for graph + no-edge scores.
+  - `tests/unit/lab/models/test_g01_01.py` — AC0/AC2/AC3 updated to pass causally-filtered frames (`df[timestamp<=eval]`); regressions `test_g01_01_mixed_frame_rejected_fail_closed`, `test_g01_01_comparator_uses_actual_ranker`, `test_g01_01_missing_forward_label_rejected`.
+- TDD RED→GREEN:
+  - RED: 4 failed (contract_3 TypeError missing ranker + 3 new DID NOT RAISE/TypeError); direct repros: `MIXED_ACCEPTED`, internal-ranker `compare` source, `MISSING_LABEL_ACCEPTED fwd=[0.]`.
+  - GREEN: `python -m pytest tests/unit/lab/models/test_g01_01.py -q` → Exit 0, 7 passed.
+- Scope: L01-01 untouched. No push. Note: callers must now pre-filter frames to `<=eval_ts`; unfiltered mixed frames are intentionally breaking (fail-closed).

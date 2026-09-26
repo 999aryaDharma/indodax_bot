@@ -81,9 +81,10 @@ def test_g01_01_valid_contract() -> None:
     )
     builder = PointInTimeGraphBuilder(config=config, listing_dates=listing_dates)
 
-    # Evaluate at bar 35 (all assets listed)
+    # Evaluate at bar 35 (all assets listed); caller passes causally-filtered frame.
     eval_ts = datetime(2025, 1, 2, 12, 0, tzinfo=UTC)
-    graph_snapshot = builder.build_snapshot(df=df, eval_ts=eval_ts)
+    causal_df = df[df["timestamp"] <= eval_ts]
+    graph_snapshot = builder.build_snapshot(df=causal_df, eval_ts=eval_ts)
 
     assert len(graph_snapshot.active_nodes) == 4
     assert graph_snapshot.adjacency_matrix.shape == (4, 4)
@@ -134,7 +135,8 @@ def test_g01_01_contract_2() -> None:
     # XRP_IDR is listed at 2025-01-02 00:00:00
     # Evaluate at 2025-01-01 10:00:00 (before XRP listing)
     eval_ts_early = datetime(2025, 1, 1, 10, 0, tzinfo=UTC)
-    snapshot = builder.build_snapshot(df=df, eval_ts=eval_ts_early)
+    causal_df = df[df["timestamp"] <= eval_ts_early]
+    snapshot = builder.build_snapshot(df=causal_df, eval_ts=eval_ts_early)
 
     # XRP must not be in active nodes
     assert "XRP_IDR" not in snapshot.active_nodes
@@ -142,7 +144,7 @@ def test_g01_01_contract_2() -> None:
 
     # Attempting to explicitly force an unlisted node must be rejected
     with pytest.raises(PrematureNodeInclusionError, match="PREMATURE_NODE_INCLUSION"):
-        builder.build_snapshot(df=df, eval_ts=eval_ts_early, forced_nodes=["BTC_IDR", "XRP_IDR"])
+        builder.build_snapshot(df=causal_df, eval_ts=eval_ts_early, forced_nodes=["BTC_IDR", "XRP_IDR"])
 
 
 def test_g01_01_contract_3() -> None:
@@ -153,12 +155,64 @@ def test_g01_01_contract_3() -> None:
     builder = PointInTimeGraphBuilder(config=config, listing_dates=listing_dates)
 
     eval_ts = datetime(2025, 1, 2, 15, 0, tzinfo=UTC)
-    snapshot = builder.build_snapshot(df=df, eval_ts=eval_ts)
+    causal_df = df[df["timestamp"] <= eval_ts]
+    snapshot = builder.build_snapshot(df=causal_df, eval_ts=eval_ts)
 
+    ranker = CrossAssetGNNRanker(config=config)
     comparator = GraphBaselineComparator()
-    comparison = comparator.compare(snapshot)
+    comparison = comparator.compare(snapshot, ranker=ranker)
 
     assert comparison.graph_score_correlation is not None
     assert comparison.no_edge_mlp_correlation is not None
     assert comparison.panel_regression_correlation is not None
     assert comparison.benchmark_sample_count == len(snapshot.active_nodes)
+
+
+def test_g01_01_mixed_frame_rejected_fail_closed() -> None:
+    """G01-01 regression: mixed past+future frame must be rejected (not silently filtered)."""
+    df, listing_dates = _generate_synthetic_panel_data()
+    config = PointInTimeGraphConfig(rolling_window=10)
+    builder = PointInTimeGraphBuilder(config=config, listing_dates=listing_dates)
+    eval_ts = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
+    # Full frame contains both past (<=eval) and future (>eval) rows.
+    assert (df["timestamp"] <= eval_ts).any() and (df["timestamp"] > eval_ts).any()
+    with pytest.raises(FullSampleAdjacencyLeakageError, match="FULL_SAMPLE_LEAKAGE_FORBIDDEN"):
+        builder.build_snapshot(df=df, eval_ts=eval_ts)
+
+
+def test_g01_01_comparator_uses_actual_ranker() -> None:
+    """G01-01 regression: comparator must score with the caller-provided ranker."""
+    import inspect
+
+    from scipy.stats import spearmanr
+
+    df, listing_dates = _generate_synthetic_panel_data()
+    config = PointInTimeGraphConfig(rolling_window=10, top_k=2)
+    builder = PointInTimeGraphBuilder(config=config, listing_dates=listing_dates)
+    eval_ts = datetime(2025, 1, 2, 15, 0, tzinfo=UTC)
+    causal_df = df[df["timestamp"] <= eval_ts]
+    snapshot = builder.build_snapshot(df=causal_df, eval_ts=eval_ts)
+
+    sig = inspect.signature(GraphBaselineComparator.compare)
+    assert "ranker" in sig.parameters, "compare() must accept the actual ranker"
+
+    ranker = CrossAssetGNNRanker(config=config)
+    comparison = GraphBaselineComparator().compare(snapshot, ranker=ranker)
+
+    expected_scores = np.array(
+        [r.score for r in sorted(ranker.rank(snapshot), key=lambda x: x.asset)]
+    )
+    expected_corr, _ = spearmanr(expected_scores, snapshot.forward_returns)
+    expected_corr = float(expected_corr) if not np.isnan(expected_corr) else 0.0
+    assert comparison.graph_score_correlation == pytest.approx(expected_corr)
+
+
+def test_g01_01_missing_forward_label_rejected() -> None:
+    """G01-01 regression: missing forward_return label must be rejected, never zero-filled."""
+    df, listing_dates = _generate_synthetic_panel_data()
+    df_no_label = df.drop(columns=["forward_return"])
+    config = PointInTimeGraphConfig(rolling_window=10)
+    builder = PointInTimeGraphBuilder(config=config, listing_dates=listing_dates)
+    eval_ts = datetime(2025, 1, 2, 15, 0, tzinfo=UTC)
+    with pytest.raises(ValueError, match="MISSING_FORWARD_LABEL"):
+        builder.build_snapshot(df=df_no_label, eval_ts=eval_ts)
