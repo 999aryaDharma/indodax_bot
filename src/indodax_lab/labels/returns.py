@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from itertools import pairwise
 from pathlib import Path
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Callable, Literal, Mapping, Sequence
 
 import pandas as pd
 import yaml
@@ -74,8 +74,36 @@ class NetReturnLabel(BaseModel):
     exclusion_reason: str | None = None
 
 
+class CandidateSampleRegistration(BaseModel):
+    """Resolved immutable association from the candidate/sample registry."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    registration_id: str
+    candidate_bundle_id: str
+    strategy_id: str
+    sample_id: str
+    intent_id: str
+    pair: str
+    decision_ts: datetime
+
+    @field_validator(
+        "registration_id", "candidate_bundle_id", "strategy_id", "sample_id", "intent_id", "pair"
+    )
+    @classmethod
+    def require_nonempty_registration_identity(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("NONEMPTY_CANDIDATE_REGISTRATION_IDENTITY_REQUIRED")
+        return value
+
+    @field_validator("decision_ts")
+    @classmethod
+    def validate_registration_time_utc(cls, value: datetime) -> datetime:
+        return _require_utc(value)
+
+
 class CandidateHorizonSample(BaseModel):
-    """Candidate-sized sample input for the separate v2 execution-aligned label."""
+    """Candidate-sized sample input paired with trusted registry evidence."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -93,6 +121,11 @@ class CandidateHorizonSample(BaseModel):
             raise ValueError("NONEMPTY_CANDIDATE_SAMPLE_IDENTITY_REQUIRED")
         return value
 
+    @field_validator("decision_ts")
+    @classmethod
+    def validate_sample_time_utc(cls, value: datetime) -> datetime:
+        return _require_utc(value)
+
 
 class CandidateHorizonLabel(BaseModel):
     """Actual shared-simulator outcome; never a full SL/TP strategy result."""
@@ -101,6 +134,7 @@ class CandidateHorizonLabel(BaseModel):
 
     sample_id: str
     candidate_bundle_id: str
+    registration_id: str
     intent_id: str
     strategy_id: str
     label_set_id: Literal["net_return_candidate_horizon_v2"] = "net_return_candidate_horizon_v2"
@@ -124,6 +158,8 @@ class CandidateHorizonLabel(BaseModel):
     binary_label: int | None = None
     cost_schedule_id: str | None = None
     cost_schedule_version: str | None = None
+    entry_cost_schedule_id: str | None = None
+    exit_cost_schedule_id: str | None = None
     execution_model_version: Literal["causal-bar-proxy-v2"] = "causal-bar-proxy-v2"
     label_available_at: datetime | None = None
     status: Literal["VALID", "EXCLUDED"]
@@ -180,6 +216,8 @@ def build_candidate_horizon_label(
     sample: CandidateHorizonSample | Mapping[str, Any],
     bars: Sequence[MarketBar],
     simulator: ConservativeExecutionSimulator,
+    *,
+    resolve_registration: Callable[[str, str], CandidateSampleRegistration | None],
     config: CandidateHorizonConfig | None = None,
 ) -> CandidateHorizonLabel:
     """Execute candidate-sized BUY and fixed-horizon SELL through SIM-01."""
@@ -188,7 +226,24 @@ def build_candidate_horizon_label(
     if simulator.execution_version != config.execution_model_version:
         raise ValueError("UNSUPPORTED_EXECUTION_MODEL")
     intent = sample.signal_intent
-    if (intent.strategy_id, intent.pair, intent.decision_ts) != (
+    registration = resolve_registration(sample.candidate_bundle_id, sample.sample_id)
+    if registration is None:
+        raise ValueError("CANDIDATE_SAMPLE_NOT_REGISTERED")
+    if (
+        registration.candidate_bundle_id,
+        registration.strategy_id,
+        registration.sample_id,
+        registration.intent_id,
+        registration.pair,
+        registration.decision_ts,
+    ) != (
+        sample.candidate_bundle_id,
+        sample.strategy_id,
+        sample.sample_id,
+        intent.intent_id,
+        sample.pair,
+        sample.decision_ts,
+    ) or (intent.strategy_id, intent.pair, intent.decision_ts) != (
         sample.strategy_id, sample.pair, sample.decision_ts
     ):
         raise ValueError("CANDIDATE_INTENT_LINEAGE_MISMATCH")
@@ -207,6 +262,7 @@ def build_candidate_horizon_label(
     def excluded(reason: str, *, entry=None, exit_at=None) -> CandidateHorizonLabel:
         return CandidateHorizonLabel(
             sample_id=sample.sample_id, candidate_bundle_id=sample.candidate_bundle_id,
+            registration_id=registration.registration_id,
             intent_id=intent.intent_id, strategy_id=sample.strategy_id,
             label_version=config.label_version, pair=sample.pair,
             decision_ts=sample.decision_ts,
@@ -236,6 +292,15 @@ def build_candidate_horizon_label(
         return excluded("NO_ENTRY_FILL")
 
     entry = entry_result.fill
+    entry_schedule = lookup_cost(
+        simulator.cost_schedule_table,
+        market=simulator.market,
+        side=entry.side,
+        role=entry.role,
+        fee_basis_ts=(
+            sample.decision_ts if entry.role == OrderRole.MAKER else entry.timestamp
+        ),
+    )
     target_exit = entry.timestamp + config.horizon
     exit_candidates = [bar for bar in market_bars if bar.open_time == target_exit]
     if not exit_candidates:
@@ -266,12 +331,20 @@ def build_candidate_horizon_label(
         return excluded("INCOMPLETE_EXIT_FILL", entry=entry, exit_at=target_exit)
 
     exit_fill = exit_result.fill
+    exit_schedule = lookup_cost(
+        simulator.cost_schedule_table,
+        market=simulator.market,
+        side=exit_fill.side,
+        role=exit_fill.role,
+        fee_basis_ts=exit_fill.timestamp,
+    )
     buy_debit = entry.gross + entry.fees
     sell_proceeds = exit_fill.gross - exit_fill.fees
     net_return = sell_proceeds / buy_debit - Decimal("1")
     gross_return = exit_fill.gross / entry.gross - Decimal("1")
     return CandidateHorizonLabel(
         sample_id=sample.sample_id, candidate_bundle_id=sample.candidate_bundle_id,
+        registration_id=registration.registration_id,
         intent_id=intent.intent_id, strategy_id=sample.strategy_id,
         label_version=config.label_version, pair=sample.pair, decision_ts=sample.decision_ts,
         label_end_ts=exit_fill.timestamp,
@@ -284,7 +357,9 @@ def build_candidate_horizon_label(
         binary_label=int(net_return > config.edge_margin),
         cost_schedule_id=simulator.cost_schedule_table.schedule_set_id,
         cost_schedule_version=simulator.cost_schedule_table.version,
-        label_available_at=max(entry_bar.available_at, exit_bar.available_at),
+        entry_cost_schedule_id=entry_schedule.schedule_id,
+        exit_cost_schedule_id=exit_schedule.schedule_id,
+        label_available_at=max(bar.available_at for bar in interval_bars),
         status="VALID",
     )
 
@@ -486,12 +561,17 @@ def build_candidate_horizon_labels_frame(
     samples: Sequence[CandidateHorizonSample | Mapping[str, Any]],
     bars: Sequence[MarketBar],
     simulator: ConservativeExecutionSimulator,
+    *,
+    resolve_registration: Callable[[str, str], CandidateSampleRegistration | None],
     config: CandidateHorizonConfig | None = None,
 ) -> pd.DataFrame:
     """Materialize v2 rows separately; does not read or rewrite v1 artifacts."""
     config = config or CandidateHorizonConfig()
     labels = [
-        build_candidate_horizon_label(sample, bars, simulator, config).model_dump()
+        build_candidate_horizon_label(
+            sample, bars, simulator,
+            resolve_registration=resolve_registration, config=config,
+        ).model_dump()
         for sample in samples
     ]
     return pd.DataFrame(labels)
@@ -501,6 +581,7 @@ __all__ = [
     "CandidateHorizonConfig",
     "CandidateHorizonLabel",
     "CandidateHorizonSample",
+    "CandidateSampleRegistration",
     "NetReturnConfig",
     "NetReturnLabel",
     "build_candidate_horizon_label",

@@ -21,6 +21,7 @@ from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.labels.returns import (
     CandidateHorizonConfig,
     CandidateHorizonSample,
+    CandidateSampleRegistration,
     NetReturnConfig,
     NetReturnLabel,
     build_candidate_horizon_label,
@@ -49,7 +50,9 @@ def test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills():
     bars = _simulator_bars()
 
     label = build_candidate_horizon_label(
-        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        sample, bars, simulator,
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
 
     assert label.status == "VALID"
@@ -59,6 +62,8 @@ def test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills():
     assert label.entry_price == Decimal("21000000")
     assert label.exit_price == Decimal("23000000")
     assert label.buy_cost > 0 and label.sell_cost > 0
+    assert label.entry_cost_schedule_id == "sim-buy"
+    assert label.exit_cost_schedule_id == "sim-sell"
     assert label.net_return == ((label.exit_qty * label.exit_price - label.sell_cost) /
                                 (label.entry_qty * label.entry_price + label.buy_cost)) - 1
     assert label.execution_model_version == simulator.execution_version == "causal-bar-proxy-v2"
@@ -81,10 +86,14 @@ def test_candidate_horizon_v2_excludes_missing_entry_or_incomplete_horizon():
                                          "open_liquidity_available_at": None})
                     for bar in bars]
     no_entry = build_candidate_horizon_label(
-        sample, no_liquidity, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        sample, no_liquidity, simulator,
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
     short = build_candidate_horizon_label(
-        sample, bars[:2], simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        sample, bars[:2], simulator,
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
     assert (no_entry.status, no_entry.exclusion_reason) == ("EXCLUDED", "NO_ENTRY_FILL")
     assert (short.status, short.exclusion_reason) == ("EXCLUDED", "INCOMPLETE_HORIZON")
@@ -98,7 +107,9 @@ def test_candidate_horizon_v2_closes_actual_partial_entry_quantity():
     bars[1] = bars[1].model_copy(update={"open_liquidity_base_volume": Decimal("0.01")})
 
     label = build_candidate_horizon_label(
-        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        sample, bars, simulator,
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
 
     assert label.status == "VALID"
@@ -112,12 +123,23 @@ def test_candidate_horizon_v2_rejects_lineage_and_excludes_partial_exit():
     with pytest.raises(ValueError, match="CANDIDATE_INTENT_LINEAGE_MISMATCH"):
         build_candidate_horizon_label(
             mismatch, _simulator_bars(), simulator,
-            CandidateHorizonConfig(horizon=timedelta(hours=2)),
+            resolve_registration=_resolve_candidate_registration,
+            config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        )
+
+    bad_bundle = sample.model_copy(update={"candidate_bundle_id": "not-a-registered-bundle"})
+    with pytest.raises(ValueError, match="CANDIDATE_SAMPLE_NOT_REGISTERED"):
+        build_candidate_horizon_label(
+            bad_bundle, _simulator_bars(), simulator,
+            resolve_registration=_resolve_candidate_registration,
+            config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
         )
 
     bars = _simulator_bars(desired_exit_liquidity=Decimal("0.001"))
     label = build_candidate_horizon_label(
-        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        sample, bars, simulator,
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
     assert (label.status, label.exclusion_reason) == ("EXCLUDED", "INCOMPLETE_EXIT_FILL")
     assert label.net_return is None
@@ -127,9 +149,23 @@ def test_candidate_horizon_v2_excludes_unverified_fee_schedule():
     simulator = ConservativeExecutionSimulator(_simulator_schedule_table(verified=False))
     label = build_candidate_horizon_label(
         _candidate_sample(Decimal("0.001")), _simulator_bars(), simulator,
-        CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
     )
     assert (label.status, label.exclusion_reason) == ("EXCLUDED", "COST_SCHEDULE_UNAVAILABLE")
+
+
+def test_candidate_horizon_availability_includes_intermediate_sources():
+    bars = _simulator_bars()
+    bars[2] = bars[2].model_copy(update={"available_at": BASE_TIME + timedelta(days=2)})
+    label = build_candidate_horizon_label(
+        _candidate_sample(Decimal("0.001")), bars,
+        ConservativeExecutionSimulator(_simulator_schedule_table()),
+        resolve_registration=_resolve_candidate_registration,
+        config=CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+    assert label.status == "VALID"
+    assert label.label_available_at == BASE_TIME + timedelta(days=2)
 
 
 def test_delayed_entry_observation_delays_label_availability():
@@ -622,6 +658,17 @@ def _candidate_sample(quantity: Decimal) -> CandidateHorizonSample:
             intent_id="candidate-intent", decision_ts=decision, pair=PAIR,
             side=OrderSide.BUY, desired_qty=quantity, strategy_id="strat-alpha",
         ),
+    )
+
+
+def _resolve_candidate_registration(bundle_id: str, sample_id: str):
+    if (bundle_id, sample_id) != ("bundle-sha256:test", "candidate-sample"):
+        return None
+    return CandidateSampleRegistration(
+        registration_id="candidate-sample-reg:1",
+        candidate_bundle_id=bundle_id, strategy_id="strat-alpha",
+        sample_id=sample_id, intent_id="candidate-intent", pair=PAIR,
+        decision_ts=BASE_TIME + timedelta(hours=1),
     )
 
 
