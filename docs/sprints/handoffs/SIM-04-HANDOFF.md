@@ -1,6 +1,6 @@
 # SIM-04 handoff
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 ## Identity
 - Sprint ID: SIM-04 — Net-cost risk and capacity metrics
@@ -81,3 +81,10 @@ Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf
 - Regression extends `test_late_older_bar_does_not_replace_newer_equity_mark` to assert unique curve timestamps.
 - Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: 1,107 passed, 2 platform-specific skipped, 4 warnings.
 - Independent exact-SHA review remains pending; status stays CHANGES_REQUESTED.
+
+## Independent review closeout (2026-09-26)
+
+- `/root/docs_review` reviewed exact code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: **PASS**, no Critical/Important findings. Review confirmed latest market-time marks survive delayed older bars and same-availability observations are emitted once.
+- Independent focused evidence: metrics, CLI reports, strategy registry and labels -> 55 passed in 1.32s. Full local suite on the same source tree -> 1,107 passed, 2 platform-specific skipped, 4 warnings; full suite was not independently rerun.
+- Code commits: `389d9163fc103530d33ea724662c7ce4dfaa2e60` and `e4ca5ad3116bc6c05d44f09ddfb57102015fa007`.
+- External limitations remain: flow-adjusted returns, verified historical fees, empirical spread and production qualification are outside this evidence.

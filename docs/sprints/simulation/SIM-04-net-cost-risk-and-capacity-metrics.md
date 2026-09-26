@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 Priority: P0 | Type: feature | Domain: simulation | Portfolio: CORE
 
@@ -14,7 +14,7 @@ Requirements: FR-06 | Legacy tasks: 18
 
 External gates: No additional portfolio activation gate; data/policy validity still applies.
 
-Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+Implementation artifacts and regressions are committed and independently reviewed; evidence is in the handoff.
 
 ## Goal
 
@@ -197,24 +197,24 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **SIM-04-AC0** Report computes ledger metrics by year/asset and by regime/tier when transaction classifications are supplied; it reports missing/partial classifications and equity paths explicitly, never fabricated values. Breakeven completed trades count in trade_count. Evidence: valid fixtures through public interface with independent expected outputs.
-- [ ] **SIM-04-AC1** No-trade dan zero-loss PF menghasilkan undefined beralasan. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SIM-04-AC2** Fee tidak dikurangi dua kali dari net cash equity. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **SIM-04-AC3** Missing spread tidak dilaporkan sebagai biaya nol. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **SIM-04-AC0** Report computes ledger metrics by year/asset and by regime/tier when transaction classifications are supplied; it reports missing/partial classifications and equity paths explicitly, never fabricated values. Breakeven completed trades count in trade_count. Delayed older bars preserve latest market-time marks; simultaneous availability is coalesced to one mark. Evidence: handoff on code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`.
+- [x] **SIM-04-AC1** No-trade dan zero-loss PF menghasilkan undefined beralasan. Evidence: focused independent review and mapped tests in handoff.
+- [x] **SIM-04-AC2** Fee tidak dikurangi dua kali dari net cash equity. Evidence: focused independent review and mapped tests in handoff.
+- [x] **SIM-04-AC3** Missing spread tidak dilaporkan sebagai biaya nol. Evidence: focused independent review and mapped tests in handoff.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updated manifest and regenerated status/waves after review PASS.
 
-Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
+Review closeout: `/root/docs_review` PASS on code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`; see `docs/sprints/handoffs/SIM-04-HANDOFF.md` for exact evidence and unresolved external limits.
 
 ## Reviewer Checklist
 

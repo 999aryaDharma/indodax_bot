@@ -1,6 +1,6 @@
 # LABEL-01 handoff
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 ## Identity
 - Sprint ID: LABEL-01 — Execution-aligned net return labels
@@ -81,3 +81,10 @@ AC1 and AC2 pass. Independent focused label tests: 21 passed, but passing tests 
 - Regressions cover unknown bundle, sample/intent identity mismatch, delayed intermediate source, and the actual applied entry/exit intervals.
 - Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` -> 1,107 passed, 2 platform-specific skipped, 4 warnings.
 - Independent exact-SHA review is pending. The runtime caller must provide a resolver backed by the authoritative registry; without that adapter no v2 labels can be produced. LABEL-02 remains locked until reviewer PASS and manifest update.
+
+## Independent review closeout (2026-09-26)
+
+- `/root/docs_review` reviewed exact code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: **PASS**, no Critical/Important findings. The handoff wording for `registration_id` was clarified in docs commit `044167b898e8bc676f49e5af1191f64a14411160`: the value is retained from the resolved registry record, while bundle/sample/strategy/intent/pair/time fields are compared.
+- Independent focused evidence: metrics, CLI reports, strategy registry and labels -> 55 passed in 1.32s; probes verified unknown registration rejection, intermediate-bar availability, and entry/exit fee interval IDs across a tariff boundary.
+- Full local suite on the same source tree -> 1,107 passed, 2 platform-specific skipped, 4 warnings; full suite was not independently rerun.
+- External gates remain: resolver adapter must use the authoritative candidate/sample registry; fee authenticity and profitability/promotion are not established. Bar-proxy results are not proof of venue fills or SL/TP PnL.

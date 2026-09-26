@@ -1,6 +1,6 @@
 # STRAT-01 handoff
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 ## Identity
 - Sprint ID: STRAT-01 — Declarative strategy protocol
@@ -81,3 +81,10 @@ Reviewer `/root/docs_review` reviewed exact repository SHA `e3f1af8d232c1bf43fdf
 - Regression: `test_all_capture_types_have_unambiguous_identity` covers `Decimal`/mapping, set/frozenset and bool/int collisions; prior list/tuple and bound-method regressions remain.
 - Full verification on combined code HEAD `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: 1,107 passed, 2 platform-specific skipped, 4 warnings.
 - Independent exact-SHA review remains pending; status stays CHANGES_REQUESTED.
+
+## Independent review closeout (2026-09-26)
+
+- `/root/docs_review` reviewed exact code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`: **PASS**, no Critical/Important findings. Review confirmed bound callbacks reject and typed captures distinguish Decimal/mapping, set/frozenset, bool/int, and list/tuple identities.
+- Independent focused evidence: metrics, CLI reports, strategy registry and labels -> 55 passed in 1.32s. Full local suite on the same source tree -> 1,107 passed, 2 platform-specific skipped, 4 warnings; full suite was not independently rerun.
+- Code commits: `14848d303629390a4a64005a8fa50d06c88ffb46` and `65291562c270b36111873d7dc2e072bc97824c3e`.
+- Capture identity encoding changed; all future candidate logic hashes use typed canonical values.

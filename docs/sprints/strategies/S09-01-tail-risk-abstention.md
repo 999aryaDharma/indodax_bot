@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: READY
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 

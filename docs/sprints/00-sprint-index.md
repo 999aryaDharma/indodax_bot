@@ -26,7 +26,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | FEAT-02 | Golden technical and liquidity transforms | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-02-golden-technical-and-liquidity-transforms.md) |
 | FEAT-03 | As-of market context | features | P0 | data | FEAT-01 | DONE | [Spec](features\FEAT-03-as-of-market-context.md) |
 | FEAT-04 | Immutable feature materialization | features | P0 | data | FEAT-02, FEAT-03 | DONE | [Spec](features\FEAT-04-immutable-feature-materialization.md) |
-| LABEL-01 | Execution-aligned net return labels | labels | P0 | data | FEAT-04, SIM-01 | CHANGES_REQUESTED | [Spec](labels\LABEL-01-execution-aligned-net-return-labels.md) |
+| LABEL-01 | Execution-aligned net return labels | labels | P0 | data | FEAT-04, SIM-01 | DONE | [Spec](labels\LABEL-01-execution-aligned-net-return-labels.md) |
 | LABEL-02 | Triple barrier outcomes | labels | P0 | data | LABEL-01 | REVIEW | [Spec](labels\LABEL-02-triple-barrier-outcomes.md) |
 | SPLIT-01 | Sealed purged chronological folds | labels | P0 | safety | LABEL-02 | REVIEW | [Spec](labels\SPLIT-01-sealed-purged-chronological-folds.md) |
 | TRAIN-01 | Verified training dataset assembly | labels | P0 | data | SPLIT-01, FEAT-04 | REVIEW | [Spec](labels\TRAIN-01-verified-training-dataset-assembly.md) |
@@ -66,29 +66,29 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SIM-01 | Conservative execution simulator | simulation | P0 | feature | COST-01, BAR-01 | DONE | [Spec](simulation\SIM-01-conservative-execution-simulator.md) |
 | SIM-02 | Portfolio risk and circuit breakers | simulation | P0 | safety | LED-01, SIM-01 | DONE | [Spec](simulation\SIM-02-portfolio-risk-and-circuit-breakers.md) |
 | SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | DONE | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
-| SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | CHANGES_REQUESTED | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
+| SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | DONE | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
 | C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C01-01-donchian-breakout.md) |
 | C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
 | C04-01 | Cross sectional momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C04-01-cross-sectional-momentum.md) |
-| C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\C05-01-volatility-breakout.md) |
-| C06-01 | Directional trend strength | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\C06-01-directional-trend-strength.md) |
+| C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C05-01-volatility-breakout.md) |
+| C06-01 | Directional trend strength | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C06-01-directional-trend-strength.md) |
 | C07-01 | Bollinger RSI reversion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C07-01-bollinger-rsi-reversion.md) |
-| C08-01 | Multi timeframe confirmation | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\C08-01-multi-timeframe-confirmation.md) |
-| C09-01 | VWAP deviation reversion | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\C09-01-vwap-deviation-reversion.md) |
+| C08-01 | Multi timeframe confirmation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C08-01-multi-timeframe-confirmation.md) |
+| C09-01 | VWAP deviation reversion | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C09-01-vwap-deviation-reversion.md) |
 | C10-01 | Regime ensemble | strategies | P0 | feature | C01-01, C07-01 | REVIEW | [Spec](strategies\C10-01-regime-ensemble.md) |
-| C11-01 | Volatility allocation | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\C11-01-volatility-allocation.md) |
+| C11-01 | Volatility allocation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C11-01-volatility-allocation.md) |
 | C12-01 | Relative strength rotation | strategies | P1 | feature | C04-01 | PLANNED | [Spec](strategies\C12-01-relative-strength-rotation.md) |
 | S01-01 | Liquidity screened breakout | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S01-01-liquidity-screened-breakout.md) |
 | S02-01 | Squeeze expansion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\S02-01-squeeze-expansion.md) |
-| S03-01 | Abnormal volume continuation | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\S03-01-abnormal-volume-continuation.md) |
-| S04-01 | Order flow imbalance | strategies | P2 | feature | STRAT-01, LOB-01 | PLANNED | [Spec](strategies\S04-01-order-flow-imbalance.md) |
-| S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\S05-01-micro-pullback.md) |
-| S06-01 | Post listing maturation | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\S06-01-post-listing-maturation.md) |
+| S03-01 | Abnormal volume continuation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S03-01-abnormal-volume-continuation.md) |
+| S04-01 | Order flow imbalance | strategies | P2 | feature | STRAT-01, LOB-01 | READY | [Spec](strategies\S04-01-order-flow-imbalance.md) |
+| S05-01 | Micro pullback | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S05-01-micro-pullback.md) |
+| S06-01 | Post listing maturation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S06-01-post-listing-maturation.md) |
 | S07-01 | Small cap rotation | strategies | P1 | feature | C04-01, S01-01 | PLANNED | [Spec](strategies\S07-01-small-cap-rotation.md) |
-| S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | PLANNED | [Spec](strategies\S08-01-passive-mean-reversion.md) |
-| S09-01 | Tail risk abstention | strategies | P1 | feature | STRAT-01 | PLANNED | [Spec](strategies\S09-01-tail-risk-abstention.md) |
-| STRAT-01 | Declarative strategy protocol | strategies | P0 | feature | SIM-03, FEAT-04 | CHANGES_REQUESTED | [Spec](strategies\STRAT-01-declarative-strategy-protocol.md) |
+| S08-01 | Passive mean reversion | strategies | P2 | feature | STRAT-01, LOB-01 | READY | [Spec](strategies\S08-01-passive-mean-reversion.md) |
+| S09-01 | Tail risk abstention | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\S09-01-tail-risk-abstention.md) |
+| STRAT-01 | Declarative strategy protocol | strategies | P0 | feature | SIM-03, FEAT-04 | DONE | [Spec](strategies\STRAT-01-declarative-strategy-protocol.md) |
 | UNIV-01 | Point-in-time investable universe | universe | P0 | data | DATA-04, DATA-05 | DONE | [Spec](universe\UNIV-01-point-in-time-investable-universe.md) |
 | QA-01 | Wave 1 tournament checkpoint | verification | P0 | quality | JOB-03, SHADOW-02, C01-01, C02-01, C03-01, C04-01, C07-01, C10-01, S01-01, S02-01, ML-04 | REVIEW | [Spec](verification\QA-01-wave-1-tournament-checkpoint.md) |
 | QA-02 | Boundary security verification | verification | P0 | security | REPORT-02, AGENT-01, OPS-02 | REVIEW | [Spec](verification\QA-02-boundary-security-verification.md) |
@@ -98,7 +98,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | RP-01 | Shared SignalIntent ownership with compatibility | runtime-parity | P0 | integration | DOC-01, BASE-01 | DONE | [Spec](runtime-parity\RP-01-shared-signalintent-ownership-with-compatibility.md) |
 | RW0-01 | Immutable Workbench domain manifests | research-workbench | P0 | integration | RP-01, DATA-01 | DONE | [Spec](research-workbench\RW0-01-immutable-workbench-domain-manifests.md) |
 | RW1-01 | Reusable immutable dataset registry | research-workbench | P1 | integration | RW0-01, DATA-06 | DONE | [Spec](research-workbench\RW1-01-reusable-immutable-dataset-registry.md) |
-| RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | PLANNED | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
+| RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | READY | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
 | RW2-02 | Model registry and offline training services | research-workbench | P1 | integration | RW0-01, ML-04, JOB-01 | PLANNED | [Spec](research-workbench\RW2-02-model-registry-and-offline-training-services.md) |
 | RW2-03 | Typed declarative pipeline composer | research-workbench | P1 | integration | RW2-01, RW2-02 | PLANNED | [Spec](research-workbench\RW2-03-typed-declarative-pipeline-composer.md) |
 | RP-02 | Shared candidate feature and exit evaluation | runtime-parity | P0 | integration | RW2-03, FEAT-02 | PLANNED | [Spec](runtime-parity\RP-02-shared-candidate-feature-and-exit-evaluation.md) |

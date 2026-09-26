@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-None. Verify external gates and shared-file ownership before claim.
+C05-01, C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01, RW2-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -79,15 +79,15 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 9
 
 - FEAT-04 — Immutable feature materialization [DONE; CORE]
-- SIM-04 — Net-cost risk and capacity metrics [CHANGES_REQUESTED; CORE]
+- SIM-04 — Net-cost risk and capacity metrics [DONE; CORE]
 - UI-09 — Same-origin Production API access [DONE; CORE]
 
 ## Wave 10
 
 - EVAL-01 — Immutable experiment registry [REVIEW; CORE]
-- LABEL-01 — Execution-aligned net return labels [CHANGES_REQUESTED; CORE]
+- LABEL-01 — Execution-aligned net return labels [DONE; CORE]
 - LOB-01 — Forward book dataset eligibility [DONE; EXPERIMENTAL]
-- STRAT-01 — Declarative strategy protocol [CHANGES_REQUESTED; CORE]
+- STRAT-01 — Declarative strategy protocol [DONE; CORE]
 
 ## Wave 11
 
@@ -98,21 +98,21 @@ None. Verify external gates and shared-file ownership before claim.
 - C02-01 — EMA pullback [REVIEW; CORE]
 - C03-01 — Time series momentum [REVIEW; CORE]
 - C04-01 — Cross sectional momentum [REVIEW; CORE]
-- C05-01 — Volatility breakout [PLANNED; EXTENSION]
-- C06-01 — Directional trend strength [PLANNED; EXTENSION]
+- C05-01 — Volatility breakout [READY; EXTENSION]
+- C06-01 — Directional trend strength [READY; EXTENSION]
 - C07-01 — Bollinger RSI reversion [REVIEW; CORE]
-- C08-01 — Multi timeframe confirmation [PLANNED; EXTENSION]
-- C09-01 — VWAP deviation reversion [PLANNED; EXTENSION]
-- C11-01 — Volatility allocation [PLANNED; EXTENSION]
+- C08-01 — Multi timeframe confirmation [READY; EXTENSION]
+- C09-01 — VWAP deviation reversion [READY; EXTENSION]
+- C11-01 — Volatility allocation [READY; EXTENSION]
 - S01-01 — Liquidity screened breakout [REVIEW; CORE]
 - S02-01 — Squeeze expansion [REVIEW; CORE]
-- S03-01 — Abnormal volume continuation [PLANNED; EXTENSION]
-- S04-01 — Order flow imbalance [PLANNED; EXPERIMENTAL]
-- S05-01 — Micro pullback [PLANNED; EXTENSION]
-- S06-01 — Post listing maturation [PLANNED; EXTENSION]
-- S08-01 — Passive mean reversion [PLANNED; EXPERIMENTAL]
-- S09-01 — Tail risk abstention [PLANNED; EXTENSION]
-- RW2-01 — Durable versioned strategy registry [PLANNED; CORE]
+- S03-01 — Abnormal volume continuation [READY; EXTENSION]
+- S04-01 — Order flow imbalance [READY; EXPERIMENTAL]
+- S05-01 — Micro pullback [READY; EXTENSION]
+- S06-01 — Post listing maturation [READY; EXTENSION]
+- S08-01 — Passive mean reversion [READY; EXPERIMENTAL]
+- S09-01 — Tail risk abstention [READY; EXTENSION]
+- RW2-01 — Durable versioned strategy registry [READY; CORE]
 
 ## Wave 12
 

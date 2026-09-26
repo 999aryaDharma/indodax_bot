@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "baseline_commit": "8a8e9f2",
   "generated_on": "2026-09-21",
-  "status_basis": "Conservative recovery from frozen-baseline sprint specs and handoffs; historical 14 DONE retained; later handoffs REVIEW pending independent approval. See docs/implementation/MANIFEST-RECOVERY.md.",
+  "status_basis": "Conservative recovery from frozen-baseline sprint specs and handoffs; historical 14 DONE retained. Reviewed remediation batch SIM-04, STRAT-01 and LABEL-01 is independently PASS on code SHA b177691d19713b901d3a4f2f1b8a5d38779efe0a; remaining status is governed by current handoffs. See docs/implementation/MANIFEST-RECOVERY.md.",
   "sprints": [
     {
       "id": "AGENT-01",
@@ -2308,14 +2308,14 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/LABEL-01-execution-aligned-net-return-labels.md",
       "priority": "P0",
-      "status": "CHANGES_REQUESTED",
+      "status": "DONE",
       "implementation_owner": "Antigravity",
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/label-01-execution-aligned-net-return-labels",
       "external_gates": [
         "Unknown/unverified historical tariff intervals remain excluded and block affected net-performance claims/promotion. Bar-proxy labels do not certify venue fills or full SL/TP strategy PnL."
       ],
-      "current_context": "Independent review at 8ecd154f466776a59dfeda38204b40d558efdf8d found AC0/AC3 do not use ConservativeExecutionSimulator and may emit VALID with unavailable liquidity; canonical YAML execution_model_version is rejected. Owner approved candidate-specific SignalIntent sizing, immutable candidate bundle lineage, shared BUY plus fixed-horizon SELL, explicit exclusion for missing/incomplete fills, and target semantics separate from SL/TP PnL. Written CR/spec proposes net_return_candidate_horizon_v2; written-spec review pending before implementation.",
+      "current_context": "Independent review PASS on b177691d19713b901d3a4f2f1b8a5d38779efe0a. net_return_candidate_horizon_v2 uses candidate SignalIntent sizing and shared BUY plus fixed-horizon SELL fills, requires trusted registry resolution, excludes unavailable/incomplete fills, tracks fee intervals, and binds availability to all consulted outcome bars. net_return_v1 remains unchanged.",
       "unlocks": [
         "LABEL-02"
       ],
@@ -2331,43 +2331,43 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "independent_review_changes_requested",
+        "kind": "independent_review_pass",
         "path": "docs/sprints/handoffs/LABEL-01-HANDOFF.md",
-        "source_commit": "8ecd154f466776a59dfeda38204b40d558efdf8d",
-        "code_target": "8ecd154f466776a59dfeda38204b40d558efdf8d",
-        "review": "Independent reviewer /root/docs_review: CHANGES_REQUESTED; two Important findings. Repro proves zero-depth candles still produce VALID label while ConservativeExecutionSimulator rejects INSUFFICIENT_DEPTH. Canonical YAML conservative_v1 is rejected by NetReturnConfig. AC1/AC2 pass; focused label suite 21 passed but misses unavailable-fill coverage."
+        "source_commit": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "code_target": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "review": "Independent reviewer /root/docs_review: PASS on exact code SHA b177691d19713b901d3a4f2f1b8a5d38779efe0a; no Critical/Important findings. Focused metrics/CLI/strategy/labels suite: 55 passed; owner full suite: 1,107 passed, 2 platform-specific skipped, 4 warnings (not independently rerun). See handoff for negative probes and external gates."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "LABEL-01-AC0",
-          "test_case": "test_label_01_valid_contract",
-          "behavior": "measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills; test_candidate_horizon_v2_closes_actual_partial_entry_quantity",
+          "behavior": "`net_return_candidate_horizon_v2` binds candidate-specific sizing/identity and measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL.",
+          "status": "PASS"
         },
         {
           "criterion": "LABEL-01-AC1",
-          "test_case": "test_label_01_contract_1",
-          "behavior": "Candidate bundle, intent, pair, strategy, sample and decision-time lineage match; mismatches reject/exclude before output",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_candidate_horizon_v2_rejects_lineage_and_excludes_partial_exit",
+          "behavior": "Trusted registry resolver matches candidate bundle, intent, pair, strategy, sample and decision-time lineage; unknown associations and mismatches reject before output.",
+          "status": "PASS"
         },
         {
           "criterion": "LABEL-01-AC2",
           "test_case": "test_label_01_contract_2",
-          "behavior": "Horizon tidak lengkap tidak menjadi label nol",
+          "behavior": "Horizon tidak lengkap tidak menjadi label nol.",
           "status": "PASS"
         },
         {
           "criterion": "LABEL-01-AC3",
-          "test_case": "test_label_01_contract_3",
-          "behavior": "Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry may be included only if actual filled quantity is fully exited.",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_candidate_horizon_v2_excludes_missing_entry_or_incomplete_horizon; test_candidate_horizon_v2_excludes_unverified_fee_schedule",
+          "behavior": "Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry is included only when actual filled quantity is fully exited. Applied entry/exit fee intervals and all consulted source availability are retained.",
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
       "context_complexity": "high",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "CHANGES_REQUESTED: current open-price proxy can claim VALID without simulator fills; canonical execution model is unsupported. Owner selected candidate-specific sample sizing; change-control design remains before implementation remediation.",
+      "implementation_status_note": "DONE: independent exact-SHA review PASS. Candidate/sample registry resolver integration, historical tariff authenticity, profitability/promotion and venue-fill proof remain external gates.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6144,14 +6144,14 @@
       "spec": "docs/specs/08-costs-ledger-and-execution.md",
       "path": "docs/sprints/simulation/SIM-04-net-cost-risk-and-capacity-metrics.md",
       "priority": "P0",
-      "status": "CHANGES_REQUESTED",
+      "status": "DONE",
       "implementation_owner": "Antigravity",
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-04-net-cost-risk-and-capacity-metrics",
       "external_gates": [
         "Empirical spread and regime/universe-tier evidence must be supplied before those grouped metrics are reported as available. Historical fee matrix verification remains required for affected net metrics/promotions. This sprint does not currently provide deposit/withdrawal flow-adjusted returns or Production qualification."
       ],
-      "current_context": "Independent review on e3f1af8d232c1bf43fdf325922c96376bb542bc0 found: empty spread coverage treated as zero; missing equity curve defaults drawdown to zero and CLI repeats ending equity at all historic transactions; breakeven closes omitted from trade counts; regime/tier breakdowns absent. AC2 fee accounting passes.",
+      "current_context": "Independent review PASS on b177691d19713b901d3a4f2f1b8a5d38779efe0a. Equity marks retain the newest market-time observation; bars sharing availability are coalesced to one equity point. Metrics retain explicit missing-spread/equity/classification semantics and breakeven trade counts.",
       "unlocks": [
         "EVAL-01",
         "REPORT-01"
@@ -6167,43 +6167,43 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "independent_review_changes_requested",
+        "kind": "independent_review_pass",
         "path": "docs/sprints/handoffs/SIM-04-HANDOFF.md",
-        "source_commit": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
-        "code_target": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
-        "review": "Independent reviewer /root/docs_review CHANGES_REQUESTED with four Important findings. Focused tests: 8 passed, but existing tests miss the reproduced failures. See handoff for exact repros. No empirical spread, flow-adjusted PnL, cost verification or production qualification is claimed."
+        "source_commit": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "code_target": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "review": "Independent reviewer /root/docs_review: PASS on exact code SHA b177691d19713b901d3a4f2f1b8a5d38779efe0a; no Critical/Important findings. Focused metrics/CLI/strategy/labels suite: 55 passed; owner full suite: 1,107 passed, 2 platform-specific skipped, 4 warnings (not independently rerun). See handoff for negative probes and external gates."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "SIM-04-AC0",
-          "test_case": "test_sim_04_valid_contract",
-          "behavior": "Report menghitung performa dari ledger dan menunjukkan batas data serta kapasitas",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_sim_04_valid_contract; test_late_older_bar_does_not_replace_newer_equity_mark",
+          "behavior": "Report computes ledger metrics by year/asset and by regime/tier when transaction classifications are supplied; it reports missing/partial classifications and equity paths explicitly, never fabricated values. Breakeven completed trades count in trade_count. Delayed older bars preserve latest market-time marks; simultaneous availability is coalesced to one mark. Evidence: handoff on code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`.",
+          "status": "PASS"
         },
         {
           "criterion": "SIM-04-AC1",
           "test_case": "test_sim_04_contract_1",
-          "behavior": "No-trade dan zero-loss PF menghasilkan undefined beralasan",
-          "status": "CHANGES_REQUESTED"
+          "behavior": "No-trade dan zero-loss PF menghasilkan undefined beralasan. Evidence: focused independent review and mapped tests in handoff.",
+          "status": "PASS"
         },
         {
           "criterion": "SIM-04-AC2",
           "test_case": "test_sim_04_contract_2",
-          "behavior": "Fee tidak dikurangi dua kali dari net cash equity",
+          "behavior": "Fee tidak dikurangi dua kali dari net cash equity. Evidence: focused independent review and mapped tests in handoff.",
           "status": "PASS"
         },
         {
           "criterion": "SIM-04-AC3",
           "test_case": "test_sim_04_contract_3",
-          "behavior": "Missing spread tidak dilaporkan sebagai biaya nol",
-          "status": "CHANGES_REQUESTED"
+          "behavior": "Missing spread tidak dilaporkan sebagai biaya nol. Evidence: focused independent review and mapped tests in handoff.",
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
       "context_complexity": "high",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "CHANGES_REQUESTED: accurate path equity/drawdown, closed breakeven trade accounting, unavailable empty spread coverage, and explicit regime/tier breakdown are incomplete.",
+      "implementation_status_note": "DONE: independent exact-SHA review PASS. Historical fee authenticity, empirical spread, flow-adjusted returns and Production qualification remain outside this sprint.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6646,7 +6646,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6725,7 +6725,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6898,7 +6898,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6977,7 +6977,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7146,7 +7146,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7483,7 +7483,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7563,7 +7563,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7642,7 +7642,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7721,7 +7721,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7881,7 +7881,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7960,7 +7960,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7998,14 +7998,14 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/STRAT-01-declarative-strategy-protocol.md",
       "priority": "P0",
-      "status": "CHANGES_REQUESTED",
+      "status": "DONE",
       "implementation_owner": "Antigravity",
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/strat-01-declarative-strategy-protocol",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
-      "current_context": "Independent review on e3f1af8d232c1bf43fdf325922c96376bb542bc0 found registered strategy specs remain mutable, closure/default state is omitted from logic hash, and nonempty DecisionFrames may omit causal columns or accept NaT. AC0/AC1 pass; AC2/AC3 incomplete.",
+      "current_context": "Independent review PASS on b177691d19713b901d3a4f2f1b8a5d38779efe0a. Registered specifications are defensive copies; callable identity binds typed supported captures, rejects stateful bound methods, detects runtime mutation, and DecisionFrames require valid causal evidence.",
       "unlocks": [
         "C01-01",
         "C02-01",
@@ -8038,43 +8038,43 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "independent_review_changes_requested",
+        "kind": "independent_review_pass",
         "path": "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
-        "source_commit": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
-        "code_target": "e3f1af8d232c1bf43fdf325922c96376bb542bc0",
-        "review": "Independent reviewer /root/docs_review CHANGES_REQUESTED with three Important findings. Focused tests: 8 passed, but negative probes reproduced mutable spec, closure collision and missing/NaT causal evidence. See handoff for repros."
+        "source_commit": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "code_target": "b177691d19713b901d3a4f2f1b8a5d38779efe0a",
+        "review": "Independent reviewer /root/docs_review: PASS on exact code SHA b177691d19713b901d3a4f2f1b8a5d38779efe0a; no Critical/Important findings. Focused metrics/CLI/strategy/labels suite: 55 passed; owner full suite: 1,107 passed, 2 platform-specific skipped, 4 warnings (not independently rerun). See handoff for negative probes and external gates."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "STRAT-01-AC0",
           "test_case": "test_strat_01_valid_contract",
-          "behavior": "Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger",
+          "behavior": "Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger. Evidence: valid fixture through the public interface, with expected output independent of implementation.",
           "status": "PASS"
         },
         {
           "criterion": "STRAT-01-AC1",
           "test_case": "test_strat_01_contract_1",
-          "behavior": "Unknown config ditolak",
+          "behavior": "Unknown config ditolak. Evidence: mapped test and independent focused review.",
           "status": "PASS"
         },
         {
           "criterion": "STRAT-01-AC2",
-          "test_case": "test_strat_01_contract_2",
-          "behavior": "Future atau ineligible row tidak masuk DecisionFrame",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_strat_01_contract_2; test_decision_frame_requires_valid_causality_evidence",
+          "behavior": "Future atau ineligible row tidak masuk DecisionFrame; required point-in-time evidence rejects missing/NaT fields.",
+          "status": "PASS"
         },
         {
           "criterion": "STRAT-01-AC3",
-          "test_case": "test_strat_01_contract_3",
-          "behavior": "Parameter atau logic change memerlukan versi baru",
-          "status": "CHANGES_REQUESTED"
+          "test_case": "test_strat_01_contract_3; test_logic_hash_includes_closure_and_default_values; test_stateful_bound_method_is_rejected; test_all_capture_types_have_unambiguous_identity",
+          "behavior": "Parameter atau logic change memerlukan versi baru; callable receiver state and supported capture types are bound to identity or rejected.",
+          "status": "PASS"
         }
       ],
       "risk_level": "medium",
       "context_complexity": "medium",
       "security_critical": false,
       "data_migration": false,
-      "implementation_status_note": "CHANGES_REQUESTED: freeze registered identity and callable behavior; require valid nonmissing point-in-time eligibility/availability evidence.",
+      "implementation_status_note": "DONE: independent exact-SHA review PASS. Logic hash encoding is type-tagged; future candidate logic identities use the canonical typed representation.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -9000,7 +9000,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-01-durable-versioned-strategy-registry.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw2-01-durable-versioned-strategy-registry",

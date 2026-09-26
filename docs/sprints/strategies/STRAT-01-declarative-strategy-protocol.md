@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 Priority: P0 | Type: feature | Domain: strategies | Portfolio: CORE
 
@@ -14,7 +14,7 @@ Requirements: FR-08 | Legacy tasks: 19
 
 External gates: No additional portfolio activation gate; data/policy validity still applies.
 
-Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+Implementation artifacts and regressions are committed and independently reviewed; evidence is in the handoff.
 
 ## Goal
 
@@ -193,24 +193,24 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **STRAT-01-AC0** Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **STRAT-01-AC1** Unknown config ditolak. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **STRAT-01-AC2** Future atau ineligible row tidak masuk DecisionFrame. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **STRAT-01-AC3** Parameter atau logic change memerlukan versi baru. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **STRAT-01-AC0** Strategi terdaftar hanya menghasilkan intent dan tidak memiliki otoritas fill atau ledger. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **STRAT-01-AC1** Unknown config ditolak. Evidence: mapped test and independent focused review.
+- [x] **STRAT-01-AC2** Future atau ineligible row tidak masuk DecisionFrame; required point-in-time evidence rejects missing/NaT fields.
+- [x] **STRAT-01-AC3** Parameter atau logic change memerlukan versi baru; callable receiver state and supported capture types are bound to identity or rejected.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updated manifest and regenerated status/waves after review PASS.
 
-Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
+Review closeout: `/root/docs_review` PASS on code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`; see `docs/sprints/handoffs/STRAT-01-HANDOFF.md` for exact evidence and hash compatibility note.
 
 ## Reviewer Checklist
 

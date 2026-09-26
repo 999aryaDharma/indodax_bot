@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: CHANGES_REQUESTED
+Status: DONE
 
 Priority: P0 | Type: data | Domain: labels | Portfolio: CORE
 
@@ -14,7 +14,7 @@ Requirements: FR-07 | Legacy tasks: 16
 
 External gates: Unknown/unverified historical tariff intervals remain excluded and block affected net-performance claims/promotion. This sprint does not qualify full strategy PnL or production fills.
 
-Implementation artifacts named below are implemented on the current review candidate; independent exact-SHA review is pending. Sprint status remains CHANGES_REQUESTED until reviewer PASS is recorded in the manifest.
+Implementation artifacts are committed and independently reviewed; see the handoff for exact evidence and remaining caller/fee gates.
 
 ## Goal
 
@@ -132,7 +132,7 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-LABEL-01-AC0 is implemented: candidate-specific `SignalIntent` is priced through the shared simulator at entry and fixed horizon exit, and net return derives from actual fills/costs. Baseline review reproduced zero-depth bars yielding VALID while the simulator rejected the fill; regression coverage now exercises missing liquidity against the shared simulator.
+LABEL-01 is implemented as the separate `net_return_candidate_horizon_v2` path. It requires a trusted candidate/sample registry resolver, prices actual candidate sizing through shared BUY and fixed-horizon SELL fills, excludes missing/incomplete fills and records fee interval provenance. Baseline and remediation reviews, regression commands and external gates are recorded in the handoff.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `LABEL-01-AC1`, prove candidate bundle/intent/sample lineage and decision-time match; reject mismatches. Write a mapped test and observe behavioral RED, then GREEN.
@@ -198,24 +198,24 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **LABEL-01-AC0** `net_return_candidate_horizon_v2` binds candidate-specific sizing/identity and measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL. Evidence: `test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills`.
-- [ ] **LABEL-01-AC1** Candidate bundle, intent, pair, strategy, sample and decision-time lineage match; mismatches reject/exclude before output. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-01-AC2** Horizon tidak lengkap tidak menjadi label nol. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **LABEL-01-AC3** Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry may be included only if actual filled quantity is fully exited. Evidence: v2 missing/unverified-cost, missing-liquidity, partial-entry, partial-exit and incomplete-horizon tests.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **LABEL-01-AC0** `net_return_candidate_horizon_v2` binds candidate-specific sizing/identity and measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL.
+- [x] **LABEL-01-AC1** Trusted registry resolver matches candidate bundle, intent, pair, strategy, sample and decision-time lineage; unknown associations and mismatches reject before output.
+- [x] **LABEL-01-AC2** Horizon tidak lengkap tidak menjadi label nol.
+- [x] **LABEL-01-AC3** Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry is included only when actual filled quantity is fully exited. Applied entry/exit fee intervals and all consulted source availability are retained.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output through the required resolver adapter.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updated manifest and regenerated status/waves after review PASS.
 
-Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
+Review closeout: `/root/docs_review` PASS on code SHA `b177691d19713b901d3a4f2f1b8a5d38779efe0a`; registry resolver, tariff authenticity and profitability gates remain as recorded in the handoff.
 
 ## Reviewer Checklist
 

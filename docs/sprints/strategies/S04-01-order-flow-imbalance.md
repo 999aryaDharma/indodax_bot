@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: PLANNED
+Status: READY
 
 Priority: P2 | Type: feature | Domain: strategies | Portfolio: EXPERIMENTAL
 
