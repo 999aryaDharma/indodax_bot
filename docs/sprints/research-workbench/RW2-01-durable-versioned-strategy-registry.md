@@ -34,7 +34,7 @@ Status: READY
 
 Priority: P1 | Type: integration | Domain: research-workbench | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/rw2-01-durable-versioned-strategy-registry`
 
@@ -42,7 +42,7 @@ Requirements: FR-19 | Legacy tasks: none
 
 Risk level: high | Complexity: M
 
-Classification: PLANNED implementation; current-state statements are audit facts. External gates are separate from READY.
+Classification: Code committed at `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`; review state remains governed by the sprint manifest and handoff. External gates remain separate from code acceptance.
 
 ## Goal
 
@@ -130,11 +130,15 @@ Modify:
 
 - `src/indodax_lab/strategies/base.py`
 
+- `src/indodax_lab/strategies/__init__.py`
+
 Create:
 
 - `src/indodax_lab/strategies/store.py`
 
 - `tests/unit/lab/strategies/test_versioned_registry.py`
+
+- `configs/strategies/seeds.yaml`
 
 Actual import-only consumer changes for RP-01 are enumerated in its focused handoff; no arbitrary adjacent refactor.
 
@@ -170,21 +174,21 @@ No graphical UI work in this task; expose structured results/reason codes to lat
 
 ## Implementation Steps
 
-- [ ] Step 1: Wrap existing built-in registry through allowlisted strategy IDs.
+- [x] Step 1: Wrap existing built-in registry through allowlisted strategy IDs.
 
-- [ ] Step 2: Store draft revisions with compare-and-swap.
+- [x] Step 2: Store draft revisions with compare-and-swap.
 
-- [ ] Step 3: Hash versioned source/artifact bytes instead of callable repr.
+- [x] Step 3: Hash versioned source/artifact bytes instead of callable repr.
 
-- [ ] Step 4: Publish immutable parameters and feature/exit contracts.
+- [x] Step 4: Publish immutable parameters and feature/exit contracts.
 
-- [ ] Step 5: Register C07/C02 seed manifests without hard-coded pair dispatch.
+- [x] Step 5: Register C07/C02 seed manifests without hard-coded pair dispatch.
 
 - [ ] For every acceptance row below, first write its named behavioral assertion using fake clocks/transports and temporary storage; observe wrong-behavior RED, implement its owner code, then GREEN. Missing dependency/import alone is not RED.
 
-- [ ] Run `python -m pytest tests/unit/lab/strategies/test_versioned_registry.py -q`; expected all named behaviors pass. Shared contract/accounting/recovery changes additionally run `python -m pytest -q` with required dependencies; required skips block acceptance.
+- [x] Run focused versioned-registry tests and the whole strategy suite; the full repository suite also passed on the implementation SHA. Platform-specific skips are recorded in the handoff.
 
-- [ ] Run `git diff --check`, record exact environment/command/exit/SHA, commit scoped files, and submit independent review.
+- [x] Run Ruff and `git diff --check`, record exact environment/commands/exit/SHA, and commit the scoped implementation. Independent review is pending.
 
 ## Required Tests
 
@@ -194,13 +198,15 @@ Planned test paths: `tests/unit/lab/strategies/test_versioned_registry.py`.
 
 |---|---|---|
 
-| RW2-01-AC0 | `test_rw2_01_0` | Published same-version parameter/logic change rejects |
+| RW2-01-AC0 | `test_rw2_01_0_published_same_version_change_rejects`, `test_rw2_01_0_published_same_version_source_change_rejects`, `test_same_version_specification_metadata_change_rejects` | Published same-version parameter, source and specification changes reject |
 
-| RW2-01-AC1 | `test_rw2_01_1` | Stale draft revision cannot overwrite edit |
+| RW2-01-AC1 | `test_rw2_01_1_stale_draft_revision_cannot_overwrite_edit`, `test_rw2_01_1_revision_cas_holds_across_service_connections` | Stale draft revision cannot overwrite edit, including across store connections |
 
-| RW2-01-AC2 | `test_rw2_01_2` | Unknown import/module path rejects |
+| RW2-01-AC2 | `test_rw2_01_2_unknown_source_and_executable_yaml_reject`, `test_registry_builtin_registration_uses_allowlist` | Unknown implementation and executable YAML fields reject without importing user paths |
 
-| RW2-01-AC3 | `test_rw2_01_3` | Clone preserves parent and leaves original intact |
+| RW2-01-AC3 | `test_rw2_01_3_clone_preserves_parent_and_source` | Clone preserves parent, gets a distinct opaque version and leaves original intact |
+
+| RW2-01-AC4 | `test_rw2_01_program_4_component_metadata_yaml_and_durable_reload`, `test_seed_manifests_bind_selected_pairs_without_pair_dispatch`, `test_seed_manifest_preserves_yaml_strategy_and_risk_defaults` | Versioned schemas/metadata and declarative C07/C02 seeds are available without executable expressions |
 
 Focused command: `python -m pytest tests/unit/lab/strategies/test_versioned_registry.py -q`. Tests must exercise the public service boundary, not only fabricated ID equality. No real network/Telegram/DB.
 
@@ -240,15 +246,15 @@ Select prior compatible code/artifact before activation; preserve failed/new evi
 
 ## Acceptance Criteria
 
-- [ ] **RW2-01-AC4** Expose versioned parameter schemas and component metadata to form/YAML/MCP without executable user expressions. Evidence: `test_rw2_01_program_4` at exact implementation SHA.
+- [x] **RW2-01-AC4** Expose versioned parameter schemas and component metadata to form/YAML/MCP without executable user expressions. Evidence: `test_rw2_01_program_4_component_metadata_yaml_and_durable_reload` at code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
 
-- [ ] **RW2-01-AC0** Published same-version parameter/logic change rejects. Evidence: named test on exact committed SHA.
+- [x] **RW2-01-AC0** Published same-version parameter/logic change rejects. Evidence: mapped parameter/source/full-spec tests on code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
 
-- [ ] **RW2-01-AC1** Stale draft revision cannot overwrite edit. Evidence: named test on exact committed SHA.
+- [x] **RW2-01-AC1** Stale draft revision cannot overwrite edit. Evidence: same-service and two-connection CAS tests on code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
 
-- [ ] **RW2-01-AC2** Unknown import/module path rejects. Evidence: named test on exact committed SHA.
+- [x] **RW2-01-AC2** Unknown import/module path rejects. Evidence: allowlist and safe YAML tests on code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
 
-- [ ] **RW2-01-AC3** Clone preserves parent and leaves original intact. Evidence: named test on exact committed SHA.
+- [x] **RW2-01-AC3** Clone preserves parent and leaves original intact. Evidence: parent-ref, version separation and immutable-original test on code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
 
 ## Definition of Done
 
