@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
+
 import pytest
 
 from indodax_lab.backtest.costs import (
@@ -13,14 +15,19 @@ from indodax_lab.backtest.costs import (
     OrderRole,
     OrderSide,
 )
+from indodax_lab.backtest.events import MarketBar
 from indodax_lab.backtest.execution import ConservativeExecutionSimulator
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.labels.returns import (
+    CandidateHorizonConfig,
+    CandidateHorizonSample,
     NetReturnConfig,
     NetReturnLabel,
+    build_candidate_horizon_label,
     build_net_return_label,
     build_net_return_labels_frame,
+    load_candidate_horizon_config,
 )
-
 
 BASE_TIME = datetime(2024, 1, 1, 10, 0, tzinfo=UTC)
 PAIR = "btc_idr"
@@ -34,6 +41,95 @@ def test_open_price_proxy_cannot_claim_verified_simulator_fills():
     assert not label.promotion_eligible
     with pytest.raises(ValueError, match="UNSUPPORTED_EXECUTION_MODEL"):
         NetReturnConfig(execution_model_version="conservative_v1")
+
+
+def test_candidate_horizon_v2_uses_actual_candidate_size_and_shared_fills():
+    simulator = ConservativeExecutionSimulator(_simulator_schedule_table())
+    sample = _candidate_sample(Decimal("0.001"))
+    bars = _simulator_bars()
+
+    label = build_candidate_horizon_label(
+        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+
+    assert label.status == "VALID"
+    assert label.label_set_id == "net_return_candidate_horizon_v2"
+    assert label.candidate_bundle_id == "bundle-sha256:test"
+    assert label.entry_qty == label.exit_qty == Decimal("0.001")
+    assert label.entry_price == Decimal("21000000")
+    assert label.exit_price == Decimal("23000000")
+    assert label.buy_cost > 0 and label.sell_cost > 0
+    assert label.net_return == ((label.exit_qty * label.exit_price - label.sell_cost) /
+                                (label.entry_qty * label.entry_price + label.buy_cost)) - 1
+    assert label.execution_model_version == simulator.execution_version == "causal-bar-proxy-v2"
+
+
+def test_candidate_horizon_config_loads_as_separate_version():
+    config = load_candidate_horizon_config(
+        Path("configs/labels/net_return_candidate_horizon_v2.yaml")
+    )
+    assert config.horizon == timedelta(hours=4)
+    assert config.execution_model_version == "causal-bar-proxy-v2"
+
+
+def test_candidate_horizon_v2_excludes_missing_entry_or_incomplete_horizon():
+    simulator = ConservativeExecutionSimulator(_simulator_schedule_table())
+    sample = _candidate_sample(Decimal("0.001"))
+    bars = _simulator_bars()
+
+    no_liquidity = [bar.model_copy(update={"open_liquidity_base_volume": None,
+                                         "open_liquidity_available_at": None})
+                    for bar in bars]
+    no_entry = build_candidate_horizon_label(
+        sample, no_liquidity, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+    short = build_candidate_horizon_label(
+        sample, bars[:2], simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+    assert (no_entry.status, no_entry.exclusion_reason) == ("EXCLUDED", "NO_ENTRY_FILL")
+    assert (short.status, short.exclusion_reason) == ("EXCLUDED", "INCOMPLETE_HORIZON")
+    assert no_entry.net_return is short.net_return is None
+
+
+def test_candidate_horizon_v2_closes_actual_partial_entry_quantity():
+    simulator = ConservativeExecutionSimulator(_simulator_schedule_table())
+    sample = _candidate_sample(Decimal("0.01"))
+    bars = _simulator_bars().copy()
+    bars[1] = bars[1].model_copy(update={"open_liquidity_base_volume": Decimal("0.01")})
+
+    label = build_candidate_horizon_label(
+        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+
+    assert label.status == "VALID"
+    assert label.entry_qty == label.exit_qty == Decimal("0.001")
+
+
+def test_candidate_horizon_v2_rejects_lineage_and_excludes_partial_exit():
+    simulator = ConservativeExecutionSimulator(_simulator_schedule_table())
+    sample = _candidate_sample(Decimal("0.01"))
+    mismatch = sample.model_copy(update={"strategy_id": "other"})
+    with pytest.raises(ValueError, match="CANDIDATE_INTENT_LINEAGE_MISMATCH"):
+        build_candidate_horizon_label(
+            mismatch, _simulator_bars(), simulator,
+            CandidateHorizonConfig(horizon=timedelta(hours=2)),
+        )
+
+    bars = _simulator_bars(desired_exit_liquidity=Decimal("0.001"))
+    label = build_candidate_horizon_label(
+        sample, bars, simulator, CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+    assert (label.status, label.exclusion_reason) == ("EXCLUDED", "INCOMPLETE_EXIT_FILL")
+    assert label.net_return is None
+
+
+def test_candidate_horizon_v2_excludes_unverified_fee_schedule():
+    simulator = ConservativeExecutionSimulator(_simulator_schedule_table(verified=False))
+    label = build_candidate_horizon_label(
+        _candidate_sample(Decimal("0.001")), _simulator_bars(), simulator,
+        CandidateHorizonConfig(horizon=timedelta(hours=2)),
+    )
+    assert (label.status, label.exclusion_reason) == ("EXCLUDED", "COST_SCHEDULE_UNAVAILABLE")
 
 
 def test_delayed_entry_observation_delays_label_availability():
@@ -130,7 +226,11 @@ def test_generated_label_frame_flows_through_split_and_training():
 
     from indodax_lab.labels.materializer import materialize_training_dataset
     from indodax_lab.labels.splits import (
-        FoldWindow, SampleRecord, SampleRole, SplitPolicy, assign_folds,
+        FoldWindow,
+        SampleRecord,
+        SampleRole,
+        SplitPolicy,
+        assign_folds,
     )
 
     decision = BASE_TIME + timedelta(hours=1)
@@ -511,3 +611,43 @@ def test_proxy_cannot_be_promoted() -> None:
 
     with pytest.raises(ValueError, match="UNSUPPORTED_EXECUTION_MODEL"):
         NetReturnConfig(execution_model_version="simulator_v1")
+
+
+def _candidate_sample(quantity: Decimal) -> CandidateHorizonSample:
+    decision = BASE_TIME + timedelta(hours=1)
+    return CandidateHorizonSample(
+        sample_id="candidate-sample", candidate_bundle_id="bundle-sha256:test",
+        strategy_id="strat-alpha", pair=PAIR, decision_ts=decision,
+        signal_intent=SignalIntent(
+            intent_id="candidate-intent", decision_ts=decision, pair=PAIR,
+            side=OrderSide.BUY, desired_qty=quantity, strategy_id="strat-alpha",
+        ),
+    )
+
+
+def _simulator_schedule_table(verified: bool = True) -> CostScheduleTable:
+    intervals = tuple(
+        CostScheduleInterval(
+            schedule_id=f"sim-{side.value}", market="spot_idr", side=side,
+            role=OrderRole.TAKER, valid_from=BASE_TIME - timedelta(days=1),
+            service_fee_rate=Decimal("0.001"), tax_rate=Decimal("0"),
+            exchange_fee_rate=Decimal("0"), min_notional=Decimal("10000"),
+            precision=0, sources=("test fixture",), evidence_verified=verified,
+        ) for side in (OrderSide.BUY, OrderSide.SELL)
+    )
+    return CostScheduleTable(schedule_set_id="sim-cost", version="1", intervals=intervals)
+
+
+def _simulator_bars(desired_exit_liquidity: Decimal = Decimal("1")) -> list[MarketBar]:
+    bars = []
+    for index in range(4):
+        opened = BASE_TIME + timedelta(hours=index)
+        price = Decimal("20000000") + Decimal(index * 1000000)
+        bars.append(MarketBar(
+            pair=PAIR, open_time=opened, close_time=opened + timedelta(hours=1),
+            open=price, high=price, low=price, close=price,
+            base_volume=Decimal("1"), quote_volume=price,
+            open_liquidity_base_volume=(desired_exit_liquidity if index == 3 else Decimal("1")),
+            open_liquidity_available_at=opened,
+        ))
+    return bars

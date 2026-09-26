@@ -1,0 +1,10 @@
+label_set_id: net_return_candidate_horizon_v2
+version: 2.0.0
+horizon_seconds: 14400
+edge_margin: "0.001"
+execution_model_version: causal-bar-proxy-v2
+sizing_source: candidate_signal_intent.desired_qty
+exit_policy: taker_sell_at_exact_horizon
+partial_entry_policy: close_actual_filled_quantity
+incomplete_or_missing_fill: EXCLUDED
+legacy_materialization: net_return_v1

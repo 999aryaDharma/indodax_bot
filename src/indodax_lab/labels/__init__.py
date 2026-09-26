@@ -1,10 +1,16 @@
 """Public exports for the labels domain (LABEL-01..LABEL-02, SPLIT-01, TRAIN-01)."""
 
 from .returns import (
+    CandidateHorizonConfig,
+    CandidateHorizonLabel,
+    CandidateHorizonSample,
     NetReturnConfig,
     NetReturnLabel,
+    build_candidate_horizon_label,
+    build_candidate_horizon_labels_frame,
     build_net_return_label,
     build_net_return_labels_frame,
+    load_candidate_horizon_config,
 )
 from .triple_barrier import (
     BarrierTouch,
@@ -37,6 +43,9 @@ __all__ = [
     "ArtifactIntegrityError",
     "AvailabilityMismatchError",
     "BarrierTouch",
+    "CandidateHorizonConfig",
+    "CandidateHorizonLabel",
+    "CandidateHorizonSample",
     "DuplicateSampleError",
     "ExposedPeriodViolationError",
     "FoldAssignment",
@@ -53,6 +62,9 @@ __all__ = [
     "TripleBarrierConfig",
     "TripleBarrierLabel",
     "assign_folds",
+    "build_candidate_horizon_label",
+    "build_candidate_horizon_labels_frame",
+    "load_candidate_horizon_config",
     "build_net_return_label",
     "build_net_return_labels_frame",
     "build_triple_barrier_label",
