@@ -30,7 +30,7 @@ Apply these to the task-owned boundaries; test rows below pin concrete relevant 
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: integration | Domain: research-workbench | Portfolio: CORE
 

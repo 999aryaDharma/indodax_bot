@@ -1,12 +1,12 @@
-Status: REVIEW
+Status: DONE
 
 ## Identity
 
 - Sprint ID: RW2-01 — Durable versioned strategy registry
 - Owner: Codex
-- Independent reviewer: `/root/docs_review` (requested; pending)
+- Independent reviewer: `/root/docs_review` (Round 3 PASS)
 - Base SHA: `12fd468a99fe4615f7789204dad3694bd42fbd89`
-- Code SHA: `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`
+- Code SHA: `e2471a0d4112868454949ecf37b2dd843b281421`
 - Branch: `feat/feat-02-finalization`
 - Environment: Windows, Python 3.12.13, `C:/Users/User/miniconda3/envs/ML/python.exe`
 
@@ -18,6 +18,8 @@ Status: REVIEW
 - Added declarative BTC-C07, ETH-C02 and SOL-C02 seed records with pair-specific parameters. Existing strategy and risk defaults are copied from the checked-in C02/C07 YAML files; no pair-to-code dispatch was added.
 - Clone retains its published parent reference and gets a unique opaque version suffix so subsequent parameter edits can publish without modifying the parent.
 - Existing `StrategyRegistry.register/get` behavior remains available. Same-version identity now binds every `StrategySpecification` field, not only its parameters.
+- `register_builtin()` now executes C02/C07 with a defensive copy of the supplied specification; strategy ID, sizing and indicator parameters therefore remain bound to the registration.
+- The actual allowlisted function is captured in the registered wrapper. Its code/defaults/closure are included in the wrapper logic hash; same-version re-registration with a replaced implementation rejects.
 
 ## Actual Paths
 
@@ -27,6 +29,8 @@ Status: REVIEW
 - `src/indodax_lab/strategies/__init__.py`
 - `configs/strategies/seeds.yaml`
 - `tests/unit/lab/strategies/test_versioned_registry.py`
+- `tests/unit/lab/strategies/test_c02.py`
+- `tests/unit/lab/strategies/test_c07.py`
 
 ## Acceptance Evidence
 
@@ -39,9 +43,10 @@ Status: REVIEW
 
 ## Checks
 
-- `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies -q` — 61 passed.
+- `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies -q -p no:cacheprovider` — 68 passed on corrected code SHA.
+- C02/C07 custom-registration regressions verify candidate identity and quantity, custom C02 ATR stop, and pinned callable behavior under module replacement.
 - `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` on code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c` — 1,121 passed, 2 platform-specific skipped, 4 warnings, 30.42s.
-- `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/base.py src/indodax_lab/strategies/registry.py src/indodax_lab/strategies/store.py src/indodax_lab/strategies/__init__.py tests/unit/lab/strategies/test_versioned_registry.py --output-format concise` — all checks passed.
+- `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/registry.py` — passed. Existing unrelated lint findings remain in test modules.
 - `rtk git diff --check` and staged diff check — passed before code commit.
 
 ## Migration, Deviations and External Gates
@@ -54,4 +59,7 @@ Status: REVIEW
 
 ## Review Rounds
 
-- Round 1: pending independent review of exact code SHA `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`.
+- Round 1: CHANGES_REQUESTED on `ab8fff6b2a7a64dbc84388f03f2b90bf05e4691c`; built-in execution ignored supplied specifications.
+- Round 2: CHANGES_REQUESTED on `43691811731a840e9642c1f09e1c0ebcd5e0cb75`; runtime lookup could execute a replacement callable.
+- Round 3 fix commit: `e2471a0d4112868454949ecf37b2dd843b281421`; exact-SHA independent review pending.
+- Round 3 review: PASS on `e2471a0d4112868454949ecf37b2dd843b281421`; no Critical/Important findings. Reviewer verified implementation pinning, immutable spec binding, mutation regression and prior publication/CAS/corruption/clone/allowlist boundaries.

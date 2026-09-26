@@ -122,6 +122,8 @@ Acceptance boundary:
 
 Prior contraction then range expansion with registered ATR risk -> versioned LONG/FLAT intent, never direct orders.
 
+Deterministic v1 defaults: compare the mean `(high-low)` over the prior 5 completed bars with the preceding 20-bar mean; contraction qualifies at `<= 0.70 × baseline`. The current closed bar must have `(high-low) >= 1.50 × contraction_mean` and `close > max(high)` of those 5 contraction bars. The current bar is excluded from both windows. Stop is `close - 2.0 × atr_14`; missing/nonpositive OHLC or ATR abstains. Equality qualifies for contraction and expansion; breakout is strict. These are frozen research hypotheses, not profitability claims.
+
 Acceptance boundary:
 - Future range tidak membentuk contraction.
 - Expansion memberi intent.

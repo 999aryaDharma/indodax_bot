@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c05-01-volatility-breakout`
 
@@ -14,7 +14,7 @@ Requirements: FR-08 | Legacy tasks: Catalog extension / operational gap identifi
 
 External gates: Portfolio backlog activation by owner; not in default scheduler
 
-Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+Code commits: initial `542369b823c3346dbfe193fa87ffcab0d48639e5`; correction `4a5579d65d6196776097b8ea9f75921ec2e993e5`. Independent review PASS; manifest is status authority.
 
 ## Goal
 
@@ -79,6 +79,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 Prior contraction then range expansion with registered ATR risk -> versioned LONG/FLAT intent, never direct orders.
 
+Default v1 formula (research hypothesis): mean `(high-low)` for the prior 5 completed bars must be `<= 0.70 ×` the mean of the preceding 20 completed bars. The current closed bar must have range `>= 1.50 ×` the contraction mean and close strictly above the contraction-window high. Current bar is excluded from both windows. Stop is `close - 2.0 × atr_14`; missing or nonpositive close/range/ATR abstains. Equality qualifies at the contraction and expansion thresholds. No tuning against fixture outcomes.
+
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 
 Global causality, identity, exact accounting and paper-only constraints apply; tidak ada exception lokal yang mengizinkan pengubahan histori.
@@ -125,7 +127,7 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-First establish C05-01-AC0: Kandidat C05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama. Use a minimal valid fixture, independent expected output, and a failing assertion before implementation.
+Code and AC fixtures are implemented in the commit above. RED evidence was not captured before implementation; reviewer should independently inspect fixtures and formula against this specification.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `C05-01-AC1`, build minimal fixture proving: Future range tidak membentuk contraction. Write `test_c05_01_contract_1` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.

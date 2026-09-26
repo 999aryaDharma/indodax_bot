@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-C05-01, C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01, RW2-01. Verify external gates and shared-file ownership before claim.
+C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -98,7 +98,7 @@ C05-01, C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, 
 - C02-01 — EMA pullback [REVIEW; CORE]
 - C03-01 — Time series momentum [REVIEW; CORE]
 - C04-01 — Cross sectional momentum [REVIEW; CORE]
-- C05-01 — Volatility breakout [READY; EXTENSION]
+- C05-01 — Volatility breakout [DONE; EXTENSION]
 - C06-01 — Directional trend strength [READY; EXTENSION]
 - C07-01 — Bollinger RSI reversion [REVIEW; CORE]
 - C08-01 — Multi timeframe confirmation [READY; EXTENSION]
@@ -112,7 +112,7 @@ C05-01, C06-01, C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, 
 - S06-01 — Post listing maturation [READY; EXTENSION]
 - S08-01 — Passive mean reversion [READY; EXPERIMENTAL]
 - S09-01 — Tail risk abstention [READY; EXTENSION]
-- RW2-01 — Durable versioned strategy registry [READY; CORE]
+- RW2-01 — Durable versioned strategy registry [DONE; CORE]
 
 ## Wave 12
 

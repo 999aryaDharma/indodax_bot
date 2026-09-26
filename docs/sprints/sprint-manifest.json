@@ -6602,8 +6602,8 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C05-01-volatility-breakout.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c05-01-volatility-breakout",
       "requirements": [
         "FR-08"
@@ -6625,28 +6625,28 @@
           "criterion": "C05-01-AC0",
           "test_case": "test_c05_01_valid_contract",
           "behavior": "Kandidat C05 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C05-01-AC1",
-          "test_case": "test_c05_01_contract_1",
+          "test_case": "test_c05_01_contract_1_future_range_does_not_create_earlier_signal",
           "behavior": "Future range tidak membentuk contraction",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C05-01-AC2",
-          "test_case": "test_c05_01_contract_2",
+          "test_case": "test_c05_01_contract_2_expansion_gives_intent",
           "behavior": "Expansion memberi intent",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C05-01-AC3",
-          "test_case": "test_c05_01_contract_3",
+          "test_case": "test_c05_01_contract_3_degenerate_range_abstains; test_c05_invalid_consumed_ohlc_abstains",
           "behavior": "Degenerate range abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6654,7 +6654,15 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
+        "code_target": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
+        "path": "docs/sprints/handoffs/C05-01-HANDOFF.md",
+        "review": "Independent review PASS Round 2; reviewer C05 tests 8 passed; local strategy suite 72 passed. Invalid/nonfinite/inconsistent OHLC regressions pass. Full suite and live qualification not claimed."
+      },
+      "implementation_status_note": "DONE after independent exact-SHA PASS. EXTENSION activation remains owner-gated; no scheduler or production execution was added."
     },
     {
       "id": "C06-01",
@@ -6681,8 +6689,8 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C06-01-directional-trend-strength.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c06-01-directional-trend-strength",
       "requirements": [
         "FR-08"
@@ -6726,6 +6734,14 @@
         }
       ],
       "status": "READY",
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
+        "code_target": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
+        "path": "docs/sprints/handoffs/C05-01-HANDOFF.md",
+        "review": "Independent review PASS Round 2; C05 tests 8 passed independently; local strategy suite 72 passed. Invalid/nonfinite/inconsistent OHLC regressions pass. Full suite and live qualification not claimed."
+      },
+      "implementation_status_note": "DONE after independent exact-SHA PASS. EXTENSION activation remains owner-gated; no scheduler or production execution was added.",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -8993,16 +9009,18 @@
         "src/indodax_lab/strategies/registry.py",
         "src/indodax_lab/strategies/base.py",
         "src/indodax_lab/strategies/store.py",
-        "tests/unit/lab/strategies/test_versioned_registry.py"
+        "tests/unit/lab/strategies/test_versioned_registry.py",
+        "tests/unit/lab/strategies/test_c02.py",
+        "tests/unit/lab/strategies/test_c07.py"
       ],
       "type": "integration",
       "tier": "CORE",
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-01-durable-versioned-strategy-registry.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/rw2-01-durable-versioned-strategy-registry",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9029,37 +9047,45 @@
       "acceptance_test_mapping": [
         {
           "criterion": "RW2-01-AC0",
-          "test_case": "test_rw2_01_0",
-          "behavior": "Published same-version parameter/logic change rejects",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "test_case": "test_registry_builtin_registration_pins_implementation; test_builtin_registration_executes_its_bound_c02_specification; test_builtin_registration_executes_its_bound_c07_specification",
+          "behavior": "Published same-version parameter, source and specification changes reject",
+          "status": "PASS"
         },
         {
           "criterion": "RW2-01-AC1",
-          "test_case": "test_rw2_01_1",
-          "behavior": "Stale draft revision cannot overwrite edit",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "test_case": "tests/unit/lab/strategies/test_versioned_registry.py",
+          "behavior": "Stale draft revision cannot overwrite edit, including across store connections",
+          "status": "PASS"
         },
         {
           "criterion": "RW2-01-AC2",
-          "test_case": "test_rw2_01_2",
-          "behavior": "Unknown import/module path rejects",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "test_case": "test_registry_builtin_registration_uses_allowlist; tests/unit/lab/strategies/test_versioned_registry.py",
+          "behavior": "Unknown implementation and executable YAML fields reject without importing user paths",
+          "status": "PASS"
         },
         {
           "criterion": "RW2-01-AC3",
-          "test_case": "test_rw2_01_3",
-          "behavior": "Clone preserves parent and leaves original intact",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "test_case": "tests/unit/lab/strategies/test_versioned_registry.py",
+          "behavior": "Clone preserves parent, gets a distinct opaque version and leaves original intact",
+          "status": "PASS"
         },
         {
           "criterion": "RW2-01-AC4",
-          "test_case": "test_rw2_01_program_4",
-          "behavior": "Expose versioned parameter schemas and component metadata to form/YAML/MCP without executable user expressions",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "test_case": "tests/unit/lab/strategies/test_versioned_registry.py",
+          "behavior": "Versioned schemas/metadata and declarative C07/C02 seeds are available without executable expressions",
+          "status": "PASS"
         }
       ],
       "risk_level": "high",
-      "complexity": "M"
+      "complexity": "M",
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "e2471a0d4112868454949ecf37b2dd843b281421",
+        "code_target": "e2471a0d4112868454949ecf37b2dd843b281421",
+        "path": "docs/sprints/handoffs/RW2-01-HANDOFF.md",
+        "review": "Independent review PASS Round 3. Focused strategy suite: 68 passed; reviewer focused registry/C02/C07 verification: 38 passed. Full suite not rerun on corrected SHA; no live qualification claimed."
+      },
+      "implementation_status_note": "DONE after independent exact-SHA PASS. Registry is research-only; transport integration and production qualification remain external gates."
     },
     {
       "id": "RW2-02",

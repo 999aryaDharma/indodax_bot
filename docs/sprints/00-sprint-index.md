@@ -71,7 +71,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
 | C04-01 | Cross sectional momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C04-01-cross-sectional-momentum.md) |
-| C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C05-01-volatility-breakout.md) |
+| C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C05-01-volatility-breakout.md) |
 | C06-01 | Directional trend strength | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C06-01-directional-trend-strength.md) |
 | C07-01 | Bollinger RSI reversion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C07-01-bollinger-rsi-reversion.md) |
 | C08-01 | Multi timeframe confirmation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C08-01-multi-timeframe-confirmation.md) |
@@ -98,7 +98,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | RP-01 | Shared SignalIntent ownership with compatibility | runtime-parity | P0 | integration | DOC-01, BASE-01 | DONE | [Spec](runtime-parity\RP-01-shared-signalintent-ownership-with-compatibility.md) |
 | RW0-01 | Immutable Workbench domain manifests | research-workbench | P0 | integration | RP-01, DATA-01 | DONE | [Spec](research-workbench\RW0-01-immutable-workbench-domain-manifests.md) |
 | RW1-01 | Reusable immutable dataset registry | research-workbench | P1 | integration | RW0-01, DATA-06 | DONE | [Spec](research-workbench\RW1-01-reusable-immutable-dataset-registry.md) |
-| RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | READY | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
+| RW2-01 | Durable versioned strategy registry | research-workbench | P1 | integration | RW0-01, STRAT-01 | DONE | [Spec](research-workbench\RW2-01-durable-versioned-strategy-registry.md) |
 | RW2-02 | Model registry and offline training services | research-workbench | P1 | integration | RW0-01, ML-04, JOB-01 | PLANNED | [Spec](research-workbench\RW2-02-model-registry-and-offline-training-services.md) |
 | RW2-03 | Typed declarative pipeline composer | research-workbench | P1 | integration | RW2-01, RW2-02 | PLANNED | [Spec](research-workbench\RW2-03-typed-declarative-pipeline-composer.md) |
 | RP-02 | Shared candidate feature and exit evaluation | runtime-parity | P0 | integration | RW2-03, FEAT-02 | PLANNED | [Spec](runtime-parity\RP-02-shared-candidate-feature-and-exit-evaluation.md) |
