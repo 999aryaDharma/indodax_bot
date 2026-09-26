@@ -50,6 +50,15 @@ Full lab suite verification: 139 passed across strategies, features, labels, eva
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Fix batch (blocking: deterministic intent_id)
+- Finding: `CostAwareExecutionMapper.evaluate_forecast` used salted `hash()` for `intent_id` digest → non-deterministic across processes.
+- Fix: `src/indodax_lab/models/execution_mapper.py` now uses `hashlib.sha256(f"{pair}|{value!r}|{qty}|{ts_str}").hexdigest()[:10]`; added `import hashlib`.
+- Regression: `tests/unit/lab/models/test_ml02_intent_determinism.py::test_ml02_intent_id_deterministic_sha256`
+  - RED (behavioral): `AssertionError: 'intent_BTC_IDR_20250601120000_42217' != 'intent_BTC_IDR_20250601120000_183e0d75ab'` on pre-fix code.
+  - GREEN: `python -m pytest tests/unit/lab/models/test_execution_mapper.py tests/unit/lab/models/test_ml02_intent_determinism.py -q` → 6 passed.
+- Shared path: `src/indodax_lab/models/__init__.py` untouched (eager xgboost import preserved per coordination).
+- Minor backlog: none new; ruff unavailable in this host (capability gap, focused gate used pytest only).
+
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for ML-02.

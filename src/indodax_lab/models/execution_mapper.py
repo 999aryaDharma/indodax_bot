@@ -9,6 +9,7 @@ Guarantees:
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
@@ -164,7 +165,8 @@ class CostAwareExecutionMapper:
         # 2. Check hurdle: net edge must strictly exceed safety margin
         if net_edge > self.cost_basis.safety_margin:
             ts_str = forecast.decision_ts.strftime("%Y%m%d%H%M%S")
-            digest = abs(hash((forecast.pair, forecast.value, str(forecast.desired_qty)))) % 100000
+            digest_payload = f"{forecast.pair}|{forecast.value!r}|{str(forecast.desired_qty)}|{ts_str}"
+            digest = hashlib.sha256(digest_payload.encode("utf-8")).hexdigest()[:10]
             intent_id = f"intent_{forecast.pair}_{ts_str}_{digest}"
 
             signal_intent = SignalIntent(
