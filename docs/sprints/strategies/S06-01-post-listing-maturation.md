@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: IN_PROGRESS
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/s06-01-post-listing-maturation`
 
@@ -41,18 +41,22 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/research/dataset-feature-contracts.md`
+- `configs/features/tabular_bar_v1.yaml`
+- `docs/sprints/handoffs/STRAT-01-HANDOFF.md`
 
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
+- S06 consumes registered `log_listing_age_days`, `log_ret_24_1h`, `bar_completeness_24_1h`, `atr_pct_14_1h`, plus the causal raw close on the replay frame. Defaults: minimum age 180 days (aligned to current big/small universe policy), maximum 24h log return 0.25 to reject spikes, minimum 24-bar completeness 0.95, positive 24h momentum, 2 ATR stop, and Rp10,000 target notional. Missing listing metadata or close abstains. The feature registry has the listing-age field, but its producer must prove point-in-time `listed_at` reaches materialization before candidate qualification.
 
 ## In Scope
 
 - Kandidat S06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.
-- Initial listing spike ditolak.
-- Age boundary memakai available listing evidence.
+- Initial listing spike ditolak by the age floor or 24h log-return ceiling.
+- Age boundary memakai point-in-time registered listing-age evidence.
 - Unknown listing date abstain.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
@@ -77,7 +81,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Domain Rules / Invariants
 
-Momentum only after registered minimum age and reliable history -> versioned LONG/FLAT intent, never direct orders.
+At `as_of`, require `log_listing_age_days >= log1p(minimum_listing_age_days)` allowing `1e-12` float rounding tolerance, `0 < log_ret_24_1h <= max_24h_log_return`, `bar_completeness_24_1h >= min_history_completeness`, finite positive `close`, and finite positive `atr_pct_14_1h`. Missing/unknown values abstain. Emit a BUY intent sized to configured IDR target notional; stop is `close × (1 − atr_pct_14_1h × atr_multiplier)`. Shared risk/execution remains authoritative; never submit orders.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 
@@ -87,7 +91,7 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 Layer owner: `src/indodax_lab/strategies, configs/strategies`. Konsumsi hanya public contracts dependency yang tercantum. Side effect berada pada boundary adapter/repository; pure calculation tidak melakukan HTTP.
 
-Momentum only after registered minimum age and reliable history -> versioned LONG/FLAT intent, never direct orders.
+Momentum only after the registered minimum-age and reliable-history gates -> versioned LONG/FLAT intent, never direct orders.
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 

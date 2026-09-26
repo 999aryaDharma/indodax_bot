@@ -73,7 +73,7 @@ def s06_decide(
             continue
         if not all(math.isfinite(v) for v in (close, age_log, log_return, completeness, atr_pct)):
             continue
-        # Registered listing age is float64 log1p(days); tolerate its one-ULP round trip.
+        # Registered listing age is float64 log1p(days); allow 1e-12 rounding tolerance.
         if (
             close <= 0
             or age_log < minimum_age_log - 1e-12
