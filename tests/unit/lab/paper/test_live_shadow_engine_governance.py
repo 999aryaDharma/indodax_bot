@@ -279,7 +279,8 @@ def test_shadow_new_risk_period_preserves_breaches_and_closed_trades(engine) -> 
 
     assert engine.risk_period_id != old_period_id
     assert engine.available_cash == remaining_equity
-    assert engine.initial_cash == remaining_equity
+    assert engine.period_initial_cash == remaining_equity
+    assert engine.initial_cash == Decimal("500000.00")
     assert engine.risk_manager.initial_equity == remaining_equity
     assert [trade.trade_id for trade in engine.closed_trades] == ["closed-before-reset"]
     restarted = LiveShadowEngine(
