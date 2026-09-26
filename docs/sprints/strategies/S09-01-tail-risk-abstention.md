@@ -51,7 +51,7 @@ No mandatory dependent sprint.
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
-- CR-S09 Research-only risk-authority boundary is owner-approved (2026-09-27). Use the existing Research risk authority, preserve breach periods across separately approved resets, block new BUYs on unknown/stale data or a breach, and leave eligible protective exits available. Numeric pump-gap threshold and data-age limit remain unresolved; no risk evaluation/activation before a versioned policy and pump-gap producer/provenance are defined. Do not add a second risk authority or touch Production/runtime state.
+- CR-S09 Research-only risk-authority boundary is owner-approved (2026-09-27). An opt-in gate now exists in the existing `RiskEngine`; it accepts only complete approved versioned policy/evidence and returns an assessment, never an order. Preserve breach periods across separately approved resets, block new BUYs on unknown/stale data or a breach, and leave eligible protective exits available. Numeric pump-gap threshold and data-age limit remain unresolved; no candidate evaluation/qualification until a versioned policy and pump-gap producer/provenance are defined. Do not add a second risk authority or touch Production/runtime state.
 
 ## In Scope
 
@@ -87,9 +87,9 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 ## Architecture / Design Contract
 
-Layer owner: existing Research risk authority and its Research-only durable state boundary. Consume only causally available, versioned evidence and reservation-aware exposure. Side effects remain in the existing adapter/repository; no HTTP in risk calculation.
+Layer owner: existing `RiskEngine`, opt-in for Research only, and its Research-only durable state boundary. Consume only causally available, versioned evidence and reservation-aware exposure. The gate returns a risk assessment and cannot create intents/orders. Side effects remain in the existing adapter/repository; no HTTP in risk calculation. No production caller opts in.
 
-Pump-gap threshold and evidence-age limits are intentionally unset until a versioned Research policy and registered producer/provenance are approved. Until then, new BUY evaluation fails closed and S09 is not qualification eligible. Never infer values from Production policy. Existing eligible protective exits continue through the existing registered path.
+Pump-gap threshold and evidence-age limits are intentionally unset until a versioned Research policy and registered producer/provenance are approved. Without a complete approved policy, evidence, and risk-period identity, opted-in new BUY evaluation fails closed and S09 is not qualification eligible. Never infer values from Production policy. Existing eligible protective exits bypass this additional gate and continue through the existing registered path. The current gate contract does not register or qualify a producer and is not wired to a running agent.
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 
@@ -123,7 +123,7 @@ Not applicable: no new graphical UI. Machine/report consumer receives explicit s
 
 ## Implementation Steps
 
-First establish S09-01-AC0: Research-only integration through the existing risk authority, with no order side effect. Use a minimal valid fixture and a failing assertion before implementation.
+S09-01-AC0 now has an opt-in `RiskEngine` contract and regression fixture with no order side effect. Complete the remaining acceptance, producer/policy qualification, and independent review; do not infer operational readiness from this interface slice.
 
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `S09-01-AC1`, prove unknown/stale and configured breach inputs block new BUY while eligible registered exits remain allowed.
@@ -189,10 +189,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **S09-01-AC0** Research gate integrates with the existing risk authority and cannot create orders or alpha intents.
-- [ ] **S09-01-AC1** Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available.
+- [ ] **S09-01-AC0** Research gate integrates with the existing risk authority and cannot create orders or alpha intents. (Implementation present; review pending.)
+- [ ] **S09-01-AC1** Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available. (RiskEngine contract tests present; runtime wiring/producer qualification and review pending.)
 - [ ] **S09-01-AC2** New risk period requires separate explicit operator approval, requires positions to be closed, starts from remaining equity, and preserves prior breach-period and closed-trade records across restart.
-- [ ] **S09-01-AC3** Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred.
+- [ ] **S09-01-AC3** Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred. (Missing/incomplete policy/evidence fails closed; registered producer and qualification path remain external gates.)
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

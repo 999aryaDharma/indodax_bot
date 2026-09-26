@@ -8028,10 +8028,15 @@
         "Missing/unapproved thresholds or pump-gap provenance fail closed and block qualification"
       ],
       "files": [
-        "src/indodax_lab/paper/live_shadow_engine.py",
-        "tests/unit/lab/paper/test_live_shadow_engine_governance.py",
         "docs/decisions/CR-S09-risk-gate-ownership.md",
-        "docs/sprints/handoffs/S09-01-HANDOFF.md"
+        "docs/sprints/handoffs/S09-01-HANDOFF.md",
+        "docs/sprints/strategies/S09-01-tail-risk-abstention.md",
+        "src/indodax_lab/paper/live_shadow_engine.py",
+        "src/indodax_lab/risk/__init__.py",
+        "src/indodax_lab/risk/engine.py",
+        "src/indodax_lab/risk/research_tail_risk.py",
+        "tests/unit/lab/paper/test_live_shadow_engine_governance.py",
+        "tests/unit/lab/risk/test_research_tail_risk_gate.py"
       ],
       "type": "feature",
       "tier": "EXTENSION",
@@ -8055,7 +8060,7 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "CR-S09 Research-only risk-authority boundary is approved. Partial implementation at code SHA da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 adds durable risk-period IDs, preserves closed trades/breach events, rejects reset with open positions, rolls back on checkpoint failure, and starts approved periods from actual remaining cash rather than refilling seed capital. Genesis capital and period opening equity are stored separately and validated on restart. Focused shadow checks: 22 passed; full suite: 1548 passed, 2 platform skips. AC0/AC1/AC3 remain incomplete. Numeric pump-gap threshold/evidence age and producer/provenance remain unresolved; no S09 evaluation or qualification until frozen. No Production/runtime changes.",
+      "current_context": "CR-S09 Research-only boundary is approved. Risk-period reset/history code at da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 preserves closed trades/breach events and starts approved periods from actual remaining cash. Opt-in Research tail-risk contracts at 13b67ca37e24487f3be3f1153480b088cddc3583 use the existing RiskEngine assessment boundary; missing/unapproved policy/evidence, invalid lineage/period, noncausal/stale evidence, and configured breaches block BUY while SELL bypasses this additional gate. The interface creates no intents/orders and default callers are unchanged. AC0/AC1 implementation is unreviewed; AC2 implementation is unreviewed; AC3 fails closed on missing policy/evidence but producer registration and qualification remain external. No agent runtime is wired to the gate. Numeric Research pump-gap/evidence-age limits are unapproved, and no qualified producer/provenance exists; S09 remains IN_PROGRESS and not qualification-eligible. No Production/runtime changes.",
       "external_gates": [
         "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
         "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
@@ -8065,15 +8070,15 @@
       "acceptance_test_mapping": [
         {
           "criterion": "S09-01-AC0",
-          "test_case": "Research risk-authority integration contract",
+          "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py::test_research_tail_gate_allows_valid_buy_and_does_not_block_sell",
           "behavior": "Research gate integrates with the existing risk authority and cannot create orders or alpha intents.",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "IMPLEMENTED_UNREVIEWED"
         },
         {
           "criterion": "S09-01-AC1",
-          "test_case": "Risk gate and exit-path regressions",
+          "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py (missing, invalid, stale and breached evidence cases)",
           "behavior": "Unknown/stale evidence and configured breaches block new BUY exposure; eligible protective exits remain available.",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "IMPLEMENTED_UNREVIEWED_PARTIAL"
         },
         {
           "criterion": "S09-01-AC2",
@@ -8083,9 +8088,9 @@
         },
         {
           "criterion": "S09-01-AC3",
-          "test_case": "Policy/provenance fail-closed regressions",
+          "test_case": "tests/unit/lab/risk/test_research_tail_risk_gate.py (missing/unapproved policy and evidence cases)",
           "behavior": "Missing/unapproved policy thresholds or pump-gap provenance fail closed and block S09 qualification; no Production values are inferred.",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "IMPLEMENTED_UNREVIEWED_PARTIAL"
         }
       ],
       "status": "IN_PROGRESS",
