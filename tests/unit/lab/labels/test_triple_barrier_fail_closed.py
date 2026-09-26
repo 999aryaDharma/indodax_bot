@@ -216,5 +216,53 @@ def test_label_02_gap_excluded_row_is_not_weighted_as_evidence() -> None:
     assert weights["s_interior_gap"] == Decimal("1.0")
 
 
+def test_label_02_future_bar_cannot_fill_coverage_gap_before_deadline() -> None:
+    bars = [
+        _make_bar(DECISION_TS, "100000000", "100500000", "99500000", "100000000"),
+        _make_bar(
+            datetime(2024, 6, 1, 11, 0, tzinfo=UTC),
+            "100000000", "100500000", "99500000", "100000000",
+        ),
+        # 12:00-15:00 are missing; this bar opens at the 15:00 deadline.
+        _make_bar(
+            datetime(2024, 6, 1, 15, 0, tzinfo=UTC),
+            "100000000", "100500000", "99500000", "100000000",
+        ),
+    ]
+
+    label = _label(bars, "s_future_bar_cannot_close_gap")
+
+    assert label.status == "EXCLUDED"
+    assert label.exclusion_reason == "INCOMPLETE_BARS_BEFORE_VERTICAL_BARRIER"
+    assert label.outcome is None
+
+
+def test_label_02_bar_crossing_vertical_deadline_is_excluded() -> None:
+    bars = [
+        _make_bar(DECISION_TS, "100000000", "100500000", "99500000", "100000000"),
+        # Its upper touch may have occurred after the 11:30 vertical deadline.
+        _make_bar(
+            datetime(2024, 6, 1, 11, 0, tzinfo=UTC),
+            "100000000", "102500000", "99500000", "102200000",
+        ),
+    ]
+    config = _config(1).model_copy(
+        update={"vertical_horizon": timedelta(hours=1, minutes=30)}
+    )
+
+    label = build_triple_barrier_label(
+        sample_id="s_crossing_deadline",
+        pair="btc_idr",
+        decision_ts=DECISION_TS,
+        decision_volatility=Decimal("0.01"),
+        bars=bars,
+        config=config,
+    )
+
+    assert label.status == "EXCLUDED"
+    assert label.exclusion_reason == "BAR_CROSSES_VERTICAL_BARRIER"
+    assert label.outcome is None
+
+
 # Actor for every line this file contributes to review evidence:
 # opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

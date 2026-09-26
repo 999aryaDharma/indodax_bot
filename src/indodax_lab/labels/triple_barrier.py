@@ -121,9 +121,26 @@ def build_triple_barrier_label(
                 status="EXCLUDED",
                 exclusion_reason="INTERIOR_BAR_GAP",
             )
+        b_close_time = _get_val(bar, "close_time")
+        if b_close_time > vertical_barrier_ts:
+            return TripleBarrierLabel(
+                sample_id=sample_id,
+                label_set_id=config.label_set_id,
+                label_version=config.version,
+                pair=pair,
+                decision_ts=decision_ts,
+                entry_ts=entry_ts,
+                label_end_ts=coverage_end,
+                entry_price=entry_price,
+                upper_barrier=upper_barrier,
+                lower_barrier=lower_barrier,
+                first_touch=None,
+                outcome=None,
+                status="EXCLUDED",
+                exclusion_reason="BAR_CROSSES_VERTICAL_BARRIER",
+            )
         b_high = Decimal(str(_get_val(bar, "high")))
         b_low = Decimal(str(_get_val(bar, "low")))
-        b_close_time = _get_val(bar, "close_time")
 
         max_high = max(max_high, b_high)
         min_low = min(min_low, b_low)
@@ -196,8 +213,7 @@ def build_triple_barrier_label(
         coverage_end = max(coverage_end, b_close_time)
 
     # Neither upper nor lower was touched: check if vertical horizon was fully reached
-    max_covered_time = max((_get_val(b, "close_time") for b in bars), default=entry_ts)
-    if max_covered_time < vertical_barrier_ts:
+    if coverage_end < vertical_barrier_ts:
         # LABEL-02-FR3: Missing exit data before vertical horizon is EXCLUDED/CENSORED, never 0
         return TripleBarrierLabel(
             sample_id=sample_id,
@@ -206,7 +222,7 @@ def build_triple_barrier_label(
             pair=pair,
             decision_ts=decision_ts,
             entry_ts=entry_ts,
-            label_end_ts=max_covered_time,
+            label_end_ts=coverage_end,
             entry_price=entry_price,
             upper_barrier=upper_barrier,
             lower_barrier=lower_barrier,
