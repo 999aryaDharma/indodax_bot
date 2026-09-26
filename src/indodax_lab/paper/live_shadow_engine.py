@@ -22,6 +22,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
@@ -35,10 +36,10 @@ from indodax_lab.backtest.costs import (
     lookup_cost,
 )
 from indodax_lab.backtest.ledger import Position as RiskPosition
-from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.backtest.ledger import ResearchLedger
 from indodax_lab.backtest.orders import Fill
 from indodax_lab.backtest.risk import PortfolioRiskManager, RiskPolicy
+from indodax_lab.contracts.decision import SignalIntent
 from indodax_lab.paper.shadow_store import ShadowStateStore
 
 logger = logging.getLogger("live_shadow_engine")
@@ -94,6 +95,7 @@ class ClosedTrade:
     pnl_pct: float
     exit_reason: str
     bars_held: int
+    risk_period_id: str = "LEGACY"
 
 
 class UnauthorizedPortfolioResetError(RuntimeError):
@@ -152,6 +154,7 @@ class LiveShadowEngine:
         self.open_positions: Dict[str, ShadowPosition] = {}
         self.closed_trades: List[ClosedTrade] = []
         self.audit_log: List[Dict[str, Any]] = []
+        self.risk_period_id = uuid4().hex
 
         # Load models and metadata
         self.models: Dict[str, xgb.Booster] = {}
@@ -231,6 +234,12 @@ class LiveShadowEngine:
         if restored.policy.policy_id != self.risk_policy.policy_id:
             raise RuntimeError("SHADOW_RISK_POLICY_MISMATCH")
         self.risk_manager = restored
+        stored_period_id = data.get("risk_period_id")
+        self.risk_period_id = (
+            stored_period_id
+            if isinstance(stored_period_id, str) and stored_period_id
+            else f"legacy:{self.risk_manager.start_time.isoformat()}"
+        )
         self._assert_accounting_consistency(
             checkpoint_cash=data.get("available_cash")
         )
@@ -246,6 +255,7 @@ class LiveShadowEngine:
         now = datetime.now(UTC)
         data = {
             "schema_version": 3,
+            "risk_period_id": self.risk_period_id,
             "initial_cash": str(self.initial_cash),
             "available_cash": str(self.available_cash),
             "ledger_state": self.ledger.to_dict(),
@@ -256,11 +266,12 @@ class LiveShadowEngine:
             "last_updated_utc": now.isoformat(),
         }
         event_id = f"{event_type}:{now.isoformat()}:{len(self.closed_trades)}:{len(self.open_positions)}"
+        payload = {"risk_period_id": self.risk_period_id, **(event_payload or {})}
         self.state_store.save_checkpoint(
             data,
             event_id=event_id,
             event_type=event_type,
-            event_payload=event_payload or {},
+            event_payload=payload,
         )
 
     def reset_portfolio(
@@ -291,14 +302,20 @@ class LiveShadowEngine:
                 raise UnauthorizedPortfolioResetError(
                     f"SHADOW_RESET_AUTHORIZATION_REQUIRED:{label}"
                 )
+        if self.open_positions:
+            raise UnauthorizedPortfolioResetError("SHADOW_RESET_PORTFOLIO_NOT_CLOSED")
 
+        previous_period_id = self.risk_period_id
+        previous_risk_state = self.risk_manager.to_dict()
+        previous_ledger = self.ledger
+        previous_positions = self.open_positions
+        previous_risk_manager = self.risk_manager
+        previous_audit_log = list(self.audit_log)
         details = [
             "hard_halt_cleared" if self.risk_manager.is_halted else "no_active_halt"
         ]
-        if self.open_positions:
-            details.append(f"open_positions_discarded={len(self.open_positions)}")
         if self.closed_trades:
-            details.append(f"closed_trades_discarded={len(self.closed_trades)}")
+            details.append(f"closed_trades_retained={len(self.closed_trades)}")
         now = datetime.now(UTC)
         self.audit_log.append(
             {
@@ -316,20 +333,32 @@ class LiveShadowEngine:
             init_timestamp=now,
         )
         self.open_positions = {}
-        self.closed_trades = []
+        self.risk_period_id = uuid4().hex
         self.risk_manager = PortfolioRiskManager(
             policy=self.risk_policy,
             initial_equity=self.initial_cash,
             start_time=now,
         )
-        self.save_state(
-            event_type="RESET",
-            event_payload={
-                "operator_id": operator_id,
-                "authorization_ref": authorization_ref,
-                "reason": reason,
-            },
-        )
+        try:
+            self.save_state(
+                event_type="RESET",
+                event_payload={
+                    "operator_id": operator_id,
+                    "authorization_ref": authorization_ref,
+                    "reason": reason,
+                    "previous_period_id": previous_period_id,
+                    "previous_halt_reason": previous_risk_state["halt_reason"],
+                    "previous_halted_at": previous_risk_state["halted_at"],
+                    "previous_policy_id": previous_risk_state["policy"]["policy_id"],
+                },
+            )
+        except Exception:
+            self.risk_period_id = previous_period_id
+            self.ledger = previous_ledger
+            self.open_positions = previous_positions
+            self.risk_manager = previous_risk_manager
+            self.audit_log = previous_audit_log
+            raise
 
     # =========================================================================
     # MARKET DATA FETCHING
@@ -582,6 +611,7 @@ class LiveShadowEngine:
                     pnl_pct=pnl_pct,
                     exit_reason=exit_reason,
                     bars_held=pos.bars_held,
+                    risk_period_id=self.risk_period_id,
                 )
                 self.closed_trades.append(ct)
                 closed_this_cycle.append(ct)

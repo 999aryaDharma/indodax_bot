@@ -22,16 +22,21 @@ schedule. No network, no real ledger, no live credentials, no real orders.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+import json
+import sqlite3
+from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from indodax_lab.backtest.costs import CostScheduleTable
-
-from indodax_lab.paper.live_shadow_engine import LiveShadowEngine
-
+from indodax_lab.paper.live_shadow_engine import (
+    ClosedTrade,
+    LiveShadowEngine,
+    ShadowPosition,
+    UnauthorizedPortfolioResetError,
+)
 
 # The audited-control arguments a governed reset must require.
 _AUTH_KWARGS = {
@@ -207,3 +212,109 @@ def test_shadow_reset_without_authorization_leaves_no_audit_entry(engine) -> Non
         "A refused/unauthorized reset still cleared the risk hard halt"
     )
     assert engine.available_cash == before_cash
+
+
+def test_shadow_new_risk_period_preserves_breaches_and_closed_trades(engine) -> None:
+    _trip_hard_halt(engine)
+    engine.save_state(
+        event_type="RISK_HALT",
+        event_payload={"reason": engine.risk_manager.halt_reason},
+    )
+    old_period_id = engine.risk_period_id
+    engine.closed_trades.append(
+        ClosedTrade(
+            trade_id="closed-before-reset",
+            position_id="position-before-reset",
+            pair="btc_idr",
+            strategy_id="test-strategy",
+            entry_ts="2026-01-01T00:00:00+00:00",
+            exit_ts="2026-01-01T01:00:00+00:00",
+            entry_price=100.0,
+            exit_price=90.0,
+            qty=1.0,
+            cash_debited=100.0,
+            cash_credited=90.0,
+            buy_fee=0.0,
+            sell_fee=0.0,
+            gross_pnl=-10.0,
+            net_pnl=-10.0,
+            pnl_pct=-0.1,
+            exit_reason="STOP_LOSS",
+            bars_held=1,
+            risk_period_id=old_period_id,
+        )
+    )
+
+    engine.reset_portfolio(**_AUTH_KWARGS)
+
+    assert engine.risk_period_id != old_period_id
+    assert [trade.trade_id for trade in engine.closed_trades] == ["closed-before-reset"]
+    restarted = LiveShadowEngine(
+        state_file=engine.state_file,
+        initial_cash=Decimal("500000.00"),
+        max_positions=2,
+        fixed_risk_pct=0.015,
+        max_cash_per_trade_pct=0.25,
+        min_order_idr=Decimal("10000.00"),
+    )
+    assert restarted.risk_period_id == engine.risk_period_id
+    assert [trade.trade_id for trade in restarted.closed_trades] == ["closed-before-reset"]
+    assert restarted.closed_trades[0].risk_period_id == old_period_id
+
+    with sqlite3.connect(engine.state_file) as conn:
+        events = conn.execute(
+            "SELECT event_type, payload FROM shadow_events ORDER BY seq"
+        ).fetchall()
+    halt_payloads = [json.loads(payload) for kind, payload in events if kind == "RISK_HALT"]
+    reset_payloads = [json.loads(payload) for kind, payload in events if kind == "RESET"]
+    assert halt_payloads and halt_payloads[-1]["risk_period_id"] == old_period_id
+    assert reset_payloads and reset_payloads[-1]["previous_period_id"] == old_period_id
+    assert reset_payloads[-1]["risk_period_id"] == engine.risk_period_id
+    assert reset_payloads[-1]["previous_halt_reason"] == "DRAWDOWN_BREACH:0.4000"
+
+
+def test_shadow_risk_period_reset_requires_closed_portfolio(engine) -> None:
+    engine.open_positions["position-open"] = ShadowPosition(
+        position_id="position-open",
+        pair="btc_idr",
+        strategy_id="test-strategy",
+        entry_ts="2026-01-01T00:00:00+00:00",
+        entry_price=100.0,
+        qty=1.0,
+        cash_debited=100.0,
+        buy_fee_paid=0.0,
+        stop_loss=90.0,
+        take_profit=110.0,
+        entry_atr=1.0,
+        highest_price=100.0,
+    )
+    old_period_id = engine.risk_period_id
+    old_cash = engine.available_cash
+
+    with pytest.raises(UnauthorizedPortfolioResetError, match="PORTFOLIO_NOT_CLOSED"):
+        engine.reset_portfolio(**_AUTH_KWARGS)
+
+    assert engine.risk_period_id == old_period_id
+    assert "position-open" in engine.open_positions
+    assert engine.available_cash == old_cash
+
+
+def test_shadow_failed_period_reset_restores_in_memory_state(engine, monkeypatch) -> None:
+    _trip_hard_halt(engine)
+    old_period_id = engine.risk_period_id
+    old_risk_manager = engine.risk_manager
+    old_audit_log = list(engine.audit_log)
+    old_cash = engine.available_cash
+
+    def fail_save(*args, **kwargs):
+        raise OSError("simulated checkpoint failure")
+
+    monkeypatch.setattr(engine.state_store, "save_checkpoint", fail_save)
+    with pytest.raises(OSError, match="simulated checkpoint failure"):
+        engine.reset_portfolio(**_AUTH_KWARGS)
+
+    assert engine.risk_period_id == old_period_id
+    assert engine.risk_manager is old_risk_manager
+    assert engine.risk_manager.is_halted
+    assert engine.audit_log == old_audit_log
+    assert engine.available_cash == old_cash
