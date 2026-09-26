@@ -339,6 +339,29 @@ def test_list_and_tuple_captures_have_distinct_logic_identity() -> None:
         registry.register(spec, make_logic((1,)))
 
 
+@pytest.mark.parametrize(
+    ("first", "second"),
+    [
+        (Decimal("1"), {"decimal": "1"}),
+        ({1}, frozenset({1})),
+        (True, 1),
+    ],
+)
+def test_all_capture_types_have_unambiguous_identity(first, second) -> None:
+    spec = StrategySpecification(
+        strategy_id="typed-capture", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={}, risk_profile={}, split="train",
+    )
+
+    def make_logic(captured):
+        return lambda frame: [] if type(captured) is type(first) else []
+
+    registry = StrategyRegistry()
+    registry.register(spec, make_logic(first))
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register(spec, make_logic(second))
+
+
 def test_stateful_bound_method_is_rejected() -> None:
     class Logic:
         def decide(self, frame):

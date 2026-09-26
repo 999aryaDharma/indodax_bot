@@ -28,35 +28,51 @@ def _ensure_utc(dt: datetime, field_name: str) -> datetime:
 def _stable_value(value: Any) -> Any:
     """Canonicalize strategy captures; reject state whose identity cannot be pinned."""
     if isinstance(value, BaseModel):
-        return _stable_value(value.model_dump(mode="python"))
+        return {
+            "type": _type_identity(value),
+            "fields": _stable_value(value.model_dump(mode="python")),
+        }
     if isinstance(value, Enum):
-        return _stable_value(value.value)
+        return {"type": _type_identity(value), "value": _stable_value(value.value)}
     if isinstance(value, Decimal):
-        return {"decimal": str(value)}
+        return {"type": _type_identity(value), "value": str(value)}
     if isinstance(value, (datetime, date)):
-        return {type(value).__name__: value.isoformat()}
+        return {"type": _type_identity(value), "value": value.isoformat()}
     if isinstance(value, bytes):
-        return {"bytes": value.hex()}
+        return {"type": _type_identity(value), "value": value.hex()}
     if isinstance(value, CodeType):
         return _code_identity(value)
-    if value is None or isinstance(value, (str, int, bool)):
-        return value
+    if value is None:
+        return {"type": "NoneType", "value": None}
+    if type(value) in (str, int, bool):
+        return {"type": _type_identity(value), "value": value}
     if isinstance(value, float):
         if not math.isfinite(value):
             raise ValueError("NON_FINITE_STRATEGY_CAPTURE")
-        return {"float": value.hex()}
+        return {"type": _type_identity(value), "value": value.hex()}
     if isinstance(value, dict):
         if not all(isinstance(key, str) for key in value):
             raise ValueError("NON_STRING_STRATEGY_CAPTURE_KEY")
-        return {key: _stable_value(value[key]) for key in sorted(value)}
+        return {
+            "type": _type_identity(value),
+            "items": [[key, _stable_value(value[key])] for key in sorted(value)],
+        }
     if isinstance(value, list):
-        return {"list": [_stable_value(item) for item in value]}
+        return {"type": _type_identity(value), "items": [_stable_value(item) for item in value]}
     if isinstance(value, tuple):
-        return {"tuple": [_stable_value(item) for item in value]}
+        return {"type": _type_identity(value), "items": [_stable_value(item) for item in value]}
     if isinstance(value, (set, frozenset)):
         items = [_stable_value(item) for item in value]
-        return sorted(items, key=lambda item: json.dumps(item, sort_keys=True))
+        return {
+            "type": _type_identity(value),
+            "items": sorted(items, key=lambda item: json.dumps(item, sort_keys=True)),
+        }
     raise ValueError(f"UNSTABLE_STRATEGY_CAPTURE:{type(value).__name__}")
+
+
+def _type_identity(value: Any) -> str:
+    cls = type(value)
+    return f"{cls.__module__}.{cls.__qualname__}"
 
 
 def _code_identity(code: CodeType) -> dict[str, Any]:
