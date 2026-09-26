@@ -85,26 +85,8 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         if prev_close <= 0:
             continue
 
-        # Check current bar squeeze status
-        curr_window = p_df.iloc[-lookback_bars:]
-        curr_mean = float(curr_window["close"].mean())
-        curr_std = float(curr_window["close"].std(ddof=1)) if len(curr_window) > 1 else 0.0
         curr_atr = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
         if curr_atr <= 0:
-            continue
-
-        curr_bb_upper = curr_mean + bb_std_mult * curr_std
-        curr_bb_lower = curr_mean - bb_std_mult * curr_std
-        curr_kc_upper = curr_mean + kc_atr_mult * curr_atr
-        curr_kc_lower = curr_mean - kc_atr_mult * curr_atr
-
-        # S02-01-AC1: Squeeze saja belum entry (still inside squeeze, no expansion)
-        curr_in_squeeze = (curr_bb_upper <= curr_kc_upper) and (curr_bb_lower >= curr_kc_lower)
-        is_expansion = (curr_close > prev_bb_upper) or (curr_bb_upper > curr_kc_upper)
-        if curr_in_squeeze and not is_expansion:
-            continue
-
-        if curr_close <= prev_bb_upper and not (curr_close > curr_bb_upper):
             continue
 
         # S02-01-AC3: Gap above chase cap is rejected
@@ -117,6 +99,11 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         curr_vol = float(curr_row.get(vol_col, 0.0))
         avg_vol = float(prior_window[vol_col].mean()) if vol_col in prior_window.columns else 0.0
         if curr_vol < (avg_vol * volume_mult):
+            continue
+
+        # Expansion detection using PRIOR window bands only (no self-reference)
+        is_expansion = curr_close > prev_bb_upper
+        if not is_expansion:
             continue
 
         # Valid expansion confirmed

@@ -263,3 +263,76 @@ def test_c02_01_contract_3():
     intent = intents[0]
     assert intent.side == OrderSide.BUY
     assert intent.limit_price == Decimal("106000000")
+
+
+def test_c02_regime_fail_open_missing_ema_slow():
+    """REGRESSION: Missing ema_slow defaults to 0.0 causing false uptrend.
+    
+    When ema_slow is missing/NaN, it defaults to 0.0 making (close > 0 and fast > 0) True
+    even when EMA data is unavailable. Must abstain when EMA not available.
+    """
+    spec = load_c02_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    
+    # Build frame WITHOUT ema_slow column
+    t_prev = as_of - timedelta(hours=1)
+    rows = [
+        {
+            "pair": "btc_idr",
+            "decision_ts": t_prev,
+            "row_ready_at": t_prev,
+            "close": 104500000.0,
+            "high": 106000000.0,
+            "low": 104000000.0,
+            "base_volume": 100.0,
+            "atr_14": 1500000.0,
+            "ema_fast": 105000000.0,
+            # NO ema_slow
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        },
+        {
+            "pair": "btc_idr",
+            "decision_ts": as_of,
+            "row_ready_at": as_of,
+            "close": 106000000.0,
+            "high": 106500000.0,
+            "low": 105100000.0,
+            "base_volume": 120.0,
+            "atr_14": 1500000.0,
+            "ema_fast": 105000000.0,
+            # NO ema_slow
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        }
+    ]
+    df = pd.DataFrame(rows)
+    df["decision_ts"] = pd.to_datetime(df["decision_ts"], utc=True)
+    df["row_ready_at"] = pd.to_datetime(df["row_ready_at"], utc=True)
+    frame = create_decision_frame(df, as_of=as_of)
+    
+    intents = c02_decide(frame, spec)
+    assert len(intents) == 0, f"Expected FLAT when ema_slow missing, got {len(intents)} intents"
+
+
+def test_c02_atr_missing_or_zero_produces_flat():
+    """REGRESSION: ATR missing/zero produces degenerate stop_loss == limit_price."""
+    spec = load_c02_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    
+    # Case A: ATR missing
+    df = _build_c02_bars(as_of=as_of, regime="uptrend", pullback_state="recovered")
+    # Remove ATR columns
+    df = df.drop(columns=["atr_14"], errors="ignore")
+    frame = create_decision_frame(df, as_of=as_of)
+    intents = c02_decide(frame, spec)
+    assert len(intents) == 0, f"Expected FLAT when ATR missing, got {len(intents)} intents"
+    
+    # Case B: ATR explicitly zero
+    df_b = _build_c02_bars(as_of=as_of, regime="uptrend", pullback_state="recovered")
+    df_b.loc[:, "atr_14"] = 0.0
+    frame_b = create_decision_frame(df_b, as_of=as_of)
+    intents_b = c02_decide(frame_b, spec)
+    assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"

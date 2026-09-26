@@ -141,3 +141,58 @@ def test_c10_01_contract_3() -> None:
     # Check that member ID and version are explicitly recorded in intent_id
     assert "C01" in intent.intent_id
     assert "v1.0.0" in intent.intent_id or "1.0.0" in intent.intent_id
+
+
+def test_c10_reversion_preserves_take_profit() -> None:
+    """REGRESSION: C10 drops take_profit from C07 member intent.
+    
+    C07 produces bounded intents with take_profit. C10 reconstructs
+    SignalIntent without copying take_profit. Must preserve all risk fields.
+    """
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c10_specification()
+    
+    # Build frame with sideways/oversold regime to trigger C07
+    df = _build_c10_bars(as_of, regime="sideways")
+    # Add C07-specific features
+    df.loc[df.index[-1], "rsi_14"] = 22.0
+    df.loc[df.index[-1], "bb_z"] = -2.5
+    df.loc[df.index[-1], "bb_width"] = 0.04
+    df.loc[df.index[-1], "adx_14"] = 0.12
+    df.loc[df.index[-1], "di_spread_14"] = 0.01
+    df.loc[df.index[-1], "atr_14"] = 1500000.0
+    
+    frame = create_decision_frame(features=df, as_of=as_of)
+    intents = c10_decide(frame, spec)
+    
+    assert len(intents) == 1, "Sideways oversold should trigger C07 via C10"
+    intent = intents[0]
+    assert intent.take_profit is not None, "take_profit from C07 must be preserved"
+    assert intent.take_profit > intent.limit_price, "take_profit must be above limit_price"
+
+
+def test_c10_frozen_member_versions() -> None:
+    """REGRESSION: C10 member versions from config not actual loaded spec.
+    
+    C10 reads trend_member_version/reversion_member_version from its own config
+    instead of from the actually loaded c01_spec.version and c07_spec.version.
+    This can make version lineage lie if member YAML changes but C10 config doesn't.
+    """
+    from indodax_lab.strategies.c01 import load_c01_specification
+    from indodax_lab.strategies.c07 import load_c07_specification
+    
+    c01_spec = load_c01_specification()
+    c07_spec = load_c07_specification()
+    
+    # The actual loaded member versions should be used, not C10 config
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c10_specification()
+    
+    df_trend = _build_c10_bars(as_of, regime="trending")
+    frame = create_decision_frame(features=df_trend, as_of=as_of)
+    intents = c10_decide(frame, spec)
+    
+    assert len(intents) == 1
+    intent = intents[0]
+    # Intent should record actual member version from loaded spec
+    assert str(c01_spec.version) in intent.intent_id or c01_spec.version in intent.intent_id

@@ -72,6 +72,9 @@ def c04_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         # Check liquidity filter
         vol = float(curr_row.get("volume", curr_row.get("base_volume", 0.0)))
+        # Guard: explicitly reject NaN/non-finite volume (fail-closed)
+        if not (vol == vol and vol != float("inf") and vol != float("-inf")):
+            continue
         if vol < min_volume:
             continue
 

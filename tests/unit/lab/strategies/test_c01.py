@@ -151,3 +151,141 @@ def test_c01_01_contract_3():
     frame_inc = create_decision_frame(df_incomplete, as_of=as_of_inc)
     intents_inc = c01_decide(frame_inc, spec)
     assert len(intents_inc) == 0, "Incomplete bar must produce FLAT"
+
+
+def test_c01_volume_gate_fail_open_zero_avg_vol():
+    """REGRESSION: Volume gate fail-open when avg_vol == 0 (all history volume zero).
+    
+    If avg_vol is 0, then curr_vol(0) >= 0 * volume_mult evaluates to True,
+    allowing breakout without volume confirmation. Must abstain when avg_vol <= 0.
+    """
+    spec = load_c01_specification()
+    
+    # Build frame with ALL bars having zero volume
+    start_dt = datetime(2024, 6, 1, 0, 0, tzinfo=UTC)
+    rows = []
+    for i in range(25):
+        bar_dt = start_dt + timedelta(hours=i)
+        is_last = (i == 24)
+        
+        if is_last:
+            close_p = 103000000.0  # Breakout price
+            high_p = 104000000.0
+        else:
+            close_p = 100000000.0
+            high_p = 101000000.0
+        
+        rows.append({
+            "pair": "btc_idr",
+            "decision_ts": bar_dt,
+            "row_ready_at": bar_dt,
+            "close": close_p,
+            "high": high_p,
+            "low": 99000000.0,
+            "base_volume": 0.0,  # ALL zero volume
+            "atr_14": 1500000.0,
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        })
+    
+    df = pd.DataFrame(rows)
+    df["decision_ts"] = pd.to_datetime(df["decision_ts"], utc=True)
+    df["row_ready_at"] = pd.to_datetime(df["row_ready_at"], utc=True)
+    
+    as_of = df["decision_ts"].max()
+    frame = create_decision_frame(df, as_of=as_of)
+    
+    intents = c01_decide(frame, spec)
+    
+    # Must produce FLAT (empty) when avg_vol == 0
+    assert len(intents) == 0, f"Expected FLAT when avg_vol=0, got {len(intents)} intents"
+
+
+def test_c01_atr_missing_or_zero_produces_flat():
+    """REGRESSION: ATR missing/non-positive produces degenerate intent instead of FLAT.
+    
+    When atr is 0 or missing, stop_loss = max(0, close - 0) = close,
+    producing intent with stop_loss == limit_price (degenerate).
+    Must abstain when ATR <= 0.
+    """
+    spec = load_c01_specification()
+    
+    # Case A: ATR is missing (not in row)
+    start_dt = datetime(2024, 6, 1, 0, 0, tzinfo=UTC)
+    rows = []
+    for i in range(25):
+        bar_dt = start_dt + timedelta(hours=i)
+        is_last = (i == 24)
+        
+        if is_last:
+            close_p = 103000000.0
+            high_p = 104000000.0
+        else:
+            close_p = 100000000.0
+            high_p = 101000000.0
+        
+        rows.append({
+            "pair": "btc_idr",
+            "decision_ts": bar_dt,
+            "row_ready_at": bar_dt,
+            "close": close_p,
+            "high": high_p,
+            "low": 99000000.0,
+            "base_volume": 100.0,
+            # NO atr_14 or atr column
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        })
+    
+    df = pd.DataFrame(rows)
+    df["decision_ts"] = pd.to_datetime(df["decision_ts"], utc=True)
+    df["row_ready_at"] = pd.to_datetime(df["row_ready_at"], utc=True)
+    
+    as_of = df["decision_ts"].max()
+    frame = create_decision_frame(df, as_of=as_of)
+    
+    intents = c01_decide(frame, spec)
+    
+    # Must produce FLAT when ATR is missing
+    assert len(intents) == 0, f"Expected FLAT when ATR missing, got {len(intents)} intents"
+    
+    # Case B: ATR is explicitly 0
+    rows_b = []
+    for i in range(25):
+        bar_dt = start_dt + timedelta(hours=i)
+        is_last = (i == 24)
+        
+        if is_last:
+            close_p = 103000000.0
+            high_p = 104000000.0
+        else:
+            close_p = 100000000.0
+            high_p = 101000000.0
+        
+        rows_b.append({
+            "pair": "btc_idr",
+            "decision_ts": bar_dt,
+            "row_ready_at": bar_dt,
+            "close": close_p,
+            "high": high_p,
+            "low": 99000000.0,
+            "base_volume": 200.0,  # Volume gate passes
+            "atr_14": 0.0,  # Explicitly zero ATR
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        })
+    
+    df_b = pd.DataFrame(rows_b)
+    df_b["decision_ts"] = pd.to_datetime(df_b["decision_ts"], utc=True)
+    df_b["row_ready_at"] = pd.to_datetime(df_b["row_ready_at"], utc=True)
+    
+    as_of_b = df_b["decision_ts"].max()
+    frame_b = create_decision_frame(df_b, as_of=as_of_b)
+    
+    intents_b = c01_decide(frame_b, spec)
+    
+    # Must produce FLAT when ATR == 0
+    assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"

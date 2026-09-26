@@ -56,6 +56,10 @@ def c02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         fast_ema = float(curr_row.get("ema_fast", 0.0))
         slow_ema = float(curr_row.get("ema_slow", 0.0))
 
+        # Guard: abstain when EMA not available (missing/NaN/non-positive)
+        if pd.isna(fast_ema) or pd.isna(slow_ema) or fast_ema <= 0.0 or slow_ema <= 0.0:
+            continue
+
         # C02-01-AC1: Downtrend menolak buy
         is_uptrend = (curr_close > slow_ema) and (fast_ema > slow_ema)
         if not is_uptrend:
@@ -65,12 +69,19 @@ def c02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         prev_low = float(prev_row.get("low", prev_row.get("close")))
         prev_fast_ema = float(prev_row.get("ema_fast", fast_ema))
 
+        # Guard: prev_fast_ema must be available
+        if pd.isna(prev_fast_ema) or prev_fast_ema <= 0.0:
+            continue
+
         had_pullback = prev_low <= prev_fast_ema
         is_recovered = curr_close > fast_ema
 
         # Pullback belum recovered tidak entry
         if had_pullback and is_recovered:
             atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
+            # Guard: abstain when ATR <= 0 (no valid stop loss)
+            if atr_val <= 0.0:
+                continue
             stop_loss = max(0.0, curr_close - atr_mult * atr_val)
 
             intent = SignalIntent(

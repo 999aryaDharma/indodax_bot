@@ -29,6 +29,7 @@ from indodax_lab.models.dl.d02_tcn import (
 )
 from indodax_lab.models.dl.d03_resnet_lstm import (
     BidirectionalLeakageError,
+    ResNetLSTMComputeBudgetSummary,
     ResNetLSTMConfig,
     ResNetLSTMModel,
     ResNetLSTMTrainedBundle,
@@ -83,6 +84,7 @@ __all__ = [
     "PointInTimePanelSnapshot",
     "PointInTimeUniverseGate",
     "ResumeInputMismatchError",
+    "ResNetLSTMComputeBudgetSummary",
     "ResNetLSTMConfig",
     "ResNetLSTMModel",
     "ResNetLSTMTrainedBundle",

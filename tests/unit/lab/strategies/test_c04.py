@@ -182,3 +182,73 @@ def test_c04_01_contract_3() -> None:
     assert total_deployed_qty == expected_deployed
     for intent in intents:
         assert intent.desired_qty == expected_deployed / Decimal("2")
+
+
+def test_c04_volume_nan_fail_open() -> None:
+    """REGRESSION: Volume NaN passes liquidity filter (fail-open).
+    
+    float(NaN) is NaN, and NaN < min_volume evaluates to False,
+    allowing pairs with NaN volume to enter rank. Must explicitly reject NaN/non-finite.
+    """
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c04_specification()
+    
+    # Pair with NaN volume but high return
+    btc_df = _build_c04_pair_bars(as_of, "btc_idr", return_pct=0.05, volume=float("nan"))
+    eth_df = _build_c04_pair_bars(as_of, "eth_idr", return_pct=0.10, volume=1000.0)
+    
+    combined_df = pd.concat([btc_df, eth_df], ignore_index=True)
+    frame = create_decision_frame(
+        features=combined_df,
+        as_of=as_of,
+        universe_snapshot_id="snap_c04_test",
+        feature_set_id="feat_c04_v1",
+    )
+    
+    intents = c04_decide(frame, spec)
+    
+    # btc_idr with NaN volume must be excluded, only eth_idr selected (if top_k=1)
+    # Actually top_k=2, but btc should be filtered out by NaN volume
+    selected_pairs = [intent.pair for intent in intents]
+    assert "btc_idr" not in selected_pairs, f"NaN volume must be rejected, got pairs: {selected_pairs}"
+    assert "eth_idr" in selected_pairs
+
+
+def test_c04_listing_date_test_isolation() -> None:
+    """REGRESSION: listing_date gate test conflates eligibility with listing date.
+    
+    Original test had future listing_date AND eligible=False together,
+    so couldn't tell which gate worked. Test them independently.
+    """
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c04_specification()
+    
+    # Case A: eligible=True but listing_date in future -> must be rejected
+    btc_df = _build_c04_pair_bars(as_of, "btc_idr", return_pct=0.05, volume=1000.0, eligible=True)
+    future_listing_dt = as_of + timedelta(days=5)
+    future_df = _build_c04_pair_bars(
+        as_of,
+        "future_idr",
+        return_pct=0.50,
+        volume=5000.0,
+        eligible=True,  # explicitly eligible
+        listing_date=future_listing_dt,
+    )
+    
+    combined_df = pd.concat([btc_df, future_df], ignore_index=True)
+    frame = create_decision_frame(features=combined_df, as_of=as_of)
+    intents = c04_decide(frame, spec)
+    
+    selected_pairs = [intent.pair for intent in intents]
+    assert "future_idr" not in selected_pairs, f"Future listing must be rejected even when eligible=True, got: {selected_pairs}"
+    assert "btc_idr" in selected_pairs
+    
+    # Case B: listing_date valid but eligible=False -> must be rejected
+    ineligible_df = _build_c04_pair_bars(as_of, "ineligible_idr", return_pct=0.20, volume=1000.0, eligible=False)
+    combined_df2 = pd.concat([btc_df, ineligible_df], ignore_index=True)
+    frame2 = create_decision_frame(features=combined_df2, as_of=as_of)
+    intents2 = c04_decide(frame2, spec)
+    
+    selected_pairs2 = [intent.pair for intent in intents2]
+    assert "ineligible_idr" not in selected_pairs2, f"Ineligible must be rejected even with valid listing, got: {selected_pairs2}"
+    assert "btc_idr" in selected_pairs2

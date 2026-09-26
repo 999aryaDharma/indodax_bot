@@ -67,9 +67,16 @@ def c01_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         avg_vol = float(prev_window[vol_col].mean()) if vol_col in prev_window.columns else 0.0
 
         # C01-01-AC2: Breakout confirmed if close > prev_n_high and curr_vol >= avg_vol * volume_mult
+        # Guard: abstain when avg_vol <= 0 (no volume history for confirmation)
+        if avg_vol <= 0.0:
+            continue
+            
         if curr_close > prev_n_high and curr_vol >= (avg_vol * volume_mult):
             # Price-denominated ATR stop loss
             atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
+            # Guard: abstain when ATR <= 0 (no valid stop loss)
+            if atr_val <= 0.0:
+                continue
             stop_loss = max(0.0, curr_close - atr_mult * atr_val)
 
             intent = SignalIntent(

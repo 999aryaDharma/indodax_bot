@@ -130,3 +130,23 @@ def test_s01_01_contract_3() -> None:
     df_no_depth = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=None)
     frame_b = create_decision_frame(features=df_no_depth, as_of=as_of)
     assert len(s01_decide(frame_b, spec)) == 0
+
+
+def test_s01_atr_missing_or_zero_abstains() -> None:
+    """REGRESSION: ATR missing/zero produces degenerate stop_loss == limit_price."""
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_s01_specification()
+    
+    # Case A: ATR missing
+    df = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=1.0)
+    df = df.drop(columns=["atr_14"], errors="ignore")
+    frame = create_decision_frame(features=df, as_of=as_of)
+    intents = s01_decide(frame, spec)
+    assert len(intents) == 0, f"Expected FLAT when ATR missing, got {len(intents)} intents"
+    
+    # Case B: ATR explicitly zero
+    df_b = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=1.0)
+    df_b.loc[:, "atr_14"] = 0.0
+    frame_b = create_decision_frame(features=df_b, as_of=as_of)
+    intents_b = s01_decide(frame_b, spec)
+    assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"

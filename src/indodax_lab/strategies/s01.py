@@ -103,6 +103,9 @@ def s01_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         # ATR stop loss
         atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
+        # Guard: abstain when ATR <= 0 (no valid stop loss)
+        if atr_val <= 0.0:
+            continue
         stop_loss = max(0.0, curr_close - atr_mult * atr_val)
 
         intent = SignalIntent(

@@ -4,7 +4,7 @@ Guarantees:
 1. D03-01-AC0: Predicts registered triple-barrier targets and routes through common CostAwareExecutionMapper.
 2. D03-01-AC1: Strictly forbids bidirectional recurrent architectures to prevent future lookahead leakage.
 3. D03-01-AC2: Mask-aware readout guarantees that padded tokens do not corrupt hidden state representations.
-4. D03-01-AC3: Evaluates net edge against standardized transaction cost basis.
+4. D03-01-AC3: Evaluates net edge against standardized transaction cost basis on common folds.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from indodax_lab.models.execution_mapper import (
     ForecastPayload,
     PayoffStructure,
 )
+from indodax_lab.labels.splits import SampleRecord, SplitPolicy, assign_folds, SampleRole
 
 
 # ---------------------------------------------------------------------------
@@ -97,8 +98,24 @@ class ResNetLSTMTrainedBundle(BaseModel):
     total_parameters: int
     best_epoch: int
     best_val_loss: float
+    compute_budget: "ResNetLSTMComputeBudgetSummary"
     bundle_hash: str
     fitted_at_utc: datetime
+
+
+class ResNetLSTMComputeBudgetSummary(BaseModel):
+    """Parameter and compute budget summary for ResNet LSTM architecture."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    total_trainable_parameters: int
+    estimated_flops_per_sequence: int
+    num_conv_layers: int
+    conv_channels: list[int]
+    kernel_size: int
+    lstm_hidden_dim: int
+    lstm_layers: int
+    receptive_field: int
 
 
 # ---------------------------------------------------------------------------
@@ -286,11 +303,30 @@ class ResNetLSTMTrainer:
 
         total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+        # Compute budget summary (mirrors D02/D04 pattern)
+        receptive_field = 1
+        for _ in self.config.conv_channels:
+            receptive_field += (self.config.kernel_size - 1)
+        # LSTM adds sequence length dependency
+        receptive_field = max(receptive_field, self.config.lstm_hidden_dim)
+        
+        compute_summary = ResNetLSTMComputeBudgetSummary(
+            total_trainable_parameters=total_params,
+            estimated_flops_per_sequence=total_params * 2,  # Approximate
+            num_conv_layers=len(self.config.conv_channels),
+            conv_channels=list(self.config.conv_channels),
+            kernel_size=self.config.kernel_size,
+            lstm_hidden_dim=self.config.lstm_hidden_dim,
+            lstm_layers=self.config.lstm_layers,
+            receptive_field=receptive_field,
+        )
+
         hash_payload = {
             "config": self.config.model_dump(mode="json"),
             "best_epoch": tracker.best_epoch,
             "best_val_loss": tracker.best_val_loss,
             "total_params": total_params,
+            "compute_budget": compute_summary.model_dump(mode="json"),
         }
         bundle_hash = hashlib.sha256(json.dumps(hash_payload, sort_keys=True).encode("utf-8")).hexdigest()
 
@@ -299,10 +335,73 @@ class ResNetLSTMTrainer:
             total_parameters=total_params,
             best_epoch=tracker.best_epoch,
             best_val_loss=tracker.best_val_loss,
+            compute_budget=compute_summary,
             bundle_hash=bundle_hash,
             fitted_at_utc=datetime.now(UTC),
         )
         return self._bundle
+
+    def evaluate_on_common_folds(
+        self,
+        inputs: np.ndarray,
+        masks: np.ndarray,
+        targets: np.ndarray,
+        decision_ts_list: list[datetime],
+        pairs: list[str],
+        split_policy: SplitPolicy,
+        mapper: CostAwareExecutionMapper,
+        round_trip_cost: float | None = None,
+    ) -> ResNetLSTMUtilityComparison:
+        """Evaluate model on SPLIT-01 common folds (PURGED/EMBARGOED excluded, fail-closed on empty clean slice).
+        
+        Uses common cost basis and standardized fold assignments per SPLIT-01.
+        """
+        if len(inputs) != len(decision_ts_list) or len(inputs) != len(pairs):
+            raise ValueError("inputs, decision_ts_list, and pairs must have same length")
+        
+        # Build SampleRecord for each sample
+        samples = []
+        for i, (decision_ts, pair) in enumerate(zip(decision_ts_list, pairs)):
+            # label_end_ts = decision_ts + max_horizon (simplified)
+            from datetime import timedelta
+            label_end_ts = decision_ts + timedelta(hours=split_policy.max_horizon_hours)
+            samples.append(SampleRecord(
+                sample_id=f"{pair}_{int(decision_ts.timestamp())}",
+                decision_ts=decision_ts,
+                label_end_ts=label_end_ts,
+                pair=pair,
+                label_available_at=decision_ts,  # Labels available at decision time
+            ))
+        
+        # Assign folds using SPLIT-01 assign_folds
+        manifest = assign_folds(
+            samples=samples,
+            split_policy=split_policy,
+            enforce_inter_fold_embargo=True,
+        )
+        
+        # Filter to only TRAIN/VALIDATION/CALIBRATION (exclude PURGED, EMBARGOED, SEALED_TEST, EXCLUDED)
+        clean_roles = {SampleRole.TRAIN, SampleRole.VALIDATION, SampleRole.CALIBRATION}
+        clean_indices = [
+            i for i, (sample_id, assignment) in enumerate(manifest.assignments.items())
+            if assignment.role in clean_roles
+        ]
+        
+        if not clean_indices:
+            raise ValueError("NO_CLEAN_SAMPLES: All samples assigned to PURGED/EMBARGOED/SEALED_TEST/EXCLUDED")
+        
+        clean_inputs = inputs[clean_indices]
+        clean_masks = masks[clean_indices]
+        clean_targets = targets[clean_indices]
+        
+        # Evaluate on clean fold
+        return self.evaluate_cost_aware_utility(
+            inputs=clean_inputs,
+            masks=clean_masks,
+            targets=clean_targets,
+            mapper=mapper,
+            round_trip_cost=round_trip_cost,
+        )
 
     def predict_proba(self, inputs: np.ndarray, masks: np.ndarray | None = None) -> np.ndarray:
         """Predict sigmoid probabilities of positive barrier outcome."""

@@ -150,3 +150,66 @@ def test_s02_01_contract_3() -> None:
 
     intents = s02_decide(frame, spec)
     assert len(intents) == 0
+
+
+def test_s02_bands_self_referential_regression() -> None:
+    """REGRESSION: Current bar included in band calculation (self-referential).
+    
+    The code uses `curr_window = p_df.iloc[-lookback_bars:]` which includes
+    the current decision bar. Expansion check should use PRIOR window only,
+    like `prev_bb_upper` from prior_window.
+    """
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_s02_specification()
+    
+    # Build a scenario where prior window was in squeeze, 
+    # but current bar expansion would fail if current bar contaminates bands
+    start_dt = as_of - timedelta(hours=24)
+    rows = []
+    base_price = 100000000.0
+    
+    # 24 prior bars: tight squeeze
+    for i in range(24):
+        bar_dt = start_dt + timedelta(hours=i)
+        p = base_price * (1.0 + 0.0001 * (1 if i % 2 == 0 else -1))
+        rows.append({
+            "pair": "btc_idr",
+            "decision_ts": bar_dt,
+            "row_ready_at": bar_dt,
+            "close": p,
+            "high": p * 1.001,
+            "low": p * 0.999,
+            "volume": 100.0,
+            "base_volume": 100.0,
+            "atr_14": 2000000.0,
+            "eligible": True,
+            "missing_feature_count": 0,
+            "reason_codes": (),
+        })
+    
+    # Current bar: expands significantly above prior high
+    curr_dt = start_dt + timedelta(hours=24)
+    rows.append({
+        "pair": "btc_idr",
+        "decision_ts": curr_dt,
+        "row_ready_at": curr_dt,
+        "close": base_price * 1.02,  # 2% expansion (under 3% chase cap)
+        "high": base_price * 1.025,
+        "low": base_price * 1.015,
+        "volume": 500.0,  # High volume
+        "base_volume": 500.0,
+        "atr_14": 2000000.0,
+        "eligible": True,
+        "missing_feature_count": 0,
+        "reason_codes": (),
+    })
+    
+    df = pd.DataFrame(rows)
+    df["decision_ts"] = pd.to_datetime(df["decision_ts"], utc=True)
+    df["row_ready_at"] = pd.to_datetime(df["row_ready_at"], utc=True)
+    frame = create_decision_frame(features=df, as_of=as_of)
+    
+    intents = s02_decide(frame, spec)
+    # Should still detect expansion correctly - using prior_window only
+    # This test ensures we don't regress to self-referential bands
+    assert len(intents) == 1, "Valid expansion should be detected using prior bands only"

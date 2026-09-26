@@ -65,7 +65,11 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         rsi = float(curr_row.get("rsi_14", curr_row.get("rsi", 50.0)))
         adx = float(curr_row.get("adx_14", curr_row.get("adx", 0.0)))
         di_spread = float(curr_row.get("di_spread_14", curr_row.get("di_spread", 0.0)))
-        regime = str(curr_row.get("regime", "sideways")).lower()
+        
+        # Guard: regime must be explicitly available (not default)
+        if "regime" not in curr_row or pd.isna(curr_row.get("regime")):
+            continue
+        regime = str(curr_row["regime"]).lower()
 
         # C07-01-AC1: Strong downtrend strictly rejects entry
         is_strong_downtrend = (
@@ -81,6 +85,9 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         if is_sideways and is_oversold:
             atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
+            # Guard: abstain when ATR <= 0 (no valid stop/target)
+            if atr_val <= 0.0:
+                continue
             stop_loss = max(0.0, close - atr_mult * atr_val)
             take_profit = close + atr_mult * atr_val
 

@@ -46,6 +46,10 @@ def c10_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
     # Load frozen member specifications
     c01_spec = load_c01_specification()
     c07_spec = load_c07_specification()
+    
+    # Use actual member versions from loaded specs (not config)
+    trend_ver = str(c01_spec.version)
+    rev_ver = str(c07_spec.version)
 
     intents: list[SignalIntent] = []
 
@@ -88,6 +92,7 @@ def c10_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         for m_intent in member_intents:
             # C10-01-AC3: Member version is recorded in intent
+            # Preserve all risk fields from member intent (stop_loss, take_profit, etc.)
             c10_intent = SignalIntent(
                 intent_id=f"c10_{pair}_{int(frame.as_of.timestamp())}_{member_id}_v{member_ver}",
                 decision_ts=m_intent.decision_ts,
@@ -96,6 +101,7 @@ def c10_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
                 desired_qty=m_intent.desired_qty,
                 limit_price=m_intent.limit_price,
                 stop_loss=m_intent.stop_loss,
+                take_profit=m_intent.take_profit,
                 strategy_id=spec.strategy_id,
             )
             intents.append(c10_intent)

@@ -73,6 +73,7 @@ class NeuralTrainingCheckpoint(BaseModel):
     optimizer_state: dict[str, Any]
     rng_state: dict[str, Any]
     best_val_metric: float
+    best_weights: dict[str, Any] | None = None
     created_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

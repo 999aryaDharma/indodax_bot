@@ -9,7 +9,7 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 import numpy as np
 import pytest
@@ -19,11 +19,18 @@ from indodax_lab.models.dl.d03_resnet_lstm import (
     ResNetLSTMConfig,
     ResNetLSTMModel,
     ResNetLSTMTrainer,
+    ResNetLSTMComputeBudgetSummary,
 )
 from indodax_lab.models.execution_mapper import (
     CostAwareExecutionMapper,
     CostBasis,
     DecisionAction,
+)
+from indodax_lab.labels.splits import (
+    SampleRole,
+    SplitPolicy,
+    FoldWindow,
+    assign_folds,
 )
 
 
@@ -166,3 +173,105 @@ def test_d03_01_contract_3() -> None:
     assert utility_comp.sample_count == 6
     assert isinstance(utility_comp.model_net_utility, float)
     assert utility_comp.cost_basis_evaluated == 0.0040
+
+
+def test_d03_01_folds_evaluation() -> None:
+    """REGRESSION: D03-01-AC3 evaluates on common folds using SPLIT-01 assign_folds.
+    
+    Folds should filter out PURGED/EMBARGOED samples and fail-closed on empty clean slice.
+    """
+    from datetime import timedelta
+    inputs, masks, targets = _generate_synthetic_sequences(n_samples=30, seq_len=16, n_features=4, seed=42)
+    
+    config = ResNetLSTMConfig(
+        input_dim=4,
+        conv_channels=(8,),
+        lstm_hidden_dim=8,
+        max_epochs=3,
+        patience=2,
+    )
+    trainer = ResNetLSTMTrainer(config=config)
+    trainer.fit(
+        train_inputs=inputs[:20],
+        train_masks=masks[:20],
+        train_targets=targets[:20],
+        val_inputs=inputs[20:],
+        val_masks=masks[20:],
+        val_targets=targets[20:],
+    )
+    
+    # Build SPLIT-01 policy with folds covering the test decision timestamps
+    # Use smaller horizon so label_end_ts stays within fold
+    base_ts = datetime(2025, 1, 12, 0, 0, tzinfo=UTC)
+    policy = SplitPolicy(
+        policy_id="test_policy_v1",
+        version="1.0.0",
+        max_horizon_hours=6,  # Smaller horizon so label_end_ts stays within fold
+        embargo_hours=6,
+        folds=[
+            FoldWindow(role=SampleRole.TRAIN, start_ts=base_ts - timedelta(days=10), end_ts=base_ts),
+            FoldWindow(role=SampleRole.VALIDATION, start_ts=base_ts, end_ts=base_ts + timedelta(days=5)),
+        ],
+    )
+    
+    # Build decision timestamps for test samples (last 10) - within VALIDATION fold
+    test_inputs = inputs[20:]
+    test_masks = masks[20:]
+    test_targets = targets[20:]
+    decision_ts_list = [base_ts + timedelta(hours=i) for i in range(len(test_inputs))]
+    pairs = ["BTC_IDR"] * len(test_inputs)
+    
+    cost_basis = CostBasis(estimated_round_trip_cost=0.0040, safety_margin=0.0015)
+    mapper = CostAwareExecutionMapper(cost_basis=cost_basis)
+    
+    # Should evaluate on clean folds only (VALIDATION fold)
+    utility_comp = trainer.evaluate_on_common_folds(
+        inputs=test_inputs,
+        masks=test_masks,
+        targets=test_targets,
+        decision_ts_list=decision_ts_list,
+        pairs=pairs,
+        split_policy=policy,
+        mapper=mapper,
+    )
+    
+    assert utility_comp.sample_count > 0
+    assert isinstance(utility_comp.model_net_utility, float)
+    assert utility_comp.cost_basis_evaluated == 0.0040
+
+
+def test_d03_01_compute_budget_logging() -> None:
+    """REGRESSION: D03-01 bundle includes ResNetLSTMComputeBudgetSummary with params/FLOPs/channels.
+    
+    Mirrors D02 TCNComputeBudgetSummary and D04 ITransformerComputeBudgetSummary pattern.
+    """
+    inputs, masks, targets = _generate_synthetic_sequences(n_samples=20)
+    
+    config = ResNetLSTMConfig(
+        input_dim=4,
+        conv_channels=(16, 16),
+        lstm_hidden_dim=16,
+        max_epochs=2,
+        patience=1,
+    )
+    trainer = ResNetLSTMTrainer(config=config)
+    bundle = trainer.fit(
+        train_inputs=inputs[:14],
+        train_masks=masks[:14],
+        train_targets=targets[:14],
+        val_inputs=inputs[14:],
+        val_masks=masks[14:],
+        val_targets=targets[14:],
+    )
+    
+    # Bundle should have compute_budget field
+    assert hasattr(bundle, 'compute_budget'), "Bundle missing compute_budget field"
+    budget = bundle.compute_budget
+    assert budget.total_trainable_parameters > 0
+    assert budget.estimated_flops_per_sequence > 0
+    assert budget.num_conv_layers == 2
+    assert budget.conv_channels == [16, 16]
+    assert budget.kernel_size == 3
+    assert budget.lstm_hidden_dim == 16
+    assert budget.lstm_layers == 1
+    assert budget.receptive_field > 0

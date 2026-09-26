@@ -10,9 +10,10 @@ Guarantees:
 from __future__ import annotations
 
 import copy
-from datetime import UTC, datetime
 import hashlib
 import json
+import random
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 import numpy as np
@@ -233,7 +234,48 @@ class D01MLPTrainer:
                 for k, v in checkpoint.model_state.items()
             }
             model.load_state_dict(weights_tensor)
-            tracker.best_weights = copy.deepcopy(model.state_dict())
+            # Restore best weights from checkpoint if available
+            if checkpoint.best_weights is not None:
+                best_weights_tensor = {
+                    k: torch.tensor(v, dtype=torch.float32)
+                    for k, v in checkpoint.best_weights.items()
+                }
+                tracker.best_weights = best_weights_tensor
+            # Restore optimizer state
+            def list_to_tensor(obj):
+                if isinstance(obj, dict):
+                    return {k: list_to_tensor(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    # Check if this looks like a tensor (list of numbers)
+                    if all(isinstance(x, (int, float)) for x in obj):
+                        return torch.tensor(obj, dtype=torch.float32)
+                    return [list_to_tensor(x) for x in obj]
+                else:
+                    return obj
+            
+            optimizer_state_restored = list_to_tensor(checkpoint.optimizer_state)
+            optimizer.load_state_dict(optimizer_state_restored)
+            # Restore RNG states
+            rng = checkpoint.rng_state
+            if "torch_rng" in rng:
+                torch.set_rng_state(torch.ByteTensor(rng["torch_rng"]))
+            if "numpy_rng" in rng:
+                # Restore numpy RNG state
+                np_rng = rng["numpy_rng"]
+                np.random.set_state((
+                    np_rng[0],
+                    np.array(np_rng[1]),
+                    np_rng[2],
+                    np_rng[3],
+                    np_rng[4],
+                ))
+            if "python_rng" in rng:
+                py_rng = rng["python_rng"]
+                random.setstate((
+                    py_rng[0],
+                    tuple(py_rng[1]),
+                    py_rng[2],
+                ))
 
         # Training loop
         for epoch in range(start_epoch, self.config.max_epochs):
@@ -260,15 +302,59 @@ class D01MLPTrainer:
                     k: v.cpu().numpy().tolist()
                     for k, v in model.state_dict().items()
                 }
+                # Save optimizer and RNG states for true resumption
+                # Convert optimizer state tensors to lists for JSON serialization (recursive)
+                def tensor_to_list(obj):
+                    if hasattr(obj, 'cpu'):  # torch.Tensor
+                        return obj.cpu().tolist()
+                    elif isinstance(obj, dict):
+                        return {k: tensor_to_list(v) for k, v in obj.items()}
+                    elif isinstance(obj, (list, tuple)):
+                        return [tensor_to_list(v) for v in obj]
+                    else:
+                        return obj
+                
+                optimizer_state = tensor_to_list(optimizer.state_dict())
+                # Capture RNG states
+                torch_rng = torch.get_rng_state().cpu().tolist()
+                numpy_rng = np.random.get_state()
+                numpy_rng_serializable = (
+                    numpy_rng[0],
+                    numpy_rng[1].tolist(),
+                    numpy_rng[2],
+                    numpy_rng[3],
+                    numpy_rng[4],
+                )
+                python_rng = random.getstate()
+                python_rng_serializable = (
+                    python_rng[0],
+                    list(python_rng[1]),
+                    python_rng[2],
+                )
+                
                 ckpt = NeuralTrainingCheckpoint(
                     epoch=epoch,
                     model_id=self.config.model_id,
                     input_hash=input_hash,
                     model_state=ckpt_model_state,
-                    optimizer_state={"lr": self.config.learning_rate},
-                    rng_state={"seed": self.config.seed},
+                    optimizer_state=optimizer_state,
+                    rng_state={
+                        "torch_rng": torch_rng,
+                        "numpy_rng": numpy_rng_serializable,
+                        "python_rng": python_rng_serializable,
+                    },
                     best_val_metric=tracker.best_val_loss,
                 )
+                # Also save best weights at the point they were achieved
+                if tracker.best_weights is not None and epoch == tracker.best_epoch:
+                    ckpt_dict = ckpt.model_dump()
+                    ckpt_dict["best_weights"] = {
+                        k: v.cpu().numpy().tolist()
+                        for k, v in tracker.best_weights.items()
+                    }
+                    ckpt_with_best = NeuralTrainingCheckpoint(**ckpt_dict)
+                    save_checkpoint(ckpt_with_best, checkpoint_dir / "best_checkpoint.json")
+                
                 save_checkpoint(ckpt, checkpoint_dir / "latest_checkpoint.json")
 
             # Check interruption simulation

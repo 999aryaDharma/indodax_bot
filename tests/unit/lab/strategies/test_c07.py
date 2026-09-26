@@ -173,3 +173,50 @@ def test_c07_01_contract_3():
 
     intents = c07_decide(frame, spec)
     assert len(intents) == 0, "Zero band width must abstain (empty intents)"
+
+
+def test_c07_regime_missing_abstains():
+    """REGRESSION: Missing regime column defaults to "sideways" causing false entry.
+    
+    When regime is missing, str(None).lower() = "none" but code checks for 
+    ("sideways", "ranging"). Actually it defaults to "sideways" via 
+    str(curr_row.get("regime", "sideways")).lower(). Must abstain when regime unavailable.
+    """
+    spec = load_c07_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    
+    # Build features WITHOUT regime column
+    df = _build_c07_features(
+        as_of=as_of,
+        bb_z=-2.5,
+        bb_width=0.04,
+        rsi=22.0,
+        adx=0.15,
+        di_spread=-0.02,
+    )
+    # Remove regime column
+    df = df.drop(columns=["regime"], errors="ignore")
+    frame = create_decision_frame(df, as_of=as_of)
+    
+    intents = c07_decide(frame, spec)
+    assert len(intents) == 0, f"Expected FLAT when regime missing, got {len(intents)} intents"
+
+
+def test_c07_atr_missing_or_zero_abstains():
+    """REGRESSION: ATR missing/zero produces degenerate stop_loss == limit_price and take_profit == limit_price."""
+    spec = load_c07_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    
+    # Case A: ATR missing
+    df = _build_c07_features(as_of=as_of, bb_z=-2.5, bb_width=0.04, rsi=22.0)
+    df = df.drop(columns=["atr_14"], errors="ignore")
+    frame = create_decision_frame(df, as_of=as_of)
+    intents = c07_decide(frame, spec)
+    assert len(intents) == 0, f"Expected FLAT when ATR missing, got {len(intents)} intents"
+    
+    # Case B: ATR explicitly zero
+    df_b = _build_c07_features(as_of=as_of, bb_z=-2.5, bb_width=0.04, rsi=22.0)
+    df_b.loc[:, "atr_14"] = 0.0
+    frame_b = create_decision_frame(df_b, as_of=as_of)
+    intents_b = c07_decide(frame_b, spec)
+    assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"
