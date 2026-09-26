@@ -1,7 +1,8 @@
 """Unit tests for REPORT-01 Compact experiment reports.
 
 Acceptance Criteria:
-- REPORT-01-AC0 (test_report_01_valid_contract): Pengguna dapat melihat kualitas data, performa net dan alasan penolakan tanpa membaca raw logs.
+- REPORT-01-AC0 (test_report_01_valid_contract): Pengguna dapat melihat kualitas data, performa net
+  dan alasan penolakan tanpa membaca raw logs.
 - REPORT-01-AC1 (test_report_01_contract_1): No-data berbeda dari zero profit.
 - REPORT-01-AC2 (test_report_01_contract_2): Shared dan independent dipisahkan.
 - REPORT-01-AC3 (test_report_01_contract_3): Run invalid tidak ranking.
@@ -9,8 +10,9 @@ Acceptance Criteria:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
+from datetime import UTC, datetime
+
 import pytest
 
 from indodax_lab.evaluation.gates import EvaluationOutcome, EvaluationResult
@@ -65,8 +67,18 @@ def _build_test_run(
     eval_result = EvaluationResult(
         run_id=run_id,
         candidate_id=candidate_id,
-        outcome=EvaluationOutcome.PASS if status == ExperimentRunStatus.SUCCESS else EvaluationOutcome.HARD_FAIL,
-        passed_gates=["profit_factor", "trade_count"] if status == ExperimentRunStatus.SUCCESS else [],
+        policy_id="eval_policy_v1",
+        policy_version="1.0.0",
+        outcome=(
+            EvaluationOutcome.PASS
+            if status == ExperimentRunStatus.SUCCESS
+            else EvaluationOutcome.HARD_FAIL
+        ),
+        passed_gates=(
+            ["profit_factor", "trade_count"]
+            if status == ExperimentRunStatus.SUCCESS
+            else []
+        ),
         failed_gates=[] if status == ExperimentRunStatus.SUCCESS else ["profit_factor"],
         reasons=[] if status == ExperimentRunStatus.SUCCESS else ["PROFIT_FACTOR_TOO_LOW"],
         metrics=m,
@@ -75,7 +87,7 @@ def _build_test_run(
 
 
 def test_report_01_valid_contract() -> None:
-    """REPORT-01-AC0: Pengguna dapat melihat kualitas data, performa net dan alasan penolakan tanpa membaca raw logs."""
+    """REPORT-01-AC0: report shows data quality, net performance and rejection reasons."""
     run, eval_result = _build_test_run("run_valid_ok")
 
     md_report = generate_experiment_report_md(run, eval_result)
@@ -138,7 +150,11 @@ def test_report_01_contract_2() -> None:
 
 def test_report_01_contract_3() -> None:
     """REPORT-01-AC3: Run invalid tidak ranking."""
-    run_valid_1, eval_1 = _build_test_run("run_1", candidate_id="cand_A", metrics={"net_profit_pct": 10.0, "sharpe_ratio": 1.2, "trade_count": 30})
+    run_valid_1, eval_1 = _build_test_run(
+        "run_1",
+        candidate_id="cand_A",
+        metrics={"net_profit_pct": 10.0, "sharpe_ratio": 1.2, "trade_count": 30},
+    )
     run_invalid, eval_inv = _build_test_run(
         "run_invalid",
         status=ExperimentRunStatus.INVALID_RUN,
@@ -148,13 +164,19 @@ def test_report_01_contract_3() -> None:
     eval_inv_custom = EvaluationResult(
         run_id="run_invalid",
         candidate_id="cand_B_invalid",
+        policy_id="eval_policy_v1",
+        policy_version="1.0.0",
         outcome=EvaluationOutcome.INVALID_RUN,
         passed_gates=[],
         failed_gates=["DATA_VALIDITY"],
         reasons=["PROVENANCE_CORRUPT"],
         metrics=run_invalid.metrics,
     )
-    run_valid_2, eval_2 = _build_test_run("run_2", candidate_id="cand_C", metrics={"net_profit_pct": 5.0, "sharpe_ratio": 0.9, "trade_count": 35})
+    run_valid_2, eval_2 = _build_test_run(
+        "run_2",
+        candidate_id="cand_C",
+        metrics={"net_profit_pct": 5.0, "sharpe_ratio": 0.9, "trade_count": 35},
+    )
 
     comparison_md = generate_multi_run_comparison_md(
         runs=[run_valid_1, run_invalid, run_valid_2],
@@ -180,6 +202,8 @@ def test_report_01_statistical_selection_and_errors() -> None:
     eval_result_stat = EvaluationResult(
         run_id=run.run_id,
         candidate_id=run.candidate_id,
+        policy_id="eval_policy_v1",
+        policy_version="1.0.0",
         outcome=EvaluationOutcome.PASS,
         passed_gates=["profit_factor"],
         failed_gates=[],
@@ -349,7 +373,9 @@ def test_report_escapes_markdown_structure_in_untrusted_values() -> None:
     # The injected payload must not be able to create a row of its own: the only
     # way a value becomes a row is a newline, and no value may contribute one.
     table_lines = [line for line in md.splitlines() if line.startswith("| ")]
-    forged_rows = [line for line in table_lines if "cand_forged" in line and "cand_hostile" not in line]
+    forged_rows = [
+        line for line in table_lines if "cand_forged" in line and "cand_hostile" not in line
+    ]
     assert forged_rows == [], "the injected payload forged a standalone leaderboard row"
 
     # And the table itself must still parse: a real ranked row has 9 cells, so
@@ -382,7 +408,7 @@ def test_leaderboard_preserves_each_run_identity_end_to_end() -> None:
         evals.append(e)
 
     first = generate_multi_run_comparison_md(runs=runs, evaluations=evals)
-    second = generate_multi_run_comparison_md(runs=list(reversed(runs)), evaluations=list(reversed(evals)))
+    second = generate_multi_run_comparison_md(
+        runs=list(reversed(runs)), evaluations=list(reversed(evals))
+    )
     assert first == second, "identical input set must produce an identical leaderboard"
-
-
