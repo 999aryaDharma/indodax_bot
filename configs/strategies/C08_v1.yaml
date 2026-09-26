@@ -1,0 +1,22 @@
+strategy_id: "C08"
+version: "1.0.0"
+family: "multi_timeframe_confirmation"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+  - "4h"
+  - "1d"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  daily_max_age_hours: 36
+  four_hour_max_age_hours: 6
+  trigger_lookback_bars: 20
+  atr_multiplier: 2.0
+  desired_qty: "0.1"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Closed daily and 4h trend aligned with lower timeframe breakout trigger"
