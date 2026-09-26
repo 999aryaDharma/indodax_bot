@@ -6,7 +6,7 @@ Status: REVIEW
 
 Priority: P0 | Type: feature | Domain: reporting | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (implementation); Codex /root (review remediation) | Independent Reviewer: /root/docs_review (pending final review)
 
 Recommended Branch: `feat/report-01-compact-experiment-reports`
 
@@ -45,7 +45,7 @@ AGENT-01, REPORT-02
 
 ## Current Context
 
-New capability; dependencies must be DONE before implementation.
+EVAL-03 and SIM-04 are DONE. Independent review identified evaluation/run identity swaps and input-order-dependent invalid sections; remediation is committed at `5c587dec44afa33d68381bdfb3d82a9ce768cfcf`. Final independent review is pending.
 
 - Dependency EVAL-03 supplies: IDEA -> IMPLEMENTED -> BACKTESTED -> VALIDATED -> SEALED_PASS -> SHADOW -> CHAMPION; immutable transitions.
 - Dependency SIM-04 supplies: postings + equity + rejected orders -> metrics by year/regime/tier/asset and 1.5x/2x stress.
@@ -144,7 +144,7 @@ Positive contract: **REPORT-01-AC0**, `test_report_01_valid_contract` — Penggu
 |---|---|---|
 | REPORT-01-AC1 | `test_report_01_contract_1` | No-data berbeda dari zero profit |
 | REPORT-01-AC2 | `test_report_01_contract_2` | Shared dan independent dipisahkan |
-| REPORT-01-AC3 | `test_report_01_contract_3` | Run invalid tidak ranking |
+| REPORT-01-AC3 | `test_report_01_contract_3`; `test_single_report_rejects_evaluation_from_another_run`; `test_leaderboard_rejects_swapped_evaluation_identities`; `test_disqualified_runs_render_in_stable_order` | Run invalid tidak ranking; evaluations must match their run and candidate identity |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 

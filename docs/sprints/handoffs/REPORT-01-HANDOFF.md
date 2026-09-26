@@ -105,3 +105,15 @@ Full lab suite verification: 134 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `_md_cell` replaces offending characters with a space rather than escaping them, so two distinct values differing only in a pipe could render identically. Pre-existing ambiguity in a human-readable report; recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: the `### Unranked / No Data` section does not distinguish *why* a run was unrankable (missing key, `None`, NaN, infinity, non-numeric). It states that the run is unranked, which satisfies the no-data boundary, but a richer reason column would help triage. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `to_markdown` still renders `data_quality_score` as a percentage plus a raw fraction with no validity floor, so a run with a known-bad data quality reads as a normal 0.0% figure. The value is reported faithfully; whether the report should visibly mark a below-threshold quality score is a product decision, recorded as backlog.
+
+## Independent review remediation — evaluation provenance and stable invalid output
+
+- Review target: `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`. The reviewer reproduced swapped run/evaluation pairs that showed a mismatched candidate as PASS, and showed the invalid-run section changed bytes when input order was reversed.
+- Remediation SHA: `5c587dec44afa33d68381bdfb3d82a9ce768cfcf` (`fix(report-01): bind evaluations to run identity`).
+- `_validate_evaluation_identity` now requires matching `run_id` and `candidate_id` before either single-run summary creation or leaderboard classification; mismatches raise `EVALUATION_IDENTITY_MISMATCH` naming the mismatched fields.
+- Disqualified rows sort by `(run_id, candidate_id)`, making output independent of caller order.
+- New regressions: single-summary mismatch, swapped leaderboard evaluations and reversed invalid-run input order. RED: 3 failed; GREEN: `tests/unit/lab/reporting/test_summary.py` -> **13 passed**.
+- Affected gate: `tests/unit/lab/orchestration tests/unit/lab/reporting tests/unit/lab/verification tests/integration/lab/test_telegram_status.py tests/regression/test_release_candidate.py tests/research/test_rl_reward_contract.py` -> **144 passed**.
+- `git diff --check` passed. Ruff reports existing findings in `summary.py`; no clean lint claim is made.
+- Final independent review: **PASS** at exact remediation SHA `5c587dec44afa33d68381bdfb3d82a9ce768cfcf`; reviewer ran 13 focused tests and identity probes. Owner's 144-test broader gate was not independently rerun.
+- Sprint remains REVIEW until coordinator updates the shared manifest and projections after the concurrent manifest edits are resolved.
