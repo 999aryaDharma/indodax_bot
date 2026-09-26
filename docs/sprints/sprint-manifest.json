@@ -7482,15 +7482,18 @@
       "files": [
         "configs/strategies/S03_v1.yaml",
         "src/indodax_lab/strategies/s03.py",
-        "tests/unit/lab/strategies/test_s03.py"
+        "tests/unit/lab/strategies/test_s03.py",
+        "src/indodax_lab/strategies/__init__.py",
+        "docs/sprints/strategies/S03-01-abnormal-volume-continuation.md",
+        "docs/sprints/handoffs/S03-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S03-01-abnormal-volume-continuation.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/s03-01-abnormal-volume-continuation",
       "requirements": [
         "FR-08"
@@ -7500,40 +7503,44 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "configs/features/tabular_bar_v1.yaml",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/sprints/handoffs/STRAT-01-HANDOFF.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.",
+      "current_context": "S03 contract implemented and independently reviewed. Candidate consumes registered volume_z_20_1h, log_ret_24_1h, atr_pct_14_1h plus causal close; defaults are volume z-score >=2.0, positive 24h log return <=0.25, explicit false pump_manipulation_flag, 2 ATR stop, and Rp10,000 target. Point-in-time pump-flag producer/provenance remains an external qualification gate; missing or unknown flag abstains.",
       "external_gates": [
-        "Portfolio backlog activation by owner; not in default scheduler"
+        "Portfolio backlog activation by owner; not in default scheduler",
+        "Verify a point-in-time pump_manipulation_flag producer and provenance; missing/unknown flag must abstain and blocks strategy qualification."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
         {
           "criterion": "S03-01-AC0",
-          "test_case": "test_s03_01_valid_contract",
+          "test_case": "test_s03_valid_volume_continuation_emits_minimum_sized_intent",
           "behavior": "Kandidat S03 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S03-01-AC1",
-          "test_case": "test_s03_01_contract_1",
+          "test_case": "test_s03_requires_volume_spike_and_price_follow_through",
           "behavior": "Volume spike tanpa price follow-through ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S03-01-AC2",
-          "test_case": "test_s03_01_contract_2",
+          "test_case": "test_s03_flagged_or_unknown_manipulation_abstains",
           "behavior": "Flagged pump abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "S03-01-AC3",
-          "test_case": "test_s03_01_contract_3",
+          "test_case": "test_s03_missing_or_nonfinite_inputs_abstain",
           "behavior": "Missing volume tidak menjadi surprise",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7541,7 +7548,14 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/S03-01-HANDOFF.md",
+        "code_target": "43b95b50675d86f3072152cb6fb918d673f0dd2e",
+        "source_commit": "43b95b50675d86f3072152cb6fb918d673f0dd2e",
+        "review": "Independent PASS; 7 tests and 15 negative/sizing probes passed. Local focused strategy/feature/integration check: 164 passed; Ruff and package import smoke check passed. Pump-flag producer/provenance remains external qualification gate."
+      }
     },
     {
       "id": "S04-01",

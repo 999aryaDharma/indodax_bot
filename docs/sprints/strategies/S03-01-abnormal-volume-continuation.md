@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex /root | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/s03-01-abnormal-volume-continuation`
 
@@ -41,12 +41,16 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `configs/features/tabular_bar_v1.yaml`
+- `docs/research/dataset-feature-contracts.md`
+- `docs/sprints/handoffs/STRAT-01-HANDOFF.md`
 
 ## Current Context
 
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
+- Candidate defaults: `volume_z_20_1h >= 2.0`, `0 < log_ret_24_1h <= 0.25`, 2 ATR stop, and Rp10,000 target notional. Require an explicit boolean `pump_manipulation_flag`; missing/unknown values abstain. No producer for this flag is currently registered, so producer provenance and point-in-time delivery remain an external qualification gate.
 
 ## In Scope
 
@@ -77,7 +81,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Domain Rules / Invariants
 
-Volume surprise plus price confirmation with manipulation flags -> versioned LONG/FLAT intent, never direct orders.
+At `as_of`, require finite `volume_z_20_1h >= min_volume_z`, `0 < log_ret_24_1h <= max_24h_log_return`, a literal false `pump_manipulation_flag`, finite positive `close` and `atr_pct_14_1h`, and `atr_pct_14_1h × atr_multiplier < 1`. Missing/unknown fields abstain. Emit a BUY intent sized to configured IDR target notional; stop is `close × (1 − atr_pct_14_1h × atr_multiplier)`. Shared risk/execution remains authoritative; never submit orders.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 
