@@ -1,11 +1,12 @@
 # C02-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: C02-01 — EMA pullback
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Corrective implementation owner: Codex `/root`
+- Independent reviewer: `/root/docs_review` — PASS on corrective SHA `9d5da4e487cc5f2c3e3123ac5125db4e01dcf983`.
 - Branch / worktree: `feat/c02-01-ema-pullback`
 - Base SHA: `72bba7e`
 - Code target: `feat(c02-01): ema pullback`
@@ -48,9 +49,17 @@ Combined suite verification (84 passed across backtest, risk, execution, ledger,
 - Quality verdict: PASS (pure stateless decision protocol, zero ledger mutation, strict causality, downtrend rejection, and pullback recovery confirmation).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Initial handoff review was pending; corrective review is PASS as recorded below.
 
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for C02-01.
 - Next unlocked consumers: QA-01.
+
+## Current remediation evidence
+
+- Corrective implementation SHA: `9d5da4e487cc5f2c3e3123ac5125db4e01dcf983` (original implementation source remains `03478f53b4208f898b520b268584be4c5a6d8671`).
+- Targeted command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c02.py -q` — 11 passed.
+- Targeted lint: `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/c02.py tests/unit/lab/strategies/test_c02.py` — passed.
+- Added regression coverage for nonfinite/oversized ATR, invalid EMA/OHLC, ineligible latest-tail replay, and non-increasing pullback chronology.
+- Independent review of corrective SHA: PASS; 11 targeted tests and 36 invalid-input probes passed, with no remaining Critical/Important findings.

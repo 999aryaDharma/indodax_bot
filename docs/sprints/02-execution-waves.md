@@ -95,7 +95,7 @@ None. Verify external gates and shared-file ownership before claim.
 - LABEL-02 — Triple barrier outcomes [REVIEW; CORE]
 - JOB-01 — Durable leased jobs [REVIEW; CORE]
 - C01-01 — Donchian breakout [DONE; CORE]
-- C02-01 — EMA pullback [REVIEW; CORE]
+- C02-01 — EMA pullback [DONE; CORE]
 - C03-01 — Time series momentum [REVIEW; CORE]
 - C04-01 — Cross sectional momentum [REVIEW; CORE]
 - C05-01 — Volatility breakout [DONE; EXTENSION]

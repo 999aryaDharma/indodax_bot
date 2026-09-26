@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: feature | Domain: strategies | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (original), Codex /root (review remediation) | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c02-01-ema-pullback`
 
@@ -191,10 +191,10 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **C02-01-AC0** Kandidat C02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **C02-01-AC1** Downtrend menolak buy. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **C02-01-AC2** Pullback belum recovered tidak entry. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **C02-01-AC3** Recovery closed bar memberi intent. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **C02-01-AC0** Candidate emits valid intent; see corrective handoff evidence.
+- [x] **C02-01-AC1** Downtrend rejects BUY.
+- [x] **C02-01-AC2** Unrecovered pullback does not enter.
+- [x] **C02-01-AC3** Closed-bar recovery emits BUY; invalid/stale inputs abstain.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 
@@ -205,7 +205,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] No unrelated capability or policy relaxation introduced.
 - [ ] Contracts/docs updated if implementation reveals an approved deviation.
 - [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Independent reviewer verifies spec and quality on corrective SHA `9d5da4e487cc5f2c3e3123ac5125db4e01dcf983`; no unresolved Critical/Important findings.
 - [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.

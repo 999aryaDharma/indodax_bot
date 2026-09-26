@@ -6328,15 +6328,16 @@
       "files": [
         "configs/strategies/C02_v1.yaml",
         "src/indodax_lab/strategies/c02.py",
-        "tests/unit/lab/strategies/test_c02.py"
+        "tests/unit/lab/strategies/test_c02.py",
+        "docs/sprints/handoffs/C02-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "CORE",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C02-01-ema-pullback.md",
       "priority": "P0",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Antigravity (original); Codex /root (review remediation)",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c02-01-ema-pullback",
       "requirements": [
         "FR-08"
@@ -6348,7 +6349,7 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.",
+      "current_context": "C02 implementation and review remediation are complete. Corrective SHA 9d5da4e487cc5f2c3e3123ac5125db4e01dcf983 closes invalid ATR, EMA/OHLC, stale-tail replay, and chronology findings; Research only, no order authority.",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
@@ -6358,34 +6359,34 @@
           "criterion": "C02-01-AC0",
           "test_case": "test_c02_01_valid_contract",
           "behavior": "Kandidat C02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C02-01-AC1",
           "test_case": "test_c02_01_contract_1",
           "behavior": "Downtrend menolak buy",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C02-01-AC2",
           "test_case": "test_c02_01_contract_2",
           "behavior": "Pullback belum recovered tidak entry",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C02-01-AC3",
           "test_case": "test_c02_01_contract_3",
           "behavior": "Recovery closed bar memberi intent",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/C02-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "9d5da4e487cc5f2c3e3123ac5125db4e01dcf983",
+        "review": "Independent PASS on corrective SHA; 11 targeted tests and 36 negative probes passed. Invalid ATR, EMA/OHLC, stale-tail replay, and pullback chronology findings are closed."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

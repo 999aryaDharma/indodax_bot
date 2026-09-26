@@ -68,7 +68,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | SIM-03 | Deterministic replay judge | simulation | P0 | integration | SIM-02, DATA-06 | DONE | [Spec](simulation\SIM-03-deterministic-replay-judge.md) |
 | SIM-04 | Net-cost risk and capacity metrics | simulation | P0 | feature | SIM-03 | DONE | [Spec](simulation\SIM-04-net-cost-risk-and-capacity-metrics.md) |
 | C01-01 | Donchian breakout | strategies | P0 | feature | STRAT-01 | DONE | [Spec](strategies\C01-01-donchian-breakout.md) |
-| C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C02-01-ema-pullback.md) |
+| C02-01 | EMA pullback | strategies | P0 | feature | STRAT-01 | DONE | [Spec](strategies\C02-01-ema-pullback.md) |
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
 | C04-01 | Cross sectional momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C04-01-cross-sectional-momentum.md) |
 | C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C05-01-volatility-breakout.md) |
