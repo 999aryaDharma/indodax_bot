@@ -1,0 +1,19 @@
+strategy_id: "S03"
+version: "1.0.0"
+family: "abnormal_volume_continuation"
+universe_tier: "small_cap"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  min_volume_z: 2.0
+  max_24h_log_return: 0.25
+  atr_multiplier: 2.0
+  target_notional_idr: "10000"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Small-cap continuation after abnormal volume and price confirmation, excluding flagged manipulation"

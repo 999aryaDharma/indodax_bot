@@ -22,6 +22,7 @@ from indodax_lab.strategies.c11 import c11_decide, load_c11_specification
 from indodax_lab.strategies.registry import StrategyRegistry
 from indodax_lab.strategies.s01 import load_s01_specification, s01_decide
 from indodax_lab.strategies.s02 import load_s02_specification, s02_decide
+from indodax_lab.strategies.s03 import load_s03_specification, s03_decide
 from indodax_lab.strategies.s06 import load_s06_specification, s06_decide
 from indodax_lab.strategies.store import StrategyService, StrategyStore
 
@@ -61,6 +62,8 @@ __all__ = [
     "load_s01_specification",
     "s02_decide",
     "load_s02_specification",
+    "s03_decide",
+    "load_s03_specification",
     "s06_decide",
     "load_s06_specification",
 ]
