@@ -2291,16 +2291,16 @@
         "FEAT-04",
         "SIM-01"
       ],
-      "goal": "Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama.",
-      "contract": "sample + horizon + fill model -> entry/exit, gross/net return, costs and label_available_at.",
+      "goal": "Candidate-sized fixed-horizon outcome derives from shared simulator fills/costs and is distinct from full SL/TP PnL.",
+      "contract": "candidate bundle + sample-specific SignalIntent + horizon -> shared-simulator entry/exit fills, net return, costs and label availability.",
       "checks": [
-        "Entry sebelum decision ditolak",
+        "Candidate/intent/sample lineage matches and entry before decision is rejected",
         "Horizon tidak lengkap tidak menjadi label nol",
-        "Cost schedule atau fill unavailable menghasilkan excluded sample"
+        "Unknown cost, no entry/exit fill or incomplete exit produces EXCLUDED with a reason"
       ],
       "files": [
         "src/indodax_lab/labels/returns.py",
-        "configs/labels/net_return_v1.yaml",
+        "configs/labels/net_return_candidate_horizon_v2.yaml",
         "tests/unit/lab/labels/test_returns.py"
       ],
       "type": "data",
@@ -2313,9 +2313,9 @@
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/label-01-execution-aligned-net-return-labels",
       "external_gates": [
-        "Unverified historical tariff intervals remain excluded from labels and block affected net-performance claims/promotion. Current independent review also requires true simulator fill alignment and supported canonical execution configuration before DONE."
+        "Unknown/unverified historical tariff intervals remain excluded and block affected net-performance claims/promotion. Bar-proxy labels do not certify venue fills or full SL/TP strategy PnL."
       ],
-      "current_context": "Independent review at 8ecd154f466776a59dfeda38204b40d558efdf8d found AC0/AC3 do not use ConservativeExecutionSimulator and may emit VALID with unavailable liquidity; canonical YAML execution_model_version is rejected. AC1/AC2 pass. Owner selected candidate-specific per-sample sizing; change-control design/schema and lineage contract must be approved before remediation.",
+      "current_context": "Independent review at 8ecd154f466776a59dfeda38204b40d558efdf8d found AC0/AC3 do not use ConservativeExecutionSimulator and may emit VALID with unavailable liquidity; canonical YAML execution_model_version is rejected. Owner approved candidate-specific SignalIntent sizing, immutable candidate bundle lineage, shared BUY plus fixed-horizon SELL, explicit exclusion for missing/incomplete fills, and target semantics separate from SL/TP PnL. Written CR/spec proposes net_return_candidate_horizon_v2; written-spec review pending before implementation.",
       "unlocks": [
         "LABEL-02"
       ],
@@ -2341,14 +2341,14 @@
         {
           "criterion": "LABEL-01-AC0",
           "test_case": "test_label_01_valid_contract",
-          "behavior": "Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama",
+          "behavior": "measures horizon outcome from actual shared BUY/SELL fills and fees; not full SL/TP strategy PnL",
           "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "LABEL-01-AC1",
           "test_case": "test_label_01_contract_1",
-          "behavior": "Entry sebelum decision ditolak",
-          "status": "PASS"
+          "behavior": "Candidate bundle, intent, pair, strategy, sample and decision-time lineage match; mismatches reject/exclude before output",
+          "status": "CHANGES_REQUESTED"
         },
         {
           "criterion": "LABEL-01-AC2",
@@ -2359,7 +2359,7 @@
         {
           "criterion": "LABEL-01-AC3",
           "test_case": "test_label_01_contract_3",
-          "behavior": "Cost schedule atau fill unavailable menghasilkan excluded sample",
+          "behavior": "Unknown cost, no entry/exit fill, or an exit that fails to close the actual entry quantity yields EXCLUDED with reason. Partial entry may be included only if actual filled quantity is fully exited.",
           "status": "CHANGES_REQUESTED"
         }
       ],

@@ -12,7 +12,7 @@ No real-money execution, no silent evaluator policy changes, and no direct mutat
 
 | Sprint | Observable result | Detailed execution scope |
 |---|---|---|
-| LABEL-01 | Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama. | `docs/sprints/labels/LABEL-01-execution-aligned-net-return-labels.md` |
+| LABEL-01 | Candidate-sized fixed-horizon outcome derives from shared simulator fills and costs. | `docs/sprints/labels/LABEL-01-execution-aligned-net-return-labels.md` |
 | LABEL-02 | Outcome upper/lower/vertical barrier mulai dari entry dan menyimpan akhir overlap. | `docs/sprints/labels/LABEL-02-triple-barrier-outcomes.md` |
 | SPLIT-01 | Fold assignment memisahkan train validation dan sealed test tanpa overlap label. | `docs/sprints/labels/SPLIT-01-sealed-purged-chronological-folds.md` |
 | TRAIN-01 | Materializer menggabungkan fitur label dan fold hanya melalui ID yang telah diverifikasi. | `docs/sprints/labels/TRAIN-01-verified-training-dataset-assembly.md` |
@@ -21,10 +21,10 @@ No real-money execution, no silent evaluator policy changes, and no direct mutat
 
 ### LABEL-01 — Execution-aligned net return labels
 
-sample + horizon + fill model -> entry/exit, gross/net return, costs and label_available_at.
+candidate bundle + sample + candidate `SignalIntent` + horizon -> shared-simulator entry/exit fills, gross/net return, costs and label_available_at.
 
 Acceptance boundary:
-- Entry sebelum decision ditolak.
+- Candidate, intent, pair, strategy, sample and decision-time lineage must match; entry before decision is rejected.
 - Horizon tidak lengkap tidak menjadi label nol.
 - Cost schedule atau fill unavailable menghasilkan excluded sample.
 
@@ -57,7 +57,7 @@ Acceptance boundary:
 
 ## Data model, persistence and lifecycle
 
-Store label_end_ts, entry/exit, cost/execution IDs; assignment table per sample; purge overlaps and embargo.
+Store label_end_ts, candidate bundle ID, intent ID, actual entry/exit fills, costs/execution IDs and exclusion reason; assignment table per sample; purge overlaps and embargo. New candidate-horizon v2 materialization is immutable and never overwrites v1.
 
 Identity and temporal primitives: [domain data model](02-domain-data-model.md). Implemented schemas stay backward compatible unless an accepted migration ADR states otherwise. Optional or absent data retains explicit unknown/missing semantics.
 
@@ -99,7 +99,7 @@ Every acceptance boundary above must map to named tests in its sprint handoff. I
 
 ## Target interface details
 
-`build_net_return(sample, horizon, execution_model, cost_schedule)` uses the first eligible execution event after decision. `net_return = net_sell_proceeds / total_buy_cash_debit - 1`; store gross_return, buy_cost, sell_cost and slippage separately without charging twice. Missing terminal market event produces censored/excluded label; sample remains auditable. `label_available_at` must include upstream data availability, not merely simulated exit time.
+`build_net_return(sample, horizon, execution_model, cost_schedule)` requires the candidate bundle ID and candidate-generated `SignalIntent` for that sample. `desired_qty` is candidate strategy sizing; do not substitute a fixed quantity or silently rescale. Validate candidate, pair, strategy, decision timestamp and sample lineage. Reuse the shared execution simulator for the BUY and a horizon SELL of the actual acquired quantity. Compute only from simulator fills and fee records: `net_return = net_sell_proceeds / total_buy_cash_debit - 1`; retain gross return, buy/sell costs and slippage separately without double charging. No entry fill, no exit fill, or an exit that does not fully close the acquired quantity produces `EXCLUDED` with a reason; partial entry is measured at its filled quantity only if fully exited. The outcome is a fixed-horizon entry outcome, not full strategy PnL; candidate SL/TP do not trigger this target. Missing terminal market event produces censored/excluded label; sample remains auditable. `label_available_at` must include upstream data availability, not merely simulated exit time. Unknown or unverified tariff intervals remain excluded.
 
 `build_barrier_label(entry, decision_volatility, pt_multiplier, sl_multiplier, vertical_horizon)` computes bounds after entry and never refits volatility on the outcome interval. Store +1/-1/0, first_touch_ts, label_end_ts, MAE/MFE and concurrency weight. Overlap count based only on overlapping target intervals; labels and masks remain outside feature arrays.
 

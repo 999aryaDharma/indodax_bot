@@ -46,7 +46,7 @@ CORE is initial paper/research scope; EXTENSION/EXPERIMENTAL require owner activ
 
 ## labels
 
-- [LABEL-01 — Execution-aligned net return labels](labels\LABEL-01-execution-aligned-net-return-labels.md) — CORE; Target return mengukur net proceeds relatif terhadap gross cash debit dari execution model yang sama.
+- [LABEL-01 — Execution-aligned net return labels](labels\LABEL-01-execution-aligned-net-return-labels.md) — CORE; Candidate-sized fixed-horizon outcome derives from shared simulator fills/costs and is distinct from full SL/TP PnL.
 - [LABEL-02 — Triple barrier outcomes](labels\LABEL-02-triple-barrier-outcomes.md) — CORE; Outcome upper/lower/vertical barrier mulai dari entry dan menyimpan akhir overlap.
 - [SPLIT-01 — Sealed purged chronological folds](labels\SPLIT-01-sealed-purged-chronological-folds.md) — CORE; Fold assignment memisahkan train validation dan sealed test tanpa overlap label.
 - [TRAIN-01 — Verified training dataset assembly](labels\TRAIN-01-verified-training-dataset-assembly.md) — CORE; Materializer menggabungkan fitur label dan fold hanya melalui ID yang telah diverifikasi.

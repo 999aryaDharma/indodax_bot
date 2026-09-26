@@ -17,3 +17,4 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [CR-20260923 Shared market runtime impact and scope](CR-20260923-shared-market-runtime.md)
 - [ADR-009 ASUS Production Main and Research Runtime](ADR-009-asus-production-and-research-runtime.md)
 - [CR-20260924 ASUS Production and Research host allocation](CR-20260924-asus-production-and-research-host.md)
+- [CR-LABEL-01 Candidate-sized execution labels](CR-LABEL-01-candidate-sized-execution-labels.md)
