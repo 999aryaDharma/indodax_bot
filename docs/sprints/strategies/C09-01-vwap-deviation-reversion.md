@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c09-01-vwap-deviation-reversion`
 
@@ -15,6 +15,8 @@ Requirements: FR-08 | Legacy tasks: Catalog extension / operational gap identifi
 External gates: Portfolio backlog activation by owner; not in default scheduler
 
 Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+
+Code commit: `36b28ea8343fe184e8f13a71492342510ac9676d`; independent review PASS. Manifest is the status authority.
 
 ## Goal
 
@@ -78,6 +80,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 ## Domain Rules / Invariants
 
 Rolling VWAP deviation in eligible reversion regime -> versioned LONG/FLAT intent, never direct orders.
+
+Default v1 formula (research hypothesis): `vwap_dev_24_1h <= -0.02`, `ema20_slope_5_1h >= 0` (falling trend gate), and `adx_14_1h <= 0.25`; `base_volume` must be present and positive. Zero VWAP denominator gives a null deviation and abstains. Missing volume is never converted to zero. Stop is `close - 1.5 × atr_14`. Equality qualifies at deviation, slope and ADX thresholds.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 

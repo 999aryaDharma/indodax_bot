@@ -6957,8 +6957,8 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C09-01-vwap-deviation-reversion.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c09-01-vwap-deviation-reversion",
       "requirements": [
         "FR-08"
@@ -6980,28 +6980,28 @@
           "criterion": "C09-01-AC0",
           "test_case": "test_c09_01_valid_contract",
           "behavior": "Kandidat C09 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C09-01-AC1",
-          "test_case": "test_c09_01_contract_1",
+          "test_case": "test_c09_01_contract_1_zero_denominator_abstains",
           "behavior": "Zero denominator abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C09-01-AC2",
-          "test_case": "test_c09_01_contract_2",
+          "test_case": "test_c09_01_contract_2_falling_price_trend_abstains",
           "behavior": "Trend risk gate menolak falling price",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C09-01-AC3",
-          "test_case": "test_c09_01_contract_3",
+          "test_case": "test_c09_01_contract_3_missing_volume_does_not_become_zero",
           "behavior": "Missing volume tidak diisi nol",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7009,7 +7009,15 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "36b28ea8343fe184e8f13a71492342510ac9676d",
+        "code_target": "36b28ea8343fe184e8f13a71492342510ac9676d",
+        "path": "docs/sprints/handoffs/C09-01-HANDOFF.md",
+        "review": "Independent review PASS; focused tests 4 passed and 18 negative/equality probes passed. Full suite and live qualification not claimed."
+      },
+      "implementation_status_note": "DONE after independent exact-SHA PASS. EXTENSION activation remains owner-gated; no scheduler or production execution was added."
     },
     {
       "id": "C10-01",

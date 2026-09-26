@@ -155,6 +155,8 @@ Acceptance boundary:
 
 Rolling VWAP deviation in eligible reversion regime -> versioned LONG/FLAT intent, never direct orders.
 
+Deterministic v1 defaults require registered `vwap_dev_24_1h <= -0.02`, nonfalling `ema20_slope_5_1h >= 0`, and reversion regime `adx_14_1h <= 0.25`; entry requires present positive `base_volume`. Missing volume remains missing and abstains; zero rolling-volume denominator yields null deviation and abstains. Stop is `close - 1.5 × atr_14`. Equality qualifies at VWAP, slope and ADX boundaries. These are fixed research hypotheses, not profitability claims.
+
 Acceptance boundary:
 - Zero denominator abstain.
 - Trend risk gate menolak falling price.
