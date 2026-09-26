@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import math
 from datetime import date, datetime, timedelta
@@ -48,8 +49,10 @@ def _stable_value(value: Any) -> Any:
         if not all(isinstance(key, str) for key in value):
             raise ValueError("NON_STRING_STRATEGY_CAPTURE_KEY")
         return {key: _stable_value(value[key]) for key in sorted(value)}
-    if isinstance(value, (tuple, list)):
-        return [_stable_value(item) for item in value]
+    if isinstance(value, list):
+        return {"list": [_stable_value(item) for item in value]}
+    if isinstance(value, tuple):
+        return {"tuple": [_stable_value(item) for item in value]}
     if isinstance(value, (set, frozenset)):
         items = [_stable_value(item) for item in value]
         return sorted(items, key=lambda item: json.dumps(item, sort_keys=True))
@@ -69,6 +72,8 @@ def _code_identity(code: CodeType) -> dict[str, Any]:
 
 def _compute_logic_hash(func: Callable) -> str:
     """Hash code, defaults and closure values so captured parameters bind identity."""
+    if inspect.ismethod(func) and func.__self__ is not None:
+        raise ValueError("BOUND_STRATEGY_METHOD_UNSUPPORTED")
     code = getattr(func, "__code__", None)
     if code is None:
         raise ValueError("STRATEGY_CALLABLE_CODE_REQUIRED")

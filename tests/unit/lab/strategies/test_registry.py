@@ -324,6 +324,34 @@ def test_logic_hash_includes_closure_and_default_values() -> None:
         registry.register(default_spec, make_default(2))
 
 
+def test_list_and_tuple_captures_have_distinct_logic_identity() -> None:
+    spec = StrategySpecification(
+        strategy_id="capture-type", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={}, risk_profile={}, split="train",
+    )
+
+    def make_logic(captured):
+        return lambda frame: [] if isinstance(captured, list) else []
+
+    registry = StrategyRegistry()
+    registry.register(spec, make_logic([1]))
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register(spec, make_logic((1,)))
+
+
+def test_stateful_bound_method_is_rejected() -> None:
+    class Logic:
+        def decide(self, frame):
+            return []
+
+    spec = StrategySpecification(
+        strategy_id="bound", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={}, risk_profile={}, split="train",
+    )
+    with pytest.raises(ValueError, match="BOUND_STRATEGY_METHOD_UNSUPPORTED"):
+        StrategyRegistry().register(spec, Logic().decide)
+
+
 def test_mutated_strategy_closure_is_rejected_at_decision_time() -> None:
     state = {"enabled": True}
     spec = StrategySpecification(
