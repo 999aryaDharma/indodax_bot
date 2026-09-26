@@ -18,3 +18,5 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [ADR-009 ASUS Production Main and Research Runtime](ADR-009-asus-production-and-research-runtime.md)
 - [CR-20260924 ASUS Production and Research host allocation](CR-20260924-asus-production-and-research-host.md)
 - [CR-LABEL-01 Candidate-sized execution labels](CR-LABEL-01-candidate-sized-execution-labels.md)
+- [CR-C11 Simulator cash context](CR-C11-simulator-cash-context.md)
+- [ADR-013 Simulator cash context in DecisionFrame](ADR-013-simulator-cash-context.md)

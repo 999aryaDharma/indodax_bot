@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: READY
+Status: REVIEW
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
@@ -41,6 +41,8 @@ No mandatory dependent sprint.
 - `docs/specs/10-strategy-catalog-and-protocol.md`
 - `docs/specs/20-testing-strategy.md`
 - `docs/decisions/ADR-002-temporal-and-accounting-semantics.md`
+- `docs/decisions/CR-C11-simulator-cash-context.md`
+- `docs/decisions/ADR-013-simulator-cash-context.md`
 
 ## Current Context
 
@@ -54,6 +56,9 @@ New capability; dependencies must be DONE before implementation.
 - Zero volatility tidak mendapat infinite weight.
 - Sum allocation tidak melebihi cash.
 - Small universe fallback explicit.
+- Uses only optional simulator-provided unreserved `DecisionFrame.available_cash_idr`; missing or zero cash abstains.
+- Allocates at most 50% of supplied cash; each pair is capped at 25% of supplied cash.
+- Emits an intent only when its allocated notional reaches the frozen Indodax Rp10.000 minimum.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -77,7 +82,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Domain Rules / Invariants
 
-Inverse volatility long-only weights with asset and cash constraints -> versioned LONG/FLAT intent, never direct orders.
+Normalize inverse positive-volatility weights across at least two valid pairs, then cap each pair at 25% of supplied cash. Do not redistribute cap or minimum-order remainder. Exclude missing, non-finite, zero or negative volatility and invalid price. Missing/zero simulator cash yields no intent. Each intent notional must be at least Rp10.000 and no greater than its IDR allocation; aggregate notional must not exceed 50% of cash. Shared risk/OMS/execution remains authoritative.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 

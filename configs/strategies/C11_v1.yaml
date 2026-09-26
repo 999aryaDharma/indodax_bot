@@ -1,0 +1,21 @@
+strategy_id: "C11"
+version: "1.0.0"
+family: "volatility_allocation"
+universe_tier: "eligible"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  volatility_feature: "rv_24_1h"
+  price_feature: "close"
+  minimum_valid_pairs: 2
+  deployment_fraction: "0.50"
+  max_pair_fraction: "0.25"
+  min_notional_idr: "10000"
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Inverse-volatility allocation from simulator-provided cash; intent only"

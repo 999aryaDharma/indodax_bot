@@ -14,6 +14,7 @@ to the ReplayBacktestEngine interface.  All temporal invariants are enforced:
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from typing import Sequence
 
@@ -145,6 +146,7 @@ class FeatureReplayAdapter:
         signal_rows: pd.DataFrame,
         context_rows: pd.DataFrame,
         as_of: datetime,
+        available_cash_idr: Decimal | None = None,
     ) -> DecisionFrame:
         """Construct a causal DecisionFrame at *as_of*.
 
@@ -165,6 +167,7 @@ class FeatureReplayAdapter:
             return create_decision_frame(
                 features=pd.DataFrame(),
                 as_of=as_of,
+                available_cash_idr=available_cash_idr,
             )
 
         # --- 2. Validate & filter signal rows ---
@@ -249,7 +252,9 @@ class FeatureReplayAdapter:
                     "Fail-closed: missing context must not be treated as neutral."
                 )
 
-        return create_decision_frame(features=sig, as_of=as_of)
+        return create_decision_frame(
+            features=sig, as_of=as_of, available_cash_idr=available_cash_idr
+        )
 
 
 def load_bars_from_parquet(

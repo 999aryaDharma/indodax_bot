@@ -37,6 +37,8 @@ Seed registrations are manifests for BTC-C07 and ALT-C02, with pair-specific ver
 
 ## Domain interfaces (RP-01..04)
 
+The shared strategy `DecisionFrame` may carry optional `available_cash_idr: Decimal | None` under [ADR-013](../decisions/ADR-013-simulator-cash-context.md). Only the Research simulator supplies unreserved IDR cash as of the frame timestamp; `None` is unavailable. This context grants no ledger or execution authority and must never be sourced from Production/live account state. Callers must ensure reservations and freshness before supplying it.
+
 RP-01 moves only existing `SignalIntent` ownership; its current fields/defaults remain byte compatible. RP-03 separately versions semantic changes where needed.
 
 `CanonicalMarketEvent(event_id, feed_id, sequence, pair, event_time, available_at, observation, quality_ref)` has immutable content-derived event ID and monotonically ordered feed sequence. UTC availability cannot exceed evaluation time. Duplicate ID/same bytes is replay; duplicate ID/different bytes is corruption. One gateway owns collection per stream; agents cannot poll independently.

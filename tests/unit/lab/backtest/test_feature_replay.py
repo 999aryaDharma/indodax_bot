@@ -22,6 +22,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pandas as pd
+from decimal import Decimal
 import pytest
 
 from indodax_lab.backtest.feature_replay import (
@@ -424,6 +425,19 @@ def test_fr15_warmup_rows_produce_no_eligible_pairs():
         as_of=BASE_5M,
     )
     assert len(frame.eligible_pairs) == 0
+
+
+def test_simulator_cash_is_forwarded_to_decision_frame():
+    adapter = FeatureReplayAdapter(
+        config=FeatureReplayConfig(pair="btc_idr", signal_interval="5m", context_interval="1h"),
+    )
+    frame = adapter.build_decision_frame(
+        signal_rows=pd.DataFrame(),
+        context_rows=pd.DataFrame(),
+        as_of=BASE_5M,
+        available_cash_idr=Decimal("12345"),
+    )
+    assert frame.available_cash_idr == Decimal("12345")
 
 
 # ---------------------------------------------------------------------------

@@ -204,8 +204,16 @@ class DecisionFrame:
         universe_snapshot_id: str | None = None,
         feature_set_id: str | None = None,
         feature_set_version: str | None = None,
+        available_cash_idr: Decimal | None = None,
     ) -> None:
         self.as_of = _ensure_utc(as_of, "as_of")
+        if available_cash_idr is not None and (
+            not isinstance(available_cash_idr, Decimal)
+            or not available_cash_idr.is_finite()
+            or available_cash_idr < 0
+        ):
+            raise ValueError("INVALID_AVAILABLE_CASH_IDR")
+        self.available_cash_idr = available_cash_idr
         self.universe_snapshot_id = universe_snapshot_id
         self.feature_set_id = feature_set_id
         self.feature_set_version = feature_set_version
@@ -248,6 +256,7 @@ def create_decision_frame(
     universe_snapshot_id: str | None = None,
     feature_set_id: str | None = None,
     feature_set_version: str | None = None,
+    available_cash_idr: Decimal | None = None,
 ) -> DecisionFrame:
     """Construct a DecisionFrame, strictly filtering out future and ineligible rows."""
     utc_as_of = _ensure_utc(as_of, "as_of")
@@ -260,6 +269,7 @@ def create_decision_frame(
             universe_snapshot_id=universe_snapshot_id,
             feature_set_id=feature_set_id,
             feature_set_version=feature_set_version,
+            available_cash_idr=available_cash_idr,
         )
 
     df = features.copy()
@@ -285,6 +295,7 @@ def create_decision_frame(
         universe_snapshot_id=universe_snapshot_id,
         feature_set_id=feature_set_id,
         feature_set_version=feature_set_version,
+        available_cash_idr=available_cash_idr,
     )
 
 

@@ -7118,7 +7118,7 @@
         "STRAT-01"
       ],
       "goal": "Kandidat C11 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
-      "contract": "Inverse volatility long-only weights with asset and cash constraints -> versioned LONG/FLAT intent, never direct orders.",
+      "contract": "Inverse-volatility LONG intents sized from optional simulator-provided unreserved IDR cash in DecisionFrame; no direct orders.",
       "checks": [
         "Zero volatility tidak mendapat infinite weight",
         "Sum allocation tidak melebihi cash",
@@ -7126,16 +7126,24 @@
       ],
       "files": [
         "configs/strategies/C11_v1.yaml",
+        "src/indodax_lab/strategies/base.py",
+        "src/indodax_lab/backtest/feature_replay.py",
         "src/indodax_lab/strategies/c11.py",
-        "tests/unit/lab/strategies/test_c11.py"
+        "src/indodax_lab/strategies/__init__.py",
+        "tests/unit/lab/strategies/test_c11.py",
+        "tests/unit/lab/backtest/test_feature_replay.py",
+        "docs/decisions/CR-C11-simulator-cash-context.md",
+        "docs/decisions/ADR-013-simulator-cash-context.md",
+        "docs/implementation/CONTRACTS.md",
+        "docs/sprints/strategies/C11-01-volatility-allocation.md"
       ],
       "type": "feature",
       "tier": "EXTENSION",
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C11-01-volatility-allocation.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c11-01-volatility-allocation",
       "requirements": [
         "FR-08"
@@ -7145,9 +7153,11 @@
         "docs/specs/00-master-product-technical-spec.md",
         "docs/specs/10-strategy-catalog-and-protocol.md",
         "docs/specs/20-testing-strategy.md",
-        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
+        "docs/decisions/ADR-002-temporal-and-accounting-semantics.md",
+        "docs/decisions/CR-C11-simulator-cash-context.md",
+        "docs/decisions/ADR-013-simulator-cash-context.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.",
+      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.\n\nOwner approved CR-C11 on 2026-09-26. ADR-013 adds optional Decimal available_cash_idr; C11 abstains if missing/zero, requires two valid volatility pairs, caps deployment at 50% cash and 25% per pair, and observes Rp10,000 minimum notional. Implementation is pending independent review; Production/live account sourcing is prohibited.",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
       ],
@@ -7178,7 +7188,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "READY",
+      "status": "REVIEW",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

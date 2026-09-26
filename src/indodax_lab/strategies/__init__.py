@@ -18,6 +18,7 @@ from indodax_lab.strategies.c08 import c08_decide, load_c08_specification
 from indodax_lab.strategies.c09 import c09_decide, load_c09_specification
 from indodax_lab.strategies.c07 import c07_decide, load_c07_specification
 from indodax_lab.strategies.c10 import c10_decide, load_c10_specification
+from indodax_lab.strategies.c11 import c11_decide, load_c11_specification
 from indodax_lab.strategies.registry import StrategyRegistry
 from indodax_lab.strategies.s01 import load_s01_specification, s01_decide
 from indodax_lab.strategies.s02 import load_s02_specification, s02_decide
@@ -53,6 +54,8 @@ __all__ = [
     "load_c07_specification",
     "c10_decide",
     "load_c10_specification",
+    "c11_decide",
+    "load_c11_specification",
     "s01_decide",
     "load_s01_specification",
     "s02_decide",
