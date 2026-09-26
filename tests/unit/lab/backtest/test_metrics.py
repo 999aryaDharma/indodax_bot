@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pytest
 
 from indodax_lab.backtest.ledger import AccountType, ResearchLedger
@@ -15,7 +16,6 @@ from indodax_lab.backtest.metrics import (
     compute_performance_metrics,
 )
 from indodax_lab.backtest.orders import Fill, OrderRole, OrderSide
-
 
 BASE_TIME = datetime(2024, 1, 1, 10, 0, tzinfo=UTC)
 
@@ -239,3 +239,101 @@ def test_sim_04_contract_3() -> None:
     assert metrics_missing_spread.spread_cost is None
     assert metrics_missing_spread.spread_status == "MISSING_SPREAD"
     assert "MISSING_SPREAD: Cost and capacity estimate requires empirical spread data" in metrics_missing_spread.capacity_notes
+
+
+def test_empty_spread_map_is_unavailable() -> None:
+    metrics = compute_performance_metrics(
+        ledger=ResearchLedger(initial_cash=Decimal("100")), spread_data={}
+    )
+    assert metrics.spread_cost is None
+    assert metrics.spread_status == "MISSING_SPREAD"
+
+
+def test_invalid_spread_cost_is_rejected() -> None:
+    with pytest.raises(ValueError, match="INVALID_SPREAD_DATA"):
+        compute_performance_metrics(
+            ledger=ResearchLedger(initial_cash=Decimal("100")),
+            spread_data={"btc_idr": Decimal("-1")},
+        )
+
+
+def test_absent_equity_curve_is_unknown_not_zero() -> None:
+    metrics = compute_performance_metrics(ledger=ResearchLedger(initial_cash=Decimal("100")))
+    assert metrics.max_drawdown_amount is None
+    assert metrics.max_drawdown_pct is None
+    assert metrics.drawdown_status == "MISSING_EQUITY_CURVE"
+
+
+def test_breakeven_closed_trade_counts_as_trade() -> None:
+    ledger = ResearchLedger(initial_cash=Decimal("1000"))
+    ledger.process_fill(Fill(
+        fill_id="be-buy", order_id="be-buy", event_id="e1", pair="btc_idr",
+        side=OrderSide.BUY, role=OrderRole.TAKER, price=Decimal("100"),
+        qty=Decimal("1"), fees=Decimal("1"), timestamp=BASE_TIME,
+    ))
+    ledger.process_fill(Fill(
+        fill_id="be-sell", order_id="be-sell", event_id="e2", pair="btc_idr",
+        side=OrderSide.SELL, role=OrderRole.TAKER, price=Decimal("100"),
+        qty=Decimal("1"), fees=Decimal("1"), timestamp=BASE_TIME + timedelta(minutes=1),
+    ))
+    metrics = compute_performance_metrics(ledger=ledger)
+    assert metrics.trade_count == 1
+    assert metrics.breakeven_count == 1
+    assert metrics.win_rate == Decimal("0")
+    assert metrics.profit_factor.reason == "NO_PROFIT_OR_LOSS"
+
+
+def test_regime_and_tier_breakdowns_require_transaction_classification() -> None:
+    ledger = ResearchLedger(initial_cash=Decimal("10000000"))
+    _populate_sample_ledger(ledger)
+    classified = {
+        "tx-fill-buy-1": {"regime": "trend", "tier": "liquid"},
+        "tx-fill-sell-1": {"regime": "trend", "tier": "liquid"},
+        "tx-fill-buy-2": {"regime": "range", "tier": "small_cap"},
+        "tx-fill-sell-2": {"regime": "range", "tier": "small_cap"},
+    }
+    metrics = compute_performance_metrics(ledger=ledger, transaction_classifications=classified)
+    assert metrics.regime_status == metrics.tier_status == "AVAILABLE"
+    assert metrics.by_regime["trend"]["gross_pnl"] == Decimal("500000")
+    assert metrics.by_regime["trend"]["fees"] == Decimal("10500")
+    assert metrics.by_regime["trend"]["net_pnl"] == Decimal("489500")
+    assert metrics.by_tier["small_cap"]["gross_pnl"] == Decimal("-200000")
+    assert metrics.by_tier["small_cap"]["net_pnl"] == Decimal("-211800")
+
+    missing = compute_performance_metrics(ledger=ledger)
+    assert missing.by_regime is None and missing.by_tier is None
+    assert missing.regime_status == missing.tier_status == "MISSING_CLASSIFICATION"
+
+    partial = compute_performance_metrics(
+        ledger=ledger,
+        transaction_classifications={"tx-fill-sell-1": {"regime": "trend", "tier": "liquid"}},
+    )
+    assert partial.regime_status == partial.tier_status == "PARTIAL_CLASSIFICATION"
+    assert partial.unclassified_regime_event_count == 3
+    assert partial.unclassified_tier_event_count == 3
+
+
+def test_observed_equity_curve_reports_drawdown_and_requires_chronology() -> None:
+    ledger = ResearchLedger(initial_cash=Decimal("1000"), init_timestamp=BASE_TIME)
+    ledger.process_fill(Fill(
+        fill_id="dd-buy", order_id="dd-buy", event_id="e1", pair="btc_idr",
+        side=OrderSide.BUY, role=OrderRole.TAKER, price=Decimal("100"),
+        qty=Decimal("1"), fees=Decimal("1"), timestamp=BASE_TIME + timedelta(minutes=2),
+    ))
+    curve = [
+        (BASE_TIME + timedelta(minutes=1), Decimal("1000")),
+        (BASE_TIME + timedelta(minutes=3), Decimal("979")),
+        (BASE_TIME + timedelta(minutes=4), Decimal("1009")),
+    ]
+    metrics = compute_performance_metrics(
+        ledger=ledger, equity_curve=curve, mark_prices={"btc_idr": Decimal("110")}
+    )
+    assert metrics.max_drawdown_amount == Decimal("21")
+    assert metrics.max_drawdown_pct == Decimal("0.021")
+    assert metrics.drawdown_status == "AVAILABLE"
+
+    with pytest.raises(ValueError, match="EQUITY_CURVE_MUST_BE_STRICTLY_CHRONOLOGICAL"):
+        compute_performance_metrics(
+            ledger=ledger, equity_curve=list(reversed(curve)),
+            mark_prices={"btc_idr": Decimal("110")},
+        )

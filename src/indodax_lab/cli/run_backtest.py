@@ -39,6 +39,7 @@ from indodax_lab.backtest.feature_replay import (
     FeatureReplayConfig,
     load_bars_from_parquet_dir,
 )
+from indodax_lab.backtest.ledger import AccountType
 from indodax_lab.backtest.metrics import compute_performance_metrics
 from indodax_lab.backtest.result import write_json_atomically
 from indodax_lab.backtest.risk import RiskPolicy
@@ -94,6 +95,41 @@ def _build_strategy_fn(spec: StrategySpecification, adapter: FeatureReplayAdapte
 # ---------------------------------------------------------------------------
 # Report building
 # ---------------------------------------------------------------------------
+
+def _build_ledger_equity_curve(
+    ledger, bars: Sequence[MarketBar]
+) -> list[tuple[datetime, Decimal]]:
+    """Replay ledger postings against only bars available at each mark time."""
+    transactions = sorted(
+        enumerate(ledger.transactions), key=lambda item: (item[1].timestamp, item[0])
+    )
+    transaction_index = 0
+    cash = Decimal("0")
+    quantities: dict[str, Decimal] = {}
+    curve: list[tuple[datetime, Decimal]] = []
+
+    for bar in sorted(bars, key=lambda item: item.available_at):
+        while (
+            transaction_index < len(transactions)
+            and transactions[transaction_index][1].timestamp <= bar.available_at
+        ):
+            tx = transactions[transaction_index][1]
+            cash += sum(
+                (p.amount for p in tx.postings if p.account == AccountType.CASH),
+                Decimal("0"),
+            )
+            if tx.pair is not None:
+                quantities[tx.pair] = quantities.get(tx.pair, Decimal("0")) + tx.base_qty_delta
+            transaction_index += 1
+
+        # The CLI replays one pair. If another asset is held, this bar cannot value it.
+        if any(qty > 0 and pair != bar.pair for pair, qty in quantities.items()):
+            continue
+        equity = cash + quantities.get(bar.pair, Decimal("0")) * bar.close
+        curve.append((bar.available_at, equity))
+
+    return curve
+
 
 def _build_report(
     result,
@@ -194,11 +230,41 @@ def _build_report(
         "total_partial_fills": 0,  # ConservativeExecutionSimulator: full fill or reject
         "open_positions_at_end": open_positions,
         # Risk metrics
-        "max_drawdown_amount_idr": str(metrics.max_drawdown_amount),
-        "max_drawdown_pct": str(metrics.max_drawdown_pct),
+        "max_drawdown_amount_idr": (
+            str(metrics.max_drawdown_amount) if metrics.max_drawdown_amount is not None else None
+        ),
+        "max_drawdown_pct": (
+            str(metrics.max_drawdown_pct) if metrics.max_drawdown_pct is not None else None
+        ),
+        "drawdown_status": getattr(metrics, "drawdown_status", "AVAILABLE"),
         "win_rate": str(metrics.win_rate) if metrics.win_rate is not None else None,
         "profit_factor": str(metrics.profit_factor.value) if metrics.profit_factor.defined else metrics.profit_factor.reason,
         "trade_count": metrics.trade_count,
+        "breakeven_count": getattr(metrics, "breakeven_count", 0),
+        "spread_cost": (
+            str(metrics.spread_cost)
+            if getattr(metrics, "spread_cost", None) is not None
+            else None
+        ),
+        "spread_status": getattr(metrics, "spread_status", "MISSING_SPREAD"),
+        "regime_status": getattr(metrics, "regime_status", "MISSING_CLASSIFICATION"),
+        "tier_status": getattr(metrics, "tier_status", "MISSING_CLASSIFICATION"),
+        "unclassified_regime_event_count": getattr(
+            metrics, "unclassified_regime_event_count", 0
+        ),
+        "unclassified_tier_event_count": getattr(
+            metrics, "unclassified_tier_event_count", 0
+        ),
+        "rejected_order_count": getattr(metrics, "rejected_order_count", 0),
+        "capacity_notes": getattr(metrics, "capacity_notes", []),
+        "performance_breakdowns": {
+            name: {
+                key: {field: str(value) if isinstance(value, Decimal) else value
+                      for field, value in group.items()}
+                for key, group in getattr(metrics, name, None).items()
+            } if getattr(metrics, name, None) is not None else None
+            for name in ("by_year", "by_asset", "by_regime", "by_tier")
+        },
         # Integrity
         "ledger_reconciliation_status": "PASS" if ledger_ok else "FAIL",
         "temporal_validation_status": "PASS" if temporal_valid else "FAIL",
@@ -387,17 +453,9 @@ def main(argv: Sequence[str] | None = None, stdout=None) -> int:
     # Build mark prices map from last 5m bar close
     mark_prices = {args.pair: bars_5m[-1].close} if bars_5m else {}
 
-    # Compute equity curve: use mark_prices for open-position valuation.
-    # We approximate: for each transaction timestamp use mark_prices (final close).
-    # This is conservative: intermediate equity is approximated, not future-looked.
-    equity_curve = []
-    for tx in engine.ledger.transactions:
-        # Use available mark prices; if a position exists but no mark, skip this point
-        try:
-            eq = engine.ledger.equity(mark_prices)
-            equity_curve.append((tx.timestamp, eq))
-        except ValueError:
-            pass  # open position without mark price — skip this equity observation
+    # Reconstruct observed equity at each closed bar using only postings and marks
+    # available by that bar; never backfill final equity onto historical timestamps.
+    equity_curve = _build_ledger_equity_curve(engine.ledger, bars_5m)
 
     metrics = compute_performance_metrics(
         ledger=engine.ledger,

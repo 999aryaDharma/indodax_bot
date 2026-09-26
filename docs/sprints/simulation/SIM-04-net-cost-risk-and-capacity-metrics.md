@@ -54,6 +54,8 @@ New capability; dependencies must be DONE before implementation.
 - No-trade dan zero-loss PF menghasilkan undefined beralasan.
 - Fee tidak dikurangi dua kali dari net cash equity.
 - Missing spread tidak dilaporkan sebagai biaya nol.
+- Missing equity observations and regime/tier classifications are explicitly unavailable; no historical values or categories are fabricated.
+- Completed breakeven gross-PnL trades count as trades.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -70,14 +72,16 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 
 ## Functional Requirements
 
-0. **SIM-04-FR0:** Report menghitung performa dari ledger dan menunjukkan batas data serta kapasitas.
+0. **SIM-04-FR0:** Report menghitung performa dari ledger dan menunjukkan batas data serta kapasitas. Historical equity uses only observed as-of marks; missing paths/classification remain explicitly unavailable.
 1. **SIM-04-FR1:** No-trade dan zero-loss PF menghasilkan undefined beralasan.
 2. **SIM-04-FR2:** Fee tidak dikurangi dua kali dari net cash equity.
 3. **SIM-04-FR3:** Missing spread tidak dilaporkan sebagai biaya nol.
 
 ## Domain Rules / Invariants
 
-postings + equity + rejected orders -> metrics by year/regime/tier/asset and 1.5x/2x stress.
+postings + observed equity + rejected orders + optional transaction classifications -> metrics by year/regime/tier/asset and 1.5x/2x stress. Missing timeline/classification is explicit, never backfilled or fabricated.
+
+`transaction_classifications` maps ledger transaction IDs to point-in-time `regime` and `tier`. Group rows include gross PnL, fees, net PnL and completed trade counts. Missing or partial mapping reports `MISSING_CLASSIFICATION` / `PARTIAL_CLASSIFICATION` and unclassified transaction counts. Missing equity history produces null drawdown with `MISSING_EQUITY_CURVE`; CLI equity marks replay cash and position postings against only the closed bar available at each timestamp.
 
 Decimal valued double-entry journal; separate asset units from IDR valuation; exact fees, partial fills and market rules.
 
@@ -87,14 +91,16 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 Layer owner: `src/indodax_lab/backtest`. Konsumsi hanya public contracts dependency yang tercantum. Side effect berada pada boundary adapter/repository; pure calculation tidak melakukan HTTP.
 
-postings + equity + rejected orders -> metrics by year/regime/tier/asset and 1.5x/2x stress.
+postings + observed equity + rejected orders + optional transaction classifications -> metrics by year/regime/tier/asset and 1.5x/2x stress. Missing timeline/classification is explicit, never backfilled or fabricated.
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 
 ## Planned Files / Artifacts
 
 - `src/indodax_lab/backtest/metrics.py`
+- `src/indodax_lab/cli/run_backtest.py`
 - `tests/unit/lab/backtest/test_metrics.py`
+- `tests/unit/lab/cli/test_run_backtest_report.py`
 
 Path baru adalah panduan, bukan bukti file sudah ada. Periksa file ekuivalen sebelum membuat modul baru; catat path aktual pada handoff.
 
@@ -140,6 +146,7 @@ Positive contract: **SIM-04-AC0**, `test_sim_04_valid_contract` — Report mengh
 
 | Acceptance | Planned test identity / map to existing equivalent | Assertion |
 |---|---|---|
+| SIM-04-AC0 | `test_observed_equity_curve_reports_drawdown_and_requires_chronology`, `test_regime_and_tier_breakdowns_require_transaction_classification`, `test_breakeven_closed_trade_counts_as_trade` | Drawdown uses an actual ordered curve; classification gaps are explicit; breakeven fill outcomes count |
 | SIM-04-AC1 | `test_sim_04_contract_1` | No-trade dan zero-loss PF menghasilkan undefined beralasan |
 | SIM-04-AC2 | `test_sim_04_contract_2` | Fee tidak dikurangi dua kali dari net cash equity |
 | SIM-04-AC3 | `test_sim_04_contract_3` | Missing spread tidak dilaporkan sebagai biaya nol |
@@ -190,7 +197,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 
 ## Acceptance Criteria
 
-- [ ] **SIM-04-AC0** Report menghitung performa dari ledger dan menunjukkan batas data serta kapasitas. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [ ] **SIM-04-AC0** Report computes ledger metrics by year/asset and by regime/tier when transaction classifications are supplied; it reports missing/partial classifications and equity paths explicitly, never fabricated values. Breakeven completed trades count in trade_count. Evidence: valid fixtures through public interface with independent expected outputs.
 - [ ] **SIM-04-AC1** No-trade dan zero-loss PF menghasilkan undefined beralasan. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **SIM-04-AC2** Fee tidak dikurangi dua kali dari net cash equity. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **SIM-04-AC3** Missing spread tidak dilaporkan sebagai biaya nol. Evidence: mapped test, exact command/exit and target SHA.
@@ -214,6 +221,7 @@ Historical import note: unchecked boxes describe the gate for future work/reveri
 - Attempt to disprove: No-trade dan zero-loss PF menghasilkan undefined beralasan. Inspect fixture and actual production path.
 - Attempt to disprove: Fee tidak dikurangi dua kali dari net cash equity. Inspect fixture and actual production path.
 - Attempt to disprove: Missing spread tidak dilaporkan sebagai biaya nol. Inspect fixture and actual production path.
+- Attempt to disprove: Missing equity history or regime/tier classifications are not converted to zero or fabricated groups. Inspect report output and exact input provenance.
 - Verify provenance and units at the boundary, not only test count or mock calls.
 - Check downstream side effects, compatibility, state rollback and no scope creep.
 - Verify budget, resource and paper-only policy are not bypassed.
