@@ -7942,8 +7942,18 @@
       "files": [
         "configs/strategies/S08_v1.yaml",
         "src/indodax_lab/strategies/s08.py",
+        "src/indodax_lab/strategies/registry.py",
+        "src/indodax_lab/models/lob/queue_evidence.py",
+        "src/indodax_lab/models/lob/__init__.py",
+        "src/indodax_lab/backtest/execution.py",
+        "src/indodax_lab/paper/promotion.py",
         "tests/unit/lab/strategies/test_s08.py",
-        "docs/decisions/CR-S08-queue-evidence.md"
+        "tests/unit/lab/models/lob/test_s08_queue_evidence.py",
+        "tests/unit/lab/paper/test_s08_queue_promotion.py",
+        "tests/integration/lab/test_disaster_drills.py",
+        "docs/decisions/CR-S08-queue-evidence.md",
+        "docs/research/dataset-feature-contracts.md",
+        "docs/sprints/handoffs/S08-01-HANDOFF.md"
       ],
       "type": "feature",
       "tier": "EXPERIMENTAL",
@@ -7969,36 +7979,36 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S08-queue-evidence.md"
       ],
-      "current_context": "Implementation is held for owner approval of CR-S08. LOB-01 validates eligible windows but does not publish per-order queue evidence. The bar simulator and TLOB queue model provide fill proxies, not observed queue position. No feature-schema or strategy implementation changes before approval.",
+      "current_context": "CR-S08 boundary approved on 2026-09-27. Implementation commits f193ae76f84fe89a24cc3e9d630160e39b1c76c2 and 18564d0f7387c5e6c3b5db60f831f08a46997500 were independently reviewed PASS at the final SHA with no unresolved Critical/Important findings. S08 adds versioned lob_queue_v1 validation and promotion approval binding, emits research-only maker intents from causal/versioned lob_v1 inputs, and extends shared execution/OMS/ledger evidence. Owner full suite at final SHA: 1602 passed, 2 platform skips, 11 warnings. No numeric queue-age policy or qualified real producer exists; candidate promotion and qualification remain blocked and the sprint stays IN_PROGRESS.",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
-        "Owner approval of CR-S08; real Indodax queue reconstruction and book/trade coverage remain external qualification gates."
+        "Approve a versioned numeric queue-evidence freshness policy and qualify real Indodax queue reconstruction/book-trade coverage before candidate qualification."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
         {
           "criterion": "S08-01-AC0",
-          "test_case": "test_s08_01_valid_contract",
+          "test_case": "tests/unit/lab/strategies/test_s08.py::test_s08_valid_causal_lob_row_emits_comparable_passive_intent",
           "behavior": "Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S08-01-AC1",
-          "test_case": "test_s08_01_contract_1",
+          "test_case": "tests/unit/lab/strategies/test_s08.py::test_s08_touching_maker_quote_does_not_create_fill",
           "behavior": "Price touches quote tidak otomatis fill",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S08-01-AC2",
-          "test_case": "test_s08_01_contract_2",
+          "test_case": "tests/unit/lab/paper/test_s08_queue_promotion.py::test_s08_promotion_rejects_missing_or_invalid_queue_report",
           "behavior": "Queue unknown memblokir promotion",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PARTIAL"
         },
         {
           "criterion": "S08-01-AC3",
-          "test_case": "test_s08_01_contract_3",
+          "test_case": "tests/integration/lab/test_disaster_drills.py::test_drill_3_cancel_fill_race_under_partial_fill",
           "behavior": "Partial cancel menjaga ledger balance",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PARTIAL"
         }
       ],
       "status": "IN_PROGRESS",
