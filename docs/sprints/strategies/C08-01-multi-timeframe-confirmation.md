@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c08-01-multi-timeframe-confirmation`
 
@@ -15,6 +15,8 @@ Requirements: FR-08 | Legacy tasks: Catalog extension / operational gap identifi
 External gates: Portfolio backlog activation by owner; not in default scheduler
 
 Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+
+Code commit: `02fb7c3e7a4dce67fe1057587aca01c724ba8538`; independent review PASS. Manifest is the status authority.
 
 ## Goal
 
@@ -78,6 +80,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 ## Domain Rules / Invariants
 
 Closed daily/4h trend and lower timeframe trigger as-of decision -> versioned LONG/FLAT intent, never direct orders.
+
+Default v1 formula (research hypothesis): the fully closed daily context must be available by `as_of` and at most 36h old; fully closed 4h context must be available and at most 6h old. Both require registered 20/50 EMA features satisfying `close > ema_slow` and `ema_fast > ema_slow`. The lower timeframe trigger is `close > lower_prev_20_high`; stop is `close - 2.0 × atr_14`. Missing, partial, future, stale, nonfinite or nonpositive required values abstain. Context timestamps and row-ready times remain explicit inputs; no future fill is allowed.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 

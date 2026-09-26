@@ -6870,8 +6870,8 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C08-01-multi-timeframe-confirmation.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/c08-01-multi-timeframe-confirmation",
       "requirements": [
         "FR-08"
@@ -6893,28 +6893,28 @@
           "criterion": "C08-01-AC0",
           "test_case": "test_c08_01_valid_contract",
           "behavior": "Kandidat C08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C08-01-AC1",
-          "test_case": "test_c08_01_contract_1",
+          "test_case": "test_c08_01_contract_1_partial_daily_trend_is_rejected",
           "behavior": "Partial daily trend ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C08-01-AC2",
-          "test_case": "test_c08_01_contract_2",
+          "test_case": "test_c08_01_contract_2_stale_higher_timeframe_abstains",
           "behavior": "Stale higher timeframe abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C08-01-AC3",
-          "test_case": "test_c08_01_contract_3",
+          "test_case": "test_c08_01_contract_3_confirmed_alignment_gives_long",
           "behavior": "Confirmed alignment memberi LONG",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6922,7 +6922,15 @@
         "basis": "Sprint specification; no completion inferred.",
         "confidence": "reconstructed-not-approved"
       },
-      "unlocks": []
+      "unlocks": [],
+      "evidence": {
+        "kind": "independent_review",
+        "source_commit": "02fb7c3e7a4dce67fe1057587aca01c724ba8538",
+        "code_target": "02fb7c3e7a4dce67fe1057587aca01c724ba8538",
+        "path": "docs/sprints/handoffs/C08-01-HANDOFF.md",
+        "review": "Independent review PASS; focused tests 4 passed and 19 additional boundary/negative probes passed. Upstream feature construction, full suite and live qualification not claimed."
+      },
+      "implementation_status_note": "DONE after independent exact-SHA PASS. EXTENSION activation remains owner-gated; upstream multi-timeframe feature construction and production integration remain separate gates."
     },
     {
       "id": "C09-01",

@@ -8,7 +8,7 @@ Central catalog/config, manifest/status/index, SQLite migrations, CI/pyproject, 
 
 ## Computed initial queue
 
-C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01. Verify external gates and shared-file ownership before claim.
+C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01. Verify external gates and shared-file ownership before claim.
 
 ## Wave 0
 
@@ -101,7 +101,7 @@ C08-01, C09-01, C11-01, S03-01, S04-01, S05-01, S06-01, S08-01, S09-01. Verify e
 - C05-01 — Volatility breakout [DONE; EXTENSION]
 - C06-01 — Directional trend strength [DONE; EXTENSION]
 - C07-01 — Bollinger RSI reversion [REVIEW; CORE]
-- C08-01 — Multi timeframe confirmation [READY; EXTENSION]
+- C08-01 — Multi timeframe confirmation [DONE; EXTENSION]
 - C09-01 — VWAP deviation reversion [READY; EXTENSION]
 - C11-01 — Volatility allocation [READY; EXTENSION]
 - S01-01 — Liquidity screened breakout [REVIEW; CORE]

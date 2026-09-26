@@ -144,6 +144,8 @@ Acceptance boundary:
 
 Closed daily/4h trend and lower timeframe trigger as-of decision -> versioned LONG/FLAT intent, never direct orders.
 
+Deterministic v1 defaults require complete daily and 4h contexts available by `as_of`, no older than 36h and 6h respectively. For both contexts, registered 20/50 EMA features must satisfy `close > ema_slow` and `ema_fast > ema_slow`; the 1h trigger is `close > lower_prev_20_high`. Stop is `close - 2.0 × atr_14`. Contexts that are partial, future, stale, missing or nonfinite abstain. These are fixed research hypotheses, not profitability claims.
+
 Acceptance boundary:
 - Partial daily trend ditolak.
 - Stale higher timeframe abstain.
