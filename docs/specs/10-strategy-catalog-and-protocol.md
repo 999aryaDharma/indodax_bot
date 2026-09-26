@@ -133,6 +133,8 @@ Acceptance boundary:
 
 ADX strength and signed DI with ATR protection -> versioned LONG/FLAT intent, never direct orders.
 
+Deterministic v1 defaults use the registered normalized `adx_14` and `di_spread_14` features: emit LONG when `adx_14 >= 0.25` and `di_spread_14 > 0`; high ADX with negative or zero spread abstains. Missing/warmup features abstain. Stop is `close - 2.0 × atr_14`; nonfinite or nonpositive close/ATR abstains. Threshold equality qualifies on ADX and is strict on signed DI. These are frozen research hypotheses, not profitability claims.
+
 Acceptance boundary:
 - High ADX negative DI tidak buy.
 - Warmup belum lengkap abstain.

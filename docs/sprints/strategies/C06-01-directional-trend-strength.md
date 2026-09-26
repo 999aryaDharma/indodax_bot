@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: READY
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Codex | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/c06-01-directional-trend-strength`
 
@@ -14,7 +14,9 @@ Requirements: FR-08 | Legacy tasks: Catalog extension / operational gap identifi
 
 External gates: Portfolio backlog activation by owner; not in default scheduler
 
-Implementation artifacts named below are planned unless present in baseline; WIP does not satisfy acceptance.
+Code commit: `e410907a64d0135c86be5d449baf6413c8139e8b`; independent review PASS. Manifest is the status authority.
+
+Code commit: `e410907a64d0135c86be5d449baf6413c8139e8b`; awaiting independent review. Manifest remains the sole status authority.
 
 ## Goal
 
@@ -78,6 +80,8 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 ## Domain Rules / Invariants
 
 ADX strength and signed DI with ATR protection -> versioned LONG/FLAT intent, never direct orders.
+
+Default v1 formula (research hypothesis): consume the registered normalized `adx_14` (`ADX/100`) and `di_spread_14` (`(+DI - -DI)/100`); emit BUY iff `adx_14 >= 0.25` and `di_spread_14 > 0`. Thus equality qualifies at the ADX threshold, while zero DI spread abstains. Missing/warmup, nonfinite, out-of-range ADX/DI, or nonpositive close/ATR abstains. Stop is `close - 2.0 × atr_14`; no direct order or ledger effect.
 
 Stateless decision functions over approved frame; only LONG/FLAT intents; registry version and fixed risk profile.
 

@@ -72,7 +72,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | C03-01 | Time series momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C03-01-time-series-momentum.md) |
 | C04-01 | Cross sectional momentum | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C04-01-cross-sectional-momentum.md) |
 | C05-01 | Volatility breakout | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C05-01-volatility-breakout.md) |
-| C06-01 | Directional trend strength | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C06-01-directional-trend-strength.md) |
+| C06-01 | Directional trend strength | strategies | P1 | feature | STRAT-01 | DONE | [Spec](strategies\C06-01-directional-trend-strength.md) |
 | C07-01 | Bollinger RSI reversion | strategies | P0 | feature | STRAT-01 | REVIEW | [Spec](strategies\C07-01-bollinger-rsi-reversion.md) |
 | C08-01 | Multi timeframe confirmation | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C08-01-multi-timeframe-confirmation.md) |
 | C09-01 | VWAP deviation reversion | strategies | P1 | feature | STRAT-01 | READY | [Spec](strategies\C09-01-vwap-deviation-reversion.md) |

@@ -6712,34 +6712,34 @@
           "criterion": "C06-01-AC0",
           "test_case": "test_c06_01_valid_contract",
           "behavior": "Kandidat C06 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C06-01-AC1",
-          "test_case": "test_c06_01_contract_1",
+          "test_case": "test_c06_01_contract_1_high_adx_negative_di_does_not_buy",
           "behavior": "High ADX negative DI tidak buy",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C06-01-AC2",
-          "test_case": "test_c06_01_contract_2",
+          "test_case": "test_c06_01_contract_2_incomplete_warmup_abstains",
           "behavior": "Warmup belum lengkap abstain",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         },
         {
           "criterion": "C06-01-AC3",
-          "test_case": "test_c06_01_contract_3",
+          "test_case": "test_c06_01_contract_3_threshold_equality_is_deterministic",
           "behavior": "Threshold equality deterministik",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "PASS"
         }
       ],
-      "status": "READY",
+      "status": "DONE",
       "evidence": {
         "kind": "independent_review",
-        "source_commit": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
-        "code_target": "4a5579d65d6196776097b8ea9f75921ec2e993e5",
-        "path": "docs/sprints/handoffs/C05-01-HANDOFF.md",
-        "review": "Independent review PASS Round 2; C05 tests 8 passed independently; local strategy suite 72 passed. Invalid/nonfinite/inconsistent OHLC regressions pass. Full suite and live qualification not claimed."
+        "source_commit": "e410907a64d0135c86be5d449baf6413c8139e8b",
+        "code_target": "e410907a64d0135c86be5d449baf6413c8139e8b",
+        "path": "docs/sprints/handoffs/C06-01-HANDOFF.md",
+        "review": "Independent review PASS; focused tests 4 passed and 8 additional numeric/threshold negative probes passed. Full suite and live qualification not claimed."
       },
       "implementation_status_note": "DONE after independent exact-SHA PASS. EXTENSION activation remains owner-gated; no scheduler or production execution was added.",
       "recovery": {
