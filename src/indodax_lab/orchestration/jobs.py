@@ -78,6 +78,10 @@ class JobRecord(BaseModel):
     result_artifact_path: str | None = None
     result_artifact_hash: str | None = None
     error_message: str | None = None
+    # Submitted parameters, carried through so a persisted job keeps its declared
+    # resource class. Without this, admission control re-derives the class from
+    # job_type substring guessing alone and a GPU/HIGH job can decay to LOW.
+    parameters: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 

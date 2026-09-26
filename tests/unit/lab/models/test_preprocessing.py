@@ -154,3 +154,56 @@ def test_ml_01_contract_3() -> None:
 
     current_state = preprocessor.fitted_artifact.model_dump()
     assert saved_state == current_state
+
+
+def test_ml_01_ac2_duplicate_feature_column_is_rejected_on_transform() -> None:
+    """Regression: the AC2 alignment guard is set-based, so it is blind to duplicated columns.
+
+    Before the fix `transform` accepted a DataFrame carrying a repeated feature name,
+    silently resolved it to the first occurrence and returned a frame whose column
+    count no longer matched the fitted feature schema.
+    """
+    train_df = pd.DataFrame({"a": [1.0, 2.0, 3.0, 4.0], "b": [5.0, 6.0, 7.0, 8.0]})
+    preprocessor = TabularPreprocessor()
+    preprocessor.fit(train_df)
+
+    duplicated = pd.DataFrame(
+        [[1.0, 9.9, 5.0], [2.0, 8.8, 6.0]],
+        columns=["a", "a", "b"],
+    )
+    assert list(duplicated.columns) == ["a", "a", "b"]
+
+    with pytest.raises(FeatureAlignmentError, match="DUPLICATE_FEATURE_COLUMNS"):
+        preprocessor.transform(duplicated)
+
+
+def test_ml_01_ac0_duplicate_feature_column_is_rejected_on_fit() -> None:
+    """Regression: a duplicated train column crashed with an unclassified pandas TypeError.
+
+    Before the fix `fit` indexed the duplicated column by label, which pandas rejects
+    with `TypeError: arg must be a list, tuple, 1-d array, or Series`.
+    """
+    duplicated_train = pd.DataFrame(
+        [[1.0, 9.9], [2.0, 8.8], [3.0, 7.7], [4.0, 6.6]],
+        columns=["a", "a"],
+    )
+    with pytest.raises(FeatureAlignmentError, match="DUPLICATE_FEATURE_COLUMNS"):
+        TabularPreprocessor().fit(duplicated_train)
+
+
+def test_ml_01_fitted_artifact_rejects_non_unique_feature_schema() -> None:
+    """A fitted artifact is an immutable record of the feature schema; it must be unique."""
+    train_df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+    artifact = TabularPreprocessor().fit(train_df)
+
+    with pytest.raises(ValueError, match="FEATURE_SCHEMA_INVALID"):
+        FittedPreprocessorArtifact(
+            feature_names=["a", "a"],
+            medians=artifact.medians,
+            means=artifact.means,
+            stds=artifact.stds,
+            iqrs=artifact.iqrs,
+            lower_bounds=artifact.lower_bounds,
+            upper_bounds=artifact.upper_bounds,
+            config=artifact.config,
+        )

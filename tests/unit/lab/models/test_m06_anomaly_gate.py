@@ -143,3 +143,61 @@ def test_m06_01_contract_3():
     # Must raise MissingDataDistinctFromAnomalyError instead of silently assigning anomaly score
     with pytest.raises(MissingDataDistinctFromAnomalyError):
         gate.evaluate(df_missing)
+
+
+# ---------------------------------------------------------------------------
+# M06-01 regression: absent feature columns and forward-return leakage
+# ---------------------------------------------------------------------------
+
+def test_m06_01_absent_feature_column_fails_closed_in_train() -> None:
+    """M06-01-AC3: a missing feature column is missing data, not a raw pandas KeyError.
+
+    ``X_train[feature_names]`` raised a bare ``KeyError: "['spread_bps'] not in index"``.
+    That escapes the module's own typed error contract, so a caller that only handles
+    ``MissingDataDistinctFromAnomalyError`` (the documented failure mode for incomplete
+    data) would not catch it.
+    """
+    df_train = _make_liquidity_df(n=60, seed=42)
+    gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
+
+    feature_names = ["volume_base", "spread_bps", "depth_idr", "trade_count"]
+    assert "spread_bps" in df_train.columns
+
+    with pytest.raises(MissingDataDistinctFromAnomalyError, match="MISSING_FEATURE_COLUMNS"):
+        gate.train(df_train.drop(columns=["spread_bps"]), feature_names=feature_names)
+
+
+def test_m06_01_absent_feature_column_fails_closed_in_score() -> None:
+    """M06-01: the same typed error must come out of the scoring path."""
+    df_train = _make_liquidity_df(n=60, seed=42)
+    feature_names = ["volume_base", "spread_bps", "depth_idr", "trade_count"]
+    gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
+    gate.train(df_train, feature_names=feature_names)
+
+    df_eval = _make_liquidity_df(n=20, seed=77)
+    with pytest.raises(MissingDataDistinctFromAnomalyError, match="MISSING_FEATURE_COLUMNS"):
+        gate.score(df_eval.drop(columns=["spread_bps"]))
+
+
+def test_m06_01_forward_return_feature_is_rejected() -> None:
+    """M06-01-AC2: an unsupervised risk gate must not accept a directional target column.
+
+    M06 is an unsupervised anomaly filter. Feeding it ``forward_return`` (or any other
+    forward target) is exactly the directional claim AC2 forbids, but the name passed
+    straight through to the IsolationForest.
+    """
+    df_train = _make_liquidity_df(n=60, seed=42)
+    gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
+
+    feature_names = ["volume_base", "spread_bps", "depth_idr", "trade_count"]
+    with pytest.raises(DirectionalClaimForbiddenError, match="DIRECTIONAL_CLAIM_FORBIDDEN"):
+        gate.train(df_train, feature_names=feature_names + ["forward_return"])
+
+
+def test_m06_01_legitimate_liquidity_features_are_still_accepted() -> None:
+    """M06-01: the leakage guard must not refuse the documented liquidity feature set."""
+    df_train = _make_liquidity_df(n=60, seed=42)
+    feature_names = ["volume_base", "spread_bps", "depth_idr", "trade_count"]
+    gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
+    bundle = gate.train(df_train, feature_names=feature_names)
+    assert bundle.feature_names == feature_names

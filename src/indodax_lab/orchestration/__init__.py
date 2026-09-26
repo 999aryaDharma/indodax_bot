@@ -30,6 +30,7 @@ from indodax_lab.orchestration.resources import (
     resolve_resource_class,
 )
 from indodax_lab.orchestration.worker import (
+    CheckpointIntegrityError,
     ExecutionResult,
     ResearchWorker,
     WorkerConfig,
@@ -39,6 +40,7 @@ from indodax_lab.orchestration.dag import (
     ExperimentRecipe,
     HardFailCannotBeReopenedError,
     InvalidRunRetryConfig,
+    InvalidRunRetryConfigRequiredError,
     InvalidRunRetryLimitExceededError,
     NearMissMustHaveNewVersionError,
     RepeatDecision,
@@ -61,6 +63,7 @@ __all__ = [
     "AdmissionPolicy",
     "AsusProfileTrainingProhibitedError",
     "CleanupReport",
+    "CheckpointIntegrityError",
     "ExecutionResult",
     "HostProfile",
     "JobDefinition",
@@ -88,6 +91,7 @@ __all__ = [
     "ExperimentRecipe",
     "HardFailCannotBeReopenedError",
     "InvalidRunRetryConfig",
+    "InvalidRunRetryConfigRequiredError",
     "InvalidRunRetryLimitExceededError",
     "NearMissMustHaveNewVersionError",
     "RepeatDecision",

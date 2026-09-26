@@ -55,3 +55,53 @@ Full lab suite verification: 169 passed across strategies, features, labels, eva
 - Deviation: `runner.py` and integration test `test_shadow_replay.py` listed in spec planned files are integration-layer consumers outside AC scope. Actual `paper/contracts.py` satisfies all four ACs. Paths recorded here.
 - Unresolved issues / blockers: None for SHADOW-01.
 - Next unlocked consumers: SHADOW-02.
+
+---
+
+## Sprint review fix cycle — SHADOW-01 (batch `ops-shadow`)
+
+Actor: `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`
+Date: 2026-09-27 · Source SHA: uncommitted working tree (`feat/feat-02-finalization`) · Fix cycle: 1 of 1
+
+### Findings fixed
+
+| ID | Severity | Finding |
+|---|---|---|
+| SHADOW-01-F1 | Critical | `PaperDecisionStore.record_decision` did not require an expected bundle hash. A decision produced against model bundle A could be recorded while bundle B was live, and the store accepted it. The audit trail then claimed a decision was bound to a model that never produced it. |
+| SHADOW-01-F2 | Critical | `ForwardDecision.feature_snapshot_age_seconds` accepted `NaN` and negative values, and `max_staleness_seconds` had no lower bound. A `NaN` age compares false against every staleness limit, so the staleness gate was silently bypassed and an arbitrarily old feature snapshot was recorded as fresh. |
+| SHADOW-01-F3 | Critical | `ForwardDecision.probability` accepted `NaN` and values outside `[0, 1]`. A `NaN` probability is storable, and `NaN > threshold` is false, so a downstream threshold comparison would treat it either as a silent reject or — depending on the comparison direction — as an unconditional accept. |
+| SHADOW-01-F4 | Important | The hash-mismatch check ran *after* the staleness check, so a mismatched bundle on stale data reported the wrong rejection reason, hiding the more serious model-binding failure from operators. |
+| SHADOW-01-F5 | Important | A rejected decision left no record at all. There was no way to evidence how many decisions were refused, which is the primary signal that a mis-bound model is live. |
+
+### RED evidence (real assertion failures)
+
+Command: `python -m pytest tests/unit/lab/paper/test_forward_decision_fail_closed.py -p no:cacheprovider -q`
+Result: **5 failed** — observed failures:
+- A `ForwardDecision` with a deliberately mismatched `bundle_hash` was accepted into the store (`DID NOT RAISE`).
+- `AssertionError` on `feature_snapshot_age_seconds=float("nan")` being stored.
+- `AssertionError` on `feature_snapshot_age_seconds=-1.0` being stored.
+- `AssertionError` on `probability=float("nan")` being stored.
+- `AssertionError` on `rejected_decision_count` — no rejection record existed.
+
+### Fix
+
+- `ForwardDecision.feature_snapshot_age_seconds` and `max_staleness_seconds` are now `Field(ge=0, allow_inf_nan=False)`; `probability` is now `Field(ge=0.0, le=1.0, allow_inf_nan=False)`. The same constraints were applied to `ForwardDecisionRecord`.
+- `ForwardDecision.parameters` is now `Field(default_factory=dict)` so the snapshot is always a real dict rather than a shared mutable default.
+- `PaperDecisionStore(expected_bundle_hash=None)` — the store fails closed with `ModelMismatchError("EXPECTED_BUNDLE_HASH_REQUIRED: ...")` when no expected hash is configured, so a store can no longer record unbound decisions.
+- The bundle-hash check now runs **before** the staleness check, so a model-binding failure is reported as such.
+- New `RejectedDecision` model plus `PaperDecisionStore.rejected_decisions` / `rejected_decision_count` record every refusal.
+
+### GREEN evidence
+
+Commands and results:
+- `python -m pytest tests/unit/lab/paper/test_forward_decision_fail_closed.py -p no:cacheprovider -q` → **6 passed**
+- `python -m pytest tests/unit/lab/paper -p no:cacheprovider -q` → **54 passed**
+
+### Files changed
+- `src/indodax_lab/paper/contracts.py`
+- `src/indodax_lab/paper/__init__.py` (new export: `RejectedDecision`)
+- `tests/unit/lab/paper/test_forward_decision_fail_closed.py` (new RED suite)
+- `tests/unit/lab/paper/test_forward_decisions.py` (existing suite updated to construct `PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)`; no assertion removed or relaxed)
+
+### Isolation
+All tests use `tmp_path` stores and constructed models only. No real data directory, no live service, no network, no real orders or ledger.

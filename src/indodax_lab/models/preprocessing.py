@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
@@ -63,6 +63,32 @@ class FittedPreprocessorArtifact(BaseModel):
     def validate_fitted_at(cls, value: datetime) -> datetime:
         return _ensure_utc(value, "fitted_at")
 
+    @model_validator(mode="after")
+    def validate_feature_schema(self) -> FittedPreprocessorArtifact:
+        """The artifact is the verified feature schema; a repeated name is not a schema.
+
+        Alignment is matched positionally at replay time, so a duplicated feature name
+        would make the fitted statistics ambiguous (ML-01-AC0/AC2).
+        """
+        if not self.feature_names or len(set(self.feature_names)) != len(self.feature_names):
+            raise ValueError(
+                f"FEATURE_SCHEMA_INVALID: feature_names must be non-empty and unique, got {self.feature_names}"
+            )
+        return self
+
+
+def _reject_duplicate_columns(columns: Any, stage: str) -> None:
+    """Fail closed on a repeated column name before any positional alignment happens.
+
+    A set-based alignment check cannot see duplicates, so without this guard a repeated
+    feature is silently resolved to its first occurrence and the transformed frame ends
+    up with a different column count than the fitted schema (ML-01-AC2).
+    """
+    names = list(columns)
+    duplicates = sorted({str(name) for name in names if list(columns).count(name) > 1})
+    if duplicates:
+        raise FeatureAlignmentError(f"DUPLICATE_FEATURE_COLUMNS:{stage}:{duplicates}")
+
 
 class TabularPreprocessor:
     """Preprocessor that fits exclusively on train data and strictly applies fixed statistics to evaluation data."""
@@ -79,6 +105,7 @@ class TabularPreprocessor:
 
     def fit(self, train_df: pd.DataFrame) -> FittedPreprocessorArtifact:
         """Fit preprocessor statistics on training features without accessing test data."""
+        _reject_duplicate_columns(train_df.columns, "fit")
         feature_names = list(train_df.columns)
 
         medians: dict[str, float] = {}
@@ -143,6 +170,7 @@ class TabularPreprocessor:
         """
         artifact = self.fitted_artifact
         expected_features = set(artifact.feature_names)
+        _reject_duplicate_columns(df.columns, "transform")
         actual_features = set(df.columns)
 
         missing = expected_features - actual_features

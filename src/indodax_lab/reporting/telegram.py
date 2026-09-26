@@ -182,7 +182,12 @@ def format_research_status(
 
 
 class ReadOnlyTelegramReporter:
-    """Read-only Telegram status reporter enforcing chat authorization and idempotency."""
+    """Read-only Telegram status reporter enforcing chat authorization and idempotency.
+
+    Idempotency state is scoped per chat: an idempotency key is only deduplicated for the
+    chat it was first delivered to. Sharing one key across two authorized chats must not
+    suppress or collide with the second chat's delivery (REPORT-02-AC3).
+    """
 
     def __init__(
         self,
@@ -195,11 +200,15 @@ class ReadOnlyTelegramReporter:
         self.allowed_chat_ids: set[str] = {str(cid) for cid in allowed_chat_ids}
         self.transport = transport
         self.max_retries = max_retries
-        self._sent_idempotency_keys: dict[str, TelegramDeliveryResult] = {}
+        # Keyed by (chat_id, idempotency_key) so one chat can never suppress another.
+        self._sent_idempotency_keys: dict[tuple[str, str], TelegramDeliveryResult] = {}
         self._delivery_log: list[TelegramDeliveryResult] = []
 
     def is_authorized(self, chat_id: str | int) -> bool:
-        """Verify whether chat_id is in the authorized allowlist."""
+        """Verify whether chat_id is in the authorized allowlist.
+
+        Fails closed: an empty allowlist authorizes nobody.
+        """
         return str(chat_id) in self.allowed_chat_ids
 
     def get_status_report(
@@ -241,9 +250,10 @@ class ReadOnlyTelegramReporter:
                 f"UNAUTHORIZED_CHAT: Chat ID '{str_chat_id}' access denied. Unauthorized chat cannot receive research reports."
             )
 
-        # REPORT-02-AC3: Deduplication guard
-        if idempotency_key in self._sent_idempotency_keys:
-            return self._sent_idempotency_keys[idempotency_key]
+        # REPORT-02-AC3: Deduplication guard, scoped to this chat only
+        dedup_key = (str_chat_id, idempotency_key)
+        if dedup_key in self._sent_idempotency_keys:
+            return self._sent_idempotency_keys[dedup_key]
 
         sanitized_text = redact_secrets(text, extra_secrets=[self.bot_token])
 
@@ -257,7 +267,7 @@ class ReadOnlyTelegramReporter:
                 retries_attempted=0,
                 delivered_at=datetime.now(UTC),
             )
-            self._sent_idempotency_keys[idempotency_key] = result
+            self._sent_idempotency_keys[dedup_key] = result
             self._delivery_log.append(result)
             return result
 
@@ -279,7 +289,7 @@ class ReadOnlyTelegramReporter:
                     retries_attempted=retries,
                     delivered_at=datetime.now(UTC),
                 )
-                self._sent_idempotency_keys[idempotency_key] = result
+                self._sent_idempotency_keys[dedup_key] = result
                 self._delivery_log.append(result)
                 return result
             except Exception as exc:

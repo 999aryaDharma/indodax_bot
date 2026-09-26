@@ -37,6 +37,20 @@ class DuplicateDecisionError(ValueError):
     """Raised when a decision with the same ID is recorded more than once."""
 
 
+class RejectedDecision(BaseModel):
+    """Audit entry for a forward decision refused before it could be stored."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    decision_id: str
+    candidate_id: str
+    bundle_hash: str
+    snapshot_id: str
+    reason_code: str
+    detail: str
+    rejected_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 # ---------------------------------------------------------------------------
 # Domain models
 # ---------------------------------------------------------------------------
@@ -55,6 +69,10 @@ class ForwardDecision(BaseModel):
 
     Decisions are recorded *before* any market outcome is observed. This prevents
     look-ahead bias and callback selection bias (SHADOW-01-AC0).
+
+    Review hardening: the staleness inputs are constrained. The AC2 guard compares
+    ``age > max_age``; an unconstrained float would let NaN or a negative
+    (impossible) measurement compare False and silently bypass the rejection.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -63,13 +81,13 @@ class ForwardDecision(BaseModel):
     candidate_id: str
     bundle_hash: str
     snapshot_id: str
-    feature_snapshot_age_seconds: float
-    max_staleness_seconds: float
-    probability: float
+    feature_snapshot_age_seconds: float = Field(ge=0, allow_inf_nan=False)
+    max_staleness_seconds: float = Field(ge=0, allow_inf_nan=False)
+    probability: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     action: str  # e.g. "ENTER", "HOLD", "EXIT"
     is_manual_intent: bool = False
     decided_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    parameters: dict[str, Any] = {}
+    parameters: dict[str, Any] = Field(default_factory=dict)
 
 
 class ForwardDecisionRecord(BaseModel):
@@ -81,7 +99,7 @@ class ForwardDecisionRecord(BaseModel):
     candidate_id: str
     bundle_hash: str
     snapshot_id: str
-    probability: float
+    probability: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
     action: str
     is_manual_intent: bool
     status: ForwardDecisionStatus
@@ -112,10 +130,41 @@ class PaperDecisionStore:
 
     Designed to be dependency-injected; real persistence adapters use the same interface.
     No real-money execution, no HTTP, no external I/O in this pure domain layer.
+
+    Review hardening: the model-mismatch guard is mandatory. Previously
+    ``record_decision`` silently skipped the check when ``expected_bundle_hash``
+    was omitted, so the SHADOW-01-AC2 guard failed open. The store now carries
+    the active frozen bundle hash and refuses to record anything without a
+    positively matching expectation.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, expected_bundle_hash: str | None = None) -> None:
+        self._expected_bundle_hash = expected_bundle_hash
         self._decisions: dict[str, ForwardDecisionRecord] = {}
+        self._rejections: list[RejectedDecision] = []
+
+    @property
+    def rejected_decisions(self) -> list[RejectedDecision]:
+        return list(self._rejections)
+
+    @property
+    def rejected_decision_count(self) -> int:
+        return len(self._rejections)
+
+    def _record_rejection(
+        self, decision: ForwardDecision, reason_code: str, detail: str
+    ) -> None:
+        """Keep blocked outputs observable; only successful rows are not enough."""
+        self._rejections.append(
+            RejectedDecision(
+                decision_id=decision.decision_id,
+                candidate_id=decision.candidate_id,
+                bundle_hash=decision.bundle_hash,
+                snapshot_id=decision.snapshot_id,
+                reason_code=reason_code,
+                detail=detail,
+            )
+        )
 
     def record_decision(
         self,
@@ -126,8 +175,10 @@ class PaperDecisionStore:
 
         Args:
             decision: The ``ForwardDecision`` to store.
-            expected_bundle_hash: If provided, the stored ``bundle_hash`` must match this
-                value. Mismatch raises ``ModelMismatchError`` (SHADOW-01-AC2).
+            expected_bundle_hash: The active frozen model bundle hash. May be supplied
+                here or configured on the store. If neither is supplied the entry is
+                refused fail-closed, because an unverified bundle hash cannot prove the
+                decision came from the frozen candidate (SHADOW-01-AC2).
 
         Returns:
             A ``ForwardDecisionRecord`` with ``status=PENDING``.
@@ -135,29 +186,64 @@ class PaperDecisionStore:
         Raises:
             DuplicateDecisionError: If ``decision.decision_id`` already exists (idempotency guard).
             StaleDataError: If ``feature_snapshot_age_seconds > max_staleness_seconds`` (SHADOW-01-AC2).
-            ModelMismatchError: If ``expected_bundle_hash`` is provided and does not match (SHADOW-01-AC2).
+            ModelMismatchError: If no expected bundle hash is available, or the
+                ``bundle_hash`` does not match it (SHADOW-01-AC2).
         """
         # Idempotency guard
         if decision.decision_id in self._decisions:
+            self._record_rejection(
+                decision,
+                "DUPLICATE_DECISION_ID",
+                f"Decision '{decision.decision_id}' is already recorded.",
+            )
             raise DuplicateDecisionError(
                 f"DUPLICATE_DECISION_ID: Decision '{decision.decision_id}' is already recorded. "
                 "Forward decisions are immutable once stored; re-submission is not permitted."
             )
 
+        # AC2: Bundle hash must be positively verified against the frozen candidate.
+        active_hash = (
+            expected_bundle_hash
+            if expected_bundle_hash is not None
+            else self._expected_bundle_hash
+        )
+        if not active_hash:
+            self._record_rejection(
+                decision,
+                "EXPECTED_BUNDLE_HASH_REQUIRED",
+                "No expected frozen bundle hash was configured for this store.",
+            )
+            raise ModelMismatchError(
+                "EXPECTED_BUNDLE_HASH_REQUIRED: Refusing to record a forward decision without "
+                "an expected frozen model bundle hash. The model-mismatch guard must never "
+                "be skipped (SHADOW-01-AC2)."
+            )
+        if decision.bundle_hash != active_hash:
+            self._record_rejection(
+                decision,
+                "MODEL_HASH_MISMATCH",
+                f"bundle_hash='{decision.bundle_hash}' != active='{active_hash}'",
+            )
+            raise ModelMismatchError(
+                f"MODEL_HASH_MISMATCH: Decision bundle_hash='{decision.bundle_hash}' "
+                f"does not match expected_bundle_hash='{active_hash}'. "
+                "Entry rejected to prevent decisions from a mismatched or stale model version."
+            )
+
         # AC2: Staleness check
         if decision.feature_snapshot_age_seconds > decision.max_staleness_seconds:
+            self._record_rejection(
+                decision,
+                "STALE_DATA_REJECTED",
+                (
+                    f"age={decision.feature_snapshot_age_seconds}s exceeds "
+                    f"max={decision.max_staleness_seconds}s"
+                ),
+            )
             raise StaleDataError(
                 f"STALE_DATA_REJECTED: Feature snapshot age {decision.feature_snapshot_age_seconds:.1f}s "
                 f"exceeds maximum allowed staleness {decision.max_staleness_seconds:.1f}s. "
                 "Entry blocked to prevent decisions on outdated market information."
-            )
-
-        # AC2: Bundle hash mismatch check
-        if expected_bundle_hash is not None and decision.bundle_hash != expected_bundle_hash:
-            raise ModelMismatchError(
-                f"MODEL_HASH_MISMATCH: Decision bundle_hash='{decision.bundle_hash}' "
-                f"does not match expected_bundle_hash='{expected_bundle_hash}'. "
-                "Entry rejected to prevent decisions from a mismatched or stale model version."
             )
 
         # AC0: Store decision BEFORE any notification attempt

@@ -28,6 +28,7 @@ def _build_test_run(
     status: ExperimentRunStatus = ExperimentRunStatus.SUCCESS,
     metrics: dict | None = None,
     candidate_id: str = "cand_donchian_v1",
+    error_message: str | None = None,
 ) -> tuple[ExperimentRunRecord, EvaluationResult]:
     base_ts = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
     default_metrics = {
@@ -56,6 +57,7 @@ def _build_test_run(
         execution_hash="exe_sim_v1",
         status=status,
         metrics=m,
+        error_message=error_message,
         created_at=base_ts,
         promotable=True if status == ExperimentRunStatus.SUCCESS else False,
     )
@@ -213,4 +215,174 @@ def test_report_01_statistical_selection_and_errors() -> None:
     # Length mismatch in multi-run comparison
     with pytest.raises(ValueError, match="LENGTH_MISMATCH"):
         generate_multi_run_comparison_md([run], [])
+
+
+def test_leaderboard_does_not_rank_a_run_with_no_net_profit_data() -> None:
+    """REPORT-01-AC1/AC3: a run with no net profit must not receive a rank.
+
+    ``_rank_key`` substituted ``float("-inf")`` for a missing ``net_profit_pct``,
+    so an unmeasured run was still assigned a leaderboard position. Ranking a run
+    that produced no performance data states a measured outcome that does not
+    exist, which is exactly the "no-data berbeda dari zero profit" boundary and
+    the spec rule "missing data is unavailable not zero".
+    """
+    run_measured, eval_measured = _build_test_run(
+        "run_measured",
+        candidate_id="cand_measured",
+        metrics={"net_profit_pct": 10.0, "sharpe_ratio": 1.2, "trade_count": 30},
+    )
+    run_unmeasured, eval_unmeasured = _build_test_run(
+        "run_unmeasured",
+        candidate_id="cand_unmeasured",
+        metrics={"net_profit_pct": None, "sharpe_ratio": None, "trade_count": 0},
+    )
+
+    md = generate_multi_run_comparison_md(
+        runs=[run_measured, run_unmeasured],
+        evaluations=[eval_measured, eval_unmeasured],
+    )
+
+    # The measured run keeps rank 1; the unmeasured run gets no rank at all.
+    assert "| 1 | cand_measured" in md
+    assert "| 2 | cand_unmeasured" not in md
+    assert "| 1 | cand_unmeasured" not in md
+
+    # It is still reported, in a dedicated section, so nothing is hidden.
+    assert "### Unranked / No Data" in md
+    assert "cand_unmeasured" in md
+    assert "NO_DATA" in md
+
+
+def test_leaderboard_does_not_rank_a_run_with_a_non_finite_net_profit() -> None:
+    """REPORT-01-AC1: NaN and infinity are not data and must not be ranked.
+
+    ``float("nan")`` compares false against every value, so a NaN metric produced
+    an arbitrary, input-order-dependent leaderboard, and ``inf`` ranked a run
+    above every real result. Both are missing/unusable data, not measurements.
+    """
+    run_measured, eval_measured = _build_test_run(
+        "run_measured",
+        candidate_id="cand_measured",
+        metrics={"net_profit_pct": 10.0, "sharpe_ratio": 1.2, "trade_count": 30},
+    )
+    run_nan, eval_nan = _build_test_run(
+        "run_nan",
+        candidate_id="cand_nonfinite_a",
+        metrics={"net_profit_pct": float("nan"), "sharpe_ratio": 1.0, "trade_count": 5},
+    )
+    run_inf, eval_inf = _build_test_run(
+        "run_inf",
+        candidate_id="cand_infinite_b",
+        metrics={"net_profit_pct": float("inf"), "sharpe_ratio": 1.0, "trade_count": 5},
+    )
+
+    md = generate_multi_run_comparison_md(
+        runs=[run_nan, run_inf, run_measured],
+        evaluations=[eval_nan, eval_inf, eval_measured],
+    )
+
+    # The only real measurement is the one that ranks.
+    assert "| 1 | cand_measured" in md
+    assert "cand_nonfinite_a" not in md.split("### Unranked / No Data")[0]
+    assert "cand_infinite_b" not in md.split("### Unranked / No Data")[0]
+
+    # NaN/inf must never be rendered as a numeric percentage either.
+    leaderboard_rows = [
+        line
+        for line in md.split("### Unranked / No Data")[0].splitlines()
+        if line.startswith("| ") and "cand_" in line
+    ]
+    assert not any("nan" in row.lower() for row in leaderboard_rows)
+    assert not any("inf" in row.lower() for row in leaderboard_rows)
+
+
+def test_summary_markdown_reports_the_run_error_message() -> None:
+    """REPORT-01-AC0: the run's own failure reason must be visible in the report.
+
+    The failure reason is the whole point of "alasan penolakan tanpa membaca raw
+    logs", but ``to_markdown`` never rendered ``error_message``, so a crashed run
+    reported only the evaluator's generic rejection reasons and the actual cause
+    existed only in the JSON artifact.
+    """
+    run, eval_result = _build_test_run(
+        "run_crashed",
+        status=ExperimentRunStatus.FAILED,
+        metrics={"net_profit_pct": None, "sharpe_ratio": None, "trade_count": 0},
+        error_message="DATA_LOAD_FAILED: snapshot_btc_2025_06 unreadable",
+    )
+
+    md = generate_experiment_report_md(run, eval_result)
+
+    assert "DATA_LOAD_FAILED" in md, "the run's actual failure reason must be in the report"
+    assert "### Run Error" in md
+    # A clean run must not invent an error section.
+    clean_run, clean_eval = _build_test_run("run_clean")
+    assert "### Run Error" not in generate_experiment_report_md(clean_run, clean_eval)
+
+
+def test_report_escapes_markdown_structure_in_untrusted_values() -> None:
+    """REPORT-01: a newline in a value must not forge a leaderboard row.
+
+    Candidate ids, run ids and rejection reasons reach these reports from
+    persisted run records. Interpolated raw into a Markdown table, a value
+    containing a newline or pipe breaks the table and injects attacker-shaped
+    rows, so a reader sees a fabricated candidate in the ranking table. The spec
+    requires "escape Markdown" for this subsystem.
+    """
+    run_real, eval_real = _build_test_run(
+        "run_real",
+        candidate_id="cand_real",
+        metrics={"net_profit_pct": 10.0, "sharpe_ratio": 1.2, "trade_count": 30},
+    )
+    forged = "\n| 99 | cand_forged | run_forged | 999.00% | 99.00 | 99 | success | PASS |"
+    run_hostile, eval_hostile = _build_test_run(
+        "run_hostile",
+        candidate_id=f"cand_hostile{forged}",
+        metrics={"net_profit_pct": -5.0, "sharpe_ratio": -0.5, "trade_count": 4},
+    )
+
+    md = generate_multi_run_comparison_md(
+        runs=[run_real, run_hostile],
+        evaluations=[eval_real, eval_hostile],
+    )
+
+    # The injected payload must not be able to create a row of its own: the only
+    # way a value becomes a row is a newline, and no value may contribute one.
+    table_lines = [line for line in md.splitlines() if line.startswith("| ")]
+    forged_rows = [line for line in table_lines if "cand_forged" in line and "cand_hostile" not in line]
+    assert forged_rows == [], "the injected payload forged a standalone leaderboard row"
+
+    # And the table itself must still parse: a real ranked row has 9 cells, so
+    # a payload that broke out of its cell would leave a different cell count.
+    header_index = next(
+        i for i, line in enumerate(table_lines) if line.startswith("| Rank | Candidate |")
+    )
+    body_rows = table_lines[header_index + 1 : header_index + 3]
+    assert len(body_rows) == 2
+    for row in body_rows:
+        assert row.count("|") == 9, f"row escaped the table structure: {row!r}"
+
+
+def test_leaderboard_preserves_each_run_identity_end_to_end() -> None:
+    """REPORT-01: ranking must be reproducible for the same input set.
+
+    A leaderboard whose order depends on hash or input ordering cannot be
+    re-derived from the same artifacts later, which breaks the report's
+    idempotency requirement.
+    """
+    runs = []
+    evals = []
+    for i, (net, sharpe) in enumerate([(5.0, 0.5), (5.0, 0.5), (5.0, 0.5)]):
+        r, e = _build_test_run(
+            f"run_tie_{i}",
+            candidate_id=f"cand_tie_{i}",
+            metrics={"net_profit_pct": net, "sharpe_ratio": sharpe, "trade_count": 10},
+        )
+        runs.append(r)
+        evals.append(e)
+
+    first = generate_multi_run_comparison_md(runs=runs, evaluations=evals)
+    second = generate_multi_run_comparison_md(runs=list(reversed(runs)), evaluations=list(reversed(evals)))
+    assert first == second, "identical input set must produce an identical leaderboard"
+
 

@@ -53,3 +53,23 @@ Full lab suite verification: 159 passed across strategies, features, labels, eva
 - Deviation: `trainer.py`, `cli/train_model.py`, `test_ml_walk_forward.py` listed in spec planned files are integration-layer consumers (JOB-03, SHADOW-01) outside this sprint's acceptance criteria. Not implemented; scope limited to `artifacts.py` which satisfies all four ACs. Deviation recorded here per AGENTS.md.
 - Unresolved issues / blockers: None for ML-04.
 - Next unlocked consumers: JOB-03, SHADOW-01, QA-01, M03-01, M04-01, M05-01, M06-01.
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave A RED (ML-01..ML-04 together): `python -m pytest tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_execution_mapper.py tests/unit/lab/models/test_tuning_budget.py tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `24 failed, 40 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - The bundle loader served predictions from a calibration artifact fitted on a forbidden segment. `calibration.segment_type` of `sealed_test`, `train`, `outer_validation` or `test` all loaded and scored successfully, so the held-out replay contract was not actually enforced at load time. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Important** - A non-numeric calibration `a`/`b` value was not rejected, so a corrupt calibration could be replayed. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added `PortableBundle._assert_inner_heldout_calibration()` and called it from both `_validate_replay_contract` and `load_from_bytes`, immediately after the required-fields check. It raises `CALIBRATION_SEGMENT_FORBIDDEN` for any segment other than the inner held-out one, and reuses the existing `FINITE_VALUE_REQUIRED:` code for non-finite or non-numeric `calibration.a` / `calibration.b` so the error surface stays consistent with the existing contract. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/artifacts.py`, `tests/unit/lab/models/test_ml04_bundle_loader.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `22 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

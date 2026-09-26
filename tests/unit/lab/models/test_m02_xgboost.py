@@ -15,6 +15,7 @@ import pytest
 
 from indodax_lab.models.m01_logistic import M01Config, M01LogisticTrainer
 from indodax_lab.models.m02_xgboost import (
+    InsufficientSeedAuditError,
     M02Config,
     M02FittedBundle,
     M02MultiSeedAudit,
@@ -244,4 +245,89 @@ def test_m02_01_config_yaml_and_unfitted_guards() -> None:
 
     with pytest.raises(RuntimeError, match="M02XGBoostTrainer is not fitted"):
         trainer.predict_proba(pd.DataFrame({"x": [1]}))
+
+
+# ---------------------------------------------------------------------------
+# M02-01-AC1 regression: early stopping partition allowlist
+# ---------------------------------------------------------------------------
+
+def test_m02_01_ac1_sealed_partition_aliases_are_rejected() -> None:
+    """M02-01-AC1: every spelling of a sealed/outer/test partition must be refused.
+
+    The previous guard compared the lower-cased partition name against an exact
+    deny-list, so near-miss spellings (``sealed_test_v2``, ``outer_test_fold2``,
+    ``test_set``) silently passed and early stopping observed sealed-test labels.
+    """
+    X_train, y_train, X_val, y_val, X_test, _ = _generate_tabular_dataset(seed=42)
+    feature_names = ["momentum_5", "volatility_20", "volume_ratio", "spread_ratio"]
+    trainer = M02XGBoostTrainer(config=M02Config(seed=42))
+
+    forbidden_partitions = [
+        "sealed_test_v2",
+        "outer_test_fold2",
+        "test_set",
+        "sealed-test",
+        "holdout",
+        "outer_oos",
+        "TEST",
+    ]
+    for partition in forbidden_partitions:
+        with pytest.raises(SealedPartitionLeakageError, match="SEALED_PARTITION_LEAKAGE"):
+            trainer.train_and_calibrate(
+                X_train=X_train,
+                y_train=y_train,
+                X_val=X_val,
+                y_val=y_val,
+                feature_names=feature_names,
+                val_partition_type=partition,
+            )
+
+
+def test_m02_01_ac1_inner_heldout_partition_is_still_accepted() -> None:
+    """M02-01-AC1: the allowlist must keep the documented inner validation partition working."""
+    X_train, y_train, X_val, y_val, _, _ = _generate_tabular_dataset(seed=42)
+    feature_names = ["momentum_5", "volatility_20", "volume_ratio", "spread_ratio"]
+    trainer = M02XGBoostTrainer(config=M02Config(seed=42))
+
+    bundle = trainer.train_and_calibrate(
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        feature_names=feature_names,
+        val_partition_type="inner_heldout",
+    )
+    assert isinstance(bundle, M02FittedBundle)
+
+
+# ---------------------------------------------------------------------------
+# M02-01-AC2 regression: multi-seed audit cannot be run on a single seed
+# ---------------------------------------------------------------------------
+
+def test_m02_01_ac2_multi_seed_audit_requires_three_distinct_seeds() -> None:
+    """M02-01-AC2: median/worst-of-seeds is meaningless with fewer than 3 distinct seeds.
+
+    Spec 12 requires the median and the worst of three fixed seeds, specifically so the
+    lucky seed is never the one selected. A single-seed audit reported
+    median == worst == that seed, which makes the audit a no-op that cannot detect
+    seed-selection luck at all.
+    """
+    X_train, y_train, X_val, y_val, X_test, y_test = _generate_tabular_dataset(seed=42)
+    feature_names = ["momentum_5", "volatility_20", "volume_ratio", "spread_ratio"]
+    trainer = M02XGBoostTrainer(config=M02Config(max_depth=3, n_estimators=30, early_stopping_rounds=5))
+    realized = np.where(y_test == 1, 0.02, -0.015)
+
+    # A single seed, and a duplicated-seed list, must both be refused.
+    for seeds in ([42], (42,), [42, 42, 42], [42, 43]):
+        with pytest.raises(InsufficientSeedAuditError, match="INSUFFICIENT_SEED_AUDIT"):
+            trainer.audit_multi_seed(
+                X_train=X_train,
+                y_train=y_train,
+                X_val=X_val,
+                y_val=y_val,
+                X_eval=X_test,
+                realized_returns=realized,
+                feature_names=feature_names,
+                seeds=seeds,
+            )
 

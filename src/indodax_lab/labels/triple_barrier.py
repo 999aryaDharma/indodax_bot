@@ -97,7 +97,30 @@ def build_triple_barrier_label(
     max_high = entry_price
     min_low = entry_price
 
+    # LABEL-02-F1: missing bars inside the horizon are EXCLUDED fail-closed. A barrier
+    # touch observed after unseen price action cannot be trusted, because the touch may
+    # have happened inside the missing window. A gap that occurs after a touch has already
+    # resolved is irrelevant and never invalidates that label.
+    coverage_end = entry_ts
     for bar in sorted_outcome_bars:
+        b_open_time = _get_val(bar, "open_time")
+        if b_open_time > coverage_end:
+            return TripleBarrierLabel(
+                sample_id=sample_id,
+                label_set_id=config.label_set_id,
+                label_version=config.version,
+                pair=pair,
+                decision_ts=decision_ts,
+                entry_ts=entry_ts,
+                label_end_ts=coverage_end,
+                entry_price=entry_price,
+                upper_barrier=upper_barrier,
+                lower_barrier=lower_barrier,
+                first_touch=None,
+                outcome=None,
+                status="EXCLUDED",
+                exclusion_reason="INTERIOR_BAR_GAP",
+            )
         b_high = Decimal(str(_get_val(bar, "high")))
         b_low = Decimal(str(_get_val(bar, "low")))
         b_close_time = _get_val(bar, "close_time")
@@ -169,6 +192,8 @@ def build_triple_barrier_label(
                 mae=mae,
                 status="VALID",
             )
+
+        coverage_end = max(coverage_end, b_close_time)
 
     # Neither upper nor lower was touched: check if vertical horizon was fully reached
     max_covered_time = max((_get_val(b, "close_time") for b in bars), default=entry_ts)

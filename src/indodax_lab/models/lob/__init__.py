@@ -24,13 +24,20 @@ from indodax_lab.models.lob.l01_deeplob import (
 )
 from indodax_lab.models.lob.l02_tlob import (
     ArchivedChallengerResult,
+    InvalidNetEdgeError,
+    MissingLatencyEvidenceError,
     PerfectQueueFillForbiddenError,
     QueueFillModel,
+    TLOBChallengerArtifact,
+    TLOBChallengerSearchEvidence,
     TLOBComputeSummary,
     TLOBConfig,
+    TLOBConfigSearch,
+    TLOBInputShapeError,
     TLOBModel,
     TLOBSearchBudgetExceededError,
     TLOBTournamentArchiver,
+    measure_inference_latency_ms,
 )
 
 __all__ = [
@@ -45,9 +52,11 @@ __all__ = [
     "DeepLOBTrainer",
     "GappedBookBlockedError",
     "InsufficientCoverageGateError",
+    "InvalidNetEdgeError",
     "LOBDatasetEligibilityGate",
     "LOBEligibilityReport",
     "LOBSessionMetadata",
+    "MissingLatencyEvidenceError",
     "PerfectQueueFillForbiddenError",
     "QueueFillModel",
     "SampleComparatorMismatchError",
@@ -55,9 +64,14 @@ __all__ = [
     "SessionStatus",
     "SpreadAwareAssessment",
     "SpreadAwareEdgeEvaluator",
+    "TLOBChallengerArtifact",
+    "TLOBChallengerSearchEvidence",
     "TLOBComputeSummary",
     "TLOBConfig",
+    "TLOBConfigSearch",
+    "TLOBInputShapeError",
     "TLOBModel",
     "TLOBSearchBudgetExceededError",
     "TLOBTournamentArchiver",
+    "measure_inference_latency_ms",
 ]

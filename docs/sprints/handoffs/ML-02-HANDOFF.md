@@ -54,3 +54,22 @@ Full lab suite verification: 139 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for ML-02.
 - Next unlocked consumers: ML-03.
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave A RED (ML-01..ML-04 together): `python -m pytest tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_execution_mapper.py tests/unit/lab/models/test_tuning_budget.py tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `24 failed, 40 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - `intent_id` was derived from Python's salted `hash()`. Probing with `PYTHONHASHSEED` 0, 1, 2 and 12345 produced four different ids for identical input (`..._92383`, `..._13886`, `..._83411`, `..._30503`). The id is part of the published intent shape, so it was neither reproducible across processes nor portable between hosts. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Replaced `abs(hash(...))` with a new `CostAwareExecutionMapper._intent_digest()` that takes a SHA-256 over an explicitly ordered 11-field canonical payload and formats the suffix with `zfill(5)`, preserving the published `intent_{pair}_{ts}_{5-digit}` shape while making it deterministic and portable. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/execution_mapper.py`, `tests/unit/lab/models/test_execution_mapper.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_execution_mapper.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

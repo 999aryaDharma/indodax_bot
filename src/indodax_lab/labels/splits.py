@@ -144,7 +144,8 @@ def assign_folds(
     samples: Sequence[SampleRecord],
     split_policy: SplitPolicy,
     exposure_log: Sequence[dict[str, Any]] | None = None,
-    enforce_inter_fold_embargo: bool = False,
+    enforce_inter_fold_embargo: bool = True,
+    embargo_opt_out_reason: str | None = None,
 ) -> SplitManifest:
     """Assign chronological roles to samples, purging boundary crossers and embargoing overlap.
 
@@ -152,7 +153,19 @@ def assign_folds(
     - SPLIT-01-AC1: Samples whose label_end_ts crosses fold boundaries are PURGED.
     - SPLIT-01-AC2: Embargo windows following fold closures are marked EMBARGOED.
     - SPLIT-01-AC3: Any sealed test fold overlapping previous exposure is strictly rejected.
+
+    SPLIT-01-F1: ``enforce_inter_fold_embargo`` defaults to True. The safe behaviour must be
+    the default so a caller that omits the argument cannot silently train across a fold
+    boundary. Opting out requires an explicit, named, auditable reason which is bound into
+    the content-addressed manifest identity.
     """
+    if not enforce_inter_fold_embargo and not (embargo_opt_out_reason or "").strip():
+        raise ValueError(
+            "EMBARGO_OPT_OUT_REASON_REQUIRED: enforce_inter_fold_embargo=False requires an "
+            "explicit embargo_opt_out_reason describing why the inter-fold embargo is "
+            "intentionally not applied."
+        )
+
     # 1. SPLIT-01-AC3: Check exposure log against sealed test folds
     identities = [s.sample_id for s in samples]
     if any(not identity.strip() for identity in identities):
@@ -161,6 +174,7 @@ def assign_folds(
         raise ValueError("DUPLICATE_SAMPLE_ID")
     policy_payload = split_policy.model_dump(mode="json")
     policy_payload["enforce_inter_fold_embargo"] = enforce_inter_fold_embargo
+    policy_payload["embargo_opt_out_reason"] = embargo_opt_out_reason
     policy_digest = hashlib.sha256(json.dumps(policy_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     if exposure_log:
         for fold in split_policy.folds:

@@ -155,7 +155,8 @@ class SqliteJobQueue:
             # Eligible candidate: PENDING, STALE, retryable FAILED, or expired RUNNING
             cursor = conn.execute(
                 """
-                SELECT job_id, generation, attempts, max_attempts, lease_duration_seconds
+                SELECT job_id, generation, attempts, max_attempts, lease_duration_seconds,
+                       status, owner_id, lease_expires_at
                 FROM jobs
                 WHERE attempts < max_attempts
                   AND (
@@ -180,10 +181,25 @@ class SqliteJobQueue:
                 conn.execute("COMMIT;")
                 return None
 
-            job_id, curr_gen, curr_attempts, max_att, lease_sec = row
+            job_id, curr_gen, curr_attempts, max_att, lease_sec = row[:5]
+            prior_status, prior_owner, prior_expiry = row[5], row[6], row[7]
             next_gen = curr_gen + 1
             next_attempts = curr_attempts + 1
             expires_at = (as_of + timedelta(seconds=lease_sec)).isoformat()
+
+            # A takeover of a crashed/expired lease (or a job already marked
+            # STALE) must leave a durable audit trail, otherwise a worker that
+            # died mid-flight is silently indistinguishable from one that never
+            # started and duplicate work cannot be detected.
+            if prior_status in (JobStatus.RUNNING.value, JobStatus.STALE.value):
+                error_message = (
+                    f"STALE_LEASE_TAKEOVER: previous owner {prior_owner or 'NONE'} generation "
+                    f"{curr_gen} ended in status {prior_status} with lease expiry "
+                    f"{prior_expiry or 'NONE'}; reclaimed by {worker_id} generation {next_gen} "
+                    f"at {as_of_iso}"
+                )
+            else:
+                error_message = None
 
             update_cur = conn.execute(
                 """
@@ -193,6 +209,7 @@ class SqliteJobQueue:
                     generation = ?,
                     attempts = ?,
                     lease_expires_at = ?,
+                    error_message = ?,
                     updated_at = ?
                 WHERE job_id = ? AND generation = ? AND attempts < max_attempts
                 """,
@@ -202,6 +219,7 @@ class SqliteJobQueue:
                     next_gen,
                     next_attempts,
                     expires_at,
+                    error_message,
                     as_of_iso,
                     job_id,
                     curr_gen,
@@ -292,40 +310,73 @@ class SqliteJobQueue:
         expected_hash: str | None = None,
         as_of: datetime | None = None,
     ) -> JobRecord:
-        """Publish SUCCESS for job, verifying artifact completeness and lease generation."""
+        """Publish SUCCESS for job, verifying lease generation and artifact completeness.
+
+        Ordering is deliberate: the lease fence is evaluated first and is
+        authoritative, so a superseded worker is always refused as stale and
+        never learns anything about the filesystem. Only a worker that still
+        holds the live lease reaches artifact validation, where a missing,
+        empty, or corrupt result raises :class:`PartialArtifactError` and leaves
+        the job RUNNING (JOB-01-AC2, JOB-01-AC3).
+        """
         if as_of is None:
             as_of = datetime.now(UTC)
         as_of = _ensure_utc(as_of, "as_of")
         as_of_iso = as_of.isoformat()
 
-        path_str = None
-        hash_str = expected_hash
-
-        # Invariant: Partial or corrupted artifact cannot transition to SUCCESS
-        if artifact_path is not None:
-            p = Path(artifact_path)
-            if not p.exists() or not p.is_file():
-                raise PartialArtifactError(f"ARTIFACT_FILE_NOT_FOUND:{artifact_path}")
-            content = p.read_bytes()
-            if len(content) == 0:
-                raise PartialArtifactError(f"ARTIFACT_FILE_EMPTY:{artifact_path}")
-            actual_hash = hashlib.sha256(content).hexdigest()
-            if expected_hash is not None and actual_hash != expected_hash:
-                raise PartialArtifactError(
-                    f"ARTIFACT_CHECKSUM_MISMATCH: expected {expected_hash}, got {actual_hash}"
-                )
-            path_str = str(p)
-            hash_str = actual_hash
-
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE;")
+            held = conn.execute(
+                """
+                SELECT 1 FROM jobs
+                WHERE job_id = ? AND owner_id = ? AND generation = ?
+                  AND status = ? AND lease_expires_at > ?
+                """,
+                (job_id, worker_id, generation, JobStatus.RUNNING.value, as_of_iso),
+            ).fetchone()
+            if not held:
+                conn.execute("ROLLBACK;")
+                raise LeaseFencingError(
+                    f"STALE_LEASE_FENCED: cannot complete job {job_id} for stale worker {worker_id} gen {generation}"
+                )
+
+            # Invariant: a partial or absent artifact cannot transition to SUCCESS.
+            if artifact_path is None:
+                conn.execute("ROLLBACK;")
+                raise PartialArtifactError(
+                    f"ARTIFACT_PATH_REQUIRED: job {job_id} cannot be published as SUCCESS without a "
+                    "result artifact reference"
+                )
+
+            p = Path(artifact_path)
+            try:
+                if not p.exists() or not p.is_file():
+                    raise PartialArtifactError(f"ARTIFACT_FILE_NOT_FOUND:{artifact_path}")
+                content = p.read_bytes()
+                if len(content) == 0:
+                    raise PartialArtifactError(f"ARTIFACT_FILE_EMPTY:{artifact_path}")
+                actual_hash = hashlib.sha256(content).hexdigest()
+                if expected_hash is not None and actual_hash != expected_hash:
+                    raise PartialArtifactError(
+                        f"ARTIFACT_CHECKSUM_MISMATCH: expected {expected_hash}, got {actual_hash}"
+                    )
+            except (PartialArtifactError, OSError) as exc:
+                conn.execute("ROLLBACK;")
+                if isinstance(exc, PartialArtifactError):
+                    raise
+                raise PartialArtifactError(f"ARTIFACT_UNREADABLE:{artifact_path}:{exc}") from exc
+
+            path_str = str(p)
+            hash_str = actual_hash
+
             cursor = conn.execute(
                 """
                 UPDATE jobs
                 SET status = ?,
                     result_artifact_path = ?,
                     result_artifact_hash = ?,
+                    error_message = NULL,
                     updated_at = ?
                 WHERE job_id = ? AND owner_id = ? AND generation = ? AND status = ?
                   AND lease_expires_at > ?
@@ -419,7 +470,7 @@ class SqliteJobQueue:
                 SELECT job_id, job_type, status, owner_id, generation,
                        attempts, max_attempts, lease_duration_seconds,
                        lease_expires_at, result_artifact_path, result_artifact_hash,
-                       error_message, created_at, updated_at
+                       error_message, created_at, updated_at, parameters_json
                 FROM jobs
                 WHERE job_id = ?
                 """,
@@ -428,6 +479,20 @@ class SqliteJobQueue:
             row = cursor.fetchone()
             if not row:
                 raise KeyError(f"JOB_NOT_FOUND:{job_id}")
+
+            # parameters_json is NOT NULL, but a hand-edited or legacy row may hold
+            # malformed JSON. Admission control must not crash on that, and an
+            # unreadable parameter blob must not be read as an empty declaration.
+            try:
+                parameters = json.loads(row[14]) if row[14] else {}
+            except ValueError as exc:
+                raise ValueError(
+                    f"JOB_PARAMETERS_CORRUPT: job {job_id} has unreadable parameters_json: {exc}"
+                ) from exc
+            if not isinstance(parameters, dict):
+                raise ValueError(
+                    f"JOB_PARAMETERS_CORRUPT: job {job_id} parameters_json is not a JSON object"
+                )
 
             return JobRecord(
                 job_id=row[0],
@@ -444,4 +509,5 @@ class SqliteJobQueue:
                 error_message=row[11],
                 created_at=_parse_utc_iso(row[12]),
                 updated_at=_parse_utc_iso(row[13]),
+                parameters=parameters,
             )

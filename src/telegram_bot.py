@@ -49,11 +49,39 @@ WIB = pytz.timezone(APP_CONFIG.timezone)
 
 
 def _is_chat_authorized(chat_id: int | str | None) -> bool:
-    """Validate chat authorization against configured allowlist (REPORT-02-AC1)."""
+    """Validate chat authorization against configured allowlist (REPORT-02-AC1).
+
+    Fails CLOSED. An absent, empty or whitespace-only allowlist denies every chat:
+    absence of configuration is not authorization. Every externally reachable command
+    handler must gate on this before doing any work.
+    """
     configured_chat = getattr(CREDENTIALS, "telegram_chat_id", None)
-    if not configured_chat:
-        return True
-    return str(chat_id) == str(configured_chat)
+    if configured_chat is None or not str(configured_chat).strip():
+        return False
+    if chat_id is None or not str(chat_id).strip():
+        return False
+    return str(chat_id) == str(configured_chat).strip()
+
+
+_ACCESS_DENIED_MESSAGE = "⛔ Akses ditolak. Chat ID tidak terdaftar."
+
+
+async def _reject_unauthorized_chat(update: Update) -> bool:
+    """Deny the update when its chat is not authorized.
+
+    Returns True when access was denied (a denial reply has been sent), False when the
+    caller may proceed. Every handler invokes this as its first statement so no status,
+    history, position or report data is ever produced for a stranger.
+    """
+    effective_chat = getattr(update, "effective_chat", None)
+    chat_id = getattr(effective_chat, "id", None)
+    if _is_chat_authorized(chat_id):
+        return False
+    logger.warning("Telegram command rejected: unauthorized chat %s", chat_id)
+    await update.message.reply_text(
+        _ACCESS_DENIED_MESSAGE, parse_mode=ParseMode.MARKDOWN_V2
+    )
+    return True
 
 
 # In-memory signal history (5 sinyal terakhir untuk command /history)
@@ -367,6 +395,9 @@ def _add_to_history(decision: SignalDecision, plan: TradingPlan) -> None:
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /start"""
+    if await _reject_unauthorized_chat(update):
+        return
+
     msg = (
         "🤖 *IndoBot Signal \\(IBS\\) v1\\.1*\n\n"
         "Asisten trading kripto untuk Indodax IDR Market\\.\n\n"
@@ -389,6 +420,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /status — tampilkan status server dan cooldown state."""
+    if await _reject_unauthorized_chat(update):
+        return
+
     now_wib = datetime.now(WIB).strftime(APP_CONFIG.datetime_format)
     cooldowns = get_cooldown_status()
 
@@ -415,8 +449,7 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def cmd_saldo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /saldo — fetch dan tampilkan saldo real-time."""
-    if not _is_chat_authorized(update.effective_chat.id):
-        await update.message.reply_text("⛔ Akses ditolak. Chat ID tidak terdaftar.", parse_mode=ParseMode.MARKDOWN_V2)
+    if await _reject_unauthorized_chat(update):
         return
 
     await update.message.reply_text("⏳ Mengambil data saldo dari Indodax\\.\\.\\.", parse_mode=ParseMode.MARKDOWN_V2)
@@ -449,6 +482,9 @@ async def cmd_saldo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cmd_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /history — tampilkan 5 sinyal terakhir."""
+    if await _reject_unauthorized_chat(update):
+        return
+
     if not _signal_history:
         await update.message.reply_text(
             "📭 Belum ada sinyal yang dikirim sejak bot berjalan\\.",
@@ -698,8 +734,7 @@ async def callback_paper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def cmd_posisi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /posisi — tampilkan semua posisi aktif saat ini."""
-    if not _is_chat_authorized(update.effective_chat.id):
-        await update.message.reply_text("⛔ Akses ditolak. Chat ID tidak terdaftar.", parse_mode=ParseMode.MARKDOWN_V2)
+    if await _reject_unauthorized_chat(update):
         return
 
     from position_tracker import tracker
@@ -742,6 +777,9 @@ async def cmd_posisi(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def cmd_raport(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /raport — tampilkan weekly paper trading analytics."""
+    if await _reject_unauthorized_chat(update):
+        return
+
     from paper_trader import paper_trader
 
     await update.message.reply_text(
@@ -757,6 +795,9 @@ async def cmd_raport(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def cmd_gate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /gate — tampilkan Daily Gate status semua pair saat ini."""
+    if await _reject_unauthorized_chat(update):
+        return
+
     from indodax_api import fetch_ohlcv
     from ta_processor import calculate
     from signal_logic import classify_daily_mode

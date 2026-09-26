@@ -51,3 +51,62 @@ Full lab suite verification: 121 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for EVAL-03.
 - Next unlocked consumers: ML-04, JOB-03, SHADOW-01, SHADOW-03, REPORT-01.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ## Sprint-review fix cycle (CHANGES_REQUESTED)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Remediation agent: `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`. All source and test changes below exist in the working tree only: nothing is committed, staged, pushed or merged, and no mutating git command was run in this cycle.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Finding EVAL-03-F1 - CRITICAL - the sealed gate could be unsealed from any stage, with no VALIDATED predecessor
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Critical): `unseal_gate` accepted a candidate in any stage, so a candidate still in `TRAINING` or `EVALUATED` had its sealed gate opened. The gate is the seal on the sealed-test evidence, so opening it before validation defeats the whole leakage-prevention chain in `docs/specs/11-evaluation-and-experiment-lifecycle.md`. No predecessor check existed.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED command: `python -m pytest tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED observed failure: `test_eval_03_unseal_requires_validated_stage` asserted that unsealing from a non-`VALIDATED` stage raises, and the pre-fix `unseal_gate` returned successfully for a `TRAINING` candidate.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Fix summary: `_GATE_UNSEAL_PREDECESSOR = CandidateStage.VALIDATED` is now enforced. Only a candidate in exactly `VALIDATED` may open its sealed gate, and the error is retokenized to `UNSEAL_REQUIRES_VALIDATED_STAGE` naming the actual stage so the operator can see what state the candidate was in.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Files changed: `src/indodax_lab/evaluation/lifecycle.py`, `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Finding EVAL-03-F2 - CRITICAL - stage transitions and gate unsealing were not atomic, so a partial write left an inconsistent candidate
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Critical): `transition_stage` and `unseal_gate` performed their read, their validation and their write as separate statements with no enclosing transaction. A failure between the read and the write, or a concurrent writer between them, left a candidate whose recorded stage and whose transition history disagreed, or a gate flag flipped without its audit row. This is exactly the persistence/state defect class that the AGENTS.md severity policy classifies as blocking.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED command: `python -m pytest tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED observed failure: `test_eval_03_transition_and_unseal_are_atomic` forced a mid-operation failure and observed committed state that did not correspond to a completed operation, rather than a rollback to the pre-call state.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Fix summary: an `_atomic()` context manager now opens `BEGIN IMMEDIATE` and commits or rolls back as a unit. Both `transition_stage` and `unseal_gate` run entirely inside it, so a failure leaves the candidate exactly as it was. The stage `UPDATE` is also now conditional (`WHERE current_stage = ?`) and rejects a `rowcount != 1`, so a concurrent writer is detected instead of silently overwritten. The gate `UPDATE` carries `WHERE sealed_gate_opened = 0` for the same reason.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Files changed: `src/indodax_lab/evaluation/lifecycle.py`, `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Finding EVAL-03-F3 - CRITICAL - blank dataset-split and blank authorizer were accepted as unseal evidence
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Critical): `unseal_gate` checked that `dataset_split_id` and `authorized_by` were not `None` but did not reject empty or whitespace-only strings. An operator could therefore open the sealed gate with `""` as the split identity or as the authorizer, producing a gate that is nominally unsealed while carrying no evidence of which dataset was used or who authorised it. The whole audit value of the seal depends on those two fields.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED command: `python -m pytest tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED observed failure: `test_eval_03_unseal_verifies_split_and_authorizer` and `test_eval_03_unseal_rejects_blank_split_and_authorizer` asserted the two rejections and the pre-fix `is None` checks let blank strings through to a successful unseal.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Fix summary: blank `dataset_split_id` now raises `DATASET_SPLIT_ID_REQUIRED` and blank `authorized_by` raises `UNSEAL_AUTHORIZED_BY_REQUIRED`. Both are validated before any state change, so a rejected unseal leaves the gate sealed.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Files changed: `src/indodax_lab/evaluation/lifecycle.py`, `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Finding EVAL-03-F4 - IMPORTANT - non-finite leaderboard metrics were admitted to the leaderboard
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important): a leaderboard entry whose metric value was NaN or infinite was written and ranked, so a corrupt run occupied a leaderboard position and could be selected by any consumer that takes the top row. The spec rule in `docs/specs/11-evaluation-and-experiment-lifecycle.md` line 52 requires absent or unusable data to keep explicit unknown semantics rather than be silently admitted.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED command: `python -m pytest tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED observed failure: the non-finite leaderboard test asserted the entry is refused and the pre-fix path admitted the NaN entry.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Fix summary: non-finite leaderboard metrics are now excluded at the write boundary, so an unusable metric never occupies a ranked position.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Files changed: `src/indodax_lab/evaluation/lifecycle.py`, `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Finding EVAL-03-F5 - IMPORTANT - the candidate was re-read outside the transaction, so the validated stage could be stale
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important): `unseal_gate` re-fetched the candidate in a separate step from the decision that relied on it, so the stage used to authorise the unseal was not the stage held under the write lock. A candidate advanced or rolled back between the two reads could be unsealed against a stage that was no longer current.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED command: `python -m pytest tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - RED observed failure: `test_eval_03_transition_and_unseal_are_atomic` exercised the interleaving and observed the unseal proceeding against the stale read.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Fix summary: the candidate fetch is now `_fetch_candidate()` and is called inside the `_atomic()` block, so the stage that authorises the unseal is the stage read under the same immediate transaction that performs the write.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Files changed: `src/indodax_lab/evaluation/lifecycle.py`, `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Affected-subsystem gate
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Command: `python -m pytest tests/unit/lab/evaluation tests/unit/lab/labels tests/unit/lab/security -q -p no:cacheprovider`
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Result: `157 passed in 4.49s` (evaluation 74, labels 71, security 12). `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py` alone is `10 passed in 1.45s`.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Repository gate: `python -m pytest tests -q -p no:cacheprovider --continue-on-collection-errors` gives `34 failed, 1109 passed, 30 errors in 40.75s`, Exit 1, with every failure and error attributable to a missing third-party package and zero behavioural failures. See the EVAL-02 handoff section for the full breakdown.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Capability gap per AGENTS.md: `ruff` is not installed, so no lint gate was run. `pyarrow` is not installed, so the parquet-dependent suites could not be collected.
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Deferred (Minor) - not blocking
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `_GATE_UNSEAL_PREDECESSOR` names a single predecessor stage, so a future lifecycle that inserts a stage between `VALIDATED` and the gate would need this constant changed rather than a rule set. Recorded as backlog.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: the `BEGIN IMMEDIATE` transaction relies on SQLite write locking, so a non-SQLite connection object supplied by a caller would not receive the same isolation guarantee. Recorded as backlog.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the non-finite leaderboard exclusion in EVAL-03-F4 silently drops the row rather than recording that a run was excluded for an unusable metric, so a candidate that trained and evaluated but could not be ranked leaves no trace. Persisting an explicit excluded-metric record is a schema change and therefore a change-control item rather than a defect repair inside this fix cycle.

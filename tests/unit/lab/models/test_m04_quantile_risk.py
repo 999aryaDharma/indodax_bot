@@ -177,3 +177,57 @@ def test_m04_01_not_fitted_error():
 
     with pytest.raises(RuntimeError):
         trainer.predict_interval(X)
+
+
+# ---------------------------------------------------------------------------
+# M04-01-AC3 regression: tail/target leakage guard must match the target family
+# ---------------------------------------------------------------------------
+
+def test_m04_01_ac3_target_family_leakage_columns_are_rejected() -> None:
+    """M04-01-AC3: the leakage guard must catch derived spellings of a forbidden target.
+
+    The previous guard used exact set membership, so only a literal ``target``/
+    ``label``/``outcome`` column was refused. Every derived name a feature builder would
+    realistically emit - ``fwd_target_vol``, ``target_vol``, ``label_win``,
+    ``next_return``, ``forward_return``, ``realized_vol``, ``outcome_up`` - passed the
+    guard and let the tail target back into the model's own inputs.
+    """
+    base_features = [f"feat_{i}" for i in range(4)]
+    leaky_names = [
+        "fwd_target_vol",
+        "target_vol",
+        "label_win",
+        "next_return",
+        "forward_return",
+        "realized_vol",
+        "outcome_up",
+        "future_return_5m",
+    ]
+    X = _make_features(n=200, n_features=4, seed=42)
+    X.columns = base_features  # type: ignore[assignment]
+    y = pd.Series(np.random.default_rng(0).standard_normal(200), name="target")
+
+    trainer = M04QuantileTrainer(
+        config=M04Config(model_id="M04", version="1.0.0", lower_quantile=0.10, upper_quantile=0.90, seed=42)
+    )
+
+    for leaky in leaky_names:
+        X_leaky = X.copy()
+        X_leaky[leaky] = np.random.default_rng(1).standard_normal(len(X))
+        with pytest.raises(TailTargetLeakageError, match="TAIL_TARGET_LEAKAGE"):
+            trainer.train(X_leaky, y, feature_names=base_features + [leaky])
+
+
+def test_m04_01_ac3_legitimate_market_features_are_still_accepted() -> None:
+    """M04-01-AC3: broadening the guard must not refuse genuine risk features."""
+    legit_features = ["volatility_20", "volume_ratio", "spread_bps", "depth_imbalance"]
+
+    X = _make_features(n=200, n_features=4, seed=42)
+    X.columns = legit_features  # type: ignore[assignment]
+    y = pd.Series(np.random.default_rng(0).standard_normal(200), name="target")
+
+    trainer = M04QuantileTrainer(
+        config=M04Config(model_id="M04", version="1.0.0", lower_quantile=0.10, upper_quantile=0.90, seed=42)
+    )
+    bundle = trainer.train(X, y, feature_names=legit_features)
+    assert bundle.feature_names == legit_features

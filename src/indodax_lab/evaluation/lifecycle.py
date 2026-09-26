@@ -11,10 +11,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from contextlib import contextmanager
 import json
+import math
 from pathlib import Path
 import sqlite3
-from typing import Any, Sequence
+from typing import Any, Iterator, Sequence
 import uuid
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -137,6 +139,10 @@ _ALLOWED_TRANSITIONS: dict[CandidateStage, set[CandidateStage]] = {
     CandidateStage.ARCHIVED: set(),
 }
 
+# EVAL-03-F2: the sealed evaluation gate may only be opened from the stage that legally
+# precedes SEALED_PASS. Any other stage is refused fail-closed.
+_GATE_UNSEAL_PREDECESSOR: CandidateStage = CandidateStage.VALIDATED
+
 
 class CandidateLifecycleManager:
     """Persistent lifecycle state machine with SQLite audit trails."""
@@ -151,6 +157,54 @@ class CandidateLifecycleManager:
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA busy_timeout = 5000;")
         return conn
+
+    @contextmanager
+    def _atomic(self) -> Iterator[sqlite3.Connection]:
+        """Run a multi-statement state change as one all-or-nothing SQLite transaction.
+
+        EVAL-03-F1: ``isolation_level=None`` puts the connection in autocommit mode, so a
+        failure between the state write and its audit record used to leave the lifecycle
+        inconsistent with no rollback. ``BEGIN IMMEDIATE`` + an explicit rollback on any
+        exception makes the state change and its audit record commit together.
+        """
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            yield conn
+        except BaseException:
+            conn.rollback()
+            conn.close()
+            raise
+        else:
+            conn.commit()
+            conn.close()
+
+    def _fetch_candidate(self, conn: sqlite3.Connection, candidate_id: str) -> CandidateRecord:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT candidate_id, candidate_version, strategy_name, config_hash,
+                   current_stage, parent_candidate_id, sealed_gate_opened,
+                   created_at, updated_at
+            FROM candidates WHERE candidate_id = ?
+            """,
+            (candidate_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise CandidateNotFoundError(f"CANDIDATE_NOT_FOUND:{candidate_id}")
+
+        return CandidateRecord(
+            candidate_id=row[0],
+            candidate_version=row[1],
+            strategy_name=row[2],
+            config_hash=row[3],
+            current_stage=CandidateStage(row[4]),
+            parent_candidate_id=row[5],
+            sealed_gate_opened=bool(row[6]),
+            created_at=datetime.fromisoformat(row[7]),
+            updated_at=datetime.fromisoformat(row[8]),
+        )
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -255,29 +309,39 @@ class CandidateLifecycleManager:
         reason: str | None = None,
         as_of: datetime | None = None,
     ) -> CandidateRecord:
-        """Advance candidate along the immutable lifecycle pipeline."""
-        candidate = self.get_candidate(candidate_id)
-        from_stage = candidate.current_stage
+        """Advance candidate along the immutable lifecycle pipeline.
 
-        allowed = _ALLOWED_TRANSITIONS.get(from_stage, set())
-        if to_stage not in allowed:
-            raise InvalidTransitionError(f"INVALID_STAGE_TRANSITION:{from_stage} -> {to_stage}")
-
-        if to_stage == CandidateStage.SEALED_PASS and not candidate.sealed_gate_opened:
-            raise InvalidTransitionError("CANNOT_TRANSITION_TO_SEALED_PASS_WITHOUT_UNSEAL_GATE")
-
+        EVAL-03-F1/F3: the current stage is read, validated and written inside a single
+        ``BEGIN IMMEDIATE`` transaction together with its audit record, so a concurrent
+        transition cannot both observe the same predecessor stage and a failed audit
+        insert cannot leave an advanced stage behind.
+        """
         ts = as_of or datetime.now(UTC)
         transition_id = f"tr_{uuid.uuid4().hex[:12]}"
 
-        with self._connect() as conn:
-            conn.execute(
+        with self._atomic() as conn:
+            candidate = self._fetch_candidate(conn, candidate_id)
+            from_stage = candidate.current_stage
+
+            allowed = _ALLOWED_TRANSITIONS.get(from_stage, set())
+            if to_stage not in allowed:
+                raise InvalidTransitionError(f"INVALID_STAGE_TRANSITION:{from_stage} -> {to_stage}")
+
+            if to_stage == CandidateStage.SEALED_PASS and not candidate.sealed_gate_opened:
+                raise InvalidTransitionError("CANNOT_TRANSITION_TO_SEALED_PASS_WITHOUT_UNSEAL_GATE")
+
+            cur = conn.execute(
                 """
                 UPDATE candidates
                 SET current_stage = ?, updated_at = ?
-                WHERE candidate_id = ?
+                WHERE candidate_id = ? AND current_stage = ?
                 """,
-                (to_stage.value, ts.isoformat(), candidate_id),
+                (to_stage.value, ts.isoformat(), candidate_id, from_stage.value),
             )
+            if cur.rowcount != 1:
+                raise InvalidTransitionError(
+                    f"CONCURRENT_STAGE_CHANGE:{candidate_id} is no longer at {from_stage}"
+                )
             conn.execute(
                 """
                 INSERT INTO transitions (
@@ -303,30 +367,50 @@ class CandidateLifecycleManager:
         authorized_by: str,
         as_of: datetime | None = None,
     ) -> ExposureAuditRecord:
-        """Authorize single-use unsealing of the sealed evaluation gate (EVAL-03-AC2)."""
-        candidate = self.get_candidate(candidate_id)
-        if candidate.sealed_gate_opened:
-            raise GateAlreadyOpenedError(
-                f"GATE_ALREADY_OPENED: candidate {candidate_id} (v{candidate.candidate_version}) has already opened the sealed gate"
+        """Authorize single-use unsealing of the sealed evaluation gate (EVAL-03-AC2).
+
+        EVAL-03-F2: reachable only from ``VALIDATED``, the legal predecessor of
+        ``SEALED_PASS``; every other stage is refused fail-closed.
+        EVAL-03-F1: the flag flip and the exposure audit record commit together, so a
+        failed audit insert leaves the gate closed and still usable.
+        """
+        if not str(dataset_split_id).strip():
+            raise ValueError(
+                "DATASET_SPLIT_ID_REQUIRED: unseal requires a declared dataset split id"
+            )
+        if not str(authorized_by).strip():
+            raise ValueError(
+                "UNSEAL_AUTHORIZED_BY_REQUIRED: unseal requires a named authorizer"
             )
 
         ts = as_of or datetime.now(UTC)
         exposure_id = f"exp_{uuid.uuid4().hex[:12]}"
 
-        audit_record = ExposureAuditRecord(
-            exposure_id=exposure_id,
-            candidate_id=candidate_id,
-            candidate_version=candidate.candidate_version,
-            dataset_split_id=dataset_split_id,
-            authorized_by=authorized_by,
-            exposed_at=ts,
-        )
+        with self._atomic() as conn:
+            candidate = self._fetch_candidate(conn, candidate_id)
+            if candidate.current_stage != _GATE_UNSEAL_PREDECESSOR:
+                raise InvalidTransitionError(
+                    f"UNSEAL_REQUIRES_VALIDATED_STAGE: candidate {candidate_id} is at "
+                    f"{candidate.current_stage}; the sealed gate may only be opened from "
+                    f"{_GATE_UNSEAL_PREDECESSOR}"
+                )
+            if candidate.sealed_gate_opened:
+                raise GateAlreadyOpenedError(
+                    f"GATE_ALREADY_OPENED: candidate {candidate_id} (v{candidate.candidate_version}) has already opened the sealed gate"
+                )
 
-        with self._connect() as conn:
-            conn.execute(
-                "UPDATE candidates SET sealed_gate_opened = 1, updated_at = ? WHERE candidate_id = ?",
+            # Conditional update: a second opener sees no changed row and is rejected.
+            cur = conn.execute(
+                """
+                UPDATE candidates SET sealed_gate_opened = 1, updated_at = ?
+                WHERE candidate_id = ? AND sealed_gate_opened = 0
+                """,
                 (ts.isoformat(), candidate_id),
             )
+            if cur.rowcount != 1:
+                raise GateAlreadyOpenedError(
+                    f"GATE_ALREADY_OPENED: candidate {candidate_id} (v{candidate.candidate_version}) has already opened the sealed gate"
+                )
             conn.execute(
                 """
                 INSERT INTO exposure_audits (
@@ -342,6 +426,14 @@ class CandidateLifecycleManager:
                     authorized_by,
                     ts.isoformat(),
                 ),
+            )
+            audit_record = ExposureAuditRecord(
+                exposure_id=exposure_id,
+                candidate_id=candidate_id,
+                candidate_version=candidate.candidate_version,
+                dataset_split_id=dataset_split_id,
+                authorized_by=authorized_by,
+                exposed_at=ts,
             )
 
         return audit_record
@@ -428,14 +520,23 @@ class CandidateLifecycleManager:
 
         Invariant:
         Runs with status INVALID_RUN or failed runs are strictly excluded from ranking.
+        EVAL-03-F4: a run whose ranking metric is absent or non-finite (NaN/inf) carries no
+        usable evidence, so it is excluded too rather than sorted as if it were neutral.
         """
-        valid_runs = [
-            r for r in runs
-            if r.status == ExperimentRunStatus.SUCCESS and sort_metric in r.metrics
-        ]
+        valid_runs: list[tuple[float, ExperimentRunRecord]] = []
+        for run in runs:
+            if run.status != ExperimentRunStatus.SUCCESS or sort_metric not in run.metrics:
+                continue
+            try:
+                metric_value = float(run.metrics[sort_metric])
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(metric_value):
+                continue
+            valid_runs.append((metric_value, run))
 
         sorted_runs = sorted(
-            valid_runs,
+            (run for _, run in valid_runs),
             key=lambda r: float(r.metrics[sort_metric]),
             reverse=not ascending,
         )

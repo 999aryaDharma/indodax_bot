@@ -8,9 +8,11 @@ from indodax_lab.paper.contracts import (
     ManualIntentRecord,
     ModelMismatchError,
     PaperDecisionStore,
+    RejectedDecision,
     StaleDataError,
 )
 from indodax_lab.paper.portfolio import (
+    CheckpointIntegrityError,
     InsufficientCashError,
     IntentProcessingResult,
     MaxPositionsExceededError,
@@ -24,8 +26,14 @@ from indodax_lab.paper.promotion import (
     ChampionRegistry,
     InsufficientForwardDurationError,
     InsufficientForwardTradesError,
+    InsufficientQualityPromotionError,
+    MissingPromotionApprovalError,
+    NoPromotedChampionError,
     PolicyBreachPromotionError,
+    PromotionApproval,
     PromotionDecision,
+    SelfApprovedPromotionError,
+    StalePromotionEvidenceError,
     UnsealedCandidatePromotionError,
 )
 
@@ -38,8 +46,10 @@ __all__ = [
     "ManualIntentRecord",
     "ModelMismatchError",
     "PaperDecisionStore",
+    "RejectedDecision",
     "StaleDataError",
     # SHADOW-02
+    "CheckpointIntegrityError",
     "InsufficientCashError",
     "IntentProcessingResult",
     "MaxPositionsExceededError",
@@ -52,7 +62,13 @@ __all__ = [
     "ChampionRegistry",
     "InsufficientForwardDurationError",
     "InsufficientForwardTradesError",
+    "InsufficientQualityPromotionError",
+    "MissingPromotionApprovalError",
+    "NoPromotedChampionError",
     "PolicyBreachPromotionError",
+    "PromotionApproval",
     "PromotionDecision",
+    "SelfApprovedPromotionError",
+    "StalePromotionEvidenceError",
     "UnsealedCandidatePromotionError",
 ]

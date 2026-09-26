@@ -30,8 +30,11 @@ from indodax_lab.orchestration.resources import (
     SystemResourceReading,
     evaluate_admission,
     guard_asus_training_import,
+    is_training_job,
+    resolve_resource_class,
 )
 from indodax_lab.orchestration.worker import (
+    CheckpointIntegrityError,
     ExecutionResult,
     ResearchWorker,
     WorkerConfig,
@@ -315,3 +318,321 @@ def test_job_02_lenovo_concurrency_limit() -> None:
     )
     assert decision.admitted is False
     assert decision.reason == "CONCURRENCY_LIMIT_EXCEEDED:max_1_high_or_gpu"
+
+
+# ---------------------------------------------------------------------------
+# Sprint-review fix cycle. Actor for every line below:
+# opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+# ---------------------------------------------------------------------------
+
+
+def test_declared_resource_class_survives_the_queue_round_trip(tmp_path: Path) -> None:
+    """JOB-02-AC3: a declared GPU/HIGH class must not decay to LOW once persisted.
+
+    ``JobRecord`` carried no ``parameters``, so ``resolve_resource_class`` fell
+    back to substring-guessing the ``job_type`` for every queued job. A job
+    submitted as ``resource_class=GPU`` with a job_type that contains none of
+    the training keywords came back out of the queue as LOW, which also
+    disabled the ASUS training prohibition and every HIGH/GPU threshold.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    definition = JobDefinition(
+        job_id="gpu_fit",
+        job_type="model_fit",  # no 'train'/'gpu'/'neural'/'tune'/'sweep' substring
+        recipe_hash="recipe_abc",
+        input_ids=["dataset_v1"],
+        parameters={"resource_class": "GPU", "epochs": 5},
+        created_at=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
+    )
+    assert resolve_resource_class(definition) == ResourceClass.GPU
+
+    queue.submit_job(definition)
+    record = queue.get_job("gpu_fit")
+
+    # Behavioral core: the declared class must survive persistence.
+    assert resolve_resource_class(record) == ResourceClass.GPU
+    assert is_training_job(record) is True
+    assert record.parameters["resource_class"] == "GPU"
+
+
+def test_queued_gpu_job_cannot_run_on_the_asus_profile(tmp_path: Path) -> None:
+    """JOB-02-AC3: the ASUS training prohibition must survive persistence.
+
+    Before the fix, a persisted GPU job whose job_type contained no training
+    keyword was classified LOW, so ``is_training_job`` returned False, the ASUS
+    guard never fired, and the job executed on the ASUS host.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    definition = JobDefinition(
+        job_id="gpu_fit_asus",
+        job_type="model_fit",
+        recipe_hash="recipe_abc",
+        input_ids=["dataset_v1"],
+        parameters={"resource_class": "GPU"},
+        created_at=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
+    )
+    queue.submit_job(definition)
+    record = queue.get_job("gpu_fit_asus")
+
+    reading = SystemResourceReading(
+        ac_power_connected=True,
+        free_ram_gb=16.0,
+        user_idle_seconds=1200.0,
+        cpu_temp_celsius=40.0,
+        cpu_load_pct=5.0,
+        gpu_available=False,
+    )
+    decision = evaluate_admission(
+        job=record,
+        reading=reading,
+        host_profile=HostProfile.ASUS,
+    )
+    assert decision.admitted is False
+    assert decision.reason == "ASUS_PROFILE_CANNOT_RUN_TRAINING"
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.ASUS,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(reading),
+    )
+    executed: list[int] = []
+    with pytest.raises(AsusProfileTrainingProhibitedError):
+        worker.execute_steps(record, total_steps=3, step_fn=lambda i: executed.append(i))
+
+
+def test_resume_refuses_a_checkpoint_claiming_more_steps_than_exist(tmp_path: Path) -> None:
+    """JOB-02-AC2: a corrupt checkpoint must not become a fake SUCCESS.
+
+    ``resume_from_checkpoint`` trusted ``last_completed_step`` without validating
+    it against ``total_steps``, so a checkpoint claiming more progress than the
+    workload contains returned ``status="SUCCESS"`` with
+    ``reason="ALREADY_COMPLETED"`` while executing no steps at all.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("resume_fake"))
+    record = queue.get_job("resume_fake")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("resume_fake")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "job_id": "resume_fake",
+                "last_completed_step": 999,  # total_steps is only 3
+                "state": None,
+                "saved_at": "2025-06-01T12:00:00+00:00",
+                "reason": "AC_POWER_DISCONNECTED",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    executed: list[int] = []
+    with pytest.raises(CheckpointIntegrityError, match="CHECKPOINT_STEP_OUT_OF_RANGE"):
+        worker.resume_from_checkpoint(
+            record, total_steps=3, step_fn=lambda i: executed.append(i)
+        )
+    assert executed == []
+
+
+def test_resume_refuses_a_checkpoint_for_a_different_job(tmp_path: Path) -> None:
+    """JOB-02-AC2: a checkpoint's recorded job identity must be verified."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("owner_job"))
+    record = queue.get_job("owner_job")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("owner_job")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "job_id": "some_other_job",  # identity mismatch
+                "last_completed_step": 1,
+                "state": None,
+                "saved_at": "2025-06-01T12:00:00+00:00",
+                "reason": "AC_POWER_DISCONNECTED",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CheckpointIntegrityError, match="CHECKPOINT_JOB_ID_MISMATCH"):
+        worker.resume_from_checkpoint(record, total_steps=5, step_fn=lambda i: None)
+
+
+def test_resume_refuses_a_negative_step_index(tmp_path: Path) -> None:
+    """JOB-02-AC2: a negative step index must not execute phantom steps."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("negative_step"))
+    record = queue.get_job("negative_step")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("negative_step")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "job_id": "negative_step",
+                "last_completed_step": -5,
+                "state": None,
+                "saved_at": "2025-06-01T12:00:00+00:00",
+                "reason": "AC_POWER_DISCONNECTED",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    executed: list[int] = []
+    with pytest.raises(CheckpointIntegrityError, match="CHECKPOINT_STEP_OUT_OF_RANGE"):
+        worker.resume_from_checkpoint(
+            record, total_steps=3, step_fn=lambda i: executed.append(i)
+        )
+    assert executed == []
+
+
+def test_resume_refuses_a_corrupt_checkpoint_file(tmp_path: Path) -> None:
+    """JOB-02-AC2: an unparseable checkpoint must be refused, not crash or restart."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("corrupt_ckpt"))
+    record = queue.get_job("corrupt_ckpt")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("corrupt_ckpt")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text("{not json", encoding="utf-8")
+
+    executed: list[int] = []
+    with pytest.raises(CheckpointIntegrityError, match="CHECKPOINT_UNREADABLE"):
+        worker.resume_from_checkpoint(
+            record, total_steps=3, step_fn=lambda i: executed.append(i)
+        )
+    assert executed == [], "a corrupt checkpoint must not silently restart the workload"
+
+
+def test_valid_checkpoint_still_resumes_from_the_next_step(tmp_path: Path) -> None:
+    """Regression guard: the integrity guards must not break legitimate resume."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("good_resume"))
+    record = queue.get_job("good_resume")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("good_resume")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "job_id": "good_resume",
+                "last_completed_step": 1,  # steps 0 and 1 already done
+                "state": None,
+                "saved_at": "2025-06-01T12:00:00+00:00",
+                "reason": "AC_POWER_DISCONNECTED",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    executed: list[int] = []
+    result = worker.resume_from_checkpoint(
+        record, total_steps=4, step_fn=lambda i: executed.append(i)
+    )
+    assert executed == [2, 3]
+    assert result.status == "SUCCESS"
+    assert result.last_completed_step == 3
+
+
+def test_completed_workload_still_reports_already_completed(tmp_path: Path) -> None:
+    """Regression guard: a fully completed checkpoint must not be treated as corrupt."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("all_done"))
+    record = queue.get_job("all_done")
+
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="w1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "ckpt",
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(
+            SystemResourceReading(ac_power_connected=True, free_ram_gb=16.0)
+        ),
+    )
+    checkpoint = worker.get_checkpoint_path("all_done")
+    checkpoint.parent.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "job_id": "all_done",
+                "last_completed_step": 2,  # == total_steps - 1
+                "state": None,
+                "saved_at": "2025-06-01T12:00:00+00:00",
+                "reason": "AC_POWER_DISCONNECTED",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    executed: list[int] = []
+    result = worker.resume_from_checkpoint(
+        record, total_steps=3, step_fn=lambda i: executed.append(i)
+    )
+    assert executed == []
+    assert result.status == "SUCCESS"
+    assert result.reason == "ALREADY_COMPLETED"
+

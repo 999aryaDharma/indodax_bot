@@ -41,6 +41,51 @@ class DirectionalClaimForbiddenError(ValueError):
     """
 
 
+# M06-01-AC2: a directional/target column may not enter the gate, whether it arrives as the
+# explicit ``target_direction`` argument or as an ordinary feature name. Matched as
+# substrings so derived spellings (forward_return, fwd_target, label_up) are also refused.
+FORBIDDEN_FEATURE_KEYWORDS = (
+    "target",
+    "label",
+    "return",
+    "realized",
+    "future",
+    "forward",
+    "outcome",
+    "y_true",
+    "y_pred",
+)
+
+
+def _assert_no_directional_features(feature_names: list[str]) -> None:
+    """Refuse any feature name carrying target/direction information (M06-01-AC2)."""
+    for col in feature_names:
+        col_lower = col.strip().lower()
+        hit = next((kw for kw in FORBIDDEN_FEATURE_KEYWORDS if kw in col_lower), None)
+        if hit is not None:
+            raise DirectionalClaimForbiddenError(
+                f"DIRECTIONAL_CLAIM_FORBIDDEN: feature '{col}' contains forbidden keyword "
+                f"'{hit}'. M06 Anomaly Gate is an unsupervised risk filter and cannot be "
+                "trained on or claim directional return targets (M06-01-AC2)."
+            )
+
+
+def _assert_feature_columns_present(X: pd.DataFrame, feature_names: list[str]) -> None:
+    """Turn an absent feature column into the module's typed missing-data error.
+
+    ``X[feature_names]`` otherwise raises a bare ``KeyError: "['x'] not in index"``, which
+    escapes the typed contract callers rely on to distinguish missing data from a real
+    market anomaly (M06-01-AC3).
+    """
+    missing = [f for f in feature_names if f not in X.columns]
+    if missing:
+        raise MissingDataDistinctFromAnomalyError(
+            f"MISSING_FEATURE_COLUMNS: input is missing required feature column(s) {missing}. "
+            "Present columns: " f"{list(X.columns)}. Missing data is a data pipeline failure, "
+            "not a market anomaly (M06-01-AC3)."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Domain models
 # ---------------------------------------------------------------------------
@@ -133,6 +178,8 @@ class M06AnomalyGate:
                 "DIRECTIONAL_CLAIM_FORBIDDEN: M06 Anomaly Gate is an unsupervised risk filter. "
                 "It cannot be trained on or claim directional return targets (M06-01-AC2)."
             )
+        _assert_no_directional_features(feature_names)
+        _assert_feature_columns_present(X_train, feature_names)
 
         X_tr = X_train[feature_names]
 
@@ -189,6 +236,7 @@ class M06AnomalyGate:
         if self._clf is None or self._bundle is None or self._threshold is None:
             raise RuntimeError("M06AnomalyGate is not fitted yet. Call train() first.")
 
+        _assert_feature_columns_present(X, self._bundle.feature_names)
         X_ord = X[self._bundle.feature_names]
 
         # AC3: Check for missing data in evaluation

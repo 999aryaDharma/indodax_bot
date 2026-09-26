@@ -52,3 +52,22 @@ Full lab suite verification: 179 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for M04-01.
 - Next unlocked consumers: No mandatory downstream (EXTENSION tier).
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave B RED (M01-01..M06-01 together): `python -m pytest tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py tests/unit/lab/models/test_m03_rf_regime.py tests/unit/lab/models/test_m04_quantile_risk.py tests/unit/lab/models/test_m05_meta_label.py tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `10 failed, 34 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - The AC3 tail-target leakage guard used exact set membership on the lower-cased column name, so it only refused a column literally named `target`, `label` or `outcome`. Every derived name a feature builder would realistically emit - `fwd_target_vol`, `target_vol`, `label_win`, `next_return`, `forward_return`, `realized_vol`, `outcome_up`, `future_return_5m` - passed the guard and let the tail target back into the model's own inputs. This is the causal-leakage prevention AC3 exists to provide. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Turned `FORBIDDEN_FEATURE_KEYWORDS` into an ordered tuple and switched the guard to substring matching, reporting the specific keyword that matched. The keyword set was extended with `return`, `realized`, `forward` and `future` so the derived spellings are covered. Trailing-window features that merely resemble a target, such as `volatility_20` and `depth_imbalance`, are deliberately not matched, and a companion test pins that they still train. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/m04_quantile_risk.py`, `tests/unit/lab/models/test_m04_quantile_risk.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_m04_quantile_risk.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

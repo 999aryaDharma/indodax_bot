@@ -52,3 +52,87 @@ Full lab suite verification: 191 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for SHADOW-02.
 - Next unlocked consumers: SHADOW-03, QA-01, R01-01, OPS-01, REPORT-02.
+
+---
+
+## Sprint review fix cycle — SHADOW-02 (batch `ops-shadow`)
+
+Actor: `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`
+Date: 2026-09-27 · Source SHA: uncommitted working tree (`feat/feat-02-finalization`) · Fix cycle: 1 of 1
+
+Scope note: this sprint owns two files, `src/indodax_lab/paper/portfolio.py` (shared capital ledger) and `src/indodax_lab/paper/live_shadow_engine.py` (forward shadow engine). Both were fixed in this cycle.
+
+### Findings fixed — `portfolio.py`
+
+| ID | Severity | Finding |
+|---|---|---|
+| SHADOW-02-P1 | Critical | `SharedLedgerCheckpoint.max_open_positions` was not persisted as a *cap*. It was restored as a soft field, so a restart silently reverted the cap to the constructor default of 2. After any restart the shared ledger would accept more concurrent paper positions than the operator had authorised. |
+| SHADOW-02-P2 | Critical | `SharedCapitalLedger.from_checkpoint` approved a restart even when the restored position count exceeded the configured cap, so a checkpoint that was already over-limit was restored as a valid, running state. |
+| SHADOW-02-P3 | Important | `initial_cash` was never persisted. After a restart the ledger could not prove the restored cash balance against the authorised starting capital, and a tampered cash figure restored as authentic. |
+| SHADOW-02-P4 | Important | The checkpoint had no integrity seal. A hand-edited or truncated checkpoint — e.g. one with `available_cash` rewritten to 900000 — was restored and reported as a clean restart. Violates the transactional checkpointing guarantee in `docs/specs/14-shadow-portfolios-and-promotion.md`. |
+
+#### RED evidence (`portfolio.py`)
+
+Command: `python -m pytest tests/unit/lab/paper/test_shared_ledger_restart_hardening.py -p no:cacheprovider -q`
+Result: **4 failed** — observed failures:
+- `AssertionError` — the max-open-positions cap reverted to `2` after a restart instead of restoring the configured value.
+- `AssertionError` — a restart was approved while the position count exceeded the cap.
+- `AssertionError: assert None is not None` — `initial_cash` was `None` on the restored ledger.
+- `AssertionError` — a tampered checkpoint carrying 900000 cash was restored and accepted as authentic.
+
+#### Fix (`portfolio.py`)
+
+- `SharedLedgerCheckpoint` gained `initial_cash: Decimal | None` and `max_open_positions: int = Field(default=2, ge=1)`.
+- `SharedLedgerCheckpoint` is now **auto-sealed**: a `model_validator(mode="after")` computes and stores a canonical `sha256` over the whole checkpoint payload.
+- New `CheckpointIntegrityError` plus `_checkpoint_digest()`. `from_checkpoint` recomputes the digest and refuses any checkpoint that does not match, and refuses an unsealed checkpoint outright.
+- `from_checkpoint` now restores `initial_cash` and `max_open_positions`, and derives the legacy cost basis as `available_cash + sum(cost_basis)` so a pre-seal checkpoint still restores coherently.
+- `SharedCapitalLedger` now carries an `initial_cash` attribute so a restart can be checked against the authorised capital.
+
+### Findings fixed — `live_shadow_engine.py`
+
+| ID | Severity | Finding |
+|---|---|---|
+| SHADOW-02-L1 | Critical | `LiveShadowEngine.reset_portfolio()` took **no authorization argument**. It rebuilds `PortfolioRiskManager`, which silently clears an active risk hard halt. Any holder of the engine object — an untrusted callback, a scheduler tick, a replay driver — could lift the risk governor. `docs/specs/14-shadow-portfolios-and-promotion.md` requires an *audited control* for exactly this, "never through untrusted callback". |
+| SHADOW-02-L2 | Critical | The same method executed `self.audit_log = []`, destroying the audit trail of the very positions it was wiping, and recorded no reason for clearing the halt. |
+| SHADOW-02-L3 | Important | Even when authorised, the halt-clearing action left no recorded reason or operator identity, so the cleared hard halt could not be reconstructed after the fact. |
+
+#### RED evidence (`live_shadow_engine.py`)
+
+Command: `python -m pytest tests/unit/lab/paper/test_live_shadow_engine_governance.py -p no:cacheprovider -q`
+Result: **4 failed, 2 passed** — observed failures:
+- `AssertionError: reset_portfolio() cleared an active risk hard halt with no authorization requirement; an untrusted caller can silently lift the risk governor` (`assert False is True`).
+- `AssertionError: An authorized hard-halt reset left no audit record` (`assert []`).
+- `AssertionError: reset_portfolio() destroyed the audit trail of the positions it wiped` (`assert [] == [{'action': 'PRIOR_ENTRY', ...}]`).
+- `TypeError: LiveShadowEngine.reset_portfolio() got an unexpected keyword argument 'operator_id'` — the governed API did not exist at all.
+
+The RED run was captured against the final version of the test file by temporarily reverting the source fix and restoring it immediately afterwards.
+
+#### Fix (`live_shadow_engine.py`)
+
+- `reset_portfolio` is now `reset_portfolio(*, operator_id: str, reason: str, authorization_ref: str)`. A blank or whitespace-only value for any of the three raises the new `UnauthorizedPortfolioResetError` (`SHADOW_RESET_AUTHORIZATION_REQUIRED:<field>`) before any state is touched.
+- The audit entry `{"action": "PORTFOLIO_RESET_AUTHORIZED", "operator_id", "authorization_ref", "detail", "reason", "timestamp"}` is **appended before** the ledger/positions/risk manager are rebuilt, and `self.audit_log` is never truncated. `detail` records `hard_halt_cleared` vs `no_active_halt` plus the discarded position/trade counts.
+- `save_state(event_type="RESET", event_payload={operator_id, authorization_ref, reason})` now persists the authorisation in the causal event, not just the checkpoint.
+- `LiveShadowEngine.__init__` still calls `save_state(event_type="INITIALIZE")`; that first-run path is unchanged and unaffected by the new gate.
+- Caller updated: `run_shadow_bot.py` now supplies `--operator`, `--reason` and `--authorization-ref` (defaulting to `CLI-RESET-<epoch>`) and prints the audit reference. A bare `reset_portfolio()` call from the CLI is no longer reachable.
+
+### GREEN evidence
+
+Commands and results:
+- `python -m pytest tests/unit/lab/paper/test_live_shadow_engine_governance.py -p no:cacheprovider -q` → **6 passed**
+- `python -m pytest tests/unit/lab/paper -p no:cacheprovider -q` → **54 passed**
+- `python -m pytest tests/unit/lab/paper tests/unit/lab/portfolio tests/unit/lab/operations tests/integration/lab/test_backup_restore.py tests/integration/lab/test_service_lifecycle.py tests/integration/lab/test_operational_recovery.py tests/integration/lab/test_retention.py -p no:cacheprovider -q` → **110 passed**
+
+### Files changed
+- `src/indodax_lab/paper/portfolio.py`
+- `src/indodax_lab/paper/live_shadow_engine.py`
+- `src/indodax_lab/paper/__init__.py` (new export: `CheckpointIntegrityError`)
+- `run_shadow_bot.py` (CLI caller updated for the new authorised reset signature)
+- `tests/unit/lab/paper/test_shared_ledger_restart_hardening.py` (new RED suite)
+- `tests/unit/lab/paper/test_live_shadow_engine_governance.py` (new RED suite)
+
+### Isolation
+All tests use a `tmp_path` SQLite state file, a synthetic cost schedule, and a hard halt driven through the public `observe_equity` surface. `fetch_live_market_data` is **never** called. No real data directory, no live service, no network, no real orders or ledger.
+
+### Deferred minors (recorded, not fixed — one fix cycle only)
+- `LiveShadowEngine.load_state` truncates the restored audit log to `self.audit_log[-200:]`, so a long-lived shadow deployment silently drops the oldest audit entries on every restart. Worth a separate retention decision for the audit log.
+- `save_state` builds `event_id` from `f"{event_type}:{now.isoformat()}:{len(self.closed_trades)}:{len(self.open_positions)}"`; two saves within the same clock tick with identical counts would collide on the event id.

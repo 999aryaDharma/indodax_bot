@@ -210,7 +210,13 @@ def test_adjacent_folds_use_half_open_decision_boundaries():
                           label_end_ts=boundary + timedelta(hours=1)).model_copy(
         update={"label_available_at": boundary + timedelta(hours=2)}
     )
-    assignment = assign_folds([sample], policy).assignments["boundary"]
+    # Embargo is on by default (SPLIT-01), so the half-open boundary probe must
+    # opt out explicitly and in writing; the embargo path is asserted below.
+    assignment = assign_folds(
+        [sample], policy,
+        enforce_inter_fold_embargo=False,
+        embargo_opt_out_reason="HALF_OPEN_BOUNDARY_PROBE",
+    ).assignments["boundary"]
     assert assignment.role == SampleRole.VALIDATION
 
     embargoed = assign_folds([sample], policy, enforce_inter_fold_embargo=True)

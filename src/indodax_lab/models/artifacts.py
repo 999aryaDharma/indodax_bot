@@ -22,6 +22,8 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from indodax_lab.models.calibration import HeldOutCalibrator
+
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -33,7 +35,11 @@ class BundleChecksumMismatchError(ValueError):
 
 
 class MissingCalibrationMetadataError(ValueError):
-    """Raised when a bundle's calibration block is absent or missing required fields (a, b, method)."""
+    """Raised when a bundle's calibration block is absent, incomplete, or unfit for replay.
+
+    Covers a missing block, missing required fields, non-finite parameters, and a
+    calibration segment that is not an inner held-out split.
+    """
 
 
 class BundleFeatureMismatchError(ValueError):
@@ -75,6 +81,30 @@ def _assert_finite_json(value: Any, path: str) -> None:
     elif isinstance(value, (list, tuple)):
         for index, member in enumerate(value):
             _assert_finite_json(member, f"{path}[{index}]")
+
+
+def _assert_inner_heldout_calibration(calibration: dict[str, Any]) -> None:
+    """Re-assert the ML-02 calibration invariant at the bundle trust boundary.
+
+    ``HeldOutCalibrator`` refuses to fit on train/test segments, but a portable bundle is
+    loaded from bytes and can be built or edited anywhere. A bundle whose calibration
+    block claims a train/test segment means sealed or out-of-fold labels reached the
+    calibrator, so replay must refuse it instead of serving the predictions (ML-04-AC2).
+    """
+    segment = calibration.get("segment_type")
+    normalized = str(segment).strip().lower()
+    if normalized in HeldOutCalibrator.FORBIDDEN_SEGMENTS or normalized not in HeldOutCalibrator.VALID_SEGMENTS:
+        raise MissingCalibrationMetadataError(
+            f"CALIBRATION_SEGMENT_FORBIDDEN: calibration segment_type '{segment}' is not an inner "
+            f"held-out segment. Allowed: {sorted(HeldOutCalibrator.VALID_SEGMENTS)}."
+        )
+
+    for field in ("a", "b"):
+        value = calibration.get(field)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise MissingCalibrationMetadataError(
+                f"FINITE_VALUE_REQUIRED:calibration.{field} must be a finite number, got {value!r}."
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +167,7 @@ class PortableBundle(BaseModel):
             raise ValueError("PREPROCESSING_FEATURE_SCHEMA_MISMATCH")
         if not self.provenance.get("source_bundle_hash"):
             raise ValueError("PROVENANCE_SOURCE_BUNDLE_HASH_REQUIRED")
+        _assert_inner_heldout_calibration(self.calibration)
         _assert_finite_json(self.coefficients, "coefficients")
         _assert_finite_json(self.intercept, "intercept")
         _assert_finite_json(self.calibration, "calibration")
@@ -309,6 +340,7 @@ class PortableBundleLoader:
                 f"MISSING_CALIBRATION_FIELDS: Required calibration fields absent: {sorted(missing_cal_fields)}. "
                 "Bundle integrity cannot be guaranteed without complete calibration metadata."
             )
+        _assert_inner_heldout_calibration(calibration)
 
         # --- AC1: Verify weights checksum ---
         stored_checksum: str = payload.get("weights_checksum", "")

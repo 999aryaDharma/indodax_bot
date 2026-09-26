@@ -283,3 +283,45 @@ def test_nonfinite_parameters_are_rejected_even_with_matching_full_hash() -> Non
 
     with pytest.raises(ValueError, match="FINITE"):
         PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+@pytest.mark.parametrize(
+    "segment_type",
+    ["sealed_test", "train", "training", "test", "outer_val", "outer_validation"],
+)
+def test_loader_rejects_bundle_calibrated_on_a_forbidden_segment(segment_type: str) -> None:
+    """Regression: the loader never re-validated the calibration segment provenance.
+
+    ``HeldOutCalibrator`` refuses to fit on train/test segments, but the portable bundle
+    is the replay trust boundary: a bundle whose calibration block claims a forbidden
+    segment used to load and serve calibrated predictions, so sealed or out-of-fold
+    labels could reach production inference through the artifact.
+    """
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    payload["calibration"]["segment_type"] = segment_type
+    # Re-seal the tampered payload so only the segment provenance is under test.
+    payload["weights_checksum"] = hashlib.sha256(
+        json.dumps(
+            {"coefficients": payload["coefficients"], "intercept": payload["intercept"]},
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    payload["bundle_hash"] = _canonical_payload_hash(payload)
+
+    with pytest.raises(MissingCalibrationMetadataError, match="CALIBRATION_SEGMENT_FORBIDDEN"):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+def test_loader_rejects_non_finite_calibration_parameters() -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    payload["calibration"]["a"] = "NaN"
+    payload["weights_checksum"] = hashlib.sha256(
+        json.dumps(
+            {"coefficients": payload["coefficients"], "intercept": payload["intercept"]},
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    payload["bundle_hash"] = _canonical_payload_hash(payload)
+
+    with pytest.raises(ValueError, match="FINITE"):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))

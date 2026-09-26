@@ -52,3 +52,50 @@ Full lab suite verification: 199 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for SHADOW-03.
 - Next unlocked consumers: No mandatory downstream.
+
+---
+
+## Sprint review fix cycle — SHADOW-03 (batch `ops-shadow`)
+
+Actor: `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`
+Date: 2026-09-27 · Source SHA: uncommitted working tree (`feat/feat-02-finalization`) · Fix cycle: 1 of 1
+
+### Findings fixed
+
+| ID | Severity | Finding |
+|---|---|---|
+| SHADOW-03-F1 | Critical | `evaluate_promotion` auto-promoted a challenger that merely satisfied the count/duration thresholds, ignoring forward *quality*. `ChallengerEvidence.outperformance` had a silent default, so a challenger with equal or worse forward performance replaced the champion. |
+| SHADOW-03-F2 | Critical | `evaluate_promotion(challenger)` had no approval parameter at all. Promotion was a pure function call — any caller, including an untrusted callback, could promote a challenger with no approver identity, no evidence reference and no review. Violates "no automatic merge" in `docs/specs/14-shadow-portfolios-and-promotion.md`. |
+| SHADOW-03-F3 | Critical | Nothing bound the approval to the evidence it reviewed. An approval captured for one evidence snapshot could promote a *different* challenger, and stale evidence (months old) promoted indefinitely. |
+| SHADOW-03-F4 | Important | `ChampionRegistry` exposed no rollback, so a bad promotion could only be undone by hand-editing registry state. |
+
+### RED evidence (real assertion failures, no assertion weakened/deleted/skipped)
+
+Command: `python -m pytest tests/unit/lab/paper/test_promotion_gate_hardening.py -p no:cacheprovider -q`
+Result: **4 failed** — observed failures:
+- `AssertionError: assert 'challenger_m02' == 'champion_m01'` — an equal-performance challenger was promoted over the live champion.
+- `AssertionError: assert None == 'champion_m01'` — `previous_champion_id` was `None`, so the decision record carried no promotion lineage.
+- Two further assertion failures on the missing-approval and self-approval paths.
+
+### Fix
+
+- `ChallengerEvidence.outperformance` is now **required** (no default) and enforced: a challenger that does not beat the champion raises the new `InsufficientQualityPromotionError`.
+- `evaluate_promotion(challenger, approval: PromotionApproval | None = None)` now **fails closed**: a missing approval raises `MissingPromotionApprovalError` instead of promoting.
+- New `PromotionApproval` carries `approver_id`, `approved_at_utc`, `evidence_id`, `evidence_digest` and `reason`; the engine rejects `approver_id == evidence.submitted_by` via `SelfApprovalForbiddenError`.
+- New `ChallengerEvidence.evidence_digest()` returns a canonical sha256 over the evidence payload, and `evaluate_promotion` recomputes it — a digest mismatch raises `StalePromotionEvidenceError`, as does evidence older than `max_evidence_age_days=30`.
+- `PromotionDecision` gained `previous_champion_id`, `previous_champion_version`, `approved_by` and `evidence_digest`; `NoPromotedChampionError` replaces silent `None` for rollback.
+- `ChampionRegistry` gained `promotion_history` and `rollback_last_promotion()`.
+
+### GREEN evidence
+
+Command: `python -m pytest tests/unit/lab/paper -p no:cacheprovider -q`
+Result: **54 passed** (includes the pre-existing `test_promotion.py`, strengthened not weakened — it now supplies `evidence_id`, `evaluated_at_utc` and an explicit `_make_approval()`).
+
+### Files changed
+- `src/indodax_lab/paper/promotion.py`
+- `src/indodax_lab/paper/__init__.py` (new exports: `InsufficientQualityPromotionError`, `MissingPromotionApprovalError`, `NoPromotedChampionError`, `PromotionApproval`, `SelfApprovedPromotionError`, `StalePromotionEvidenceError`)
+- `tests/unit/lab/paper/test_promotion_gate_hardening.py` (new RED suite)
+- `tests/unit/lab/paper/test_promotion.py` (existing suite strengthened to supply the now-required approval and evidence fields)
+
+### Isolation
+All tests use `tmp_path` and in-memory fakes only. No real data directory, no live service, no network, no real orders or ledger.

@@ -39,15 +39,22 @@ class TailTargetLeakageError(ValueError):
 # Domain models
 # ---------------------------------------------------------------------------
 
-FORBIDDEN_FEATURE_KEYWORDS = {
+# M04-01-AC3: causal leakage prevention. These are matched as *substrings* of the
+# lower-cased column name, so derived spellings (fwd_target_vol, label_win,
+# next_return, outcome_up) are caught too. Exact set membership only refused a column
+# literally named "target" or "label" and let every realistic derived name through.
+FORBIDDEN_FEATURE_KEYWORDS = (
     "tail_target",
     "target",
     "label",
-    "realized_return",
-    "future_return",
-    "y_true",
+    "return",
+    "realized",
+    "future",
+    "forward",
     "outcome",
-}
+    "y_true",
+    "y_pred",
+)
 
 
 class M04Config(BaseModel):
@@ -142,9 +149,11 @@ class M04QuantileTrainer:
         # AC3: Check for tail target or label leakage in features
         for col in feature_names:
             col_lower = col.strip().lower()
-            if col_lower in FORBIDDEN_FEATURE_KEYWORDS or "tail_target" in col_lower:
+            hit = next((kw for kw in FORBIDDEN_FEATURE_KEYWORDS if kw in col_lower), None)
+            if hit is not None:
                 raise TailTargetLeakageError(
-                    f"TAIL_TARGET_LEAKAGE: Feature '{col}' contains target or tail information. "
+                    f"TAIL_TARGET_LEAKAGE: Feature '{col}' contains forbidden keyword "
+                    f"'{hit}' (target or tail information). "
                     "Tail target must not be used as an input feature (M04-01-AC3)."
                 )
 

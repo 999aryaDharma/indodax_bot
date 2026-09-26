@@ -22,6 +22,12 @@ from indodax_lab.models.tuning import (
     TrialStatus,
 )
 
+# ADR-003 "Default budgets" pins the classical/ML search caps as research policy:
+# ML 30 trials, and at most one near-miss revision per model. The literals below are
+# the contract, deliberately not imported from the implementation.
+ADR003_MAX_TRIALS = 30
+ADR003_MAX_REVISIONS = 1
+
 
 def test_ml_03_valid_contract() -> None:
     """ML-03-AC0: Search mencatat trial budget dan tidak memakai sealed test sebagai objective."""
@@ -287,4 +293,215 @@ def test_ml_03_edge_cases_and_winning_recipe() -> None:
         target_objective="inner_val_pnl",
     )
     assert h1 == space_clone.space_hash()
+
+
+# ---------------------------------------------------------------------------
+# Regression: objective guard was substring-based (ML-03-AC0)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "lookalike",
+    [
+        "outer_val_loss",
+        "outer_validation_loss",
+        "holdout_pnl",
+        "sealed_test_v2_sharpe",
+        "test_sharpe",
+        "innerval_sharpe",
+        "inner_val_sharpe_v2",
+        "cv_test_pnl",
+        "latest_pnl",
+        "",
+    ],
+)
+def test_ml_03_ac0_objective_guard_is_an_exact_allowlist(lookalike: str) -> None:
+    """Only registered inner-validation objectives may drive a search.
+
+    The previous guard was a substring scan for `test`/`sealed`, so lookalike names such
+    as `outer_val_loss` and `holdout_pnl` slipped through and let sealed or out-of-fold
+    data act as the tuning objective.
+    """
+    with pytest.raises(SealedTestObjectiveForbiddenError, match="SEALED_TEST_OBJECTIVE_FORBIDDEN"):
+        SearchSpace(
+            space_id="sp_m01_lr",
+            version="1.0.0",
+            params={"C": [0.01, 0.1]},
+            target_objective=lookalike,
+        )
+
+
+@pytest.mark.parametrize(
+    "allowed",
+    ["inner_val_sharpe", "inner_val_pnl", "inner_val_log_loss", "inner_val_brier"],
+)
+def test_ml_03_ac0_registered_inner_validation_objectives_are_accepted(allowed: str) -> None:
+    space = SearchSpace(
+        space_id="sp_m01_lr",
+        version="1.0.0",
+        params={"C": [0.01, 0.1]},
+        target_objective=allowed,
+    )
+    assert space.target_objective == allowed
+
+
+# ---------------------------------------------------------------------------
+# Regression: ADR-003 caps were never enforced (ML-03-AC3)
+# ---------------------------------------------------------------------------
+
+def test_ml_03_ac3_constructor_refuses_to_raise_the_adr003_trial_cap() -> None:
+    """ADR-003 caps ML search at 30 trials; the cap must not be raisable by the caller."""
+    space = SearchSpace(
+        space_id="sp_m01_lr",
+        version="1.0.0",
+        params={"C": [0.01, 0.1]},
+        target_objective="inner_val_sharpe",
+    )
+
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        BoundedTrialSearch(search_space=space, max_trials=ADR003_MAX_TRIALS + 1)
+
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        BoundedTrialSearch(search_space=space, max_trials=0)
+
+    # The documented cap itself stays constructible and the budget is a real cap.
+    capped = BoundedTrialSearch(search_space=space, max_trials=ADR003_MAX_TRIALS)
+    assert capped.budget.max_trials == ADR003_MAX_TRIALS
+
+
+def test_ml_03_ac3_constructor_refuses_to_raise_the_adr003_revision_cap() -> None:
+    """ADR-003 permits at most one near-miss revision per model."""
+    space = SearchSpace(
+        space_id="sp_m01_lr",
+        version="1.0.0",
+        params={"C": [0.01, 0.1]},
+        target_objective="inner_val_sharpe",
+    )
+
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        BoundedTrialSearch(search_space=space, max_revisions=ADR003_MAX_REVISIONS + 1)
+
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        BoundedTrialSearch(search_space=space, max_revisions=-1)
+
+    # A budget of 0 revisions is *stricter* than the cap, not a cap violation, so it
+    # stays constructible and must fail closed on the very first revision attempt.
+    locked = BoundedTrialSearch(search_space=space, max_revisions=0)
+    with pytest.raises(RevisionBudgetExhaustedError, match="REVISION_BUDGET_EXHAUSTED"):
+        locked.revise_search_space(space)
+    assert locked.budget.revision_count == 0
+
+    single = BoundedTrialSearch(search_space=space, max_revisions=ADR003_MAX_REVISIONS)
+    assert single.budget.max_revisions == ADR003_MAX_REVISIONS
+
+
+def test_ml_03_ac3_trial_budget_under_the_cap_still_fails_closed() -> None:
+    """A sub-cap budget must still stop the next trial instead of silently allowing it."""
+    space = SearchSpace(
+        space_id="sp_m01_lr",
+        version="1.0.0",
+        params={"C": [0.01, 0.1]},
+        target_objective="inner_val_sharpe",
+    )
+    search = BoundedTrialSearch(search_space=space, max_trials=3)
+    for i in range(3):
+        search.register_trial(
+            trial_id=f"t_{i}", params={"C": 0.01}, status=TrialStatus.SUCCESS, objective_score=0.5
+        )
+
+    with pytest.raises(TrialBudgetExhaustedError, match="TRIAL_BUDGET_EXHAUSTED"):
+        search.register_trial(
+            trial_id="t_over", params={"C": 0.01}, status=TrialStatus.SUCCESS, objective_score=0.9
+        )
+
+
+def test_ml_03_trial_budget_model_cannot_be_constructed_over_the_adr003_cap() -> None:
+    """The cap is enforced on the budget record itself, not only on the search wrapper."""
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        TrialBudget(max_trials=ADR003_MAX_TRIALS + 1, max_revisions=ADR003_MAX_REVISIONS)
+
+    with pytest.raises(ValueError, match="BUDGET_POLICY_VIOLATION"):
+        TrialBudget(max_trials=ADR003_MAX_TRIALS, max_revisions=ADR003_MAX_REVISIONS + 1)
+
+
+# ---------------------------------------------------------------------------
+# Regression: from_state trusted serialized counters (ML-03-AC2 / AC3)
+# ---------------------------------------------------------------------------
+
+def _search_space() -> SearchSpace:
+    return SearchSpace(
+        space_id="sp_m01_lr",
+        version="1.0.0",
+        params={"C": [0.01, 0.1]},
+        target_objective="inner_val_sharpe",
+    )
+
+
+def _state_with_one_trial() -> dict:
+    space = _search_space()
+    search = BoundedTrialSearch(search_space=space)
+    search.register_trial(
+        trial_id="t_0", params={"C": 0.01}, status=TrialStatus.SUCCESS, objective_score=0.5
+    )
+    return search.export_state()
+
+
+def test_ml_03_from_state_rejects_understated_consumed_trials() -> None:
+    """`from_state` must reconstruct the trial counter, not trust the serialized value.
+
+    Tampering the persisted counter downward would otherwise hand back a search that
+    believes it still has a full trial budget while trials are already recorded.
+    """
+    state = _state_with_one_trial()
+    assert len(state["trials"]) == 1
+    state["budget"]["consumed_trials"] = 0
+
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(state, search_space=_search_space())
+
+
+def test_ml_03_from_state_rejects_overstated_consumed_trials() -> None:
+    state = _state_with_one_trial()
+    state["budget"]["consumed_trials"] = 99
+
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(state, search_space=_search_space())
+
+
+def test_ml_03_from_state_rejects_raised_trial_cap() -> None:
+    """A serialized budget must not be able to raise the ADR-003 trial cap on resume."""
+    state = _state_with_one_trial()
+    state["budget"]["max_trials"] = ADR003_MAX_TRIALS + 1
+
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(state, search_space=_search_space())
+
+
+def test_ml_03_from_state_rejects_raised_revision_cap_and_count() -> None:
+    state = _state_with_one_trial()
+
+    raised_cap = _state_with_one_trial()
+    raised_cap["budget"]["max_revisions"] = ADR003_MAX_REVISIONS + 1
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(raised_cap, search_space=_search_space())
+
+    over_consumed = _state_with_one_trial()
+    over_consumed["budget"]["revision_count"] = ADR003_MAX_REVISIONS + 1
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(over_consumed, search_space=_search_space())
+
+    negative = _state_with_one_trial()
+    negative["budget"]["revision_count"] = -1
+    with pytest.raises(ResumeConfigMismatchError, match="RESUME_CONFIG_MISMATCH"):
+        BoundedTrialSearch.from_state(negative, search_space=_search_space())
+
+
+def test_ml_03_from_state_preserves_the_budget_a_matching_checkpoint_reports() -> None:
+    """A consistent checkpoint still resumes with the same remaining budget."""
+    space = _search_space()
+    state = _state_with_one_trial()
+    resumed = BoundedTrialSearch.from_state(state, search_space=space)
+
+    assert resumed.budget.consumed_trials == 1
+    assert resumed.budget.remaining_trials == ADR003_MAX_TRIALS - 1
+    assert len(resumed.trials) == 1
 

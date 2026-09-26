@@ -52,3 +52,25 @@ Full lab suite verification: 144 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for ML-03.
 - Next unlocked consumers: M01-01, M02-01.
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave A RED (ML-01..ML-04 together): `python -m pytest tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_execution_mapper.py tests/unit/lab/models/test_tuning_budget.py tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `24 failed, 40 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - The target-objective guard was a substring test over a loose token list, so non-objective names such as `outer_val_loss`, `holdout_pnl`, `inner_val_loss` and `validation_auc` were accepted as bounded-search objectives. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Important** - The ADR-003 caps were not enforced. `BoundedTrialSearch(max_trials=100000, max_revisions=99)` constructed successfully and accepted 40 trials and 10 revisions, against an ADR that allows 30 trials and at most one revision. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Important** - `from_state` trusted the persisted counters. A checkpoint claiming `consumed_trials=0` with `max_trials=100000` and one recorded trial resumed with `remaining_trials=100000`, which is a silent budget reset rather than a resume. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added `BudgetPolicyViolationError(ValueError)`, the `ADR003_MAX_TRIALS = 30` / `ADR003_MAX_REVISIONS = 1` constants, and an `ALLOWED_TARGET_OBJECTIVES` allowlist of the nine exact `inner_val_*` objective names. `SearchSpace.__init__` now accepts only the allowlist. `TrialBudget` gained an `enforce_adr003_caps` validator and cap-derived defaults, and `BoundedTrialSearch.__init__` defaults from the constants. `from_state` was rewritten to validate the caps, reconstruct `consumed_trials = len(outcomes)`, cross-check the claimed value, and validate `revision_count` within `[0, max_revisions]`. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Test correction recorded** - The new regression test initially asserted that `max_revisions=0` was a policy violation. That assertion encoded a wrong invariant, because a budget of 0 revisions is *stricter* than the ADR-003 cap rather than a breach of it. The assertion was corrected to require that `max_revisions=0` stays constructible and fails closed on the first `revise_search_space` call with `REVISION_BUDGET_EXHAUSTED`, and `max_revisions=-1` was used for the negative case. This is a correction of an incorrect test premise, not a weakening of coverage. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/tuning.py`, `tests/unit/lab/models/test_tuning_budget.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_tuning_budget.py -p no:cacheprovider -q` -> `28 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

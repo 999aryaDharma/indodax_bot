@@ -1,6 +1,7 @@
 """Host operations, backup, transfer, and restore subsystem (OPS-02)."""
 
 from indodax_lab.operations.backup import (
+    BackupVerificationError,
     backup_sqlite_db,
     compute_sha256,
     create_backup_bundle,
@@ -29,6 +30,7 @@ from indodax_lab.operations.service_lifecycle import (
 )
 
 __all__ = [
+    "BackupVerificationError",
     "ChecksumMismatchError",
     "CorruptTransferError",
     "RestoreResult",

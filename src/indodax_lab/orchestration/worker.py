@@ -25,6 +25,16 @@ from indodax_lab.orchestration.resources import (
 )
 
 
+class CheckpointIntegrityError(RuntimeError):
+    """Raised when a persisted checkpoint cannot be trusted to resume from.
+
+    A checkpoint drives both which step is resumed at and whether the workload is
+    already complete. Unvalidated on-disk state can therefore fabricate a
+    SUCCESS that never ran the work, or replay step indices that do not exist, so
+    an untrustworthy checkpoint must be refused rather than acted on.
+    """
+
+
 class WorkerConfig(BaseModel):
     """Configuration for an execution worker process."""
 
@@ -135,18 +145,67 @@ class ResearchWorker:
             checkpoint_path=checkpoint_path,
         )
 
+    def _load_verified_checkpoint(self, job_id: str, total_steps: int) -> dict[str, Any]:
+        """Load a checkpoint and refuse to resume from untrustworthy state.
+
+        A checkpoint decides both which step runs next and whether the workload is
+        already finished, so fabricated or stale on-disk state would report a
+        SUCCESS that never executed the work or replay step indices that do not
+        exist. Anything unprovable is refused rather than acted on.
+        """
+        checkpoint_path = self.get_checkpoint_path(job_id)
+        try:
+            data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise CheckpointIntegrityError(
+                f"CHECKPOINT_UNREADABLE: {checkpoint_path} cannot be parsed: {exc}"
+            ) from exc
+
+        if not isinstance(data, dict):
+            raise CheckpointIntegrityError(
+                f"CHECKPOINT_UNREADABLE: {checkpoint_path} is not a checkpoint object: "
+                f"{type(data).__name__}"
+            )
+
+        recorded_job_id = data.get("job_id")
+        if recorded_job_id != job_id:
+            raise CheckpointIntegrityError(
+                f"CHECKPOINT_JOB_ID_MISMATCH: {checkpoint_path} belongs to "
+                f"{recorded_job_id!r}, not {job_id!r}"
+            )
+
+        last_completed_step = data.get("last_completed_step")
+        if isinstance(last_completed_step, bool) or not isinstance(last_completed_step, int):
+            raise CheckpointIntegrityError(
+                f"CHECKPOINT_STEP_OUT_OF_RANGE: {checkpoint_path} recorded "
+                f"last_completed_step={last_completed_step!r} which is not an integer"
+            )
+        if not -1 <= last_completed_step <= total_steps - 1:
+            raise CheckpointIntegrityError(
+                f"CHECKPOINT_STEP_OUT_OF_RANGE: {checkpoint_path} recorded "
+                f"last_completed_step={last_completed_step} outside "
+                f"[-1, {total_steps - 1}] for total_steps={total_steps}"
+            )
+
+        return data
+
     def resume_from_checkpoint(
         self,
         job: JobRecord,
         total_steps: int,
         step_fn: Callable[[int], dict[str, Any] | None],
     ) -> ExecutionResult:
-        """Resume execution from the last persisted checkpoint."""
+        """Resume execution from the last persisted checkpoint.
+
+        Raises:
+            CheckpointIntegrityError: if the persisted checkpoint is unreadable,
+                belongs to another job, or records progress outside the workload.
+        """
         checkpoint_path = self.get_checkpoint_path(job.job_id)
         if not checkpoint_path.exists():
             return self.execute_steps(job, total_steps, step_fn, start_step=0)
 
-        data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        data = self._load_verified_checkpoint(job.job_id, total_steps)
         next_step = data["last_completed_step"] + 1
 
         if next_step >= total_steps:

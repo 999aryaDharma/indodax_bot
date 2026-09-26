@@ -13,6 +13,8 @@ AC boundaries:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
 # These imports will fail until implementation exists — RED phase
@@ -21,6 +23,7 @@ from indodax_lab.paper.promotion import (
     ChampionRegistry,
     InsufficientForwardDurationError,
     InsufficientForwardTradesError,
+    PromotionApproval,
     PromotionDecision,
     UnsealedCandidatePromotionError,
 )
@@ -42,11 +45,26 @@ def _make_evidence(
     return ChallengerEvidence(
         candidate_id=candidate_id,
         candidate_version=candidate_version,
+        evidence_id=f"eval-{candidate_id}",
+        evaluated_at_utc=datetime.now(UTC),
         is_sealed_pass=is_sealed_pass,
         forward_days=forward_days,
         closed_trades_count=closed_trades_count,
         has_policy_breach=has_policy_breach,
         outperformance=outperformance,
+    )
+
+
+def _make_approval(
+    evidence: ChallengerEvidence, approver_id: str = "reviewer_ops"
+) -> PromotionApproval:
+    """Explicit recorded human approval bound to this exact evidence digest."""
+    return PromotionApproval(
+        approver_id=approver_id,
+        approved_at_utc=datetime.now(UTC),
+        evidence_id=evidence.evidence_id,
+        evidence_digest=evidence.evidence_digest(),
+        reason="Independent review of sealed pass, forward window and cost schedule.",
     )
 
 
@@ -69,7 +87,7 @@ def test_shadow_03_valid_contract():
         is_sealed_pass=True,
     )
 
-    decision = registry.evaluate_promotion(evidence)
+    decision = registry.evaluate_promotion(evidence, _make_approval(evidence))
 
     assert isinstance(decision, PromotionDecision)
     assert decision.promoted is True
@@ -91,7 +109,7 @@ def test_shadow_03_contract_1():
     )
 
     with pytest.raises(InsufficientForwardDurationError):
-        registry.evaluate_promotion(fast_evidence)
+        registry.evaluate_promotion(fast_evidence, _make_approval(fast_evidence))
 
     # Active champion must remain unchanged
     assert registry.active_champion_id == "champion_m01"
@@ -111,7 +129,7 @@ def test_shadow_03_contract_2():
     )
 
     with pytest.raises(InsufficientForwardTradesError):
-        registry.evaluate_promotion(sparse_evidence)
+        registry.evaluate_promotion(sparse_evidence, _make_approval(sparse_evidence))
 
     # Active champion must remain unchanged
     assert registry.active_champion_id == "champion_m01"

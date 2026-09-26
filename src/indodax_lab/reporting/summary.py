@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import math
+import re
 from typing import Any, Sequence
 from pydantic import BaseModel, ConfigDict
 
@@ -18,9 +20,43 @@ from indodax_lab.evaluation.gates import EvaluationOutcome, EvaluationResult
 from indodax_lab.evaluation.registry import ExperimentRunRecord, ExperimentRunStatus
 
 
+# Table-structure characters: a newline or pipe in an untrusted value breaks the
+# Markdown table and injects rows that a reader cannot distinguish from real
+# ranked data. Full Markdown-special escaping is deliberately not applied here,
+# because these reports are read as Markdown by humans and REPORT-02 owns the
+# full MarkdownV2 escaping for the Telegram surface.
+_MD_TABLE_UNSAFE = re.compile(r"[|\r\n\t\x00-\x1f]")
+
+
+def _md_cell(value: Any) -> str:
+    """Render a value safely inside a Markdown table cell or inline code span."""
+    return _MD_TABLE_UNSAFE.sub(" ", str(value)).strip()
+
+
+def _finite_metric(metrics: dict[str, Any], key: str) -> float | None:
+    """Return a metric only when it is a real, finite, numeric measurement.
+
+    A missing key, ``None``, a bool, a non-numeric value, NaN and +/-infinity all
+    mean "no usable measurement" rather than a number, so every one of them
+    returns ``None``. Reporting them as a value would state a performance result
+    that was never measured.
+    """
+    raw = metrics.get(key)
+    if raw is None or isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return None
+    val = float(raw)
+    return val if math.isfinite(val) else None
+
+
 def _format_metric_display(key: str, val: Any) -> str:
     """Format metric value safely, never converting missing/None data to 0.00%."""
     if val is None:
+        return "NO_DATA"
+
+    if isinstance(val, bool):
+        return "NO_DATA"
+
+    if isinstance(val, (int, float)) and not math.isfinite(float(val)):
         return "NO_DATA"
 
     if key == "data_quality_score" and isinstance(val, (int, float)):
@@ -35,7 +71,7 @@ def _format_metric_display(key: str, val: Any) -> str:
     if isinstance(val, int):
         return str(val)
 
-    return str(val)
+    return _md_cell(val)
 
 
 class ExperimentSummaryReport(BaseModel):
@@ -117,14 +153,14 @@ class ExperimentSummaryReport(BaseModel):
     def to_markdown(self) -> str:
         """Generate human-readable compact markdown report."""
         lines: list[str] = [
-            f"## Experiment Summary: {self.run_id}",
+            f"## Experiment Summary: {_md_cell(self.run_id)}",
             "",
             "### Candidate Information",
-            f"- **Candidate ID**: `{self.candidate_id}`",
-            f"- **Candidate Version**: `{self.candidate_version}`",
-            f"- **Family**: `{self.family}`",
-            f"- **Status**: `{self.status}`",
-            f"- **Outcome**: `{self.outcome}`",
+            f"- **Candidate ID**: `{_md_cell(self.candidate_id)}`",
+            f"- **Candidate Version**: `{_md_cell(self.candidate_version)}`",
+            f"- **Family**: `{_md_cell(self.family)}`",
+            f"- **Status**: `{_md_cell(self.status)}`",
+            f"- **Outcome**: `{_md_cell(self.outcome)}`",
             f"- **Created At**: `{self.created_at.isoformat()}`",
             "",
             "### Key Performance Metrics",
@@ -146,26 +182,33 @@ class ExperimentSummaryReport(BaseModel):
         for k, label in key_order:
             if k in self.metrics:
                 displayed_keys.add(k)
-                lines.append(f"| {label} | {_format_metric_display(k, self.metrics[k])} |")
+                lines.append(f"| {_md_cell(label)} | {_md_cell(_format_metric_display(k, self.metrics[k]))} |")
 
         for k, v in self.metrics.items():
             if k not in displayed_keys:
-                lines.append(f"| {k} | {_format_metric_display(k, v)} |")
+                lines.append(f"| {_md_cell(k)} | {_md_cell(_format_metric_display(k, v))} |")
 
         lines.extend([
             "",
             "### Evaluation Gates",
-            f"- **Passed Gates**: {', '.join(f'`{g}`' for g in self.passed_gates) if self.passed_gates else 'None'}",
-            f"- **Failed Gates**: {', '.join(f'`{g}`' for g in self.failed_gates) if self.failed_gates else 'None'}",
-            f"- **Rejection Reasons**: {', '.join(f'`{r}`' for r in self.reasons) if self.reasons else 'None'}",
+            f"- **Passed Gates**: {', '.join(f'`{_md_cell(g)}`' for g in self.passed_gates) if self.passed_gates else 'None'}",
+            f"- **Failed Gates**: {', '.join(f'`{_md_cell(g)}`' for g in self.failed_gates) if self.failed_gates else 'None'}",
+            f"- **Rejection Reasons**: {', '.join(f'`{_md_cell(r)}`' for r in self.reasons) if self.reasons else 'None'}",
         ])
+
+        if self.error_message:
+            lines.extend([
+                "",
+                "### Run Error",
+                f"- **Error Message**: `{_md_cell(self.error_message)}`",
+            ])
 
         if self.dsr is not None or self.pbo is not None:
             lines.extend([
                 "",
                 "### Statistical Selection Adjustments",
-                f"- **DSR**: {f'{self.dsr:.4f}' if self.dsr is not None else 'N/A'} ({self.dsr_status})",
-                f"- **PBO**: {f'{self.pbo:.4f}' if self.pbo is not None else 'N/A'} ({self.pbo_status})",
+                f"- **DSR**: {f'{self.dsr:.4f}' if self.dsr is not None else 'N/A'} ({_md_cell(self.dsr_status)})",
+                f"- **PBO**: {f'{self.pbo:.4f}' if self.pbo is not None else 'N/A'} ({_md_cell(self.pbo_status)})",
             ])
 
         lines.extend([
@@ -175,7 +218,7 @@ class ExperimentSummaryReport(BaseModel):
             "|---|---|",
         ])
         for prop, val in self.shared_pipeline.items():
-            lines.append(f"| {prop} | `{val}` |")
+            lines.append(f"| {_md_cell(prop)} | `{_md_cell(val)}` |")
 
         lines.extend([
             "",
@@ -187,7 +230,7 @@ class ExperimentSummaryReport(BaseModel):
                 "|---|---|",
             ])
             for param, val in self.candidate_parameters.items():
-                lines.append(f"| {param} | `{val}` |")
+                lines.append(f"| {_md_cell(param)} | `{_md_cell(val)}` |")
         else:
             lines.append("*(No independent parameters specified)*")
 
@@ -257,16 +300,23 @@ def generate_multi_run_comparison_md(
         else:
             valid_entries.append((run, evaluation))
 
-    # Rank valid entries by net_profit_pct (descending), then sharpe_ratio
-    def _rank_key(item: tuple[ExperimentRunRecord, EvaluationResult]) -> tuple[float, float]:
-        r, _ = item
-        net_pct = r.metrics.get("net_profit_pct")
-        sharpe = r.metrics.get("sharpe_ratio")
-        net_val = float(net_pct) if net_pct is not None else float("-inf")
-        sharpe_val = float(sharpe) if sharpe is not None else float("-inf")
-        return (net_val, sharpe_val)
+    # Only a run with a real, finite net profit measurement can hold a rank.
+    # Ranking a run whose performance was never measured would state a result
+    # that does not exist, which is the "no-data is not zero profit" boundary.
+    ranked_entries: list[tuple[ExperimentRunRecord, EvaluationResult, float, float]] = []
+    unranked_entries: list[tuple[ExperimentRunRecord, EvaluationResult]] = []
+    for run, evaluation in valid_entries:
+        net_val = _finite_metric(run.metrics, "net_profit_pct")
+        if net_val is None:
+            unranked_entries.append((run, evaluation))
+            continue
+        sharpe = _finite_metric(run.metrics, "sharpe_ratio")
+        ranked_entries.append((run, evaluation, net_val, sharpe if sharpe is not None else float("-inf")))
 
-    valid_entries.sort(key=_rank_key, reverse=True)
+    # Rank by net_profit_pct descending, then sharpe_ratio, then run_id so the
+    # ordering is total and reproducible from the same input set.
+    ranked_entries.sort(key=lambda item: (-item[2], -item[3], item[0].run_id))
+    unranked_entries.sort(key=lambda item: item[0].run_id)
 
     lines: list[str] = [
         "## Experiment Comparison Leaderboard",
@@ -275,15 +325,36 @@ def generate_multi_run_comparison_md(
         "|---|---|---|---|---|---|---|---|",
     ]
 
-    for rank, (run, evaluation) in enumerate(valid_entries, start=1):
+    for rank, (run, evaluation, _net, _sharpe) in enumerate(ranked_entries, start=1):
         net_profit_str = _format_metric_display("net_profit_pct", run.metrics.get("net_profit_pct"))
         sharpe_str = _format_metric_display("sharpe_ratio", run.metrics.get("sharpe_ratio"))
         trade_str = _format_metric_display("trade_count", run.metrics.get("trade_count"))
         status_str = run.status.value if hasattr(run.status, "value") else str(run.status)
         outcome_str = evaluation.outcome.value if hasattr(evaluation.outcome, "value") else str(evaluation.outcome)
         lines.append(
-            f"| {rank} | {run.candidate_id} | {run.run_id} | {net_profit_str} | {sharpe_str} | {trade_str} | {status_str} | {outcome_str} |"
+            f"| {rank} | {_md_cell(run.candidate_id)} | {_md_cell(run.run_id)} | "
+            f"{_md_cell(net_profit_str)} | {_md_cell(sharpe_str)} | {_md_cell(trade_str)} | "
+            f"{_md_cell(status_str)} | {_md_cell(outcome_str)} |"
         )
+
+    if unranked_entries:
+        lines.extend([
+            "",
+            "### Unranked / No Data",
+            "",
+            "Runs with no usable net profit measurement are not ranked.",
+            "",
+            "| Candidate | Run ID | Net Profit | Status | Outcome |",
+            "|---|---|---|---|---|",
+        ])
+        for run, evaluation in unranked_entries:
+            net_profit_str = _format_metric_display("net_profit_pct", run.metrics.get("net_profit_pct"))
+            status_str = run.status.value if hasattr(run.status, "value") else str(run.status)
+            outcome_str = evaluation.outcome.value if hasattr(evaluation.outcome, "value") else str(evaluation.outcome)
+            lines.append(
+                f"| {_md_cell(run.candidate_id)} | {_md_cell(run.run_id)} | "
+                f"{_md_cell(net_profit_str)} | {_md_cell(status_str)} | {_md_cell(outcome_str)} |"
+            )
 
     if disqualified_entries:
         lines.extend([
@@ -298,7 +369,8 @@ def generate_multi_run_comparison_md(
             outcome_str = evaluation.outcome.value if hasattr(evaluation.outcome, "value") else str(evaluation.outcome)
             reasons_str = ", ".join(evaluation.reasons) if evaluation.reasons else (run.error_message or "N/A")
             lines.append(
-                f"| {run.candidate_id} | {run.run_id} | {status_str} | {outcome_str} | {reasons_str} |"
+                f"| {_md_cell(run.candidate_id)} | {_md_cell(run.run_id)} | "
+                f"{_md_cell(status_str)} | {_md_cell(outcome_str)} | {_md_cell(reasons_str)} |"
             )
 
     return "\n".join(lines)

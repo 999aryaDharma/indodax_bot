@@ -194,7 +194,9 @@ def resolve_resource_class(job: JobDefinition | JobRecord | ResourceClass | str)
     if isinstance(job, JobDefinition):
         params = job.parameters
     elif isinstance(job, JobRecord):
-        pass  # JobRecord parameters stored in queue JSON
+        # The record carries the parameters the job was submitted with, so a
+        # persisted job keeps its declared class instead of being re-guessed.
+        params = job.parameters
 
     rc_val = params.get("resource_class")
     if rc_val is not None:

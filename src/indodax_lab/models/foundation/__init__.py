@@ -2,10 +2,11 @@ from indodax_lab.models.foundation.f01_kronos import (
     AdaptationStage,
     ContaminatedDatesClaimError,
     FoundationAdaptationConfig,
+    FoundationComputeBudgetSummary,
     FullFineTuneForbiddenError,
+    StagedFoundationAdapter,
     StageEvaluationResult,
     StagePreconditionNotMetError,
-    StagedFoundationAdapter,
 )
 from indodax_lab.models.foundation.provenance import (
     APPROVED_OPEN_LICENSES,
@@ -27,6 +28,7 @@ __all__ = [
     "FakeFoundationModelAdapter",
     "FoundationAdaptationConfig",
     "FoundationArtifactStatus",
+    "FoundationComputeBudgetSummary",
     "FoundationModelProvenance",
     "FoundationProvenanceGate",
     "FullFineTuneForbiddenError",

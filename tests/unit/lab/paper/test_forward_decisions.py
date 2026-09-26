@@ -28,6 +28,11 @@ from indodax_lab.paper.contracts import (
 )
 
 
+# The frozen candidate bundle hash this store is pinned to. The AC2 model-mismatch
+# guard is mandatory: a decision that does not positively match it is refused.
+ACTIVE_BUNDLE_HASH = "abc123"
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -35,7 +40,7 @@ from indodax_lab.paper.contracts import (
 def _make_decision(
     decision_id: str = "dec_001",
     candidate_id: str = "cand_001",
-    bundle_hash: str = "abc123",
+    bundle_hash: str = ACTIVE_BUNDLE_HASH,
     snapshot_id: str = "snap_20260901",
     feature_snapshot_age_seconds: float = 30.0,
     max_staleness_seconds: float = 300.0,
@@ -65,7 +70,7 @@ def _make_decision(
 def test_shadow_01_valid_contract():
     """SHADOW-01-AC0: ForwardDecision stored in PaperDecisionStore before outcome is known."""
     decision = _make_decision()
-    store = PaperDecisionStore()
+    store = PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)
 
     record = store.record_decision(decision)
 
@@ -89,7 +94,7 @@ def test_shadow_01_valid_contract():
 def test_shadow_01_contract_1():
     """SHADOW-01-AC1: If Telegram notification fails, the stored decision is preserved."""
     decision = _make_decision(decision_id="dec_telegram_fail")
-    store = PaperDecisionStore()
+    store = PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)
 
     # Record decision first
     store.record_decision(decision)
@@ -118,7 +123,7 @@ def test_shadow_01_contract_1():
 
 def test_shadow_01_contract_2():
     """SHADOW-01-AC2: Stale feature snapshot rejects entry; model hash mismatch rejects entry."""
-    store = PaperDecisionStore()
+    store = PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)
 
     # Sub-case A: Feature data too stale (age > max_staleness)
     stale_decision = _make_decision(
@@ -154,7 +159,7 @@ def test_shadow_01_contract_3():
         is_manual_intent=True,
         action="ENTER",
     )
-    store = PaperDecisionStore()
+    store = PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)
     record = store.record_decision(manual_decision)
 
     # Must be stored, but flagged as manual intent (not auto)
@@ -177,7 +182,7 @@ def test_shadow_01_contract_3():
 def test_shadow_01_idempotent_guard():
     """Edge case: Recording the same decision_id twice raises an error (no duplicate entries)."""
     decision = _make_decision(decision_id="dec_dup")
-    store = PaperDecisionStore()
+    store = PaperDecisionStore(expected_bundle_hash=ACTIVE_BUNDLE_HASH)
     store.record_decision(decision)
 
     with pytest.raises(ValueError, match="DUPLICATE_DECISION_ID"):

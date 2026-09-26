@@ -52,3 +52,23 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for ML-01.
 - Next unlocked consumers: ML-02.
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave A RED (ML-01..ML-04 together): `python -m pytest tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_execution_mapper.py tests/unit/lab/models/test_tuning_budget.py tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `24 failed, 40 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - Duplicate feature columns were silently accepted instead of rejected. `FeaturePreprocessor.transform` returned a `(2, 3)` result for a 2-feature input that carried a duplicated column, and `fit` surfaced a raw pandas `TypeError: arg must be a list, tuple, 1-d array, or Series` rather than the module's own typed alignment error. A duplicated column silently changes the effective feature width the model was fitted on. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Important** - A persisted `FeaturePreprocessor` artifact accepted an arbitrary or empty feature schema, so a bundle could be reloaded under a schema that does not match the data it was fitted on. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added `_reject_duplicate_columns()`, which raises `FeatureAlignmentError` with code `DUPLICATE_FEATURE_COLUMNS:<stage>:<dups>`, called at the top of both `fit()` and `transform()`. Added a `validate_feature_schema` pydantic model validator that raises `FEATURE_SCHEMA_INVALID`. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/preprocessing.py`, `tests/unit/lab/models/test_preprocessing.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_preprocessing.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

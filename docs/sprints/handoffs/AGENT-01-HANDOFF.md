@@ -53,3 +53,52 @@ Full lab suite verification: 195 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for AGENT-01.
 - Next unlocked consumers: QA-02.
+
+---
+
+## Sprint review fix cycle — AGENT-01 (batch `ops-shadow`) — **BLOCKED, review only**
+
+Actor: `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`
+Date: 2026-09-27 · Source SHA: uncommitted working tree (`feat/feat-02-finalization`) · Fix cycle: **not started — blocked**
+
+### Why this sprint is blocked
+
+The AGENT-01 implementation is `src/indodax_lab/orchestration/curator_policy.py`, and its only test suite is `tests/unit/lab/orchestration/test_curator_policy.py`. Both are under sibling-owned / FORBIDDEN paths for this batch. No RED test was written and **no source file was edited**.
+
+This is a **cross-batch conflict** and needs coordinator routing — see the conflict note at the end of this section.
+
+### Review findings (read-only, NOT fixed)
+
+Spec: `docs/specs/19-agent-research-governance.md` -> AGENT-01, "report + hypothesis -> change request + bounded candidate branch; no automatic merge or evaluator edits", with acceptance boundary "HARD_FAIL tidak memicu tuning liar / Prompt injection pada report dianggap data / Implementer bukan final approver".
+
+| ID | Severity | Finding | AC |
+|---|---|---|---|
+| AGENT-01-R1 | **Critical** | **The HARD_FAIL guard is per-proposal, not per-candidate, and is trivially bypassed.** `submit_proposal` checks only `proposal.prior_outcome` (line 122). `CuratorEngine` keeps no memory of prior outcomes per `candidate_id`, so the same HARD_FAIL candidate can be resubmitted under a fresh `proposal_id` with `prior_outcome` set to something else and sails straight through. The entire point of AC1 is to stop a failing candidate from being tuned until a formal defect report exists, and one field on one submission does not enforce that. | AC1 |
+| AGENT-01-R2 | Important | **"Bounded budget" is not enforced anywhere.** `budget_trials: int` on both `ChangeRequestProposal` and `ChangeRequestRecord` has no `ge`/`le` bound, and the engine never compares a new proposal's budget against the prior attempt's or against a cumulative per-candidate total. A proposal with `budget_trials=10_000_000` is accepted. The word "bounded" in the declared contract has no corresponding check. | AC0 |
+| AGENT-01-R3 | Important | **`branch_name` is completely unvalidated.** AC0 requires a *dedicated* branch. `branch_name` accepts any string, including `"main"`, `"master"`, `"prod"`, `""`, or a traversal such as `"../../etc"`. Nothing forbids proposing challenger work directly on a protected ref, and nothing requires the branch to differ from the one the proposer already owns. | AC0 |
+| AGENT-01-R4 | Important | **AC2's control is not wired into the engine.** `sanitize_curator_input` is a bare `raw_text.strip()` and is never called by `CuratorEngine` — a repository-wide search finds it referenced only in its own definition, the package `__init__` re-export, and the test file. `ChangeRequestProposal.hypothesis` — the untrusted, agent-authored free text that is exactly the injection surface — is stored raw and later surfaced through `get_proposal()` with no sanitisation pass. The control exists as dead code. | AC2 |
+| AGENT-01-R5 | Important | **The self-approval check is an unnormalised raw string compare, and no identity is validated.** `if approver_id == record.proposer_id` (line 162) is exact-match only, so `proposer_id="agent_a"` is self-approved by `"agent_a "`, `"Agent_A"` or `"agent_a\n"`. Neither `proposer_id` nor `approver_id` is checked for non-blank, so an approver of `"  "` bypasses AC3 entirely. AC3 is "implementer is not the final approver", and a case-or-whitespace variant defeats it. | AC3 |
+| AGENT-01-R6 | Important | **`approve_proposal` is not idempotent and has no terminal state; the audit trail is destructible.** There is no `reject_proposal` at all despite `ProposalStatus.REJECTED` existing, so a rejection can never be recorded. `approve_proposal` can be called repeatedly, including on an already-`APPROVED` proposal, and each call **overwrites** `approver_id` and `decided_at` — destroying the record of who actually approved and when. `decided_at` is `datetime.now(UTC)` with no monotonicity or ordering guarantee. | AC3 |
+| AGENT-01-R7 | Important | **No persistence.** `self._proposals` is an in-memory dict; a process restart loses the entire proposal and approval audit trail. For a subsystem whose stated purpose is "auditable collaboration without autonomous policy drift", the audit record is not durable. | — |
+| AGENT-01-R8 | Minor | `sanitize_curator_input` returns `str(raw_text)` for non-`str` input rather than rejecting it, so a structured payload is silently coerced into a string instead of being refused as the wrong type. |
+| AGENT-01-R9 | Minor | `approve_proposal` raises a bare `KeyError` for an unknown `proposal_id`, inconsistent with the module's own typed errors. |
+
+### Recommended remediation (for the owning agent, not performed here)
+1. Track outcomes **per `candidate_id`** in the engine and refuse any new proposal for a candidate whose last recorded outcome was `HARD_FAIL`, regardless of the `prior_outcome` the new submission asserts. This closes AGENT-01-R1.
+2. Add `budget_trials: int = Field(ge=1, le=<policy ceiling>)` and a per-candidate cumulative budget check in `submit_proposal`. This closes AGENT-01-R2.
+3. Add a `field_validator` on `branch_name` rejecting blank values, protected refs (`main`/`master`/`prod`/anything matching the repo's protected set) and path separators. This closes AGENT-01-R3.
+4. Route `hypothesis` (and any report text) through `sanitize_curator_input` at the `CuratorEngine` boundary, and make the sanitiser actually neutralise instruction-shaped content rather than only stripping whitespace. This closes AGENT-01-R4.
+5. Normalise identities (strip + casefold) and require non-blank on `proposer_id` and `approver_id`; add `reject_proposal` and make `approve_proposal` refuse a non-`PENDING_REVIEW` proposal. This closes AGENT-01-R5/R6.
+6. Persist proposals and the append-only decision history to a durable store. This closes AGENT-01-R7.
+
+### Files changed
+**None.** Read-only review.
+
+### Isolation
+No test was written for this sprint, because a behavioural regression test would itself have to live in the forbidden `tests/unit/lab/orchestration/` tree. The existing `tests/unit/lab/orchestration/test_curator_policy.py` was **not** modified.
+
+### Capability gap recorded
+`ruff` is **not installed** in this environment, so no static lint gate could be run for this or any other sprint in the batch. Per `AGENTS.md` this is recorded as a capability gap rather than worked around; no project-local or unknown binary was installed as a substitute.
+
+### Cross-batch conflict flagged to the coordinator
+`src/indodax_lab/orchestration/curator_policy.py` and `tests/unit/lab/orchestration/test_curator_policy.py` are claimed by AGENT-01 but sit in directories owned by the orchestration batch. Either (a) route AGENT-01 to the orchestration owner, or (b) grant a documented path exception for these two files. **Do not** let two agents edit them concurrently. **Recommend marking AGENT-01 BLOCKED pending that routing decision** — AGENT-01-R1 is Critical and AGENT-01-R1/R4 mean the sprint's three declared acceptance boundaries are each only nominally satisfied.

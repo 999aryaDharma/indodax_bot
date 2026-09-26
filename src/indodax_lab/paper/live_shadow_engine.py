@@ -96,6 +96,15 @@ class ClosedTrade:
     bars_held: int
 
 
+class UnauthorizedPortfolioResetError(RuntimeError):
+    """Raised when a portfolio reset is attempted without a complete authorization.
+
+    The reset control is what lifts a live risk hard halt, so a missing operator
+    identity, reason or change reference must stop the reset outright rather than
+    fall back to an ungoverned clear.
+    """
+
+
 class LiveShadowEngine:
     """Manages forward shadow paper trading portfolio and strategy execution."""
 
@@ -254,21 +263,73 @@ class LiveShadowEngine:
             event_payload=event_payload or {},
         )
 
-    def reset_portfolio(self) -> None:
-        """Reset paper trading portfolio to clean initial state."""
+    def reset_portfolio(
+        self,
+        *,
+        operator_id: str,
+        reason: str,
+        authorization_ref: str,
+    ) -> None:
+        """Reset the paper portfolio to a clean initial state.
+
+        This is the audited control that lifts a risk hard halt, so it fails
+        closed: an untrusted callback, a scheduler tick or a replay driver that
+        merely holds the engine object must not be able to clear the risk
+        governor. The operator identity, reason and change reference are all
+        mandatory, and the audit entry is appended *before* any state is wiped
+        so the trail of what was discarded survives the reset itself.
+        """
+        operator_id = (operator_id or "").strip()
+        reason = (reason or "").strip()
+        authorization_ref = (authorization_ref or "").strip()
+        for label, value in (
+            ("operator_id", operator_id),
+            ("reason", reason),
+            ("authorization_ref", authorization_ref),
+        ):
+            if not value:
+                raise UnauthorizedPortfolioResetError(
+                    f"SHADOW_RESET_AUTHORIZATION_REQUIRED:{label}"
+                )
+
+        details = [
+            "hard_halt_cleared" if self.risk_manager.is_halted else "no_active_halt"
+        ]
+        if self.open_positions:
+            details.append(f"open_positions_discarded={len(self.open_positions)}")
+        if self.closed_trades:
+            details.append(f"closed_trades_discarded={len(self.closed_trades)}")
+        now = datetime.now(UTC)
+        self.audit_log.append(
+            {
+                "action": "PORTFOLIO_RESET_AUTHORIZED",
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "operator_id": operator_id,
+                "authorization_ref": authorization_ref,
+                "detail": ";".join(details),
+                "reason": reason,
+            }
+        )
+
         self.ledger = ResearchLedger(
             initial_cash=self.initial_cash,
-            init_timestamp=datetime.now(UTC),
+            init_timestamp=now,
         )
         self.open_positions = {}
         self.closed_trades = []
-        self.audit_log = []
         self.risk_manager = PortfolioRiskManager(
             policy=self.risk_policy,
             initial_equity=self.initial_cash,
-            start_time=datetime.now(UTC),
+            start_time=now,
         )
-        self.save_state(event_type="RESET")
+        self.save_state(
+            event_type="RESET",
+            event_payload={
+                "operator_id": operator_id,
+                "authorization_ref": authorization_ref,
+                "reason": reason,
+            },
+        )
 
     # =========================================================================
     # MARKET DATA FETCHING

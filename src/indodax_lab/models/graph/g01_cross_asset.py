@@ -9,12 +9,14 @@ Guarantees:
 
 from __future__ import annotations
 
+import warnings
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
+
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, ConfigDict, Field
-from scipy.stats import spearmanr
+from pydantic import BaseModel, ConfigDict
+from scipy.stats import ConstantInputWarning, spearmanr
 
 from indodax_lab.models.execution_mapper import (
     CostAwareExecutionMapper,
@@ -23,7 +25,6 @@ from indodax_lab.models.execution_mapper import (
     ForecastPayload,
     PayoffStructure,
 )
-
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -40,6 +41,14 @@ class PrematureNodeInclusionError(ValueError):
 
 class GraphBudgetExceededError(ValueError):
     """Raised when graph hyperparameter search configurations exceed budget of 8."""
+
+
+class MissingGraphColumnError(ValueError):
+    """Raised when a required point-in-time panel column is absent from the input frame."""
+
+
+class GraphSnapshotUnderdeterminedError(ValueError):
+    """Raised when a snapshot carries too few nodes to support a rank-correlation claim."""
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +87,28 @@ class GraphSnapshot(BaseModel):
     node_features: np.ndarray
     adjacency_matrix: np.ndarray
     forward_returns: np.ndarray
+    # Edge provenance (spec 15: "Graph metadata binds edge method/window/train cutoff
+    # and availability"). A snapshot without these cannot be shown to be edge-causal.
+    edge_method: str
+    edge_window: int
+    edge_train_cutoff: datetime
+    edges_available_at: datetime
+
+
+class GraphComputeBudgetSummary(BaseModel):
+    """Parameter and compute budget summary for the cross-asset GNN ranker.
+
+    `estimated_flops_per_inference` counts the dense multiply-accumulates of one full
+    message-passing forward over a single-node graph (self-loop only); the per-edge
+    message transform is a further `input_dim * hidden_dim` MACs for every other node.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    input_dim: int
+    hidden_dim: int
+    total_learned_parameters: int
+    estimated_flops_per_inference: int
 
 
 class RankedAsset(BaseModel):
@@ -91,15 +122,22 @@ class RankedAsset(BaseModel):
 
 
 class GraphBaselineComparison(BaseModel):
-    """Comparative rank metrics between graph model, no-edge MLP, and panel regression."""
+    """Comparative rank metrics between graph model, no-edge MLP, and panel regression.
+
+    Each correlation is `None` when Spearman is undefined (a constant score or target
+    vector, fewer than 2 distinct ranks). `0.0` means a genuinely uncorrelated score
+    and must never be used to stand in for "not computable".
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
 
-    graph_score_correlation: float
-    no_edge_mlp_correlation: float
-    panel_regression_correlation: float
+    graph_score_correlation: float | None
+    no_edge_mlp_correlation: float | None
+    panel_regression_correlation: float | None
     benchmark_sample_count: int
     evaluated_at_utc: datetime
+    ranker_seed: int
+    compute_budget: GraphComputeBudgetSummary
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +147,22 @@ class GraphBaselineComparison(BaseModel):
 
 class PointInTimeGraphBuilder:
     """Builds point-in-time graph snapshots with causal rolling edges and strict listing validation."""
+
+    #: Columns every point-in-time panel frame must carry.
+    REQUIRED_COLUMNS: ClassVar[tuple[str, ...]] = (
+        "timestamp",
+        "asset",
+        "return",
+        "volatility",
+        "momentum",
+        "forward_return",
+    )
+    #: Edge method bound into every snapshot's metadata.
+    EDGE_METHOD: ClassVar[str] = "rolling_pearson_thresholded_symmetric"
+    #: Node features consumed by the message-passing layers, in order.
+    FEATURE_COLUMNS: ClassVar[tuple[str, ...]] = ("return", "volatility", "momentum")
+    #: Minimum same-asset observations required at or before eval_ts.
+    MIN_OBSERVATIONS_PER_NODE: ClassVar[int] = 2
 
     def __init__(
         self,
@@ -125,6 +179,15 @@ class PointInTimeGraphBuilder:
         forced_nodes: list[str] | None = None,
     ) -> GraphSnapshot:
         """Construct graph snapshot up to eval_ts without lookahead contamination."""
+        # 0. Reject a frame that cannot support any claim at all. A silently missing
+        # `forward_return` used to become a constant 0.0 target, which reported a clean
+        # 0.0 correlation for every model and read as "no graph benefit".
+        missing = [col for col in self.REQUIRED_COLUMNS if col not in df.columns]
+        if missing:
+            raise MissingGraphColumnError(
+                f"MISSING_GRAPH_COLUMN: Required panel columns absent: {sorted(missing)}"
+            )
+
         # 1. Reject future data inputs
         if len(df) > 0 and df["timestamp"].min() > eval_ts:
             raise FullSampleAdjacencyLeakageError(
@@ -155,15 +218,28 @@ class PointInTimeGraphBuilder:
         if len(active_nodes) == 0:
             raise ValueError(f"NO_ACTIVE_NODES: No eligible listed assets found at {eval_ts}")
 
-        # 5. Extract rolling return series to compute point-in-time correlation matrix
+        # 5. Every node must actually be observed at or before eval_ts. A listed but
+        # dateless node used to be zero-filled, which both fabricated features and
+        # desynchronised the adjacency rows from the real observations.
+        per_node = hist_df[hist_df["asset"].isin(active_nodes)].groupby("asset").size()
+        for node in active_nodes:
+            observed = int(per_node.get(node, 0))
+            if observed < self.MIN_OBSERVATIONS_PER_NODE:
+                raise PrematureNodeInclusionError(
+                    f"NO_OBSERVATIONS_AT_EVAL_TS: Asset '{node}' has {observed} observation(s) "
+                    f"at or before eval_ts {eval_ts.isoformat()}, "
+                    f"{self.MIN_OBSERVATIONS_PER_NODE} required"
+                )
+
+        # 6. Extract rolling return series to compute point-in-time correlation matrix
         return_piv = (
             hist_df[hist_df["asset"].isin(active_nodes)]
             .pivot_table(index="timestamp", columns="asset", values="return")
+            .reindex(columns=active_nodes)
             .tail(self.config.rolling_window)
         )
 
         corr_matrix = return_piv.corr().fillna(0.0).values
-        n_nodes = len(active_nodes)
 
         # Apply correlation threshold and add self-loops
         adj = np.where(np.abs(corr_matrix) >= self.config.correlation_threshold, corr_matrix, 0.0)
@@ -174,20 +250,23 @@ class PointInTimeGraphBuilder:
         d_inv_sqrt = np.power(np.maximum(d, 1e-6), -0.5)
         adj_norm = np.diag(d_inv_sqrt) @ adj @ np.diag(d_inv_sqrt)
 
-        # 6. Extract latest node features at eval_ts
-        feature_cols = ["return", "volatility", "momentum"]
+        # 7. Extract latest node features and observed target at eval_ts
+        feature_cols = list(self.FEATURE_COLUMNS)
         latest_features: list[list[float]] = []
         forward_returns: list[float] = []
 
         for node in active_nodes:
             node_data = hist_df[hist_df["asset"] == node].sort_values("timestamp")
-            if len(node_data) > 0:
-                last_row = node_data.iloc[-1]
-                latest_features.append([float(last_row[c]) for c in feature_cols])
-                forward_returns.append(float(last_row.get("forward_return", 0.0)))
-            else:
-                latest_features.append([0.0] * len(feature_cols))
-                forward_returns.append(0.0)
+            if node_data.empty:
+                # Unreachable given step 5, but a zero-filled node is a silent data
+                # corruption so fail closed rather than fabricate a row.
+                raise PrematureNodeInclusionError(
+                    f"NO_OBSERVATIONS_AT_EVAL_TS: Asset '{node}' has no row at or before "
+                    f"eval_ts {eval_ts.isoformat()}"
+                )
+            last_row = node_data.iloc[-1]
+            latest_features.append([float(last_row[c]) for c in feature_cols])
+            forward_returns.append(float(last_row["forward_return"]))
 
         return GraphSnapshot(
             eval_ts=eval_ts,
@@ -195,6 +274,10 @@ class PointInTimeGraphBuilder:
             node_features=np.array(latest_features, dtype=float),
             adjacency_matrix=adj_norm,
             forward_returns=np.array(forward_returns, dtype=float),
+            edge_method=self.EDGE_METHOD,
+            edge_window=self.config.rolling_window,
+            edge_train_cutoff=eval_ts,
+            edges_available_at=eval_ts,
         )
 
 
@@ -206,13 +289,35 @@ class PointInTimeGraphBuilder:
 class CrossAssetGNNRanker:
     """Graph neural ranker performing message passing over cross-asset rolling graph."""
 
+    #: Node feature dimensionality consumed by the message-passing layers.
+    INPUT_DIM: ClassVar[int] = 3
+    #: Hidden width of the message-passing and self projections.
+    HIDDEN_DIM: ClassVar[int] = 8
+
     def __init__(self, config: PointInTimeGraphConfig) -> None:
         self.config = config
         rng = np.random.default_rng(config.seed)
         # 3 input features -> hidden 8 -> 1 score
-        self.w_graph = rng.normal(0.0, 0.2, size=(3, 8))
-        self.w_self = rng.normal(0.0, 0.2, size=(3, 8))
-        self.w_head = rng.normal(0.0, 0.2, size=(8, 1))
+        self.w_graph = rng.normal(0.0, 0.2, size=(self.INPUT_DIM, self.HIDDEN_DIM))
+        self.w_self = rng.normal(0.0, 0.2, size=(self.INPUT_DIM, self.HIDDEN_DIM))
+        self.w_head = rng.normal(0.0, 0.2, size=(self.HIDDEN_DIM, 1))
+
+    @property
+    def compute_budget(self) -> GraphComputeBudgetSummary:
+        """Report learned-parameter count and single-node forward cost."""
+        input_dim, hidden_dim = self.INPUT_DIM, self.HIDDEN_DIM
+        return GraphComputeBudgetSummary(
+            input_dim=input_dim,
+            hidden_dim=hidden_dim,
+            total_learned_parameters=int(
+                self.w_graph.size + self.w_self.size + self.w_head.size
+            ),
+            estimated_flops_per_inference=int(
+                input_dim * hidden_dim  # graph projection per node
+                + input_dim * hidden_dim  # self projection per node
+                + hidden_dim  # scoring head
+            ),
+        )
 
     def rank(self, snapshot: GraphSnapshot) -> list[RankedAsset]:
         """Compute message passing scores and rank active assets descending."""
@@ -267,12 +372,32 @@ class CrossAssetGNNRanker:
 
 
 class GraphBaselineComparator:
-    """Evaluates graph benefit against no-edge baseline and naive panel regression."""
+    """Evaluates graph benefit against no-edge baseline and naive panel regression.
+
+    AC3 requires the comparison to be *about the model in use*, so a ranker built with a
+    different window/seed must be passed in. The previous implementation silently built
+    its own `rolling_window=10, seed=42` ranker, which benchmarked a different model than
+    the caller's whenever the caller configured anything else.
+    """
+
+    #: Below this many assets a Spearman rank correlation cannot support a claim.
+    MIN_BENCHMARK_NODES: ClassVar[int] = 3
+
+    def __init__(self, ranker: CrossAssetGNNRanker | None = None) -> None:
+        self.ranker = ranker
 
     def compare(self, snapshot: GraphSnapshot) -> GraphBaselineComparison:
-        """Benchmark G01 graph against no-edge MLP and panel regression on identical snapshot."""
-        config = PointInTimeGraphConfig(rolling_window=10)
-        ranker = CrossAssetGNNRanker(config=config)
+        """Benchmark the graph ranker against no-edge MLP and panel regression on one snapshot."""
+        n_nodes = len(snapshot.active_nodes)
+        if n_nodes < self.MIN_BENCHMARK_NODES:
+            raise GraphSnapshotUnderdeterminedError(
+                f"UNDERDETERMINED_GRAPH_SNAPSHOT: Rank correlation needs at least "
+                f"{self.MIN_BENCHMARK_NODES} assets, snapshot has {n_nodes}"
+            )
+
+        ranker = self.ranker or CrossAssetGNNRanker(
+            config=PointInTimeGraphConfig(rolling_window=10)
+        )
 
         # 1. Graph model rank scores
         graph_ranks = ranker.rank(snapshot)
@@ -283,8 +408,12 @@ class GraphBaselineComparator:
             eval_ts=snapshot.eval_ts,
             active_nodes=snapshot.active_nodes,
             node_features=snapshot.node_features,
-            adjacency_matrix=np.eye(len(snapshot.active_nodes)),
+            adjacency_matrix=np.eye(n_nodes),
             forward_returns=snapshot.forward_returns,
+            edge_method=f"{snapshot.edge_method}::no_edge_identity",
+            edge_window=snapshot.edge_window,
+            edge_train_cutoff=snapshot.edge_train_cutoff,
+            edges_available_at=snapshot.edges_available_at,
         )
         no_edge_ranks = ranker.rank(identity_snapshot)
         no_edge_scores = np.array([r.score for r in sorted(no_edge_ranks, key=lambda x: x.asset)])
@@ -292,16 +421,29 @@ class GraphBaselineComparator:
         # 3. Panel regression baseline: simple linear score from momentum feature (feature index 2)
         panel_scores = snapshot.node_features[:, 2]
 
-        # Calculate rank correlations with forward returns
+        # Calculate rank correlations with forward returns. An undefined correlation is
+        # reported as None, never 0.0 -- 0.0 is a real "uncorrelated" claim.
         y = snapshot.forward_returns
-        r_graph, _ = spearmanr(graph_scores, y)
-        r_no_edge, _ = spearmanr(no_edge_scores, y)
-        r_panel, _ = spearmanr(panel_scores, y)
+        r_graph = _spearman_or_none(graph_scores, y)
+        r_no_edge = _spearman_or_none(no_edge_scores, y)
+        r_panel = _spearman_or_none(panel_scores, y)
 
         return GraphBaselineComparison(
-            graph_score_correlation=float(r_graph) if not np.isnan(r_graph) else 0.0,
-            no_edge_mlp_correlation=float(r_no_edge) if not np.isnan(r_no_edge) else 0.0,
-            panel_regression_correlation=float(r_panel) if not np.isnan(r_panel) else 0.0,
-            benchmark_sample_count=len(snapshot.active_nodes),
+            graph_score_correlation=r_graph,
+            no_edge_mlp_correlation=r_no_edge,
+            panel_regression_correlation=r_panel,
+            benchmark_sample_count=n_nodes,
             evaluated_at_utc=datetime.now(UTC),
+            ranker_seed=ranker.config.seed,
+            compute_budget=ranker.compute_budget,
         )
+
+
+def _spearman_or_none(scores: np.ndarray, target: np.ndarray) -> float | None:
+    """Spearman rank correlation, or None when it is mathematically undefined."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConstantInputWarning)
+        rho, _ = spearmanr(scores, target)
+    if rho is None or not np.isfinite(rho):
+        return None
+    return float(rho)

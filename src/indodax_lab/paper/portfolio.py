@@ -7,16 +7,23 @@ Guarantees:
 2. SHADOW-02-AC1: Duplicate event IDs are detected and rejected without altering balances.
 3. SHADOW-02-AC2: Maximum of two shared open positions enforced strictly across all candidates.
 4. SHADOW-02-AC3: Restart from checkpoint produces identical equity, cash, and position state.
+
+Review hardening (ops-shadow batch): the checkpoint now carries the capital basis,
+the active shared position cap, and a SHA-256 integrity fingerprint. Previously the
+cap silently reverted to its default on restart (a risk-cap bypass) and a tampered
+checkpoint was restored as if authentic.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+import hashlib
+import json
 from threading import RLock
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -30,6 +37,10 @@ class MaxPositionsExceededError(RuntimeError):
 
 class InsufficientCashError(ValueError):
     """Raised when cash allocation exceeds available ledger cash."""
+
+
+class CheckpointIntegrityError(ValueError):
+    """Raised when a persisted shared-ledger checkpoint cannot be trusted."""
 
 
 # ---------------------------------------------------------------------------
@@ -83,14 +94,62 @@ class IntentProcessingResult(BaseModel):
 
 
 class SharedLedgerCheckpoint(BaseModel):
-    """Immutable snapshot of the shared ledger state for crash recovery."""
+    """Immutable, integrity-sealed snapshot of the shared ledger state for crash recovery."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     available_cash: Decimal
     positions: list[PaperPosition]
     processed_event_ids: list[str]
+    # Review hardening: the original capital basis and the active shared cap must
+    # survive the restart, otherwise equity and the AC2 gate are both wrong after it.
+    initial_cash: Decimal | None = None
+    max_open_positions: int = Field(default=2, ge=1)
     checkpoint_time: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    sha256: str = ""
+
+    @field_validator("available_cash", "initial_cash")
+    @classmethod
+    def require_finite_cash(cls, value: Decimal | None) -> Decimal | None:
+        if value is not None and (not value.is_finite() or value < 0):
+            raise ValueError("SHARED_CHECKPOINT_CASH_INVALID")
+        return value
+
+    @model_validator(mode="after")
+    def seal_or_verify(self) -> "SharedLedgerCheckpoint":
+        digest = _checkpoint_digest(self)
+        if not self.sha256:
+            object.__setattr__(self, "sha256", digest)
+        elif self.sha256 != digest:
+            raise CheckpointIntegrityError("SHARED_CHECKPOINT_DIGEST_MISMATCH")
+        return self
+
+
+def _checkpoint_digest(checkpoint: SharedLedgerCheckpoint) -> str:
+    """Fingerprint the reconciled state only; timestamp and digest are excluded."""
+    payload = {
+        "available_cash": str(checkpoint.available_cash),
+        "initial_cash": None if checkpoint.initial_cash is None else str(checkpoint.initial_cash),
+        "max_open_positions": checkpoint.max_open_positions,
+        "processed_event_ids": sorted(checkpoint.processed_event_ids),
+        "positions": sorted(
+            (
+                {
+                    "position_id": position.position_id,
+                    "candidate_id": position.candidate_id,
+                    "pair": position.pair,
+                    "cost_basis": str(position.cost_basis),
+                    "entry_price": str(position.entry_price),
+                    "quantity": str(position.quantity),
+                    "opened_at": position.opened_at.isoformat(),
+                }
+                for position in checkpoint.positions
+            ),
+            key=lambda item: item["position_id"],
+        ),
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +171,7 @@ class SharedCapitalLedger:
         if isinstance(max_open_positions, bool) or not isinstance(max_open_positions, int) or max_open_positions <= 0:
             raise ValueError("INVALID_MAX_OPEN_POSITIONS")
         self._allocation_lock = RLock()  # Threads sharing this object, not processes.
+        self.initial_cash: Decimal = initial_cash
         self.available_cash: Decimal = initial_cash
         self.max_open_positions: int = max_open_positions
         self._positions: dict[str, PaperPosition] = {}
@@ -185,23 +245,53 @@ class SharedCapitalLedger:
         return result
 
     def create_checkpoint(self) -> SharedLedgerCheckpoint:
-        """Generate an immutable checkpoint of the ledger state (SHADOW-02-AC3)."""
+        """Generate an immutable, integrity-sealed checkpoint (SHADOW-02-AC3)."""
         with self._allocation_lock:
             return SharedLedgerCheckpoint(
                 available_cash=self.available_cash,
+                initial_cash=self.initial_cash,
+                max_open_positions=self.max_open_positions,
                 positions=list(self._positions.values()),
                 processed_event_ids=sorted(self._processed_event_ids),
             )
 
     @classmethod
     def from_checkpoint(cls, checkpoint: SharedLedgerCheckpoint) -> SharedCapitalLedger:
-        """Reconstruct a ledger from a checkpoint with identical state (SHADOW-02-AC3)."""
+        """Reconstruct a ledger from a verified checkpoint (SHADOW-02-AC3).
+
+        The checkpoint fingerprint is verified before any state is adopted, so a
+        tampered or forged balance is refused instead of being restored silently.
+        The capital basis and the shared position cap are restored with the state.
+        """
+        recomputed = _checkpoint_digest(checkpoint)
+        if checkpoint.sha256 and recomputed != checkpoint.sha256:
+            raise CheckpointIntegrityError(
+                "SHARED_CHECKPOINT_DIGEST_MISMATCH: Refusing to restore a shared-ledger "
+                "checkpoint whose state does not match its recorded fingerprint."
+            )
+        if not checkpoint.sha256:
+            raise CheckpointIntegrityError(
+                "SHARED_CHECKPOINT_DIGEST_MISSING: Refusing to restore an unsealed checkpoint."
+            )
+
+        if checkpoint.initial_cash is not None:
+            basis = Decimal(str(checkpoint.initial_cash))
+        else:
+            # Legacy checkpoints carry no basis; the only admitted movement is an entry
+            # allocation, so remaining cash plus allocated cost basis is the original.
+            basis = checkpoint.available_cash + sum(
+                (position.cost_basis for position in checkpoint.positions),
+                Decimal("0"),
+            )
+
         ledger = cls(
-            initial_cash=checkpoint.available_cash,
+            initial_cash=basis,
+            max_open_positions=checkpoint.max_open_positions,
         )
         for pos in checkpoint.positions:
             # key positions by their original event_id extracted from pos_id or matching event
             event_id = pos.position_id.removeprefix("pos_")
             ledger._positions[event_id] = pos
+        ledger.available_cash = checkpoint.available_cash
         ledger._processed_event_ids = set(checkpoint.processed_event_ids)
         return ledger

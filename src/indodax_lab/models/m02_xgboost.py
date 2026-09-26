@@ -27,6 +27,10 @@ class SealedPartitionLeakageError(ValueError):
     """Raised when early stopping evaluation targets sealed or test partitions."""
 
 
+class InsufficientSeedAuditError(ValueError):
+    """Raised when a multi-seed audit is asked to certify robustness from too few seeds."""
+
+
 class M02Config(BaseModel):
     """Configuration for M02 XGBoost challenger model."""
 
@@ -81,13 +85,14 @@ class M02MultiSeedAudit(BaseModel):
 class M02XGBoostTrainer:
     """Trains, early-stops, calibrates, and audits M02 XGBoost challenger models."""
 
-    FORBIDDEN_EVAL_PARTITIONS = {
-        "sealed_test",
-        "test",
-        "outer_test",
-        "outer_val",
-        "outer_validation",
-    }
+    # M02-01-AC1: early stopping may only observe an inner validation partition. This is
+    # a positive allowlist rather than a deny-list of known-bad names, because a deny-list
+    # cannot see near-miss spellings (sealed_test_v2, outer_test_fold2, test_set, ...).
+    ALLOWED_EVAL_PARTITIONS = frozenset({"inner_heldout", "inner_val", "inner_validation"})
+
+    # M02-01-AC2: the audit exists to stop the lucky seed from being selected, which needs
+    # a real spread of seeds. Spec 12 fixes this at three.
+    MIN_AUDIT_SEEDS = 3
 
     def __init__(self, config: M02Config) -> None:
         self.config = config
@@ -113,9 +118,10 @@ class M02XGBoostTrainer:
         """Fit XGBoost model with early stopping on inner validation, then calibrate on held-out scores."""
         # 1. Reject sealed test evaluation partition leakage (M02-01-AC1)
         norm_part = val_partition_type.strip().lower()
-        if norm_part in self.FORBIDDEN_EVAL_PARTITIONS:
+        if norm_part not in self.ALLOWED_EVAL_PARTITIONS:
             raise SealedPartitionLeakageError(
-                f"SEALED_PARTITION_LEAKAGE: Early stopping partition '{val_partition_type}' is forbidden. "
+                f"SEALED_PARTITION_LEAKAGE: Early stopping partition '{val_partition_type}' is not an "
+                f"inner validation partition. Allowed: {sorted(self.ALLOWED_EVAL_PARTITIONS)}. "
                 "Early stopping must strictly observe inner validation partitions."
             )
 
@@ -232,6 +238,16 @@ class M02XGBoostTrainer:
         round_trip_cost: float = 0.0040,
     ) -> M02MultiSeedAudit:
         """Train across multiple seeds and document median and worst seed utility (M02-01-AC2)."""
+        # A single seed (or a repeated one) makes median == worst == that seed, so the audit
+        # cannot detect seed-selection luck at all - the exact thing it exists to prevent.
+        distinct_seeds = list(dict.fromkeys(seeds))
+        if len(distinct_seeds) < self.MIN_AUDIT_SEEDS:
+            raise InsufficientSeedAuditError(
+                f"INSUFFICIENT_SEED_AUDIT: {len(distinct_seeds)} distinct seed(s) supplied "
+                f"({list(seeds)}); at least {self.MIN_AUDIT_SEEDS} distinct seeds are required to "
+                "certify median and worst-seed robustness (M02-01-AC2)."
+            )
+
         seed_results: list[M02SeedResult] = []
 
         for seed in seeds:

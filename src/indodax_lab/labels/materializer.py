@@ -198,10 +198,18 @@ def materialize_training_dataset(
         raise DuplicateSampleError(f"DUPLICATE_SAMPLE_ID_DETECTED: labels dataframe contains duplicate sample_ids: {dups[:5]}")
 
     # 3. Target leakage guard (TRAIN-01-AC2)
+    # TRAIN-01-F1: compare case-insensitively on *both* sides. The prohibited set used the
+    # raw `target_column` while the membership test used `col.lower()`, so any target
+    # column that was not already lowercase escaped its own guard.
+    # TRAIN-01-F2: the whole `features_df` is merged into the artifact below, so scan every
+    # physical column as well as the declared list. An outcome-shaped column that was never
+    # declared would otherwise ride into the persisted training set.
     inf_features_set = set(inference_feature_columns)
-    prohibited_names = {target_column, "net_return", "binary_label"}
-    for col in inf_features_set:
-        if col.lower() in prohibited_names or col.lower().startswith(("label_", "future_", "exit_", "target_", "outcome_", "entry_")):
+    prohibited_names = {target_column.lower(), "net_return", "binary_label"}
+    prohibited_prefixes = ("label_", "future_", "exit_", "target_", "outcome_", "entry_")
+    for col in inf_features_set | set(features_df.columns):
+        lowered = col.lower()
+        if lowered in prohibited_names or lowered.startswith(prohibited_prefixes):
             raise TargetLeakageError(
                 f"TARGET_COLUMN_IN_FEATURE_LIST: column '{col}' is a target or future outcome and cannot be in inference features"
             )

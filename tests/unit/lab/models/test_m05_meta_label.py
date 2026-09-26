@@ -20,6 +20,7 @@ import pytest
 
 # These imports will fail until implementation exists — RED phase
 from indodax_lab.models.m05_meta_label import (
+    InconsistentFeatureSchemaError,
     M05Config,
     M05FittedBundle,
     M05MetaLabelTrainer,
@@ -193,3 +194,49 @@ def test_m05_01_contract_3():
     assert hasattr(report, "base_mean_return")
     assert hasattr(report, "filtered_mean_return")
     assert report.base_trades_count == len(candidates)
+
+
+# ---------------------------------------------------------------------------
+# M05-01 feature-schema regression: the trade feature set must be homogeneous
+# ---------------------------------------------------------------------------
+
+def test_m05_01_inconsistent_trade_feature_schema_is_rejected() -> None:
+    """M05-01: every trade must expose the same feature keys.
+
+    The previous implementation took the schema from ``trades[0]`` only and then used
+    ``trade.features.get(f, 0.0)``, so a trade that was missing a feature was silently
+    padded with a fabricated 0.0 and a trade carrying an extra key had that key dropped
+    without a warning. A fabricated 0.0 for, say, ``breakout_strength`` is a real feature
+    value to the forest, so this silently trained on data that never existed.
+    """
+    config = M05Config(model_id="M05", version="1.0.0", take_threshold=0.55, n_estimators=10, seed=42)
+    trainer = M05MetaLabelTrainer(config=config)
+
+    # (a) A later trade missing a key that trades[0] has.
+    trades_missing = _make_base_trades(n=20, seed=42)
+    short = trades_missing[5].model_copy(
+        update={"trade_id": "trade_missing", "features": {"volatility": 0.02, "volume_z": 0.1}}
+    )
+    trades_missing[5] = short
+
+    # (b) A later trade carrying an extra key the first trade did not have.
+    trades_extra = _make_base_trades(n=20, seed=42)
+    extra = trades_extra[5].model_copy(
+        update={
+            "trade_id": "trade_extra",
+            "features": {**trades_extra[5].features, "insider_flow": 1.0},
+        }
+    )
+    trades_extra[5] = extra
+
+    for broken in (trades_missing, trades_extra):
+        with pytest.raises(InconsistentFeatureSchemaError, match="INCONSISTENT_FEATURE_SCHEMA"):
+            trainer.train(broken)
+
+
+def test_m05_01_consistent_trade_feature_schema_is_accepted() -> None:
+    """M05-01: the homogeneous case must keep working and keep full key coverage."""
+    config = M05Config(model_id="M05", version="1.0.0", take_threshold=0.55, n_estimators=10, seed=42)
+    trainer = M05MetaLabelTrainer(config=config)
+    bundle = trainer.train(_make_base_trades(n=40, seed=42))
+    assert bundle.feature_names == ["breakout_strength", "volatility", "volume_z"]

@@ -7,12 +7,50 @@ metrics + policy + trial family -> INVALID_RUN/HARD_FAIL/NEAR_MISS/REGIME_EDGE/P
 from __future__ import annotations
 
 from enum import StrEnum
+import math
 from typing import Any, Sequence
 import numpy as np
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from indodax_lab.evaluation.registry import ExperimentRunRecord, ExperimentRunStatus
 from indodax_lab.evaluation.statistics import compute_deflated_sharpe_ratio, compute_pbo
+
+# EVAL-02-F4: metrics that a strategy-quality gate consumes. Each must be present and
+# finite; an absent or non-finite value is *unknown* evidence, never a passing value.
+_GATED_METRICS = ("sharpe_ratio", "profit_factor", "max_drawdown", "trade_count")
+
+
+def _finite_metric(metrics: dict[str, Any], name: str) -> float | None:
+    """Return ``name`` as a finite float, or None when absent or unusable."""
+    if name not in metrics:
+        return None
+    try:
+        value = float(metrics[name])
+    except (TypeError, ValueError):
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _invalid_run(
+    run: ExperimentRunRecord,
+    metrics: dict[str, Any],
+    passed_gates: list[str],
+    failed_gates: list[str],
+    reasons: list[str],
+) -> EvaluationResult:
+    return EvaluationResult(
+        run_id=run.run_id,
+        candidate_id=run.candidate_id,
+        outcome=EvaluationOutcome.INVALID_RUN,
+        passed_gates=passed_gates,
+        failed_gates=failed_gates,
+        reasons=reasons,
+        dsr=None,
+        dsr_status="NOT_ESTIMABLE",
+        pbo=None,
+        pbo_status="NOT_ESTIMABLE",
+        metrics=metrics,
+    )
 
 
 class EvaluationOutcome(StrEnum):
@@ -93,66 +131,49 @@ def evaluate_run(
     metrics = run.metrics or {}
 
     # 1. Run Validity Gates (INVALID_RUN checks)
-    # EVAL-02-AC1: High score does not conceal unknown costs
-    is_cost_verified = metrics.get("cost_model_verified", True)
+    # EVAL-02-AC1 / EVAL-02-F1: High score does not conceal unknown costs.
+    # Fail-closed: cost evidence must be an explicit `True`. An absent flag is
+    # *unknown* cost, never verified cost.
+    is_cost_verified = metrics.get("cost_model_verified") is True
     if not is_cost_verified or not run.cost_schedule_hash or run.cost_schedule_hash.lower() == "unknown":
         failed_gates.append("COST_MODEL_VERIFIED")
         reasons.append("COST_MODEL_UNKNOWN")
-        return EvaluationResult(
-            run_id=run.run_id,
-            candidate_id=run.candidate_id,
-            outcome=EvaluationOutcome.INVALID_RUN,
-            passed_gates=passed_gates,
-            failed_gates=failed_gates,
-            reasons=reasons,
-            dsr=None,
-            dsr_status="NOT_ESTIMABLE",
-            pbo=None,
-            pbo_status="NOT_ESTIMABLE",
-            metrics=metrics,
-        )
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
     passed_gates.append("COST_MODEL_VERIFIED")
 
     # Dirty worktree gate
     if policy.require_clean_worktree and run.is_dirty:
         failed_gates.append("CLEAN_WORKTREE")
         reasons.append("DIRTY_WORKTREE_PROMOTION_FORBIDDEN")
-        return EvaluationResult(
-            run_id=run.run_id,
-            candidate_id=run.candidate_id,
-            outcome=EvaluationOutcome.INVALID_RUN,
-            passed_gates=passed_gates,
-            failed_gates=failed_gates,
-            reasons=reasons,
-            dsr=None,
-            dsr_status="NOT_ESTIMABLE",
-            pbo=None,
-            pbo_status="NOT_ESTIMABLE",
-            metrics=metrics,
-        )
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
     passed_gates.append("CLEAN_WORKTREE")
 
     if run.status != ExperimentRunStatus.SUCCESS:
         failed_gates.append("RUN_EXECUTION_SUCCESS")
         reasons.append("RUN_FAILED_TECHNICAL")
-        return EvaluationResult(
-            run_id=run.run_id,
-            candidate_id=run.candidate_id,
-            outcome=EvaluationOutcome.INVALID_RUN,
-            passed_gates=passed_gates,
-            failed_gates=failed_gates,
-            reasons=reasons,
-            dsr=None,
-            dsr_status="NOT_ESTIMABLE",
-            pbo=None,
-            pbo_status="NOT_ESTIMABLE",
-            metrics=metrics,
-        )
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
     passed_gates.append("RUN_EXECUTION_SUCCESS")
+
+    # EVAL-02-F4: every quality-gate input must be present and finite. Comparison against
+    # NaN is always False, so an unchecked NaN would satisfy *every* threshold and reach
+    # PASS. Reject the run as invalid instead of gating on unusable evidence.
+    resolved: dict[str, float] = {}
+    unusable: list[str] = []
+    for name in _GATED_METRICS:
+        value = _finite_metric(metrics, name)
+        if value is None:
+            unusable.append(name)
+        else:
+            resolved[name] = value
+    if unusable:
+        failed_gates.append("METRICS_PRESENT_AND_FINITE")
+        reasons.append("METRIC_MISSING_OR_NON_FINITE:" + ",".join(sorted(unusable)))
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
+    passed_gates.append("METRICS_PRESENT_AND_FINITE")
 
     # 2. Strategy Quality & Evidence Gates
     # EVAL-02-AC2: Sample size gate
-    trade_count = int(metrics.get("trade_count", 0))
+    trade_count = int(resolved["trade_count"])
     if trade_count < policy.min_trade_count:
         failed_gates.append("SAMPLE_SIZE_ADEQUATE")
         reasons.append("INSUFFICIENT_SAMPLE_SIZE")
@@ -160,7 +181,7 @@ def evaluate_run(
         passed_gates.append("SAMPLE_SIZE_ADEQUATE")
 
     # Sharpe ratio gate
-    sharpe = float(metrics.get("sharpe_ratio", 0.0))
+    sharpe = resolved["sharpe_ratio"]
     if sharpe < policy.min_sharpe_ratio:
         failed_gates.append("SHARPE_GATE")
         reasons.append("SHARPE_BELOW_THRESHOLD")
@@ -168,7 +189,7 @@ def evaluate_run(
         passed_gates.append("SHARPE_GATE")
 
     # Profit factor gate
-    profit_factor = float(metrics.get("profit_factor", 0.0))
+    profit_factor = resolved["profit_factor"]
     if profit_factor < policy.min_profit_factor:
         failed_gates.append("PROFIT_FACTOR_GATE")
         reasons.append("PROFIT_FACTOR_BELOW_THRESHOLD")
@@ -176,7 +197,7 @@ def evaluate_run(
         passed_gates.append("PROFIT_FACTOR_GATE")
 
     # Drawdown gate
-    max_dd = float(metrics.get("max_drawdown", 0.0))
+    max_dd = resolved["max_drawdown"]
     if max_dd > policy.max_drawdown_pct:
         failed_gates.append("DRAWDOWN_GATE")
         reasons.append("DRAWDOWN_EXCEEDS_THRESHOLD")
@@ -184,9 +205,13 @@ def evaluate_run(
         passed_gates.append("DRAWDOWN_GATE")
 
     # 3. Outcome classification
+    # EVAL-02-F2: a risk breach is a hard fail. Softening a maximum-drawdown breach into
+    # NEAR_MISS because the score was positive would present a losing run as a near miss.
     if failed_gates:
         # Check if near miss (e.g. sample size passed, positive sharpe, but marginally below threshold)
         if "INSUFFICIENT_SAMPLE_SIZE" in reasons:
+            outcome = EvaluationOutcome.HARD_FAIL
+        elif "DRAWDOWN_EXCEEDS_THRESHOLD" in reasons:
             outcome = EvaluationOutcome.HARD_FAIL
         elif sharpe > 0.0 and profit_factor >= 1.0:
             outcome = EvaluationOutcome.NEAR_MISS
@@ -265,12 +290,22 @@ def evaluate_multi_seed_runs(
     else:
         raise ValueError(f"UNSUPPORTED_SEED_AGGREGATION_METHOD:{seed_selection}")
 
+    # EVAL-02-F5: the aggregate is only as trustworthy as its least trustworthy seed.
+    # The representative run below is re-gated by `evaluate_run`, so it must carry real
+    # cost evidence: verified only when every seed declared verification and every seed
+    # was priced with the same cost schedule. Without this the aggregate silently loses
+    # the cost evidence and EVAL-02-AC1 no longer protects the multi-seed path.
+    identical_cost_basis = len({r.cost_schedule_hash for r in runs}) == 1
     finalist_metric = {
         "sharpe_ratio": agg_sharpe,
         "profit_factor": agg_pf,
         "trade_count": agg_tc,
         "max_drawdown": agg_dd,
         "seed_count": len(runs),
+        "cost_model_verified": (
+            identical_cost_basis
+            and all(r.metrics.get("cost_model_verified") is True for r in runs)
+        ),
     }
 
     # Evaluate using representative synthetic run record

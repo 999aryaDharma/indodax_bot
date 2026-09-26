@@ -16,7 +16,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
-from typing import BinaryIO, Callable
+from typing import BinaryIO, Callable, Mapping, Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -170,15 +170,35 @@ class ManagedService:
         start_hook: Callable[[], bool] | None = None,
         stop_hook: Callable[[], bool] | None = None,
         flush_hook: Callable[[], bool] | None = None,
+        required_secrets: Sequence[str] = (),
+        secret_resolver: Callable[[str], str] | None = None,
     ) -> None:
         self.service_name = service_name
         self.profile = profile
         self.status = "STOPPED"
         self.is_flushed = False
         self.active_lease: str | None = None
+        self.required_secrets: tuple[str, ...] = tuple(required_secrets)
         self._start_hook = start_hook
         self._stop_hook = stop_hook
         self._flush_hook = flush_hook
+        self._secret_resolver = secret_resolver
+
+    def _verify_required_secrets(self) -> None:
+        """Fail closed before any start hook runs when a credential is unset.
+
+        OPS-01-AC3 is only real if the lifecycle itself enforces it. Every
+        declared requirement is resolved through the supervisor's resolver, which
+        raises ``MissingSecretError`` for an absent or blank credential. Values
+        are deliberately not retained here: the gate exists to prove the service
+        is configured, not to duplicate credentials in process memory.
+        """
+        if not self.required_secrets:
+            return
+        if self._secret_resolver is None:
+            raise LifecycleOperationError("SECRET_RESOLVER_UNAVAILABLE")
+        for secret_key in self.required_secrets:
+            self._secret_resolver(secret_key)
 
     def _run_hook(self, operation: str, hook: Callable[[], bool] | None) -> None:
         if hook is None:
@@ -191,7 +211,10 @@ class ManagedService:
             raise LifecycleOperationError(f"{operation.upper()}_FAILED")
 
     def start(self) -> None:
-        """Start the managed service."""
+        """Start the managed service, refusing to run unconfigured."""
+        # Credentials are resolved first: a start hook must never observe a
+        # half-configured process, and a refusal must publish no RUNNING state.
+        self._verify_required_secrets()
         self._run_hook("start", self._start_hook)
         self.status = "RUNNING"
         self.is_flushed = False
@@ -230,9 +253,20 @@ class ManagedService:
 class ServiceManager:
     """Supervisor coordinating services, host profiles, and secure environment secrets."""
 
-    def __init__(self, profile: HostServiceProfile) -> None:
+    def __init__(
+        self,
+        profile: HostServiceProfile,
+        *,
+        env: Mapping[str, str] | None = None,
+    ) -> None:
         self.profile = profile
         self._services: dict[str, ManagedService] = {}
+        # None means "consult the live process environment at resolve time";
+        # an injected mapping makes the credential source explicit and testable.
+        self._env = env
+
+    def _current_env(self) -> Mapping[str, str]:
+        return os.environ if self._env is None else self._env
 
     def register_service(
         self,
@@ -241,26 +275,48 @@ class ServiceManager:
         start_hook: Callable[[], bool] | None = None,
         stop_hook: Callable[[], bool] | None = None,
         flush_hook: Callable[[], bool] | None = None,
+        required_secrets: Sequence[str] = (),
     ) -> ManagedService:
-        """Register a new service under this manager's host profile."""
+        """Register a new service under this manager's host profile.
+
+        Raises:
+            LifecycleOperationError: If the name is already registered. Silently
+                replacing an entry would orphan a live service that still holds
+                its writer lock and lease while the manager can no longer reach it.
+        """
+        if service_name in self._services:
+            raise LifecycleOperationError(
+                f"SERVICE_ALREADY_REGISTERED:{service_name}"
+            )
         srv = ManagedService(
             service_name=service_name,
             profile=self.profile,
             start_hook=start_hook,
             stop_hook=stop_hook,
             flush_hook=flush_hook,
+            required_secrets=required_secrets,
+            secret_resolver=self._resolve_for_service,
         )
         self._services[service_name] = srv
         return srv
 
-    def resolve_secret(self, secret_key: str, env_dict: dict[str, str]) -> str:
+    def get_service(self, service_name: str) -> ManagedService | None:
+        """Return the registered service, or None when it was never registered."""
+        return self._services.get(service_name)
+
+    def _resolve_for_service(self, secret_key: str) -> str:
+        return self.resolve_secret(secret_key, self._current_env())
+
+    def resolve_secret(self, secret_key: str, env_dict: Mapping[str, str]) -> str:
         """Resolve a sensitive credential from environment dictionary (OPS-01-AC3).
 
         Raises:
-            MissingSecretError: If the credential key is absent or empty. Redacts secret details.
+            MissingSecretError: If the credential key is absent or blank. The
+                message never names the key or echoes the value, so an error
+                surfaced in a supervisor log or traceback cannot leak either.
         """
         val = env_dict.get(secret_key)
-        if not val:
+        if not val or not val.strip():
             raise MissingSecretError(
                 "MISSING_SECRET: A required security credential is not set in the environment. "
                 "Execution failed closed without leaking confidential details (OPS-01-AC3)."

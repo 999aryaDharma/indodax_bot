@@ -293,3 +293,120 @@ def test_every_queue_connection_enables_foreign_keys(tmp_path: Path) -> None:
     queue = SqliteJobQueue(tmp_path / "queue.db")
     with queue._connect() as conn:
         assert conn.execute("PRAGMA foreign_keys;").fetchone() == (1,)
+
+
+# ---------------------------------------------------------------------------
+# Sprint-review fix cycle. Actor for every line below:
+# opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+# ---------------------------------------------------------------------------
+
+
+def test_complete_job_cannot_publish_success_without_a_result_artifact(tmp_path: Path) -> None:
+    """JOB-01-AC3: a job with no artifact at all is a partial result, never SUCCESS.
+
+    ``artifact_path=None`` previously flowed straight through to
+    ``status=SUCCESS`` with a null result path and hash, so a worker that
+    produced nothing - or died before writing - published a successful job.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("no_artifact"))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_1", as_of=started)
+    assert claimed is not None
+
+    with pytest.raises(PartialArtifactError) as exc_info:
+        queue.complete_job("no_artifact", "worker_1", generation=claimed.generation, as_of=started)
+
+    assert "ARTIFACT_PATH_REQUIRED" in str(exc_info.value)
+
+    record = queue.get_job("no_artifact")
+    assert record.status == JobStatus.RUNNING
+    assert record.result_artifact_path is None
+    assert record.result_artifact_hash is None
+
+
+def test_fenced_worker_is_fenced_before_artifact_inspection(tmp_path: Path) -> None:
+    """JOB-01-AC2: lease fencing is authoritative and is checked before the artifact.
+
+    A superseded worker must be refused as stale regardless of what it passes
+    as ``artifact_path``. Previously a fenced worker got
+    ``ARTIFACT_FILE_NOT_FOUND`` for a bad path, which both leaked artifact
+    filesystem details to a fenced caller and reported the wrong reason.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("fenced_first", lease_duration_seconds=30))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    first = queue.claim_job("worker_1", as_of=started)
+    assert first is not None
+
+    expired = started + timedelta(seconds=35)
+    second = queue.claim_job("worker_2", as_of=expired)
+    assert second is not None and second.generation == first.generation + 1
+
+    with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
+        queue.complete_job(
+            "fenced_first",
+            "worker_1",
+            generation=first.generation,
+            artifact_path=tmp_path / "definitely_absent.bin",
+            as_of=expired,
+        )
+
+
+def test_expired_lease_takeover_is_recorded_for_audit(tmp_path: Path) -> None:
+    """A crashed attempt must leave a durable trail when its lease is taken over.
+
+    ``JobStatus.STALE`` is part of the declared JOB-01 lifecycle but nothing in
+    the queue ever produced it, so a worker that died mid-flight was silently
+    re-claimed with no observable evidence. The takeover must be recorded.
+    """
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("crashed", lease_duration_seconds=30, max_attempts=3))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    first = queue.claim_job("dead_worker", as_of=started)
+    assert first is not None
+
+    expired = started + timedelta(seconds=35)
+    replacement = queue.claim_job("live_worker", as_of=expired)
+    assert replacement is not None
+    assert replacement.owner_id == "live_worker"
+
+    marker = replacement.error_message
+    assert marker is not None, "expired-lease takeover left no audit marker"
+    assert "STALE_LEASE_TAKEOVER" in marker
+    assert "dead_worker" in marker
+    assert str(first.generation) in marker
+
+
+def test_successful_completion_clears_the_takeover_marker(tmp_path: Path) -> None:
+    """Regression guard: a clean SUCCESS must not inherit a stale-takeover marker."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("recovered", lease_duration_seconds=30, max_attempts=3))
+    started = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    queue.claim_job("dead_worker", as_of=started)
+
+    expired = started + timedelta(seconds=35)
+    replacement = queue.claim_job("live_worker", as_of=expired)
+    assert replacement is not None
+
+    artifact = tmp_path / "recovered.bin"
+    artifact.write_bytes(b"recovered_result_payload")
+    completed = queue.complete_job(
+        "recovered",
+        "live_worker",
+        generation=replacement.generation,
+        artifact_path=artifact,
+        as_of=expired + timedelta(seconds=5),
+    )
+    assert completed.status == JobStatus.SUCCESS
+    assert completed.error_message is None
+
+
+def test_first_claim_carries_no_takeover_marker(tmp_path: Path) -> None:
+    """Regression guard: a first-time PENDING claim is not a stale takeover."""
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(_build_test_job("fresh"))
+    claimed = queue.claim_job("worker_1", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
+    assert claimed is not None
+    assert claimed.error_message is None
+

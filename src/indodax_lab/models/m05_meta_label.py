@@ -31,6 +31,10 @@ class ManualLabelForbiddenError(ValueError):
     """Raised when manual click or human intent is provided as a training label."""
 
 
+class InconsistentFeatureSchemaError(ValueError):
+    """Raised when supplied trades do not all expose the same feature keys."""
+
+
 # ---------------------------------------------------------------------------
 # Domain models
 # ---------------------------------------------------------------------------
@@ -163,11 +167,25 @@ class M05MetaLabelTrainer:
         if not trades:
             raise ValueError("NO_TRADES_PROVIDED: Cannot train meta-model on empty trade list.")
 
-        # Canonical sorted feature names from the first trade
+        # Canonical sorted feature names, validated to be identical for every trade.
+        # The previous code took the schema from trades[0] and padded with .get(f, 0.0),
+        # so a missing key became a fabricated 0.0 feature value and an unexpected key
+        # was dropped without a trace. Both train the forest on data that never existed.
         feature_names = sorted(trades[0].features.keys())
+        feature_name_set = set(feature_names)
+        for trade in trades:
+            trade_keys = set(trade.features.keys())
+            if trade_keys != feature_name_set:
+                missing = sorted(feature_name_set - trade_keys)
+                unexpected = sorted(trade_keys - feature_name_set)
+                raise InconsistentFeatureSchemaError(
+                    f"INCONSISTENT_FEATURE_SCHEMA: trade '{trade.trade_id}' feature keys differ from "
+                    f"the canonical schema {feature_names}. missing={missing} unexpected={unexpected}. "
+                    "Every trade must expose the same feature keys so no value is fabricated or dropped."
+                )
 
         # Construct feature matrix and labels
-        X_rows = [[trade.features.get(f, 0.0) for f in feature_names] for trade in trades]
+        X_rows = [[trade.features[f] for f in feature_names] for trade in trades]
         y_rows = [trade.label for trade in trades]
 
         X = np.array(X_rows, dtype=np.float64)

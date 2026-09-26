@@ -5,16 +5,24 @@ Guarantees:
 2. F01-01-AC1: Unknown or lookahead training cutoff strictly blocks promotion beyond EXPLORATORY fail-closed.
 3. F01-01-AC2: Raw bytes without matching SHA-256 checksum are rejected and never loaded into memory.
 4. F01-01-AC3: Fake adapter provides reproducible offline weights for CI without external downloads.
+
+`docs/specs/15-deep-learning-and-provenance.md` is authoritative: "Missing revision/hash/license
+rejects load. Unknown cutoff can permit explicitly exploratory analysis but blocks promotion."
+Every rejection therefore raises a typed error; the `REJECTED_*` members of
+`FoundationArtifactStatus` are retained for report rendering and are never returned by
+`verify_provenance`, which either returns VERIFIED/EXPLORATORY or raises.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from enum import StrEnum
 import hashlib
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+_HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +69,12 @@ APPROVED_OPEN_LICENSES: frozenset[str] = frozenset(
 
 
 class FoundationModelProvenance(BaseModel):
-    """Immutable specification of origin and legal/causal bounds of an external model."""
+    """Immutable specification of origin and legal/causal bounds of an external model.
+
+    Spec 15 requires that a missing revision, hash, or license rejects the load. These
+    are therefore structural constraints of the model itself, so an un-loadable artifact
+    cannot be represented at all rather than being discovered later at a call site.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
 
@@ -76,10 +89,41 @@ class FoundationModelProvenance(BaseModel):
     @field_validator("release_date", "training_cutoff_date", mode="after")
     @classmethod
     def validate_utc(cls, v: datetime | None) -> datetime | None:
-        if v is not None:
-            if v.tzinfo is None or v.utcoffset() != (v - v).resolution * 0:
-                raise ValueError("UTC_AWARE_DATETIME_REQUIRED")
+        if v is not None and v.utcoffset() != timedelta(0):
+            raise ValueError("UTC_AWARE_DATETIME_REQUIRED")
         return v
+
+    @field_validator("model_name", "revision", mode="after")
+    @classmethod
+    def validate_known_identity(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "IDENTITY_FIELD_REQUIRED: model_name and revision must be known, non-blank values"
+            )
+        return v
+
+    @field_validator("expected_sha256", mode="after")
+    @classmethod
+    def validate_sha256(cls, v: str) -> str:
+        if len(v) != 64 or not set(v) <= _HEX_DIGITS:
+            raise ValueError(
+                "SHA256_DIGEST_REQUIRED: expected_sha256 must be a 64-character hexadecimal digest"
+            )
+        return v.lower()
+
+    @model_validator(mode="after")
+    def validate_release_and_cutoff_order(self) -> FoundationModelProvenance:
+        if self.release_date > datetime.now(UTC):
+            raise ValueError(
+                "FUTURE_RELEASE_DATE_FORBIDDEN: release_date cannot be in the "
+                "future for a loadable artifact"
+            )
+        if self.training_cutoff_date is not None and self.training_cutoff_date > self.release_date:
+            raise ValueError(
+                "CUTOFF_AFTER_RELEASE_FORBIDDEN: declared training cutoff cannot "
+                "follow the release date"
+            )
+        return self
 
 
 class VerificationResult(BaseModel):
@@ -107,6 +151,15 @@ class FoundationProvenanceGate:
     def __init__(self, approved_licenses: frozenset[str] = APPROVED_OPEN_LICENSES) -> None:
         self.approved_licenses = approved_licenses
 
+    def _require_approved_license(self, provenance: FoundationModelProvenance) -> None:
+        """Fail closed unless the artifact license is on the approved open whitelist."""
+        if provenance.license_spdx not in self.approved_licenses:
+            raise IncompatibleLicenseError(
+                f"INCOMPATIBLE_LICENSE: '{provenance.license_spdx}' is not in "
+                f"approved open licenses "
+                f"{sorted(self.approved_licenses)}"
+            )
+
     def verify_provenance(
         self,
         provenance: FoundationModelProvenance,
@@ -115,11 +168,7 @@ class FoundationProvenanceGate:
     ) -> VerificationResult:
         """Verify provenance metadata and raw byte checksum."""
         # 1. License check
-        if provenance.license_spdx not in self.approved_licenses:
-            raise IncompatibleLicenseError(
-                f"INCOMPATIBLE_LICENSE: '{provenance.license_spdx}' is not in approved open licenses "
-                f"{sorted(self.approved_licenses)}"
-            )
+        self._require_approved_license(provenance)
 
         # 2. Byte checksum check
         computed_sha = ""
@@ -166,8 +215,18 @@ class FoundationProvenanceGate:
         self,
         provenance: FoundationModelProvenance,
         test_start_date: datetime,
+        verification: VerificationResult | None = None,
     ) -> None:
-        """Attempt to promote external foundation model to benchmark or release qualification."""
+        """Attempt to promote external foundation model to benchmark or release qualification.
+
+        Promotion is the only path past EXPLORATORY, so it re-derives every term of the
+        F01-01 contract (`revision checksum license release and cutoff -> verified external
+        artifact or EXPLORATORY`) instead of trusting the caller: the cutoff must be known
+        and pre-test, the license must be on the whitelist, and the caller must present the
+        `VerificationResult` produced by `verify_provenance` for these exact bytes. A
+        caller-supplied, non-VERIFIED, absent or mismatched result cannot promote, and the
+        promoted digest must match the declared `expected_sha256`.
+        """
         if provenance.training_cutoff_date is None:
             raise UnknownCutoffBlockedError(
                 "UNKNOWN_CUTOFF_BLOCKS_PROMOTION: Model has unknown training cutoff date; "
@@ -178,6 +237,38 @@ class FoundationProvenanceGate:
             raise UnknownCutoffBlockedError(
                 f"CUTOFF_LOOKAHEAD_PROMOTION_BLOCKED: Model cutoff {provenance.training_cutoff_date.isoformat()} "
                 f"reaches or exceeds test evaluation start {test_start_date.isoformat()}."
+            )
+
+        self._require_approved_license(provenance)
+
+        if verification is None:
+            raise UnknownCutoffBlockedError(
+                "UNVERIFIED_ARTIFACT_BLOCKS_PROMOTION: promotion requires the VerificationResult "
+                "produced by verify_provenance for these exact bytes; none was supplied."
+            )
+        if verification.status is not FoundationArtifactStatus.VERIFIED:
+            raise UnknownCutoffBlockedError(
+                "UNVERIFIED_ARTIFACT_BLOCKS_PROMOTION: promotion requires a "
+                "VerificationResult with "
+                f"status=verified, got status={verification.status.value!r}."
+            )
+        if not (
+            verification.checksum_verified
+            and verification.license_approved
+            and verification.cutoff_verified
+        ):
+            raise UnknownCutoffBlockedError(
+                "UNVERIFIED_ARTIFACT_BLOCKS_PROMOTION: promotion requires checksum_verified, "
+                "license_approved and cutoff_verified all true, got "
+                f"checksum_verified={verification.checksum_verified}, "
+                f"license_approved={verification.license_approved}, "
+                f"cutoff_verified={verification.cutoff_verified}."
+            )
+        if verification.computed_sha256.lower() != provenance.expected_sha256.lower():
+            raise UnknownCutoffBlockedError(
+                "UNVERIFIED_ARTIFACT_BLOCKS_PROMOTION: supplied verification covers bytes "
+                f"with digest {verification.computed_sha256}, but provenance declares "
+                f"{provenance.expected_sha256}."
             )
 
 
@@ -194,7 +285,7 @@ class FakeFoundationModelAdapter:
 
     def get_test_weights_and_provenance(self) -> tuple[bytes, FoundationModelProvenance]:
         """Produce synthetic reproducible weights and matching provenance metadata."""
-        weights = f"OFFLINE_CI_WEIGHTS_{self.model_name}_STABLE_BYTES".encode("utf-8")
+        weights = f"OFFLINE_CI_WEIGHTS_{self.model_name}_STABLE_BYTES".encode()
         sha256_hash = hashlib.sha256(weights).hexdigest()
 
         provenance = FoundationModelProvenance(

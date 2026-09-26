@@ -52,3 +52,22 @@ Full lab suite verification: 183 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for M05-01.
 - Next unlocked consumers: No mandatory downstream (EXTENSION tier).
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave B RED (M01-01..M06-01 together): `python -m pytest tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py tests/unit/lab/models/test_m03_rf_regime.py tests/unit/lab/models/test_m04_quantile_risk.py tests/unit/lab/models/test_m05_meta_label.py tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `10 failed, 34 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - The meta-label trainer took its feature schema from `trades[0]` alone and then built rows with `trade.features.get(f, 0.0)`. A trade missing a key was silently padded with a fabricated `0.0`, and a trade carrying an unexpected key had that key dropped without any trace. A fabricated `0.0` is a real feature value to the random forest, so the model was trained on data that never existed, and the bundle hash and the published `feature_names` did not describe the rows actually used. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added `InconsistentFeatureSchemaError` and a schema check in `train()` that compares every trade's feature key set against the canonical schema derived from `trades[0]`, raising with the exact `missing` and `unexpected` key lists. Row construction now indexes `trade.features[f]` directly, so no value can be fabricated or dropped. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/m05_meta_label.py`, `tests/unit/lab/models/test_m05_meta_label.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_m05_meta_label.py -p no:cacheprovider -q` -> `6 passed` (exit 0). A companion test pins the homogeneous case still trains and still publishes all three sorted feature names. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

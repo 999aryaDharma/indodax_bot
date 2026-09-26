@@ -33,6 +33,36 @@ class ResumeConfigMismatchError(ValueError):
     """Raised when resuming a search with mismatched search space parameters or identities."""
 
 
+class BudgetPolicyViolationError(ValueError):
+    """Raised when a requested budget exceeds the ADR-003 research policy caps."""
+
+
+# ADR-003 "Default budgets": ML search is capped at 30 trials, and NEAR_MISS allows at
+# most one model/horizon revision under its remaining trial budget. These are the
+# absolute research-policy ceilings; a caller may pick a *lower* budget but never a
+# higher one, and no revision round can reset a consumed trial budget.
+ADR003_MAX_TRIALS = 30
+ADR003_MAX_REVISIONS = 1
+
+# ML-03-AC0 requires the tuning objective to target inner validation only. This is an
+# exact allowlist rather than a keyword scan: substring matching lets lookalikes such as
+# `outer_val_loss` or `holdout_pnl` through, and those objectives read sealed or
+# out-of-fold data during the search.
+ALLOWED_TARGET_OBJECTIVES = frozenset(
+    {
+        "inner_val_accuracy",
+        "inner_val_auc",
+        "inner_val_brier",
+        "inner_val_coverage",
+        "inner_val_log_loss",
+        "inner_val_mae",
+        "inner_val_pnl",
+        "inner_val_rmse",
+        "inner_val_sharpe",
+    }
+)
+
+
 class TrialStatus(StrEnum):
     """Execution status of a single hyperparameter evaluation trial."""
 
@@ -53,13 +83,13 @@ class SearchSpace(BaseModel):
 
     def __init__(self, **data: Any) -> None:
         obj = str(data.get("target_objective", "")).strip().lower()
-        forbidden_terms = ["sealed_test", "outer_test", "test", "sealed"]
-        for term in forbidden_terms:
-            if term in obj:
-                raise SealedTestObjectiveForbiddenError(
-                    f"SEALED_TEST_OBJECTIVE_FORBIDDEN: Objective '{data.get('target_objective')}' references "
-                    f"forbidden partition keyword '{term}'. Search objectives must target inner validation only."
-                )
+        if obj not in ALLOWED_TARGET_OBJECTIVES:
+            raise SealedTestObjectiveForbiddenError(
+                f"SEALED_TEST_OBJECTIVE_FORBIDDEN: Objective "
+                f"'{data.get('target_objective')}' is not a registered inner-validation "
+                f"objective. Search objectives must exactly match one of "
+                f"{sorted(ALLOWED_TARGET_OBJECTIVES)}; sealed/outer/test lookalikes are rejected."
+            )
         super().__init__(**data)
 
     def space_hash(self) -> str:
@@ -79,10 +109,30 @@ class TrialBudget(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    max_trials: int = 30
-    max_revisions: int = 1
+    max_trials: int = ADR003_MAX_TRIALS
+    max_revisions: int = ADR003_MAX_REVISIONS
     consumed_trials: int = 0
     revision_count: int = 0
+
+    @model_validator(mode="after")
+    def enforce_adr003_caps(self) -> TrialBudget:
+        """The ADR-003 ceilings are absolute, so they are enforced on the record itself.
+
+        Enforcing here (not only in ``BoundedTrialSearch.__init__``) also covers budgets
+        rebuilt from a persisted checkpoint during resume.
+        """
+        if not 1 <= self.max_trials <= ADR003_MAX_TRIALS:
+            raise BudgetPolicyViolationError(
+                f"BUDGET_POLICY_VIOLATION: max_trials={self.max_trials} is outside the ADR-003 "
+                f"range [1, {ADR003_MAX_TRIALS}] for ML research search."
+            )
+        if not 0 <= self.max_revisions <= ADR003_MAX_REVISIONS:
+            raise BudgetPolicyViolationError(
+                f"BUDGET_POLICY_VIOLATION: max_revisions={self.max_revisions} is outside the ADR-003 "
+                f"range [0, {ADR003_MAX_REVISIONS}]; at most {ADR003_MAX_REVISIONS} near-miss "
+                "revision is permitted per model."
+            )
+        return self
 
     @property
     def remaining_trials(self) -> int:
@@ -109,8 +159,8 @@ class BoundedTrialSearch:
     def __init__(
         self,
         search_space: SearchSpace,
-        max_trials: int = 30,
-        max_revisions: int = 1,
+        max_trials: int = ADR003_MAX_TRIALS,
+        max_revisions: int = ADR003_MAX_REVISIONS,
     ) -> None:
         self.search_space = search_space
         self.budget = TrialBudget(
@@ -181,7 +231,13 @@ class BoundedTrialSearch:
 
     @classmethod
     def from_state(cls, state: dict[str, Any], search_space: SearchSpace) -> BoundedTrialSearch:
-        """Resume search from state checkpoint, verifying strict configuration parity."""
+        """Resume search from a checkpoint, re-deriving budget counters instead of trusting them.
+
+        Every trial the search ever recorded is present in ``state["trials"]``, and every
+        recorded trial consumed budget, so the consumed-trial counter is *reconstructed*
+        from the trial log and cross-checked against the persisted value. A tampered
+        counter (or a tampered cap) is a resume rejection, not a silent budget reset.
+        """
         saved_space = state.get("search_space", {})
         saved_hash = state.get("search_space_hash")
 
@@ -193,16 +249,59 @@ class BoundedTrialSearch:
                 "Resume is strictly rejected."
             )
 
+        saved_budget = state.get("budget")
+        if not isinstance(saved_budget, dict):
+            raise ResumeConfigMismatchError(
+                "RESUME_CONFIG_MISMATCH: Checkpoint carries no readable budget block. "
+                "Budget counters are reconstructed, never assumed."
+            )
+
+        max_trials = saved_budget.get("max_trials")
+        max_revisions = saved_budget.get("max_revisions")
+        if (
+            not isinstance(max_trials, int)
+            or isinstance(max_trials, bool)
+            or not 1 <= max_trials <= ADR003_MAX_TRIALS
+            or not isinstance(max_revisions, int)
+            or isinstance(max_revisions, bool)
+            or not 0 <= max_revisions <= ADR003_MAX_REVISIONS
+        ):
+            raise ResumeConfigMismatchError(
+                f"RESUME_CONFIG_MISMATCH: Checkpoint budget (max_trials={max_trials}, "
+                f"max_revisions={max_revisions}) is outside the ADR-003 caps "
+                f"(max_trials<={ADR003_MAX_TRIALS}, max_revisions<={ADR003_MAX_REVISIONS}). "
+                "Resume is strictly rejected."
+            )
+
+        outcomes = [TrialOutcome.model_validate(t) for t in state.get("trials", [])]
+        reconstructed_consumed = len(outcomes)
+        claimed_consumed = saved_budget.get("consumed_trials")
+        if claimed_consumed != reconstructed_consumed:
+            raise ResumeConfigMismatchError(
+                f"RESUME_CONFIG_MISMATCH: Checkpoint claims consumed_trials={claimed_consumed} but "
+                f"records {reconstructed_consumed} trial outcomes. Failed trials consume budget, so "
+                "the trial log is authoritative. Resume is strictly rejected."
+            )
+
+        claimed_revisions = saved_budget.get("revision_count")
+        if (
+            not isinstance(claimed_revisions, int)
+            or isinstance(claimed_revisions, bool)
+            or not 0 <= claimed_revisions <= max_revisions
+        ):
+            raise ResumeConfigMismatchError(
+                f"RESUME_CONFIG_MISMATCH: Checkpoint revision_count={claimed_revisions} is not a "
+                f"count in [0, {max_revisions}]. Resume is strictly rejected."
+            )
+
         instance = cls(
             search_space=search_space,
-            max_trials=state["budget"]["max_trials"],
-            max_revisions=state["budget"]["max_revisions"],
+            max_trials=max_trials,
+            max_revisions=max_revisions,
         )
-        instance.budget.consumed_trials = state["budget"]["consumed_trials"]
-        instance.budget.revision_count = state["budget"]["revision_count"]
-
-        for t_data in state.get("trials", []):
-            outcome = TrialOutcome.model_validate(t_data)
-            instance.trials.append(outcome)
+        # Re-derived from the trial log, not read back from the checkpoint.
+        instance.budget.consumed_trials = reconstructed_consumed
+        instance.budget.revision_count = claimed_revisions
+        instance.trials.extend(outcomes)
 
         return instance

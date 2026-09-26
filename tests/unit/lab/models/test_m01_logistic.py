@@ -217,3 +217,37 @@ def test_m01_01_config_yaml_and_unfitted_guards() -> None:
     with pytest.raises(RuntimeError, match="M01LogisticTrainer is not fitted"):
         trainer.predict_proba(pd.DataFrame({"x": [1]}))
 
+
+# ---------------------------------------------------------------------------
+# M01-01-AC1 regression: fail-closed solver/penalty allowlist
+# ---------------------------------------------------------------------------
+
+def test_m01_01_ac1_unknown_penalty_is_rejected_at_config_time() -> None:
+    """M01-01-AC1: an unsupported penalty must be refused by the config, not deferred to sklearn.
+
+    Previously M01Config only validated the three penalties it happened to know about
+    combinatorially. Any other string (``bogus``, ``none``) fell straight through to
+    ``super().__init__`` and produced a *constructible* config, so the fail-closed
+    contract was only enforced much later (or not at all) inside sklearn's fit.
+    """
+    for bad_penalty in ("bogus", "none", "elastic-net", "", "L1"):
+        with pytest.raises(InvalidSolverPenaltyError, match="INVALID_SOLVER_PENALTY"):
+            M01Config(penalty=bad_penalty, solver="saga", C=0.1, l1_ratio=0.5)
+
+
+def test_m01_01_ac1_unsupported_penalty_never_reaches_the_fitted_model() -> None:
+    """M01-01-AC1: the three documented penalties remain constructible and fittable.
+
+    The allowlist must not be so tight that it blocks a legitimate configuration.
+    """
+    X_train, y_train, X_val, y_val = _generate_synthetic_classification_data(n_train=200, n_val=100, seed=42)
+    feature_names = ["momentum_5", "volatility_20", "volume_ratio"]
+
+    trainer = M01LogisticTrainer(
+        config=M01Config(penalty="l2", solver="lbfgs", C=0.1, l1_ratio=0.5, seed=42)
+    )
+    bundle = trainer.train_and_calibrate(
+        X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val, feature_names=feature_names
+    )
+    assert isinstance(bundle, M01FittedBundle)
+

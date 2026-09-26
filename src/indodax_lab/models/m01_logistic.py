@@ -29,6 +29,11 @@ class ClassImbalanceError(ValueError):
     """Raised when training data exhibits extreme minority class starvation."""
 
 
+# The only regularizers M01 is allowed to request. Anything else is refused at config
+# construction time so the failure surfaces here instead of inside sklearn's fit.
+SUPPORTED_PENALTIES = frozenset({"l1", "l2", "elasticnet"})
+
+
 class M01Config(BaseModel):
     """Configuration for M01 regularized logistic regression baseline."""
 
@@ -54,6 +59,15 @@ class M01Config(BaseModel):
 
         if c_val <= 0.0:
             raise ValueError("POSITIVE_REGULARIZATION_REQUIRED: C parameter must be strictly positive")
+
+        # AC1: fail closed on an unsupported penalty. Without this allowlist an unknown
+        # penalty fell straight through to super().__init__ and produced a constructible
+        # config, deferring the failure to sklearn's fit (or nowhere at all).
+        if penalty not in SUPPORTED_PENALTIES:
+            raise InvalidSolverPenaltyError(
+                f"INVALID_SOLVER_PENALTY: penalty '{penalty}' is not supported. "
+                f"Supported penalties: {sorted(SUPPORTED_PENALTIES)}."
+            )
 
         if penalty == "elasticnet":
             if solver != "saga":

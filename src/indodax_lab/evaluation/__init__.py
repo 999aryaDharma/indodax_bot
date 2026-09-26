@@ -33,6 +33,7 @@ from indodax_lab.evaluation.tournament import (
     LiveProfitabilityClaimForbiddenError,
     TournamentCandidate,
     TournamentFollowUp,
+    TournamentPortfolioInvalidError,
     TournamentReport,
     run_wave1_tournament,
 )
@@ -63,6 +64,7 @@ __all__ = [
     "LiveProfitabilityClaimForbiddenError",
     "TournamentCandidate",
     "TournamentFollowUp",
+    "TournamentPortfolioInvalidError",
     "TournamentReport",
     "run_wave1_tournament",
 ]

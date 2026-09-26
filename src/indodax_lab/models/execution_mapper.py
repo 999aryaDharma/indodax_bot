@@ -9,9 +9,10 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
+import hashlib
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -142,6 +143,35 @@ class CostAwareExecutionMapper:
     def __init__(self, cost_basis: CostBasis) -> None:
         self.cost_basis = cost_basis
 
+    @staticmethod
+    def _intent_digest(forecast: ForecastPayload) -> str:
+        """Process-stable 5-digit digest of a canonical, explicitly ordered field payload.
+
+        The builtin ``hash()`` is salted per interpreter, so it produced a different id
+        for the same logical intent in every worker and after every restart, which broke
+        idempotency and intent deduplication. This is a content digest instead.
+
+        The field order below is part of the published id contract: appending a field is
+        a contract change, reordering it silently rewrites every emitted id.
+        """
+        canonical = "|".join(
+            [
+                forecast.pair,
+                str(forecast.side.value),
+                forecast.decision_ts.astimezone(UTC).isoformat(),
+                str(forecast.kind.value),
+                format(forecast.value, ".17g"),
+                str(forecast.desired_qty),
+                forecast.strategy_id,
+                str(forecast.role_preference.value),
+                "" if forecast.limit_price is None else str(forecast.limit_price),
+                "" if forecast.stop_loss is None else str(forecast.stop_loss),
+                "" if forecast.take_profit is None else str(forecast.take_profit),
+            ]
+        )
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        return str(int(digest[:16], 16) % 100000).zfill(5)
+
     def evaluate_forecast(self, forecast: ForecastPayload) -> ExecutionDecision:
         """Evaluate whether forecast exceeds required safety margin over costs."""
         # 1. Compute net edge per ADR-002 exact-cost semantics
@@ -164,8 +194,7 @@ class CostAwareExecutionMapper:
         # 2. Check hurdle: net edge must strictly exceed safety margin
         if net_edge > self.cost_basis.safety_margin:
             ts_str = forecast.decision_ts.strftime("%Y%m%d%H%M%S")
-            digest = abs(hash((forecast.pair, forecast.value, str(forecast.desired_qty)))) % 100000
-            intent_id = f"intent_{forecast.pair}_{ts_str}_{digest}"
+            intent_id = f"intent_{forecast.pair}_{ts_str}_{self._intent_digest(forecast)}"
 
             signal_intent = SignalIntent(
                 intent_id=intent_id,

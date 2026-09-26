@@ -171,3 +171,92 @@ def test_m03_01_not_fitted_error():
 
     with pytest.raises(RuntimeError):
         trainer.predict_regime_proba(X)
+
+
+# ---------------------------------------------------------------------------
+# M03-01 downside-risk regression: semi-deviation must not collapse to 0.0
+# ---------------------------------------------------------------------------
+
+def _force_all_bull_entries(trainer: M03RFRegimeTrainer) -> None:
+    """Make every evaluated bar enter, so the entry set is fully under test control."""
+    classes = trainer.bundle.classes_
+    bull_idx = classes.index(2)
+
+    def _always_bull(_X: pd.DataFrame) -> np.ndarray:
+        proba = np.zeros((len(_X), len(classes)), dtype=np.float64)
+        proba[:, bull_idx] = 1.0
+        return proba
+
+    trainer.predict_regime_proba = _always_bull  # type: ignore[method-assign]
+
+
+def test_m03_01_downside_risk_is_positive_for_a_steady_bleed() -> None:
+    """M03-01: a small loss on *every* entry is real downside risk, not zero risk.
+
+    The previous implementation computed ``np.std`` over the negative subset only.
+    When every negative return is identical the standard deviation is exactly 0.0, so
+    a book that lost money on 100% of its entries reported no downside risk at all.
+    """
+    feature_names = ["feat_0", "feat_1", "feat_2", "feat_3"]
+    trainer, _ = _build_trainer_and_bundle(feature_names)
+    _force_all_bull_entries(trainer)
+
+    n_entries = 40
+    # Constant small loss on every single entry -> std == 0.0 under the old formula.
+    X_eval = _make_feature_df(n=n_entries, n_features=4, seed=5)
+    X_eval.columns = feature_names  # type: ignore[assignment]
+
+    report = trainer.evaluate_utility(
+        X_eval=X_eval,
+        realized_returns=np.full(n_entries, -0.001, dtype=np.float64),
+        round_trip_cost=0.0,
+    )
+    assert report.n_entries == n_entries
+    assert report.net_utility < 0.0
+    assert report.downside_risk > 0.0
+
+
+def test_m03_01_downside_risk_is_positive_for_a_single_crash() -> None:
+    """M03-01: one large crash among winners is real downside risk, not zero risk.
+
+    A single losing entry is a one-element array, so ``np.std`` returned 0.0 there too
+    and a tail-loss event was reported as riskless.
+    """
+    feature_names = ["feat_0", "feat_1", "feat_2", "feat_3"]
+    trainer, _ = _build_trainer_and_bundle(feature_names)
+    _force_all_bull_entries(trainer)
+
+    n_entries = 40
+    one_crash = np.full(n_entries, 0.02, dtype=np.float64)
+    one_crash[7] = -0.029
+
+    X_eval = _make_feature_df(n=n_entries, n_features=4, seed=5)
+    X_eval.columns = feature_names  # type: ignore[assignment]
+
+    report = trainer.evaluate_utility(
+        X_eval=X_eval,
+        realized_returns=one_crash,
+        round_trip_cost=0.0,
+    )
+    assert report.n_entries == n_entries
+    assert report.net_utility > 0.0
+    assert report.downside_risk > 0.0
+
+
+def test_m03_01_downside_risk_is_zero_when_no_entry_loses() -> None:
+    """M03-01: the fix must not invent risk - an all-winning book stays at 0.0."""
+    feature_names = ["feat_0", "feat_1", "feat_2", "feat_3"]
+    trainer, _ = _build_trainer_and_bundle(feature_names)
+    _force_all_bull_entries(trainer)
+
+    n_entries = 20
+    X_eval = _make_feature_df(n=n_entries, n_features=4, seed=5)
+    X_eval.columns = feature_names  # type: ignore[assignment]
+
+    report = trainer.evaluate_utility(
+        X_eval=X_eval,
+        realized_returns=np.full(n_entries, 0.01, dtype=np.float64),
+        round_trip_cost=0.0,
+    )
+    assert report.n_entries == n_entries
+    assert report.downside_risk == pytest.approx(0.0)

@@ -52,3 +52,23 @@ Full lab suite verification: 187 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for M06-01.
 - Next unlocked consumers: No mandatory downstream (EXTENSION tier).
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave B RED (M01-01..M06-01 together): `python -m pytest tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py tests/unit/lab/models/test_m03_rf_regime.py tests/unit/lab/models/test_m04_quantile_risk.py tests/unit/lab/models/test_m05_meta_label.py tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `10 failed, 34 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - An absent feature column escaped the module's typed error contract. `X_train[feature_names]` raised a bare `KeyError: "['spread_bps'] not in index"` in both `train()` and `score()`, so a caller handling only the documented `MissingDataDistinctFromAnomalyError` would not catch incomplete data. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Important** - The unsupervised gate accepted a directional target column as an ordinary feature. Passing `forward_return` in `feature_names` trained the IsolationForest on it, which is exactly the directional claim AC2 forbids; the guard only covered the explicit `target_direction` argument. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added `_assert_feature_columns_present()`, which converts a missing column into `MissingDataDistinctFromAnomalyError` with code `MISSING_FEATURE_COLUMNS` and lists both the missing and the present columns, and wired it into `train()` and `score()`. Added `_assert_no_directional_features()` plus a `FORBIDDEN_FEATURE_KEYWORDS` tuple matched as substrings, raising `DirectionalClaimForbiddenError` with the existing `DIRECTIONAL_CLAIM_FORBIDDEN` code, called from `train()`. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/m06_anomaly_gate.py`, `tests/unit/lab/models/test_m06_anomaly_gate.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `8 passed` (exit 0). A companion test pins that the documented liquidity feature set `volume_base, spread_bps, depth_idr, trade_count` still trains, so the new guard is not over-tight. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

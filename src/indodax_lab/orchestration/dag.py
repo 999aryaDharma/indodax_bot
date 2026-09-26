@@ -16,7 +16,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from indodax_lab.evaluation.gates import EvaluationOutcome
 
@@ -39,6 +39,16 @@ class InvalidRunRetryLimitExceededError(RuntimeError):
 
     Once the retry ceiling is reached, the job must be moved to BLOCKED_POLICY state
     rather than re-enqueued.
+    """
+
+
+class InvalidRunRetryConfigRequiredError(RuntimeError):
+    """Raised when an INVALID_RUN retry is attempted without a config anchor to verify against.
+
+    AC2 requires that an INVALID_RUN retry keeps the original config. Without the
+    anchor record there is nothing to compare against, so the retry cannot be
+    authorized: allowing it would silently permit config mutation on every retry,
+    which is the "tuning on an invalid run" path the sprint forbids.
     """
 
 
@@ -75,9 +85,33 @@ class RepeatPolicy(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     policy_id: str = "repeat_policy_v1"
-    max_invalid_run_retries: int = 2
+    max_invalid_run_retries: int = Field(default=2, ge=0)
     near_miss_requires_new_version: bool = True
     hard_fail_reopenable: bool = False
+
+    @field_validator("max_invalid_run_retries")
+    @classmethod
+    def validate_retry_cap(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError(
+                f"RETRY_CAP_INVALID: max_invalid_run_retries must be >= 0, got {value}. "
+                "A negative cap would block even the first run while appearing to be a policy."
+            )
+        return value
+
+    @field_validator("hard_fail_reopenable")
+    @classmethod
+    def validate_hard_fail_reopenable(cls, value: bool) -> bool:
+        # HARD_FAIL is a permanent gate verdict. The scheduler blocks it
+        # unconditionally and never consults this field, so accepting `True`
+        # would hand a caller false assurance that the gate had been relaxed.
+        if value:
+            raise ValueError(
+                "HARD_FAIL_REOPEN_NOT_SUPPORTED: HARD_FAIL is a permanent verdict and cannot be "
+                "made reopenable by policy. A new candidate version with a documented hypothesis "
+                "is the only sanctioned path (JOB-03-AC1)."
+            )
+        return value
 
 
 class RepeatOutcome(StrEnum):
@@ -147,20 +181,23 @@ class DAGScheduler:
         Args:
             recipe: The experiment recipe to potentially reschedule.
             prior_outcome: The most recent ``EvaluationOutcome`` for this candidate/recipe.
-            attempt_count: Number of times this recipe has already been attempted.
+            attempt_count: Number of times this recipe has already been attempted. Must be >= 0.
             prior_recipe_version: Version string of the recipe in the prior run.
             system_idle: Whether the host system is currently idle. Does NOT override HARD_FAIL.
-            original_retry_config: If provided, validates that the current recipe config_hash
-                has not changed from the original (required for INVALID_RUN retry).
+            original_retry_config: Anchor record holding the original ``config_hash``. Required for
+                ``INVALID_RUN`` retries so config immutability can be verified.
 
         Returns:
             A ``RepeatDecision`` with ``outcome=ALLOWED`` or ``outcome=BLOCKED``.
 
         Raises:
             HardFailCannotBeReopenedError: If ``prior_outcome`` is ``HARD_FAIL``.
+            InvalidRunRetryConfigRequiredError: If ``prior_outcome`` is ``INVALID_RUN`` and no
+                config anchor was supplied.
             InvalidRunRetryLimitExceededError: If ``INVALID_RUN`` attempt count exceeds policy cap.
             NearMissMustHaveNewVersionError: If ``NEAR_MISS`` is retried with the same version.
-            ValueError: If ``INVALID_RUN`` retry uses a different config_hash.
+            ValueError: If ``attempt_count`` is negative, or if an ``INVALID_RUN`` retry uses a
+                different config_hash.
         """
         # --- AC1: HARD_FAIL is a permanent block regardless of system state ---
         if prior_outcome == EvaluationOutcome.HARD_FAIL:
@@ -173,15 +210,33 @@ class DAGScheduler:
 
         # --- AC2: INVALID_RUN retry must be bounded and use the same config ---
         if prior_outcome == EvaluationOutcome.INVALID_RUN:
-            # Config change check (if anchor provided)
-            if original_retry_config is not None:
-                if recipe.config_hash != original_retry_config.original_config_hash:
-                    raise ValueError(
-                        f"CONFIG_MUST_NOT_CHANGE: INVALID_RUN retry must use the same config. "
-                        f"Original config_hash='{original_retry_config.original_config_hash}', "
-                        f"current config_hash='{recipe.config_hash}'. "
-                        "Changing config on an INVALID_RUN retry is forbidden; submit as a new recipe version."
-                    )
+            # The cap is meaningless for a negative counter, and an unguarded
+            # negative value satisfies `attempt_count > cap` for every cap,
+            # granting unlimited retries to a caller with broken bookkeeping.
+            if attempt_count < 0:
+                raise ValueError(
+                    f"ATTEMPT_COUNT_INVALID: attempt_count must be >= 0, got {attempt_count}. "
+                    "A negative count would bypass the INVALID_RUN retry cap entirely."
+                )
+
+            # The config-immutability guard must not be skippable by omission.
+            # Without an anchor there is nothing to compare against, so the
+            # retry cannot be proven to have kept its config.
+            if original_retry_config is None:
+                raise InvalidRunRetryConfigRequiredError(
+                    f"RETRY_CONFIG_ANCHOR_REQUIRED: INVALID_RUN retry of recipe "
+                    f"'{recipe.recipe_id}' was submitted without an InvalidRunRetryConfig anchor, "
+                    "so config immutability cannot be verified. Pass the original config_hash, "
+                    "or submit the change as a new recipe version (JOB-03-AC2)."
+                )
+
+            if recipe.config_hash != original_retry_config.original_config_hash:
+                raise ValueError(
+                    f"CONFIG_MUST_NOT_CHANGE: INVALID_RUN retry must use the same config. "
+                    f"Original config_hash='{original_retry_config.original_config_hash}', "
+                    f"current config_hash='{recipe.config_hash}'. "
+                    "Changing config on an INVALID_RUN retry is forbidden; submit as a new recipe version."
+                )
 
             # Attempt cap check
             if attempt_count > self.policy.max_invalid_run_retries:

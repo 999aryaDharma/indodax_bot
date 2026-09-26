@@ -264,3 +264,92 @@ def test_ml_02_edge_cases_and_guards() -> None:
         _ = calibrator.is_fitted
         calibrator.predict_probability([0.5])
 
+
+_CHILD_PROBE = """
+import sys
+from datetime import UTC, datetime
+from decimal import Decimal
+from indodax_lab.models.execution_mapper import (
+    CostAwareExecutionMapper, CostBasis, ForecastKind, ForecastPayload,
+)
+
+mapper = CostAwareExecutionMapper(
+    CostBasis(estimated_round_trip_cost=0.0040, safety_margin=0.0015)
+)
+payload = ForecastPayload(
+    kind=ForecastKind.NET_RETURN,
+    value=0.0035,
+    pair="BTC_IDR",
+    decision_ts=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
+    desired_qty=Decimal("0.05"),
+)
+decision = mapper.evaluate_forecast(payload)
+assert decision.signal_intent is not None
+print(decision.signal_intent.intent_id)
+"""
+
+
+def _intent_id_under_hash_seed(seed: str) -> str:
+    """Compute the mapper's intent id in a fresh interpreter with a pinned hash salt."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    import indodax_lab
+
+    src_root = str(Path(indodax_lab.__file__).resolve().parent.parent)
+    env = dict(os.environ, PYTHONHASHSEED=seed, PYTHONPATH=src_root)
+    completed = subprocess.run(
+        [sys.executable, "-c", _CHILD_PROBE],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return completed.stdout.strip()
+
+
+def test_ml_02_intent_id_is_stable_across_processes() -> None:
+    """Regression: `intent_id` was derived from the builtin salted `hash()`.
+
+    Python salts `hash()` per process, so the identical logical intent produced a
+    different id in every worker and after every restart, breaking idempotency and
+    deduplication of order intents.
+    """
+    ids = {seed: _intent_id_under_hash_seed(seed) for seed in ("0", "1", "2", "12345")}
+
+    assert len(set(ids.values())) == 1, f"intent_id is not process-stable: {ids}"
+
+
+def test_ml_02_intent_id_is_deterministic_within_process_and_keeps_shape() -> None:
+    """Same payload -> same id, and the published `intent_<pair>_<ts>_<digest>` shape holds."""
+    cost_basis = CostBasis(estimated_round_trip_cost=0.0040, safety_margin=0.0015)
+    mapper = CostAwareExecutionMapper(cost_basis=cost_basis)
+    decision_ts = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+
+    def _payload(value: float) -> ForecastPayload:
+        return ForecastPayload(
+            kind=ForecastKind.NET_RETURN,
+            value=value,
+            pair="BTC_IDR",
+            decision_ts=decision_ts,
+            desired_qty=Decimal("0.05"),
+        )
+
+    first = mapper.evaluate_forecast(_payload(0.0035))
+    second = mapper.evaluate_forecast(_payload(0.0035))
+    assert first.signal_intent is not None
+    assert second.signal_intent is not None
+    assert first.signal_intent.intent_id == second.signal_intent.intent_id
+
+    intent_id = first.signal_intent.intent_id
+    assert intent_id.startswith("intent_BTC_IDR_20250601120000_")
+    assert len(intent_id.rsplit("_", 1)[1]) == 5
+    assert intent_id.rsplit("_", 1)[1].isdigit()
+
+    # A materially different decision must not collide with the first one.
+    other = mapper.evaluate_forecast(_payload(0.0037))
+    assert other.signal_intent is not None
+    assert other.signal_intent.intent_id != intent_id
+

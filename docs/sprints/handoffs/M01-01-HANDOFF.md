@@ -54,3 +54,23 @@ Full lab suite verification: 149 passed across strategies, features, labels, eva
 - Deviations: None.
 - Unresolved issues / blockers: None for M01-01.
 - Next unlocked consumers: M02-01, ML-04.
+
+
+## Review fix cycle evidence (sprint review CHANGES_REQUESTED)
+- Agent: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Base: branch `feat/feat-02-finalization` @ `0e2a0ab`; all changes are uncommitted working-tree edits, coordinator commits centrally.
+- Owning suite before this fix cycle: `python -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` -> `102 passed` (exit 0).
+- Owning suite after this fix cycle: the same command -> `175 passed` (exit 0).
+- Capability gaps recorded: `ruff` is not installed in this environment, so the lint gate could not be executed; `pyarrow` is not installed, so `tests/unit/lab/models/lob/` plus the `test_deeplob_smoke.py` and `test_tlob_smoke.py` integration modules cannot be collected.
+- TDD shape used: behavioural RED captured first, then the minimal source change, then GREEN. No assertion was weakened, deleted or skipped.
+- Wave B RED (M01-01..M06-01 together): `python -m pytest tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py tests/unit/lab/models/test_m03_rf_regime.py tests/unit/lab/models/test_m04_quantile_risk.py tests/unit/lab/models/test_m05_meta_label.py tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `10 failed, 34 passed` (exit 1), every failure a real assertion failure or leaked exception.
+
+### Findings fixed in this cycle
+
+- **Important** - `M01Config` did not fail closed on an unsupported penalty. Only the three penalties it happened to know about were checked combinatorially, so `penalty="bogus"`, `penalty="none"` and `penalty="elastic-net"` all produced a constructible config and deferred the failure to sklearn's fit. That contradicts AC1, which requires invalid solver and penalty configurations to be rejected fail-closed. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Fix** - Added the module-level `SUPPORTED_PENALTIES = frozenset({"l1", "l2", "elasticnet"})` allowlist and an up-front check in `M01Config.__init__` that raises `InvalidSolverPenaltyError` with the existing `INVALID_SOLVER_PENALTY` code, before the existing per-pair solver checks run. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Files** - `src/indodax_lab/models/m01_logistic.py`, `tests/unit/lab/models/test_m01_logistic.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **GREEN** - `python -m pytest tests/unit/lab/models/test_m01_logistic.py -p no:cacheprovider -q` -> `7 passed` (exit 0). A companion assertion pins that the legitimate `penalty="l2", solver="lbfgs"` configuration still trains, so the allowlist is not over-tight. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- **Note** - `configs/models/M01_logistic_v1.yaml` uses the documented `elasticnet`/`saga` pair and is unaffected. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

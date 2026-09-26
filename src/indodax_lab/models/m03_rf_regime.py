@@ -80,10 +80,24 @@ class RegimeUtilityReport(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     net_utility: float
-    downside_risk: float  # Semi-deviation of returns when regime gate triggers
+    downside_risk: float  # Downside semi-deviation (LPM2) of entry returns
     n_entries: int
     n_abstains: int
     round_trip_cost: float
+
+
+def downside_semideviation(entry_returns: np.ndarray) -> float:
+    """Second-order lower partial moment of entry returns, as a non-negative loss measure.
+
+    ``sqrt(mean(min(r, 0) ** 2))`` over *all* entries. Gains contribute zero, so this is a
+    pure downside measure, and it is 0.0 only when no entry lost. Unlike the standard
+    deviation of the negative subset it does not collapse to zero when the losing entries
+    are identical in size or when there is exactly one of them.
+    """
+    losses = np.minimum(np.asarray(entry_returns, dtype=np.float64), 0.0)
+    if losses.size == 0:
+        return 0.0
+    return float(np.sqrt(np.mean(np.square(losses))))
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +250,6 @@ class M03RFRegimeTrainer:
                 round_trip_cost=round_trip_cost,
             )
 
-        bull_idx = classes.index(bull_class)
         predicted_class = np.argmax(proba, axis=1)
         # Map predicted column index back to class label
         predicted_labels = np.array([classes[i] for i in predicted_class])
@@ -257,12 +270,12 @@ class M03RFRegimeTrainer:
         entry_returns = realized_returns[entries] - round_trip_cost
         net_utility = float(np.mean(entry_returns))
 
-        # Downside risk = semi-deviation (negative returns only)
-        negative_returns = entry_returns[entry_returns < 0]
-        if len(negative_returns) > 0:
-            downside_risk = float(np.std(negative_returns))
-        else:
-            downside_risk = 0.0
+        # Downside risk = lower partial moment (semi-deviation) of entry returns.
+        # The previous np.std() over the negative subset returned 0.0 both for a
+        # constant loss on every entry and for a single losing entry, i.e. it reported a
+        # book that only ever lost as riskless. LPM2 keeps positive returns out of the
+        # measure and is 0.0 only when nothing lost.
+        downside_risk = downside_semideviation(entry_returns)
 
         return RegimeUtilityReport(
             net_utility=net_utility,

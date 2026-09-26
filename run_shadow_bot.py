@@ -67,6 +67,9 @@ def main():
     parser.add_argument("--status", action="store_true", help="Tampilkan status portofolio dan riwayat trade")
     parser.add_argument("--reset", action="store_true", help="Reset saldo paper trading kembali ke Rp 500.000")
     parser.add_argument("--yes", action="store_true", help="Bypass konfirmasi saat reset")
+    parser.add_argument("--operator", default="cli_local_operator", help="Identitas operator yang melakukan reset (dicatat di audit trail)")
+    parser.add_argument("--reason", default="Paper portfolio reset requested via CLI", help="Alasan reset yang dicatat di audit trail")
+    parser.add_argument("--authorization-ref", default=None, help="Nomor referensi perubahan/tiket untuk reset (default: CLI-RESET-<epoch>)")
 
     args = parser.parse_args()
     engine = LiveShadowEngine()
@@ -78,8 +81,13 @@ def main():
             if confirm.lower() != "y":
                 print("Reset dibatalkan.")
                 return
-        engine.reset_portfolio()
-        print("✅ Portofolio paper trading berhasil di-reset ke Rp 500.000 IDR.")
+        authorization_ref = args.authorization_ref or f"CLI-RESET-{int(time.time())}"
+        engine.reset_portfolio(
+            operator_id=args.operator,
+            reason=args.reason,
+            authorization_ref=authorization_ref,
+        )
+        print(f"✅ Portofolio paper trading berhasil di-reset ke Rp 500.000 IDR (audit ref: {authorization_ref}).")
         return
 
     if args.status:

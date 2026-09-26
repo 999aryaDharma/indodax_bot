@@ -92,7 +92,7 @@ def test_label_02_contract_1():
     )
 
     # Volatility is 1% -> Upper = 102m, Lower = 98.5m
-    # At 11:00 bar, both high >= 102m and low <= 98.5m occur
+    # At 11:00 the bar ranges across BOTH barriers; the conservative choice is LOWER
     bars = [
         _make_bar(datetime(2024, 6, 1, 10, 0, tzinfo=UTC), 100000000, 100500000, 99500000, 100000000),
         # Wild candle touching BOTH upper and lower

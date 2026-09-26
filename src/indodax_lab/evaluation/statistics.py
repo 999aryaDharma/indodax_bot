@@ -27,7 +27,15 @@ def compute_deflated_sharpe_ratio(
     if trial_count < 2 or len(returns) < 30:
         return None, "NOT_ESTIMABLE"
 
+    # EVAL-02-F4: a non-finite Sharpe or return sample makes every downstream moment
+    # non-finite, and the final `max(0.0, min(1.0, x))` clamp turns NaN into 1.0 -- i.e. a
+    # maximum-confidence DSR. Refuse to estimate rather than report full confidence.
+    if not math.isfinite(sharpe_ratio):
+        return None, "NOT_ESTIMABLE"
+
     arr = np.asarray(returns, dtype=float)
+    if not np.all(np.isfinite(arr)):
+        return None, "NOT_ESTIMABLE"
     t_len = len(arr)
 
     # Compute higher moments
@@ -62,13 +70,25 @@ def compute_deflated_sharpe_ratio(
     stat_val = ((sharpe_ratio - e_max_sr) * math.sqrt(t_len - 1.0)) / denom
     dsr = float(stats.norm.cdf(stat_val))
 
+    if not math.isfinite(dsr):
+        return None, "NOT_ESTIMABLE"
+
     return max(0.0, min(1.0, dsr)), "ESTIMATED"
 
 
 def compute_pbo(
     matrix_returns: Sequence[Sequence[float]] | None,
+    seed: int = 7,
 ) -> tuple[float | None, str]:
     """Calculate Probability of Backtest Overfitting (PBO) via CSCV when eligible.
+
+    EVAL-02-F3: the CSCV resampling uses a seeded, private RNG so the same matrix always
+    yields the same PBO. Previously it drew from the unseeded global numpy RNG, so the
+    recorded selection diagnostic changed on every call and was not reproducible evidence.
+
+    Args:
+        matrix_returns: rows are time partitions, columns are candidate strategies.
+        seed: RNG seed for the CSCV partition draws.
 
     Returns:
         (pbo_value, status): (None, "NOT_ESTIMABLE") if matrix unprovided/inadequate,
@@ -88,8 +108,9 @@ def compute_pbo(
     # For now, if matrix is given with sufficient shape:
     # Estimate probability that in-sample best underperforms median out-of-sample
     logits = []
+    rng = np.random.default_rng(seed)
     for _ in range(min(16, n_parts)):
-        is_idx = np.random.choice(n_parts, subsets, replace=False)
+        is_idx = rng.choice(n_parts, subsets, replace=False)
         oos_idx = np.array([i for i in range(n_parts) if i not in is_idx])
 
         is_perf = np.mean(mat[is_idx], axis=0)

@@ -313,7 +313,22 @@ def test_generated_fold_cutoffs_exclude_delayed_labels_from_training():
     records = [SampleRecord(**row) for row in labels[
         ["sample_id", "pair", "decision_ts", "label_end_ts", "label_available_at"]
     ].to_dict("records")]
-    manifest = assign_folds(records, policy)
+    # This fixture's samples sit exactly on the declared fold boundaries
+    # (sample_002 at 2024-03-01, sample_003 at 2024-03-31). Under the corrected
+    # SPLIT-01 default (enforce_inter_fold_embargo=True) both fall inside a
+    # post-fold embargo window, which would mask the delayed-label behaviour this
+    # test exists to verify. Opt out explicitly and by name; the embargo
+    # semantics themselves are covered by tests/unit/lab/labels/test_splits.py
+    # and test_splits_integration_compat.py.
+    manifest = assign_folds(
+        records,
+        policy,
+        enforce_inter_fold_embargo=False,
+        embargo_opt_out_reason=(
+            "fold-cutoff/delayed-label fixture; inter-fold embargo is not the "
+            "subject of this assertion"
+        ),
+    )
     artifact = _assemble_temporal(features, labels, manifest)
     assert artifact.get_role_data("TRAIN")["sample_id"].tolist() == ["sample_000"]
     assert artifact.get_role_data("PURGED")["sample_id"].tolist() == ["sample_001"]
