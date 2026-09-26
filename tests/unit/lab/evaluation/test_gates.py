@@ -1,6 +1,7 @@
 """Unit tests for EVAL-02 Hard gates and selection diagnostics."""
 
 from datetime import UTC, datetime
+
 import pytest
 
 from indodax_lab.evaluation.gates import (
@@ -64,6 +65,8 @@ def test_eval_02_valid_contract() -> None:
 
     result = evaluate_run(run, policy)
     assert result.outcome == EvaluationOutcome.PASS
+    assert result.policy_id == policy.policy_id
+    assert result.policy_version == policy.policy_version
     assert "COST_MODEL_VERIFIED" in result.passed_gates
     assert "SAMPLE_SIZE_ADEQUATE" in result.passed_gates
     assert "SHARPE_GATE" in result.passed_gates
@@ -129,7 +132,7 @@ def test_eval_02_contract_3() -> None:
             sharpe=sr,
             trade_count=40,
         )
-        for s, sr in zip(seeds, sharpe_ratios)
+        for s, sr in zip(seeds, sharpe_ratios, strict=True)
     ]
 
     # Rejecting cherry-picked "best" seed selection

@@ -46,10 +46,13 @@ def _invalid_run(
     passed_gates: list[str],
     failed_gates: list[str],
     reasons: list[str],
+    policy: EvaluationPolicy,
 ) -> EvaluationResult:
     return EvaluationResult(
         run_id=run.run_id,
         candidate_id=run.candidate_id,
+        policy_id=policy.policy_id,
+        policy_version=policy.policy_version,
         outcome=EvaluationOutcome.INVALID_RUN,
         passed_gates=passed_gates,
         failed_gates=failed_gates,
@@ -144,6 +147,8 @@ class EvaluationResult(BaseModel):
 
     run_id: str
     candidate_id: str
+    policy_id: str
+    policy_version: str
     outcome: EvaluationOutcome
     passed_gates: list[str]
     failed_gates: list[str]
@@ -161,6 +166,8 @@ class MultiSeedEvaluationResult(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     candidate_id: str
+    policy_id: str
+    policy_version: str
     seed_runs: list[str]
     aggregation_method: str
     finalist_metric: dict[str, Any]
@@ -202,20 +209,20 @@ def evaluate_run(
     ):
         failed_gates.append("COST_MODEL_VERIFIED")
         reasons.append("COST_MODEL_UNKNOWN")
-        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons, policy)
     passed_gates.append("COST_MODEL_VERIFIED")
 
     # Dirty worktree gate
     if policy.require_clean_worktree and run.is_dirty:
         failed_gates.append("CLEAN_WORKTREE")
         reasons.append("DIRTY_WORKTREE_PROMOTION_FORBIDDEN")
-        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons, policy)
     passed_gates.append("CLEAN_WORKTREE")
 
     if run.status != ExperimentRunStatus.SUCCESS:
         failed_gates.append("RUN_EXECUTION_SUCCESS")
         reasons.append("RUN_FAILED_TECHNICAL")
-        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons, policy)
     passed_gates.append("RUN_EXECUTION_SUCCESS")
 
     # EVAL-02-F4: every quality-gate input must be present and finite. Comparison against
@@ -232,7 +239,7 @@ def evaluate_run(
     if unusable:
         failed_gates.append("METRICS_PRESENT_AND_FINITE")
         reasons.append("METRIC_MISSING_OR_NON_FINITE:" + ",".join(sorted(unusable)))
-        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons)
+        return _invalid_run(run, metrics, passed_gates, failed_gates, reasons, policy)
     passed_gates.append("METRICS_PRESENT_AND_FINITE")
 
     # 2. Strategy Quality & Evidence Gates
@@ -296,6 +303,8 @@ def evaluate_run(
     return EvaluationResult(
         run_id=run.run_id,
         candidate_id=run.candidate_id,
+        policy_id=policy.policy_id,
+        policy_version=policy.policy_version,
         outcome=outcome,
         passed_gates=passed_gates,
         failed_gates=failed_gates,
@@ -352,6 +361,8 @@ def evaluate_multi_seed_runs(
     def invalid_result(reason: str) -> MultiSeedEvaluationResult:
         return MultiSeedEvaluationResult(
             candidate_id=first_run.candidate_id,
+            policy_id=policy.policy_id,
+            policy_version=policy.policy_version,
             seed_runs=run_ids,
             aggregation_method=normalized_selection,
             finalist_metric={"cost_model_verified": all_costs_verified},
@@ -484,6 +495,8 @@ def evaluate_multi_seed_runs(
 
     return MultiSeedEvaluationResult(
         candidate_id=first_run.candidate_id,
+        policy_id=policy.policy_id,
+        policy_version=policy.policy_version,
         seed_runs=[r.run_id for r in runs],
         aggregation_method=normalized_selection,
         finalist_metric=finalist_metric,

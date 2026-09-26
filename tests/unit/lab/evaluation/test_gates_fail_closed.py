@@ -79,6 +79,14 @@ def test_eval_02_absent_cost_verification_fails_closed() -> None:
     assert result.outcome != EvaluationOutcome.PASS
 
 
+def test_eval_02_invalid_verdict_records_policy_identity() -> None:
+    policy = EvaluationPolicy(policy_id="audit-policy", policy_version="2.1.0")
+    result = evaluate_run(_run(cost_model_verified=False), policy)
+
+    assert result.outcome == EvaluationOutcome.INVALID_RUN
+    assert (result.policy_id, result.policy_version) == ("audit-policy", "2.1.0")
+
+
 @pytest.mark.parametrize("flag", [False, None, "unknown", 0])
 def test_eval_02_only_an_explicit_true_verifies_costs(flag: Any) -> None:
     """EVAL-02-F1: only a literal verified flag satisfies the cost gate."""
@@ -244,6 +252,8 @@ def test_eval_02_multi_seed_aggregate_is_evaluable_when_every_seed_is_verified()
 
     assert result.overall_outcome != EvaluationOutcome.INVALID_RUN
     assert result.finalist_metric["cost_model_verified"] is True
+    assert result.policy_id == EvaluationPolicy().policy_id
+    assert result.policy_version == EvaluationPolicy().policy_version
 
 
 def test_eval_02_multi_seed_with_one_unverified_seed_is_invalid() -> None:
