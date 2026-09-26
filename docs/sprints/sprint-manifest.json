@@ -8079,7 +8079,7 @@
           "criterion": "S09-01-AC2",
           "test_case": "test_shadow_new_risk_period_preserves_breaches_and_closed_trades; test_shadow_risk_period_reset_requires_closed_portfolio; test_shadow_failed_period_reset_restores_in_memory_state",
           "behavior": "New risk period requires separate explicit operator approval, requires positions to be closed, starts from remaining equity, and preserves prior breach-period and closed-trade records across restart.",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "IMPLEMENTED_UNREVIEWED"
         },
         {
           "criterion": "S09-01-AC3",
