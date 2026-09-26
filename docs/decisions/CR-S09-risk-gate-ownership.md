@@ -15,7 +15,7 @@ Treat S09-01 as a Research risk-gate capability integrated at the existing RiskE
 - A risk-period reset requires separate explicit operator approval. It starts a new period identity and preserves all prior breach records; it never resets historical losses or edits the prior period.
 - Keep Research state, stores, and credentials isolated from Production Main. Do not add a second risk engine or give the candidate order authority.
 
-Thresholds and data-age limits must be frozen in a versioned research policy before implementation. No profitability claim follows from this gate.
+The pump-gap measurement is the upward return between consecutive 1-hour candles. Hold evaluation and activation until measured producer ranges establish the threshold and maximum input age; do not choose those values before producer evidence exists. No profitability claim follows from this gate.
 
 ## Impact
 
@@ -30,6 +30,6 @@ Before implementation, validate the revised owning interface, source/provenance 
 
 ## Decision
 
-Owner approval: Research-only ownership and behavior boundary accepted on 2026-09-27. Use the existing Research risk authority; preserve breach periods across separately approved resets; block new BUYs on unknown/stale data or a breach while allowing eligible protective exits. No numeric pump-gap threshold or data-age limit was approved. Risk evaluation and activation remain blocked until a versioned policy and pump-gap producer/provenance are defined; do not infer values from Production policy. No Production/runtime changes.
+Owner approval: Research-only ownership and behavior boundary accepted on 2026-09-27. Use the existing Research risk authority; preserve breach periods across separately approved resets; block new BUYs on unknown/stale data or a breach while allowing eligible protective exits. `pump_gap_fraction` represents the upward return between consecutive 1-hour candles. Hold evaluation and activation until producer ranges are measured, then freeze the threshold and maximum input age in a versioned policy; do not infer values from Production policy. No Production/runtime changes.
 
 Implementation may proceed on the Research boundary and durable period/history semantics. Until the policy and producer gates above are satisfied, the gate must fail closed for new BUY evaluation; it must not substitute zero, borrow a Production threshold, or claim S09 qualification. Existing protective SELL/exit processing stays available through the registered Research risk/execution path.

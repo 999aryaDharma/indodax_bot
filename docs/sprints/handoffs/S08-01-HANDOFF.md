@@ -43,13 +43,21 @@ Status: REVIEWED_PARTIAL — implementation independently passed; external queue
 - Fixes at `18564d0f7387c5e6c3b5db60f831f08a46997500`: trim/reject blank policy, session, source, candidate and report identity; require `event_at <= available_at <= row_ready_at <= decision`; expand the shared partial-fill/cancel integration to assert reservation rebasing/release and reconciled ledger values.
 - Independent re-review at exact SHA `18564d0f7387c5e6c3b5db60f831f08a46997500`: PASS. All three Important findings were resolved; no Critical/Important findings remain.
 - Reviewer independently ran queue, strategy, promotion and shared execution checks: 36 passed. Reviewer did not rerun AC3 integration because of the temp-directory limitation. Owner's exact-SHA full suite passed all 1,602 tests, including AC3.
-- Sprint remains IN_PROGRESS because the real queue producer, approved numeric freshness policy and operational qualification are unavailable; no completion is claimed.
+- Sprint remains IN_PROGRESS because the real queue producer and operational qualification are unavailable; no completion is claimed.
 
 ## Deviations and known risks
 
-- CR-S08 accepted by the owner on 2026-09-27. No operational freshness threshold was invented; the 5-second policy in tests is fixture-only.
+- CR-S08 boundary and 5-second Research freshness default accepted by the owner on 2026-09-27. `observed_at` age is checked at decision/quote time. This default is not real producer qualification.
 - S08 thresholds/notional in YAML are research hypothesis defaults, not profitability evidence or Production risk policy.
 - There is no qualified real Indodax per-order queue producer/reconstruction or 90-day queue-coverage report. Queue-mode simulation requires explicit policy/evidence; candidate promotion remains blocked without the qualified report.
 - A valid queue observation only passes the precondition; fill outcomes still use the existing conservative bar proxy. No strategy-local OMS or ledger was created.
 - Rollback: stop selecting S08 and revert the scoped code commit; existing `bar_proxy_v1` call sites retain default behavior. No Production state or credentials were accessed.
-- Next gate: owner-approved numeric freshness policy and real queue source qualification.
+- Next gate: real queue source qualification with measured book/trade coverage.
+
+## Owner-approved freshness default
+
+- Owner approved a 5-second maximum queue-evidence age for Research on 2026-09-27; age is measured from `observed_at` at decision/quote time. Exactly 5 seconds is accepted; 5.001 seconds is stale.
+- `QueueEvidencePolicy.max_evidence_age_seconds` defaults to `Decimal("5")`; version, approval reference, source ID/version and explicit policy remain required. Missing policy/evidence remains fail-closed.
+- Implementation SHA: `8203356edd849e8aa0094120a1b960a3f73049d3`.
+- Owner checks after the default change: queue/strategy/promotion/risk focused suite — 64 passed; full repository suite at descendant SHA `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30` — 1,646 passed, 2 platform skips, 11 warnings.
+- Independent review of the default at `4bdc2e52eabfd2e50d330cf9197ded4dc5d034ae`: PASS; 31 S08 checks passed. Real Indodax queue reconstruction and measured book/trade coverage remain external gates, so S08 remains IN_PROGRESS.

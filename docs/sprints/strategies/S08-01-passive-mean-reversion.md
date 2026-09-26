@@ -55,7 +55,7 @@ New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
 - Dependency LOB-01 supplies: continuous raw books -> depth/imbalance tensors with >=90 day coverage gate plus sample/regime report.
-- The current bar simulator and TLOB fill-probability model do not prove observed per-order queue position. CR-S08 boundary is owner-approved (2026-09-27): versioned queue evidence is required at simulation/promotion, and missing, unknown, stale, future-dated, or sequence-invalid evidence blocks promotion. The implemented report is bound into the promotion approval digest. No numeric freshness threshold was approved; queue qualification remains blocked until a versioned limit and qualified producer exist. Partial-cancel accounting stays in the existing OMS/ledger. Real queue reconstruction remains an external gate.
+- The current bar simulator and TLOB fill-probability model do not prove observed per-order queue position. CR-S08 boundary and 5-second Research freshness default are owner-approved (2026-09-27): versioned queue evidence is required at simulation/promotion, and missing, unknown, >5-second-old, future-dated, or sequence-invalid evidence blocks promotion. Age is measured from `observed_at` at decision/quote time. The implemented report is bound into the promotion approval digest. The default does not qualify the real producer; real queue reconstruction and measured book/trade coverage remain external gates. Partial-cancel accounting stays in the existing OMS/ledger.
 
 ## In Scope
 
@@ -85,6 +85,7 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 1. **S08-01-FR1:** Price touches quote tidak otomatis fill.
 2. **S08-01-FR2:** Queue unknown memblokir promotion.
 3. **S08-01-FR3:** Partial cancel menjaga ledger balance.
+4. **S08-01-FR4:** Versioned Research queue policy defaults to a maximum evidence age of 5 seconds, measured from `observed_at` at decision/quote time; older evidence blocks qualification.
 
 ## Domain Rules / Invariants
 
@@ -155,6 +156,7 @@ Positive contract: **S08-01-AC0**, `test_s08_01_valid_contract` — Kandidat S08
 | S08-01-AC1 | `test_s08_01_contract_1` | Price touches quote tidak otomatis fill |
 | S08-01-AC2 | `test_s08_01_contract_2` | Queue unknown memblokir promotion |
 | S08-01-AC3 | `test_s08_01_contract_3` | Partial cancel menjaga ledger balance |
+| S08-01-AC4 | `tests/unit/lab/models/lob/test_s08_queue_evidence.py::test_s08_default_queue_freshness_is_five_seconds_fail_closed` | Exact 5-second evidence age passes; 5.001 seconds blocks; the default is recorded in the explicit versioned policy |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -206,6 +208,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **S08-01-AC1** Price touches quote tidak otomatis fill. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **S08-01-AC2** Queue unknown memblokir promotion. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **S08-01-AC3** Partial cancel menjaga ledger balance. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **S08-01-AC4** Research queue evidence defaults to a 5-second maximum age from `observed_at`, with older evidence failing closed. Evidence: boundary test, exact command/exit and target SHA recorded in the handoff.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

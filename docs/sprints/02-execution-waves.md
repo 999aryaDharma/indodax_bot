@@ -93,7 +93,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 - EVAL-02 — Hard gates and selection diagnostics [DONE; CORE]
 - LABEL-02 — Triple barrier outcomes [REVIEW; CORE]
-- JOB-01 — Durable leased jobs [REVIEW; CORE]
+- JOB-01 — Durable leased jobs [DONE; CORE]
 - C01-01 — Donchian breakout [DONE; CORE]
 - C02-01 — EMA pullback [DONE; CORE]
 - C03-01 — Time series momentum [REVIEW; CORE]

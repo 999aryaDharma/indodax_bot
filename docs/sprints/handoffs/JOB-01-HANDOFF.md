@@ -1,11 +1,11 @@
 # JOB-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: JOB-01 — Durable leased jobs
-- Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Implementation agent: Antigravity; review remediation: Codex `/root`
+- Independent reviewer: `/root/docs_review` (PASS at exact source SHA `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30`)
 - Branch / worktree: `feat/job-01-durable-leased-jobs`
 - Base SHA: `f5cd708`
 - Code target: `feat(job-01): durable leased jobs`
@@ -46,7 +46,7 @@ Combined suite verification (96 passed across backtest, risk, execution, ledger,
 - Quality verdict: PASS (atomic claims, strict generation lease fencing, fail-closed artifact checksums, zero data race).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: PASS at exact source SHA `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30`; reviewer performed source/test inspection but could not run persistence tests in its environment.
 
 ## Deviations and known risks
 - Deviations: None.
@@ -102,3 +102,15 @@ Combined suite verification (96 passed across backtest, risk, execution, ledger,
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: the `STALE_LEASE_TAKEOVER` marker is stored in the same `error_message` column as genuine failure reasons, so a consumer cannot distinguish a takeover note from an error without string matching. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: the exhaustion sweep in `claim_job` sets `error_message = "ATTEMPT_BUDGET_EXHAUSTED"` with a plain string while the new takeover marker is a longer structured line, so the column has two formats. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `claim_job` still selects the single oldest eligible row with `LIMIT 1` and no fairness or priority column. Pre-existing and unchanged.
+
+## Final remediation and verification
+
+- Final implementation SHA: `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30` (includes review fixes from `7c5e61d` and `4bdc2e5`).
+- Mandatory valid SHA-256 completion evidence prevents nonempty partial files from publishing SUCCESS. Completion copies bytes to a content-addressed store; `read_result_artifact` verifies the persisted digest.
+- A durable `(job_id, source_path, artifact_path, digest)` intent commits before object publication. Recovery can verify and reuse the immutable object, or publish the staged source when the object copy had not completed, then finalize under a newly checked live lease without rerunning the job.
+- Unique per-attempt temporary files avoid same-digest publisher races; migration adds `source_path` to prior staging tables without dropping prior rows.
+- Tests: `tests/unit/lab/orchestration/test_queue.py` — 23 passed; final combined affected suite including concurrency and migration regressions — 205 passed in 11.22s.
+- Full suite at the final source tree: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests -q -p no:cacheprovider` — 1,646 passed, 2 platform skips, 11 warnings in 53.89s.
+- Ruff on queue implementation/tests and `git diff --check`: PASS.
+- Independent review history: CHANGES_REQUESTED at `9b6dab1` and `7c5e61d`; final PASS at `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30`. Reviewer did not execute persistence tests; owner ran the full suite above.
+- The previous artifact-reuse “out of scope” note is closed by this remediation. Historical review notes remain as provenance.

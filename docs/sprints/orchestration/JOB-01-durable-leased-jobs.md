@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: feature | Domain: orchestration | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (review remediation: Codex /root) | Independent Reviewer: /root/docs_review
 
 Recommended Branch: `feat/job-01-durable-leased-jobs`
 
@@ -74,12 +74,13 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 1. **JOB-01-FR1:** Claim atomik dua koneksi hanya satu menang.
 2. **JOB-01-FR2:** Stale lease fencing menolak publish worker lama.
 3. **JOB-01-FR3:** Partial artifact tidak menandai SUCCESS.
+4. **JOB-01-FR4:** A complete result is staged by SHA-256 before SUCCESS; a new fenced worker can recover and finalize that staged artifact after a database crash without rerunning the completed work.
 
 ## Domain Rules / Invariants
 
 SQLite WAL local queue: PENDING/RUNNING/SUCCESS/FAILED_RETRYABLE/FAILED_FINAL/BLOCKED_DATA/BLOCKED_POLICY/CANCELLED/STALE.
 
-Local SQLite WAL queue with lease generation fencing, heartbeat, attempts and immutable outputs.
+Local SQLite WAL queue with lease generation fencing, heartbeat, attempts and immutable outputs. Verified artifacts are atomically copied to the queue's content-addressed `<db-name>.artifacts/` store. An additive `job_artifacts` table checkpoints the digest/path before SUCCESS; retries verify and reuse the same staged object. Consumers read through a digest-verifying API.
 
 Global causality, identity, exact accounting and paper-only constraints apply; tidak ada exception lokal yang mengizinkan pengubahan histori.
 
@@ -131,9 +132,10 @@ First establish JOB-01-AC0: Dua worker tidak dapat mengeksekusi claim yang sama 
 2. For `JOB-01-AC1`, build minimal fixture proving: Claim atomik dua koneksi hanya satu menang. Write `test_job_01_contract_1` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 3. For `JOB-01-AC2`, build minimal fixture proving: Stale lease fencing menolak publish worker lama. Write `test_job_01_contract_2` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 4. For `JOB-01-AC3`, build minimal fixture proving: Partial artifact tidak menandai SUCCESS. Write `test_job_01_contract_3` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
-5. Integrate through the public boundary using actual output of dependency fixture; verify the declared contract and failure outcome rather than mock call counts alone.
-6. Run the relevant tests below, inspect diff and record output/exit/source SHA. Refactor only after the contract remains green.
-7. Commit scoped code/tests; prepare handoff with acceptance-to-evidence links, migrations and deviations; submit exact SHA for independent review.
+5. For `JOB-01-AC4`, inject a database commit failure after staging and prove a new fenced worker verifies/reuses the staged output without recomputation.
+6. Integrate through the public boundary using actual output of dependency fixture; verify the declared contract and failure outcome rather than mock call counts alone.
+7. Run the relevant tests below, inspect diff and record output/exit/source SHA. Refactor only after the contract remains green.
+8. Commit scoped code/tests; prepare handoff with acceptance-to-evidence links, migrations and deviations; submit exact SHA for independent review.
 
 ## Required Tests
 
@@ -144,6 +146,7 @@ Positive contract: **JOB-01-AC0**, `test_job_01_valid_contract` — Dua worker t
 | JOB-01-AC1 | `test_job_01_contract_1` | Claim atomik dua koneksi hanya satu menang |
 | JOB-01-AC2 | `test_job_01_contract_2` | Stale lease fencing menolak publish worker lama |
 | JOB-01-AC3 | `test_job_01_contract_3` | Partial artifact tidak menandai SUCCESS |
+| JOB-01-AC4 | `tests/unit/lab/orchestration/test_queue.py::test_commit_crash_recovers_staged_artifact_without_recomputation` | Staged output survives a DB commit crash and a newly fenced worker finalizes it without recomputation |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -191,22 +194,23 @@ Restore verified pre-migration copy on a stopped writer, replay from known check
 
 ## Acceptance Criteria
 
-- [ ] **JOB-01-AC0** Dua worker tidak dapat mengeksekusi claim yang sama dan crash dapat dipulihkan tanpa duplicate result. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **JOB-01-AC1** Claim atomik dua koneksi hanya satu menang. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **JOB-01-AC2** Stale lease fencing menolak publish worker lama. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **JOB-01-AC3** Partial artifact tidak menandai SUCCESS. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **JOB-01-AC0** Claim uniqueness and crash recovery are proven through the public queue interface; see final handoff at `40e91215df3f99bd4ecaf2e47aeb76de19e2fb30`.
+- [x] **JOB-01-AC1** Atomic claim allows exactly one concurrent worker to win.
+- [x] **JOB-01-AC2** Stale lease fencing rejects publication before touching artifacts.
+- [x] **JOB-01-AC3** Missing, empty, partial, unreadable, digest-mismatched and later-tampered artifacts cannot be consumed as SUCCESS.
+- [x] **JOB-01-AC4** A verified staged artifact recovers after a DB crash without recomputation under a new live lease.
+- [x] Public contract matches this sprint; consumers can read only digest-verified artifacts.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria map to evidence; no required test was skipped silently.
+- [x] Focused and affected checks plus the full repository suite passed.
+- [x] No unrelated capability or policy relaxation was introduced.
+- [x] Contract and handoff document staged recovery, immutable storage and additive migration.
+- [x] Self-review and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer PASS at exact SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updates manifest and projections after review PASS.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

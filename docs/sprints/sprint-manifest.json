@@ -4858,7 +4858,9 @@
       "checks": [
         "Claim atomik dua koneksi hanya satu menang",
         "Stale lease fencing menolak publish worker lama",
-        "Partial artifact tidak menandai SUCCESS"
+        "Missing, empty, partial, unreadable or digest-mismatched artifact never publishes SUCCESS",
+        "Verified output is copied to a content-addressed store and reads verify the persisted digest",
+        "A staged output survives a DB commit crash and can be recovered by a new fenced worker without recomputation"
       ],
       "files": [
         "src/indodax_lab/orchestration/jobs.py",
@@ -4870,8 +4872,8 @@
       "spec": "docs/specs/13-jobs-resource-policy-and-repeats.md",
       "path": "docs/sprints/orchestration/JOB-01-durable-leased-jobs.md",
       "priority": "P0",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/job-01-durable-leased-jobs",
       "requirements": [
         "FR-11"
@@ -4883,7 +4885,7 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency EVAL-01 supplies: run_id + parent + git SHA + environment/data/config/cost/execution hashes -> immutable run record.",
+      "current_context": "EVAL-01 dependency DONE. Mandatory SHA-256 evidence, atomic content-addressed storage, verified reads, and durable staged-artifact recovery are implemented. A successor worker finalizes a staged result under its current lease after a DB crash without recomputation. Focused affected suite: 205 passed; repository suite: 1,646 passed, 2 platform skips, 11 warnings. Independent review PASS at exact implementation SHA 40e91215df3f99bd4ecaf2e47aeb76de19e2fb30. Research-local queue only; no Production runtime wiring.",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
@@ -4891,36 +4893,42 @@
       "acceptance_test_mapping": [
         {
           "criterion": "JOB-01-AC0",
-          "test_case": "test_job_01_valid_contract",
+          "test_case": "tests/unit/lab/orchestration/test_queue.py::test_job_01_valid_contract; test_commit_crash_recovers_staged_artifact_without_recomputation",
           "behavior": "Dua worker tidak dapat mengeksekusi claim yang sama dan crash dapat dipulihkan tanpa duplicate result",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "JOB-01-AC1",
-          "test_case": "test_job_01_contract_1",
+          "test_case": "tests/unit/lab/orchestration/test_queue.py::test_job_01_contract_1 and concurrent claim test",
           "behavior": "Claim atomik dua koneksi hanya satu menang",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "JOB-01-AC2",
-          "test_case": "test_job_01_contract_2",
+          "test_case": "tests/unit/lab/orchestration/test_queue.py::test_job_01_contract_2 and fenced-worker regressions",
           "behavior": "Stale lease fencing menolak publish worker lama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "JOB-01-AC3",
-          "test_case": "test_job_01_contract_3",
+          "test_case": "tests/unit/lab/orchestration/test_queue.py::test_job_01_contract_3; missing-digest, immutable-copy and tamper regressions",
           "behavior": "Partial artifact tidak menandai SUCCESS",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
+        },
+        {
+          "criterion": "JOB-01-AC4",
+          "test_case": "tests/unit/lab/orchestration/test_queue.py::test_commit_crash_recovers_staged_artifact_without_recomputation",
+          "behavior": "A verified staged artifact recovers after a DB crash without recomputation under a new live lease.",
+          "status": "REVIEWED_PASS"
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_implementation",
         "path": "docs/sprints/handoffs/JOB-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "40e91215df3f99bd4ecaf2e47aeb76de19e2fb30",
+        "review": "PASS at exact implementation SHA 40e91215df3f99bd4ecaf2e47aeb76de19e2fb30 by /root/docs_review; final combined affected suite 205 passed; full suite 1,646 passed, 2 platform skips."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7941,9 +7949,10 @@
       "goal": "Kandidat S08 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama.",
       "contract": "Conservative queue-based passive order simulation without guaranteed maker fills -> versioned LONG/FLAT intent, never direct orders.",
       "checks": [
-        "Price touches quote tidak otomatis fill",
-        "Queue unknown memblokir promotion",
-        "Partial cancel menjaga ledger balance"
+        "Price touches quote do not create fills",
+        "Unknown, noncausal, sequence-invalid, or >5-second-old queue evidence blocks qualification",
+        "Five-second freshness default is versioned and measured at decision/quote time",
+        "Partial cancel keeps shared OMS/ledger accounting balanced"
       ],
       "files": [
         "configs/strategies/S08_v1.yaml",
@@ -7985,10 +7994,10 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S08-queue-evidence.md"
       ],
-      "current_context": "CR-S08 boundary approved on 2026-09-27. Implementation commits f193ae76f84fe89a24cc3e9d630160e39b1c76c2 and 18564d0f7387c5e6c3b5db60f831f08a46997500 were independently reviewed PASS at the final SHA with no unresolved Critical/Important findings. S08 adds versioned lob_queue_v1 validation and promotion approval binding, emits research-only maker intents from causal/versioned lob_v1 inputs, and extends shared execution/OMS/ledger evidence. Owner full suite at final SHA: 1602 passed, 2 platform skips, 11 warnings. No numeric queue-age policy or qualified real producer exists; candidate promotion and qualification remain blocked and the sprint stays IN_PROGRESS.",
+      "current_context": "CR-S08 boundary and owner-approved 5-second Research freshness default accepted on 2026-09-27. `QueueEvidencePolicy.max_evidence_age_seconds` defaults to 5 seconds, measured from observed_at at decision/quote time; missing policy/evidence and age >5 seconds fail closed. The policy remains versioned and binds source identity. Implementation/review and shared ledger evidence remain as recorded in the handoff. S08 stays IN_PROGRESS until real Indodax queue reconstruction and measured book/trade coverage are qualified; no Production integration.",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
-        "Approve a versioned numeric queue-evidence freshness policy and qualify real Indodax queue reconstruction/book-trade coverage before candidate qualification."
+        "Qualify real Indodax queue reconstruction and book/trade coverage with measured evidence-age/range reports before candidate qualification."
       ],
       "risk_level": "high",
       "acceptance_test_mapping": [
@@ -8006,7 +8015,7 @@
         },
         {
           "criterion": "S08-01-AC2",
-          "test_case": "tests/unit/lab/paper/test_s08_queue_promotion.py::test_s08_promotion_rejects_missing_or_invalid_queue_report",
+          "test_case": "tests/unit/lab/paper/test_s08_queue_promotion.py::test_s08_promotion_rejects_missing_or_invalid_queue_report; tests/unit/lab/models/lob/test_s08_queue_evidence.py::test_s08_default_queue_freshness_is_five_seconds_fail_closed",
           "behavior": "Queue unknown memblokir promotion",
           "status": "REVIEWED_PARTIAL"
         },
@@ -8015,6 +8024,12 @@
           "test_case": "tests/integration/lab/test_disaster_drills.py::test_drill_3_cancel_fill_race_under_partial_fill",
           "behavior": "Partial cancel menjaga ledger balance",
           "status": "REVIEWED_PARTIAL"
+        },
+        {
+          "criterion": "S08-01-AC4",
+          "test_case": "tests/unit/lab/models/lob/test_s08_queue_evidence.py::test_s08_default_queue_freshness_is_five_seconds_fail_closed",
+          "behavior": "Exact 5-second evidence age passes; 5.001 seconds blocks; the default is recorded in the explicit versioned policy",
+          "status": "REVIEWED_PASS"
         }
       ],
       "status": "IN_PROGRESS",
@@ -8076,9 +8091,9 @@
         "docs/sprints/handoffs/STRAT-01-HANDOFF.md",
         "docs/decisions/CR-S09-risk-gate-ownership.md"
       ],
-      "current_context": "CR-S09 Research-only boundary is approved. Risk-period reset/history code at da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 preserves closed trades/breach events and starts approved periods from actual remaining cash. Opt-in Research tail-risk contracts at 75e2d587b3b47894e2ee37e27283f5a1c3211c6f use the existing RiskEngine assessment boundary; missing/unapproved policy/evidence, invalid lineage/period, noncausal/stale evidence, and configured breaches block BUY while SELL bypasses this additional gate. The interface creates no intents/orders and default callers are unchanged. Review at exact source SHA 75e2d587b3b47894e2ee37e27283f5a1c3211c6f: PASS for implemented slice across AC0-AC3; review round 1 requested malformed-decimal fix and round 2 passed correction. AC0/AC1/AC2 implementation reviewed; reviewer could not independently rerun persistence tests because of temp-directory permissions, but owner full suite passed. Runtime wiring/evidence remain incomplete; AC3 fails closed on missing policy/evidence but producer registration and qualification remain external. Evidence freshness is measured at assessment time, including delayed decisions; risk suite: 39 passed; full suite at 75e2d58: 1572 passed, 2 platform skips, 11 warnings. No agent runtime is wired to the gate. Numeric Research pump-gap/evidence-age limits are unapproved, and no qualified producer/provenance exists; S09 remains IN_PROGRESS and not qualification-eligible. No Production/runtime changes.",
+      "current_context": "CR-S09 Research-only boundary is approved. Risk-period reset/history code at da7c50cfd13f46a32f4bdd4d7f5e4c55cb0b83c7 preserves closed trades/breach events and starts approved periods from actual remaining cash. Opt-in Research tail-risk contracts at 75e2d587b3b47894e2ee37e27283f5a1c3211c6f use the existing RiskEngine assessment boundary; missing/unapproved policy/evidence, invalid lineage/period, noncausal/stale evidence, and configured breaches block BUY while SELL bypasses this additional gate. The interface creates no intents/orders and default callers are unchanged. Review at exact source SHA 75e2d587b3b47894e2ee37e27283f5a1c3211c6f: PASS for implemented slice across AC0-AC3; review round 1 requested malformed-decimal fix and round 2 passed correction. AC0/AC1/AC2 implementation reviewed; reviewer could not independently rerun persistence tests because of temp-directory permissions, but owner full suite passed. Runtime wiring/evidence remain incomplete; AC3 fails closed on missing policy/evidence but producer registration and qualification remain external. Evidence freshness is measured at assessment time, including delayed decisions; risk suite: 39 passed; full suite at 75e2d58: 1572 passed, 2 platform skips, 11 warnings. No agent runtime is wired to the gate. `pump_gap_fraction` is the upward return between consecutive 1-hour candles. Hold evaluation/activation until producer ranges are measured, then freeze threshold and maximum input age in a versioned policy. No qualified producer/provenance exists; S09 remains IN_PROGRESS and not qualification-eligible. No Production/runtime changes.",
       "external_gates": [
-        "Freeze a versioned Research risk policy including pump-gap threshold and evidence-age limits before evaluation/qualification",
+        "Measure point-in-time pump-gap producer ranges before setting a versioned threshold and maximum input age; hold evaluation/activation meanwhile.",
         "Register and qualify point-in-time pump-gap producer/provenance before candidate qualification",
         "Production activation is excluded"
       ],

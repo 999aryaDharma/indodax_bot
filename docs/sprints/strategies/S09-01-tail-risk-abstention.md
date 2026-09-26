@@ -51,7 +51,7 @@ No mandatory dependent sprint.
 New capability; dependencies must be DONE before implementation.
 
 - Dependency STRAT-01 supplies: StrategySpecification + DecisionFrame -> list[SignalIntent]; ID/version/family/timeframes/risk/split required.
-- CR-S09 Research-only risk-authority boundary is owner-approved (2026-09-27). An opt-in gate now exists in the existing `RiskEngine`; it accepts only complete approved versioned policy/evidence and returns an assessment, never an order. Preserve breach periods across separately approved resets, block new BUYs on unknown/stale data or a breach, and leave eligible protective exits available. Numeric pump-gap threshold and data-age limit remain unresolved; no candidate evaluation/qualification until a versioned policy and pump-gap producer/provenance are defined. Do not add a second risk authority or touch Production/runtime state.
+- CR-S09 Research-only risk-authority boundary is owner-approved (2026-09-27). An opt-in gate now exists in the existing `RiskEngine`; it accepts only complete approved versioned policy/evidence and returns an assessment, never an order. Preserve breach periods across separately approved resets, block new BUYs on unknown/stale data or a breach, and leave eligible protective exits available. `pump_gap_fraction` is the upward return between consecutive 1-hour candles. Hold candidate evaluation/qualification until producer ranges are measured, then set the numeric threshold and maximum input age in a versioned policy. Do not add a second risk authority or touch Production/runtime state.
 
 ## In Scope
 
@@ -89,7 +89,7 @@ Global causality, identity, exact accounting and paper-only constraints apply; t
 
 Layer owner: existing `RiskEngine`, opt-in for Research only, and its Research-only durable state boundary. Consume only causally available, versioned evidence and reservation-aware exposure. The gate returns a risk assessment and cannot create intents/orders. Side effects remain in the existing adapter/repository; no HTTP in risk calculation. No production caller opts in.
 
-Pump-gap threshold and evidence-age limits are intentionally unset until a versioned Research policy and registered producer/provenance are approved. Without a complete approved policy, evidence, and risk-period identity, opted-in new BUY evaluation fails closed and S09 is not qualification eligible. Never infer values from Production policy. Existing eligible protective exits bypass this additional gate and continue through the existing registered path. The current gate contract does not register or qualify a producer and is not wired to a running agent.
+`pump_gap_fraction` measures the upward return between consecutive 1-hour candles; input availability and source provenance remain causal and versioned. Pump-gap threshold and evidence-age limits are intentionally unset until producer ranges are measured and a versioned Research policy is approved. Hold candidate evaluation/activation meanwhile. Without a complete approved policy, evidence, and risk-period identity, opted-in new BUY evaluation fails closed and S09 is not qualification eligible. Never infer values from Production policy. Existing eligible protective exits bypass this additional gate and continue through the existing registered path. The current gate contract does not register or qualify a producer and is not wired to a running agent.
 
 Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan dependency direction atau persistence material memerlukan ADR.
 

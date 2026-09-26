@@ -1,6 +1,6 @@
 # CR-S08 — Queue evidence and promotion boundary
 
-Status: ACCEPTED — owner approved boundary on 2026-09-27; numeric freshness policy remains unresolved.
+Status: ACCEPTED — owner approved boundary and 5-second Research freshness default on 2026-09-27.
 
 ## Problem
 
@@ -15,7 +15,7 @@ Define a versioned `lob_queue_v1` research contract at the execution/promotion b
 - Missing, stale, future-dated, or sequence-invalid queue evidence makes that simulated sample `QUEUE_UNAVAILABLE` and blocks promotion. The strategy may emit an intent only when its market-data gates pass; it cannot mark a fill successful.
 - Partial fill/cancel remains owned by existing OMS/ledger reconciliation. Tests must prove filled quantity, remaining quantity, released reservation and ledger balance from real shared components; do not implement a strategy-local ledger.
 
-Freshness limits require an explicit versioned Research policy; no numeric limit is approved by this CR. The contract and fail-closed boundary may be implemented now, but S08 promotion remains blocked until an owner approves a policy and a qualified producer supplies evidence. A model-estimated queue fill probability is labeled as a model estimate, never observed queue state.
+Freshness uses an explicit versioned Research policy with a default maximum evidence age of 5 seconds, measured from `observed_at` to decision/quote time. Missing policy or evidence remains fail-closed. The default does not qualify a producer or establish real queue coverage; S08 promotion remains blocked until a qualified producer supplies evidence. A model-estimated queue fill probability is labeled as a model estimate, never observed queue state.
 
 ## Impact
 
@@ -30,4 +30,4 @@ Before implementation, approve the exact queue fields, unknown/freshness behavio
 
 ## Decision
 
-Owner approval: boundary accepted on 2026-09-27. Queue evidence must carry the fields and fail-closed states above; unknown or stale evidence blocks promotion. No numeric freshness threshold was approved. Until a versioned threshold is separately frozen, queue qualification and promotion remain blocked; do not infer a limit from another feature contract. Partial-cancel accounting remains in the existing OMS/ledger.
+Owner approval: boundary and 5-second Research default accepted on 2026-09-27. The versioned `QueueEvidencePolicy` defaults `max_evidence_age_seconds` to 5; age is measured from `observed_at` at decision/quote time. Unknown or evidence older than 5 seconds blocks promotion. The policy still pins source identity and approval reference; real queue reconstruction and coverage remain external qualification gates. Partial-cancel accounting remains in the existing OMS/ledger.
