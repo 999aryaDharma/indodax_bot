@@ -1632,7 +1632,9 @@
       "checks": [
         "Dirty worktree tidak memenuhi promotable run",
         "Failed trial ikut trial count",
-        "Duplicate run key tidak menimpa hasil berbeda"
+        "Duplicate run key tidak menimpa hasil berbeda",
+        "Missing/cyclic ancestry and persisted content tampering are rejected",
+        "Failed and invalid runs cannot be promotable"
       ],
       "files": [
         "src/indodax_lab/evaluation/registry.py",
@@ -1643,8 +1645,8 @@
       "spec": "docs/specs/11-evaluation-and-experiment-lifecycle.md",
       "path": "docs/sprints/evaluation/EVAL-01-immutable-experiment-registry.md",
       "priority": "P0",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "implementation_owner": "Antigravity; remediation Codex /root",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/eval-01-immutable-experiment-registry",
       "requirements": [
         "FR-09"
@@ -1656,7 +1658,7 @@
         "docs/specs/20-testing-strategy.md",
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
-      "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency SIM-04 supplies: postings + equity + rejected orders -> metrics by year/regime/tier/asset and 1.5x/2x stress.",
+      "current_context": "Implemented at exact code SHA be3a40359653a79d9aa7f07152b8d27fcdd6eb6f; independent review PASS. Registry persists immutable run content, counts failed/invalid trials, rejects dirty or non-success promotability, validates complete parent ancestry, and verifies stored content hashes on reads and idempotent writes. Focused evidence: 9 registry tests passed; import/unused lint and diff-check passed. No external activation gate is added.",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
@@ -1664,36 +1666,36 @@
       "acceptance_test_mapping": [
         {
           "criterion": "EVAL-01-AC0",
-          "test_case": "test_eval_01_valid_contract",
+          "test_case": "test_eval_01_valid_contract; test_eval_01_rejects_missing_or_self_parent; test_eval_01_detects_persisted_ancestry_cycle",
           "behavior": "Setiap percobaan termasuk gagal tersimpan dengan konfigurasi dan ancestry yang dapat diaudit",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-01-AC1",
-          "test_case": "test_eval_01_contract_1",
+          "test_case": "test_eval_01_contract_1; test_eval_01_non_success_runs_cannot_be_promotable",
           "behavior": "Dirty worktree tidak memenuhi promotable run",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-01-AC2",
           "test_case": "test_eval_01_contract_2",
           "behavior": "Failed trial ikut trial count",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "EVAL-01-AC3",
-          "test_case": "test_eval_01_contract_3",
+          "test_case": "test_eval_01_contract_3; test_eval_01_detects_persisted_content_tampering",
           "behavior": "Duplicate run key tidak menimpa hasil berbeda",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_implementation",
         "path": "docs/sprints/handoffs/EVAL-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "be3a40359653a79d9aa7f07152b8d27fcdd6eb6f",
+        "review": "PASS on exact code SHA be3a40359653a79d9aa7f07152b8d27fcdd6eb6f by /root/docs_review; 9 focused tests passed."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
