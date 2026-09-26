@@ -39,8 +39,20 @@ Status: REVIEW
 | JOB-02-AC3 (RED) | `test_job_02_contract_3` | `python -m pytest tests/unit/lab/orchestration/test_resources.py` | Exit 1 (ModuleNotFoundError) | `working tree` |
 | JOB-02-AC3 (GREEN) | `test_job_02_contract_3` | `python -m pytest tests/unit/lab/orchestration/test_resources.py::test_job_02_contract_3` | Exit 0 (Passed, ASUS profile strictly rejects training admission and prohibits training import) | `29b4e57` |
 
-All 5 tests in `tests/unit/lab/orchestration/test_resources.py` passed (0.18s).
-Full lab suite verification: 109 passed across strategies, features, labels, evaluation, backtest, and orchestration.
+All 10 tests in `tests/unit/lab/orchestration/test_resources.py` passed; 30 passed across `tests/unit/lab/orchestration/`.
+
+## Fix record (review follow-up)
+| Fix ID | Test (RED→GREEN) | Result |
+|---|---|---|
+| JOB-02-FIX1 | `test_job_02_jobrecord_roundtrips_resource_class` | RED (resolved MEDIUM via job_type inference) → GREEN (HIGH round-tripped) |
+| JOB-02-FIX2 | `test_job_02_unknown_cpu_load_defers` | RED (UNKNOWN cpu_load admitted) → GREEN (`SENSOR_UNKNOWN:cpu_load_pct`) |
+| JOB-02-FIX3 | `test_job_02_low_unknown_idle_defers` | RED (LOW + UNKNOWN idle admitted) → GREEN (`SENSOR_UNKNOWN:user_idle_seconds`) |
+| JOB-02-FIX4 | `test_job_02_worker_fenced_when_lease_stolen` | RED (stale worker executed blindly) → GREEN (`LeaseFencingError`) |
+| JOB-02-FIX5 | `test_job_02_worker_pauses_on_unknown_ac` | RED (UNKNOWN AC executed) → GREEN (PAUSED + checkpoint) |
+
+- Defects: (1) `resolve_resource_class(JobRecord)` dropped `parameters` (comment admitted data loss), so running jobs could silently downgrade HIGH→MEDIUM/LOW and bypass Lenovo concurrency limits + ASUS training prohibition. (2) UNKNOWN sensors admitted fail-open whenever the class policy did not require them (LOW idle/AC, any-class cpu_load). (3) `ResearchWorker` never coordinated with queue leases (no owner/generation/expiry check, no heartbeat) and treated UNKNOWN AC as safe.
+- Fixes: `JobRecord.resource_class` round-trips the explicit class via stored `parameters_json` (no schema migration); all core sensors (AC/RAM/idle/thermal/cpu_load) fail closed unconditionally; worker verifies active lease at every step boundary, heartbeats after each step, pauses on AC UNKNOWN, and accepts injectable `as_of` clock. `test_job_02_contract_2` threads `as_of` so lease verification is exercised honestly.
+- Files: `src/indodax_lab/orchestration/jobs.py`, `queue.py`, `resources.py`, `worker.py`, `tests/unit/lab/orchestration/test_resources.py`.
 
 ## Review
 - Spec verdict: PASS (meets all functional requirements of JOB-02 and specs/13-jobs-resource-policy-and-repeats.md).

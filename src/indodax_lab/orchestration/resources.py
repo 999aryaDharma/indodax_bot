@@ -189,12 +189,13 @@ def resolve_resource_class(job: JobDefinition | JobRecord | ResourceClass | str)
     if isinstance(job, str):
         return ResourceClass(job.upper())
 
-    # Check job parameters
+    # Check job parameters (JobDefinition) or round-tripped class (JobRecord).
     params: dict[str, Any] = {}
     if isinstance(job, JobDefinition):
         params = job.parameters
     elif isinstance(job, JobRecord):
-        pass  # JobRecord parameters stored in queue JSON
+        if job.resource_class is not None:
+            return ResourceClass(str(job.resource_class).upper())
 
     rc_val = params.get("resource_class")
     if rc_val is not None:
@@ -291,8 +292,10 @@ def evaluate_admission(
 
     thresholds = active_policy.get_thresholds(resource_class)
 
-    # 3. Sensor UNKNOWN is not safe (JOB-02-AC1)
-    if thresholds.require_ac_power and reading.ac_power_connected is None:
+    # 3. Sensor UNKNOWN is not safe (JOB-02-AC1). Every core sensor must be
+    # known before admission regardless of resource class; an UNKNOWN reading
+    # is never treated as meeting policy.
+    if reading.ac_power_connected is None:
         return AdmissionDecision(
             admitted=False,
             reason="SENSOR_UNKNOWN:ac_power_connected",
@@ -302,7 +305,7 @@ def evaluate_admission(
             evaluated_at=now,
         )
 
-    if thresholds.min_free_ram_gb > 0 and reading.free_ram_gb is None:
+    if reading.free_ram_gb is None:
         return AdmissionDecision(
             admitted=False,
             reason="SENSOR_UNKNOWN:free_ram_gb",
@@ -312,7 +315,7 @@ def evaluate_admission(
             evaluated_at=now,
         )
 
-    if thresholds.min_idle_seconds > 0 and reading.user_idle_seconds is None:
+    if reading.user_idle_seconds is None:
         return AdmissionDecision(
             admitted=False,
             reason="SENSOR_UNKNOWN:user_idle_seconds",
@@ -322,10 +325,20 @@ def evaluate_admission(
             evaluated_at=now,
         )
 
-    if thresholds.max_thermal_celsius is not None and reading.cpu_temp_celsius is None:
+    if reading.cpu_temp_celsius is None:
         return AdmissionDecision(
             admitted=False,
             reason="SENSOR_UNKNOWN:cpu_temp_celsius",
+            resource_class=resource_class,
+            host_profile=profile,
+            reading=reading,
+            evaluated_at=now,
+        )
+
+    if reading.cpu_load_pct is None:
+        return AdmissionDecision(
+            admitted=False,
+            reason="SENSOR_UNKNOWN:cpu_load_pct",
             resource_class=resource_class,
             host_profile=profile,
             reading=reading,

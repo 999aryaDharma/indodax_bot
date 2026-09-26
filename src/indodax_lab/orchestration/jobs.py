@@ -70,6 +70,10 @@ class JobRecord(BaseModel):
     job_type: str
     status: JobStatus
     owner_id: str | None = None
+    # Explicit execution weight round-tripped from queue parameters_json.
+    # JobRecord carries no other parameters; without this, resource_class
+    # would silently downgrade via job_type inference (fail-open).
+    resource_class: str | None = None
     generation: int = Field(default=0, ge=0)
     attempts: int = Field(default=0, ge=0)
     max_attempts: int = Field(default=3, ge=1)

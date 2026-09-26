@@ -207,12 +207,13 @@ def test_job_02_contract_2(tmp_path: Path) -> None:
             probe.update(ac_power_connected=False)
         return {"current_epoch": step_idx}
 
-    # Execute steps 0 to 4
+    # Execute steps 0 to 4 (worker clock injected so queue lease stays valid)
     result = worker.execute_steps(
         job=claimed,
         total_steps=5,
         step_fn=mock_step,
         start_step=0,
+        as_of=datetime(2025, 6, 1, 12, 0, 10, tzinfo=UTC),
     )
 
     # AC disconnected at step 2 -> pause execution and save checkpoint
@@ -235,6 +236,7 @@ def test_job_02_contract_2(tmp_path: Path) -> None:
         job=claimed,
         total_steps=5,
         step_fn=mock_step,
+        as_of=datetime(2025, 6, 1, 12, 0, 20, tzinfo=UTC),
     )
 
     assert resumed_result.status == "SUCCESS"
@@ -315,3 +317,139 @@ def test_job_02_lenovo_concurrency_limit() -> None:
     )
     assert decision.admitted is False
     assert decision.reason == "CONCURRENCY_LIMIT_EXCEEDED:max_1_high_or_gpu"
+
+
+def test_job_02_jobrecord_roundtrips_resource_class(tmp_path: Path) -> None:
+    """JOB-02 regression: JobRecord keeps explicit resource_class (no silent downgrade)."""
+    from indodax_lab.orchestration.resources import resolve_resource_class
+
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    job_def = JobDefinition(
+        job_id="job_heavy_backtest",
+        job_type="backtest_monthly",
+        recipe_hash="recipe_abc123",
+        input_ids=["dataset_v1"],
+        cadence_window="daily_2025_06_01",
+        parameters={"resource_class": ResourceClass.HIGH.value},
+        max_attempts=3,
+        lease_duration_seconds=60,
+        created_at=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
+    )
+    assert resolve_resource_class(job_def) == ResourceClass.HIGH
+    queue.submit_job(job_def)
+    claimed = queue.claim_job("worker_1", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
+    assert claimed is not None
+    # Before fix this resolved MEDIUM via job_type inference (parameters dropped).
+    assert resolve_resource_class(claimed) == ResourceClass.HIGH
+
+
+def test_job_02_unknown_cpu_load_defers() -> None:
+    """JOB-02 regression: UNKNOWN cpu load fails closed."""
+    job = _build_test_job("job_cpu_unknown", resource_class=ResourceClass.HIGH)
+    reading = SystemResourceReading(
+        ac_power_connected=True,
+        free_ram_gb=16.0,
+        user_idle_seconds=900.0,
+        cpu_temp_celsius=50.0,
+        cpu_load_pct=None,
+        gpu_available=True,
+    )
+    decision = evaluate_admission(job=job, reading=reading, host_profile=HostProfile.LENOVO)
+    assert decision.admitted is False
+    assert decision.reason == "SENSOR_UNKNOWN:cpu_load_pct"
+
+
+def test_job_02_low_unknown_idle_defers() -> None:
+    """JOB-02 regression: LOW job with UNKNOWN idle sensor fails closed."""
+    job = _build_test_job("job_low_idle_unknown", job_type="backtest", resource_class=ResourceClass.LOW)
+    reading = SystemResourceReading(
+        ac_power_connected=True,
+        free_ram_gb=16.0,
+        user_idle_seconds=None,
+        cpu_temp_celsius=50.0,
+        cpu_load_pct=10.0,
+        gpu_available=True,
+    )
+    decision = evaluate_admission(job=job, reading=reading, host_profile=HostProfile.LENOVO)
+    assert decision.admitted is False
+    assert decision.reason == "SENSOR_UNKNOWN:user_idle_seconds"
+
+
+def test_job_02_worker_fenced_when_lease_stolen(tmp_path: Path) -> None:
+    """JOB-02 regression: worker without the active lease cannot execute steps."""
+    from indodax_lab.orchestration.jobs import LeaseFencingError
+
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    queue.submit_job(_build_test_job("job_lease_race", resource_class=ResourceClass.HIGH))
+    checkpoint_dir = tmp_path / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    reading = SystemResourceReading(
+        ac_power_connected=True,
+        free_ram_gb=16.0,
+        user_idle_seconds=900.0,
+        cpu_temp_celsius=55.0,
+        cpu_load_pct=20.0,
+        gpu_available=True,
+    )
+    t0 = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    first = queue.claim_job("worker_lenovo_01", as_of=t0)
+    assert first is not None
+    # Lease expires; a second worker takes over.
+    second = queue.claim_job("worker_lenovo_02", as_of=datetime(2025, 6, 1, 12, 2, tzinfo=UTC))
+    assert second is not None and second.owner_id == "worker_lenovo_02"
+
+    stale_worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="worker_lenovo_01",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=checkpoint_dir,
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(reading),
+    )
+    with pytest.raises(LeaseFencingError, match="STALE_LEASE_FENCED"):
+        stale_worker.execute_steps(
+            job=first,
+            total_steps=3,
+            step_fn=lambda idx: {"step": idx},
+            as_of=datetime(2025, 6, 1, 12, 2, 30, tzinfo=UTC),
+        )
+
+
+def test_job_02_worker_pauses_on_unknown_ac(tmp_path: Path) -> None:
+    """JOB-02 regression: UNKNOWN AC sensor pauses instead of executing blindly."""
+    db_path = tmp_path / "queue.db"
+    queue = SqliteJobQueue(db_path)
+    queue.submit_job(_build_test_job("job_ac_unknown", resource_class=ResourceClass.HIGH))
+    checkpoint_dir = tmp_path / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    reading = SystemResourceReading(
+        ac_power_connected=None,
+        free_ram_gb=16.0,
+        user_idle_seconds=900.0,
+        cpu_temp_celsius=55.0,
+        cpu_load_pct=20.0,
+        gpu_available=True,
+    )
+    t0 = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    claimed = queue.claim_job("worker_lenovo_01", as_of=t0)
+    assert claimed is not None
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="worker_lenovo_01",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=checkpoint_dir,
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(reading),
+    )
+    result = worker.execute_steps(
+        job=claimed,
+        total_steps=3,
+        step_fn=lambda idx: {"step": idx},
+        as_of=datetime(2025, 6, 1, 12, 0, 10, tzinfo=UTC),
+    )
+    assert result.status == "PAUSED"
+    assert result.reason == "AC_POWER_DISCONNECTED_CHECKPOINT_SAVED"

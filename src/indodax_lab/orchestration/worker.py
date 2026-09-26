@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, Field
 
-from indodax_lab.orchestration.jobs import JobRecord
+from indodax_lab.orchestration.jobs import JobRecord, JobStatus, LeaseFencingError
 from indodax_lab.orchestration.queue import SqliteJobQueue
 from indodax_lab.orchestration.resources import (
     AdmissionPolicy,
@@ -75,10 +75,16 @@ class ResearchWorker:
         total_steps: int,
         step_fn: Callable[[int], dict[str, Any] | None],
         start_step: int = 0,
+        as_of: datetime | None = None,
     ) -> ExecutionResult:
         """Execute a staged sequence of steps, checking for AC disconnect at each boundary.
 
-        If AC power is disconnected:
+        Lease coordination: the worker verifies it still holds the active queue
+        lease (owner/generation/status/expiry) at every step boundary and extends
+        it via heartbeat after each completed step. A stolen or expired lease
+        raises LeaseFencingError fail-closed instead of executing blindly.
+
+        If AC power is disconnected or UNKNOWN:
         - Saves current progress into a checkpoint JSON file.
         - Immediately pauses execution with status PAUSED and reason AC_POWER_DISCONNECTED_CHECKPOINT_SAVED.
         """
@@ -86,22 +92,27 @@ class ResearchWorker:
         if self.config.host_profile == HostProfile.ASUS and is_training_job(job):
             guard_asus_training_import(self.config.host_profile)
 
+        now = as_of or datetime.now(UTC)
+        self._verify_lease(job, now)
+
         last_completed_step = start_step - 1
         last_state: dict[str, Any] | None = None
 
         for step_idx in range(start_step, total_steps):
-            # Check resource probe before executing step
+            self._verify_lease(job, now)
+            # Check resource probe before executing step (UNKNOWN AC is not safe)
             reading = self.probe.read()
-            if reading.ac_power_connected is False:
+            if reading.ac_power_connected is not True:
                 return self._trigger_checkpoint_pause(job.job_id, last_completed_step, last_state)
 
             # Execute step
             last_state = step_fn(step_idx)
             last_completed_step = step_idx
+            self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation, as_of=now)
 
             # Check resource probe immediately after completing step
             post_reading = self.probe.read()
-            if post_reading.ac_power_connected is False:
+            if post_reading.ac_power_connected is not True:
                 return self._trigger_checkpoint_pause(job.job_id, last_completed_step, last_state)
 
         return ExecutionResult(
@@ -111,6 +122,26 @@ class ResearchWorker:
             checkpoint_path=None,
             metrics={"total_completed_steps": total_steps},
         )
+
+    def _verify_lease(self, job: JobRecord, as_of: datetime) -> None:
+        """Fail closed unless this worker holds the active queue lease."""
+        try:
+            current = self.queue.get_job(job.job_id)
+        except KeyError:
+            raise LeaseFencingError(
+                f"STALE_LEASE_FENCED: job {job.job_id} is not tracked by the queue"
+            ) from None
+        if (
+            current.status != JobStatus.RUNNING
+            or current.owner_id != self.config.worker_id
+            or current.generation != job.generation
+            or current.lease_expires_at is None
+            or current.lease_expires_at <= as_of
+        ):
+            raise LeaseFencingError(
+                f"STALE_LEASE_FENCED: worker {self.config.worker_id} generation "
+                f"{job.generation} does not hold the active lease for job {job.job_id}"
+            )
 
     def _trigger_checkpoint_pause(
         self,
@@ -140,11 +171,12 @@ class ResearchWorker:
         job: JobRecord,
         total_steps: int,
         step_fn: Callable[[int], dict[str, Any] | None],
+        as_of: datetime | None = None,
     ) -> ExecutionResult:
         """Resume execution from the last persisted checkpoint."""
         checkpoint_path = self.get_checkpoint_path(job.job_id)
         if not checkpoint_path.exists():
-            return self.execute_steps(job, total_steps, step_fn, start_step=0)
+            return self.execute_steps(job, total_steps, step_fn, start_step=0, as_of=as_of)
 
         data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
         next_step = data["last_completed_step"] + 1
@@ -157,4 +189,4 @@ class ResearchWorker:
                 checkpoint_path=checkpoint_path,
             )
 
-        return self.execute_steps(job, total_steps, step_fn, start_step=next_step)
+        return self.execute_steps(job, total_steps, step_fn, start_step=next_step, as_of=as_of)

@@ -419,7 +419,7 @@ class SqliteJobQueue:
                 SELECT job_id, job_type, status, owner_id, generation,
                        attempts, max_attempts, lease_duration_seconds,
                        lease_expires_at, result_artifact_path, result_artifact_hash,
-                       error_message, created_at, updated_at
+                       error_message, created_at, updated_at, parameters_json
                 FROM jobs
                 WHERE job_id = ?
                 """,
@@ -429,11 +429,18 @@ class SqliteJobQueue:
             if not row:
                 raise KeyError(f"JOB_NOT_FOUND:{job_id}")
 
+            try:
+                stored_params = json.loads(row[14]) if row[14] else {}
+            except (json.JSONDecodeError, TypeError):
+                stored_params = {}
+            stored_rc = stored_params.get("resource_class") if isinstance(stored_params, dict) else None
+
             return JobRecord(
                 job_id=row[0],
                 job_type=row[1],
                 status=JobStatus(row[2]),
                 owner_id=row[3],
+                resource_class=str(stored_rc).upper() if stored_rc is not None else None,
                 generation=row[4],
                 attempts=row[5],
                 max_attempts=row[6],
