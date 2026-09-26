@@ -1,14 +1,15 @@
 # C11-01 handoff
 
-Status: REVIEW
+Status: DELTA_REVIEW
 
 ## Identity
 
 - Sprint ID: C11-01 — Volatility allocation
 - Implementation agent: Codex
-- Independent reviewer: `/root/docs_review` (pending)
+- Independent reviewer: `/root/docs_review` (first review CHANGES_REQUESTED; delta review pending)
 - Branch: `feat/feat-02-finalization`
-- Code SHA: `56c6e055cafbf01cc20d2c4c09f72dcdecacce8c`
+- Initial review SHA: `56c6e055cafbf01cc20d2c4c09f72dcdecacce8c`
+- Delta review SHA: `46c2abcf7b9a104a8f399877a6727be3722e5c47`
 - Environment: Windows, Python 3.12.13, `C:/Users/User/miniconda3/envs/ML/python.exe`
 
 ## Files and contract
@@ -27,8 +28,10 @@ Status: REVIEW
 | AC1 | `test_c11_excludes_zero_and_nonfinite_volatility_and_requires_two_pairs` | Zero/NaN RV excluded; fewer than two valid pairs abstains |
 | AC2 | `test_c11_candidate_sized_inverse_volatility_respects_cash_and_pair_caps`, `test_c11_respects_indodax_minimum_notional` | Total <=50%, pair <=25%, below Rp10.000 excluded |
 | AC3 | `test_c11_missing_cash_abstains` | Missing cash abstains explicitly |
+| Delta guards | `test_c11_excludes_missing_volatility_without_crashing`, `test_c11_rechecks_minimum_after_decimal_quantity_rounding`, `test_c11_rejects_parameters_above_frozen_allocation_caps` | Missing numeric values abstain, rounded notional remains >= Rp10.000, unsafe/nonfinite configuration rejected |
 
-- Focused: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c11.py tests/unit/lab/backtest/test_feature_replay.py tests/unit/lab/strategies/test_registry.py -q` — 37 passed.
+- Initial focused: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c11.py tests/unit/lab/backtest/test_feature_replay.py tests/unit/lab/strategies/test_registry.py -q` — 37 passed.
+- Delta focused, same command — 40 passed.
 - Targeted lint: `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/c11.py src/indodax_lab/strategies/base.py tests/unit/lab/strategies/test_c11.py` — passed.
 - Planning: `C:/Users/User/miniconda3/envs/ML/python.exe docs/quality/validate_planning.py` — PASS, 134 nodes, 264 edges, 0 cycles.
 - Full suite: 1,154 passed, 2 skipped, 1 failed. Failure: pre-existing dirty `tests/unit/lab/strategies/test_c04.py::test_c04_volume_nan_fail_open` against concurrently dirty C04 implementation; those paths were not changed or staged by this sprint.
@@ -39,4 +42,4 @@ Status: REVIEW
 - No live account, Production ledger, venue, order, fill, or runtime state access.
 - Simulator caller remains responsible for supplying fresh unreserved cash; no simulator orchestration caller currently supplies it automatically.
 - Candidate is research-only and not activated or qualified for trading.
-- Independent review requested for exact code SHA above; keep sprint in REVIEW until PASS.
+- First independent review found 3 Important findings; all were reproduced RED, fixed, and covered by regressions. Delta review requested for `46c2abcf7b9a104a8f399877a6727be3722e5c47`; keep sprint in REVIEW until PASS.
