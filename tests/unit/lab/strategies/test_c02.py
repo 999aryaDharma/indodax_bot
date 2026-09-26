@@ -2,15 +2,16 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pandas as pd
 import pytest
 
+import indodax_lab.strategies.c02 as c02_module
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
 from indodax_lab.strategies.base import create_decision_frame
 from indodax_lab.strategies.c02 import c02_decide, load_c02_specification
 from indodax_lab.strategies.registry import StrategyRegistry
-import indodax_lab.strategies.c02 as c02_module
 
 
 def _build_c02_bars(
@@ -165,7 +166,7 @@ def _build_c02_bars(
 
 
 def test_c02_01_valid_contract():
-    """C02-01-AC0: Kandidat C02 menghasilkan intent yang dapat dibandingkan dengan baseline pada judge yang sama."""
+    """C02-01-AC0: Emit valid intent for comparison on the shared baseline judge."""
     spec = load_c02_specification()
     assert spec.strategy_id == "C02"
     assert spec.family == "trend_pullback"
@@ -254,7 +255,7 @@ def test_c02_01_contract_3():
     spec = load_c02_specification()
     as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
 
-    # In uptrend, prior bar pulled back below fast EMA, and current closed bar closed back above fast EMA
+    # Prior bar pulled back below fast EMA; current closed bar recovered above it.
     df_recovered = _build_c02_bars(as_of=as_of, regime="uptrend", pullback_state="recovered")
     frame = create_decision_frame(df_recovered, as_of=as_of)
 
@@ -336,3 +337,49 @@ def test_c02_atr_missing_or_zero_produces_flat():
     frame_b = create_decision_frame(df_b, as_of=as_of)
     intents_b = c02_decide(frame_b, spec)
     assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"
+
+
+def test_c02_nonfinite_or_oversized_atr_produces_flat():
+    spec = load_c02_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    for atr in (float("nan"), float("inf"), 100_000_000.0):
+        df = _build_c02_bars(as_of=as_of)
+        df.loc[df.index[-1], "atr_14"] = atr
+        frame = create_decision_frame(df, as_of=as_of)
+        assert c02_decide(frame, spec) == []
+
+
+def test_c02_invalid_ema_and_ohlc_produce_flat():
+    spec = load_c02_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    for row_index, column, value in (
+        (0, "ema_fast", float("inf")),
+        (0, "low", -1.0),
+        (1, "high", 1.0),
+    ):
+        df = _build_c02_bars(as_of=as_of)
+        df.loc[row_index, column] = value
+        frame = create_decision_frame(df, as_of=as_of)
+        assert c02_decide(frame, spec) == []
+
+
+def test_c02_requires_current_row_and_strictly_earlier_pullback():
+    spec = load_c02_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+
+    df = _build_c02_bars(as_of=as_of)
+    duplicate_time = df.copy()
+    duplicate_time.loc[0, ["decision_ts", "row_ready_at"]] = as_of
+    frame = create_decision_frame(duplicate_time, as_of=as_of)
+    assert c02_decide(frame, spec) == []
+
+    old_signal = _build_c02_bars(as_of=as_of)
+    tail = old_signal.iloc[-1].to_dict()
+    tail["decision_ts"] = as_of + timedelta(hours=1)
+    tail["row_ready_at"] = as_of + timedelta(hours=1)
+    tail["eligible"] = False
+    with_tail = pd.concat([old_signal, pd.DataFrame([tail])], ignore_index=True)
+    frame_with_tail = create_decision_frame(
+        with_tail, as_of=as_of + timedelta(hours=1)
+    )
+    assert c02_decide(frame_with_tail, spec) == []
