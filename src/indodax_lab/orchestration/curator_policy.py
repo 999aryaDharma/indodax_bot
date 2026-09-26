@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+import re
+from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,6 +34,10 @@ class SelfApprovalForbiddenError(ValueError):
     """Raised when an implementation agent attempts to approve its own change request."""
 
 
+class DuplicateProposalError(ValueError):
+    """Raised when a proposal_id is reused with conflicting content."""
+
+
 # ---------------------------------------------------------------------------
 # Domain models
 # ---------------------------------------------------------------------------
@@ -44,6 +49,13 @@ class ProposalStatus(StrEnum):
     PENDING_REVIEW = "PENDING_REVIEW"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+
+
+# ADR-003 bounded search budget mirrored from ML-03 TrialBudget default.
+MAX_BUDGET_TRIALS = 30
+
+_BRANCH_RE = re.compile(r"^(feat|fix|exp|chore)/[a-z0-9][a-z0-9._/-]{0,127}$")
+_RESERVED_BRANCHES = {"main", "dev", "master", "prod", "production"}
 
 
 class ChangeRequestProposal(BaseModel):
@@ -100,11 +112,54 @@ def sanitize_curator_input(raw_text: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def validate_branch_name(branch_name: str) -> str:
+    """Validate a candidate branch name fail-closed (AGENT-01-AC0).
+
+    Only namespaced branches (feat|fix|exp|chore)/... are accepted; reserved
+    integration branches and path escapes are rejected without side effects.
+    """
+    if not branch_name or branch_name in _RESERVED_BRANCHES or not _BRANCH_RE.match(branch_name):
+        raise ValueError(
+            f"BRANCH_NAME_INVALID: '{branch_name}' is not a bounded candidate branch. "
+            "Expected '<feat|fix|exp|chore>/<slug>' (AGENT-01-AC0)."
+        )
+    if ".." in branch_name:
+        raise ValueError(f"BRANCH_NAME_INVALID: '{branch_name}' contains path escape (AGENT-01-AC0).")
+    return branch_name
+
+
+def validate_budget_trials(budget_trials: int) -> int:
+    """Validate the trial budget against the ADR-003 bound (AGENT-01-AC0)."""
+    if isinstance(budget_trials, bool) or not isinstance(budget_trials, int):
+        raise ValueError("BUDGET_TRIALS_INVALID: budget_trials must be an int (AGENT-01-AC0).")
+    if not 1 <= budget_trials <= MAX_BUDGET_TRIALS:
+        raise ValueError(
+            f"BUDGET_TRIALS_OUT_OF_BOUNDS: {budget_trials} outside 1..{MAX_BUDGET_TRIALS} (AGENT-01-AC0)."
+        )
+    return budget_trials
+
+
 class CuratorEngine:
     """Governed engine managing challenger proposals, budgets, and independent approvals."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        outcome_lookup: Callable[[str], EvaluationOutcome | None] | None = None,
+    ) -> None:
         self._proposals: dict[str, ChangeRequestRecord] = {}
+        # Registry lookup mapping candidate_id -> authoritative EvaluationOutcome.
+        # When present it overrides the self-reported prior_outcome on the proposal,
+        # so a HARD_FAIL verdict cannot be spoofed away (AGENT-01-AC1).
+        self._outcome_lookup = outcome_lookup
+
+    def _authoritative_outcome(self, proposal: ChangeRequestProposal) -> EvaluationOutcome:
+        if self._outcome_lookup is None:
+            return proposal.prior_outcome
+        try:
+            resolved = self._outcome_lookup(proposal.candidate_id)
+        except Exception:
+            resolved = None
+        return resolved if resolved is not None else proposal.prior_outcome
 
     def submit_proposal(self, proposal: ChangeRequestProposal) -> ChangeRequestRecord:
         """Submit a change request proposal for evaluation (AGENT-01-AC0, AC1).
@@ -113,13 +168,36 @@ class CuratorEngine:
             proposal: The ``ChangeRequestProposal`` from the research agent.
 
         Returns:
-            A ``ChangeRequestRecord`` in ``PENDING_REVIEW`` state.
+            A ``ChangeRequestRecord`` in ``PENDING_REVIEW`` state. Identical
+            resubmission of a known ``proposal_id`` returns the stored record.
 
         Raises:
-            HardFailTuningForbiddenError: If prior outcome was ``HARD_FAIL`` (AGENT-01-AC1).
+            HardFailTuningForbiddenError: If the authoritative outcome is ``HARD_FAIL`` (AGENT-01-AC1).
+            ValueError: If budget or branch validation fails (AGENT-01-AC0).
+            DuplicateProposalError: If ``proposal_id`` is reused with conflicting content.
         """
-        # AC1: HARD_FAIL must not trigger unconstrained tuning or retry
-        if proposal.prior_outcome == EvaluationOutcome.HARD_FAIL:
+        validate_budget_trials(proposal.budget_trials)
+        validate_branch_name(proposal.branch_name)
+
+        existing = self._proposals.get(proposal.proposal_id)
+        if existing is not None:
+            if (
+                existing.proposer_id == proposal.proposer_id
+                and existing.candidate_id == proposal.candidate_id
+                and existing.branch_name == proposal.branch_name
+                and existing.hypothesis == proposal.hypothesis
+                and existing.budget_trials == proposal.budget_trials
+                and existing.prior_outcome == proposal.prior_outcome
+            ):
+                return existing
+            raise DuplicateProposalError(
+                f"DUPLICATE_PROPOSAL_CONFLICT: proposal_id '{proposal.proposal_id}' already exists "
+                "with different content. Reuse of proposal IDs with conflicting content is forbidden."
+            )
+
+        # AC1: authoritative HARD_FAIL must not trigger unconstrained tuning or retry
+        authoritative = self._authoritative_outcome(proposal)
+        if authoritative == EvaluationOutcome.HARD_FAIL:
             raise HardFailTuningForbiddenError(
                 f"HARD_FAIL_TUNING_FORBIDDEN: Proposal '{proposal.proposal_id}' for candidate "
                 f"'{proposal.candidate_id}' follows a HARD_FAIL verdict. "

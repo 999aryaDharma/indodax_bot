@@ -19,6 +19,7 @@ import pytest
 from indodax_lab.orchestration.curator_policy import (
     ChangeRequestProposal,
     CuratorEngine,
+    DuplicateProposalError,
     HardFailTuningForbiddenError,
     ProposalStatus,
     SelfApprovalForbiddenError,
@@ -130,3 +131,39 @@ def test_agent_01_contract_3():
     )
     assert approved.status == ProposalStatus.APPROVED
     assert approved.approver_id == "agent_bob_reviewer"
+
+
+def test_agent_01_hard_fail_lookup_overrides_claimed_outcome():
+    """Registry HARD_FAIL lookup rejects even when proposal claims NEAR_MISS."""
+    engine = CuratorEngine(outcome_lookup=lambda cid: EvaluationOutcome.HARD_FAIL)
+    proposal = _make_proposal(proposal_id="cr_spoofed", prior_outcome=EvaluationOutcome.NEAR_MISS)
+    with pytest.raises(HardFailTuningForbiddenError):
+        engine.submit_proposal(proposal)
+
+
+def test_agent_01_budget_and_branch_validators():
+    """Budget bounded 1..30 (ADR-003); branch must be namespaced candidate branch."""
+    engine = CuratorEngine()
+    with pytest.raises(ValueError, match="BUDGET"):
+        engine.submit_proposal(_make_proposal(proposal_id="cr_bad0", budget_trials=0))
+    with pytest.raises(ValueError, match="BUDGET"):
+        engine.submit_proposal(_make_proposal(proposal_id="cr_bad500", budget_trials=500))
+    for bad_branch in ["main", "dev", "evil branch", "../escape", ""]:
+        with pytest.raises(ValueError, match="BRANCH"):
+            engine.submit_proposal(
+                _make_proposal(proposal_id="cr_b_" + (bad_branch or "empty"), branch_name=bad_branch)
+            )
+
+
+def test_agent_01_idempotent_resubmit():
+    """Identical resubmit returns stored record; conflicting reuse raises."""
+    engine = CuratorEngine()
+    proposal = _make_proposal(proposal_id="cr_idem")
+    first = engine.submit_proposal(proposal)
+    second = engine.submit_proposal(proposal)
+    assert second.proposal_id == first.proposal_id
+    assert second.status == ProposalStatus.PENDING_REVIEW
+    assert engine.get_proposal("cr_idem") is not None
+    conflicting = _make_proposal(proposal_id="cr_idem", hypothesis="Different hypothesis")
+    with pytest.raises(DuplicateProposalError):
+        engine.submit_proposal(conflicting)

@@ -47,13 +47,17 @@ from indodax_lab.orchestration.dag import (
     ResearchDAGJob,
 )
 from indodax_lab.orchestration.curator_policy import (
+    MAX_BUDGET_TRIALS,
     ChangeRequestProposal,
     ChangeRequestRecord,
     CuratorEngine,
+    DuplicateProposalError,
     HardFailTuningForbiddenError,
     ProposalStatus,
     SelfApprovalForbiddenError,
     sanitize_curator_input,
+    validate_branch_name,
+    validate_budget_trials,
 )
 
 __all__ = [
@@ -98,8 +102,12 @@ __all__ = [
     "ChangeRequestProposal",
     "ChangeRequestRecord",
     "CuratorEngine",
+    "DuplicateProposalError",
     "HardFailTuningForbiddenError",
+    "MAX_BUDGET_TRIALS",
     "ProposalStatus",
     "SelfApprovalForbiddenError",
     "sanitize_curator_input",
+    "validate_branch_name",
+    "validate_budget_trials",
 ]
