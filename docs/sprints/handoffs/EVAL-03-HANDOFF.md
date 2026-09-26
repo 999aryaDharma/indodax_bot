@@ -47,7 +47,32 @@ Full lab suite verification: 121 passed across strategies, features, labels, eva
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Blocking-fix batch (implementer, fix/eval-03-blocking)
+
+Accepted blocking findings fixed in this batch (one commit):
+
+1. Non-atomic state transitions — `_connect` used `isolation_level=None`
+   (autocommit), so the UPDATE + audit INSERT pairs in `transition_stage` /
+   `unseal_gate` could land partially on crash. `_connect` now uses default
+   DEFERRED isolation so `with conn:` blocks are atomic transactions, and
+   both methods issue `BEGIN IMMEDIATE` for writer serialization.
+   Regression: `test_eval_03_transition_and_unseal_are_atomic`
+   (failed op leaves stage and history untouched).
+2. Unseal without VALIDATED — `unseal_gate` opened from any stage (observed:
+   allowed from IDEA). Now requires `current_stage == VALIDATED`, else
+   `InvalidTransitionError(UNSEAL_REQUIRES_VALIDATED_STAGE)`; the sealed flag
+   stays closed. Regression: `test_eval_03_unseal_requires_validated_stage`.
+3. Unverified split/authorizer — blank `dataset_split_id` / `authorized_by`
+   were accepted and audited as-is (observed: allowed). Now rejected
+   fail-closed with `DATASET_SPLIT_ID_REQUIRED` /
+   `UNSEAL_AUTHORIZED_BY_REQUIRED`. Regression:
+   `test_eval_03_unseal_verifies_split_and_authorizer`.
+
+Focused gate: `tests/unit/lab/evaluation/test_lifecycle.py` => 7 passed.
+Affected subsystem: `tests/unit/lab/evaluation/` => 15 passed.
+EVAL-01/EVAL-02 untouched.
+
 ## Deviations and known risks
-- Deviations: None.
-- Unresolved issues / blockers: None for EVAL-03.
+- Deviations: None beyond the blocking fixes above.
+- Unresolved issues / blockers: None for EVAL-03 after this batch.
 - Next unlocked consumers: ML-04, JOB-03, SHADOW-01, SHADOW-03, REPORT-01.

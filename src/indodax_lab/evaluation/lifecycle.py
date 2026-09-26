@@ -147,7 +147,11 @@ class CandidateLifecycleManager:
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.db_path), timeout=10.0, isolation_level=None)
+        # Default isolation (DEFERRED): `with conn:` blocks are atomic
+        # transactions (commit on success, rollback on exception). Autocommit
+        # is forbidden here because transition/unseal pair an UPDATE with an
+        # audit INSERT that must land together or not at all.
+        conn = sqlite3.connect(str(self.db_path), timeout=10.0)
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA busy_timeout = 5000;")
         return conn
@@ -270,6 +274,7 @@ class CandidateLifecycleManager:
         transition_id = f"tr_{uuid.uuid4().hex[:12]}"
 
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             conn.execute(
                 """
                 UPDATE candidates
@@ -303,8 +308,23 @@ class CandidateLifecycleManager:
         authorized_by: str,
         as_of: datetime | None = None,
     ) -> ExposureAuditRecord:
-        """Authorize single-use unsealing of the sealed evaluation gate (EVAL-03-AC2)."""
+        """Authorize single-use unsealing of the sealed evaluation gate (EVAL-03-AC2).
+
+        Guards (fail-closed):
+        - candidate must be at VALIDATED stage (sealed exposure only after validation);
+        - dataset_split_id must reference a declared split (non-blank verified);
+        - authorized_by must identify the approver (non-blank).
+        """
+        if not dataset_split_id or not dataset_split_id.strip():
+            raise ValueError("DATASET_SPLIT_ID_REQUIRED: unseal requires a declared dataset split id")
+        if not authorized_by or not authorized_by.strip():
+            raise ValueError("UNSEAL_AUTHORIZED_BY_REQUIRED: unseal requires a named authorizer")
         candidate = self.get_candidate(candidate_id)
+        if candidate.current_stage != CandidateStage.VALIDATED:
+            raise InvalidTransitionError(
+                f"UNSEAL_REQUIRES_VALIDATED_STAGE: candidate {candidate_id} is at {candidate.current_stage}, "
+                "sealed gate may only open from VALIDATED"
+            )
         if candidate.sealed_gate_opened:
             raise GateAlreadyOpenedError(
                 f"GATE_ALREADY_OPENED: candidate {candidate_id} (v{candidate.candidate_version}) has already opened the sealed gate"
@@ -323,6 +343,7 @@ class CandidateLifecycleManager:
         )
 
         with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             conn.execute(
                 "UPDATE candidates SET sealed_gate_opened = 1, updated_at = ? WHERE candidate_id = ?",
                 (ts.isoformat(), candidate_id),

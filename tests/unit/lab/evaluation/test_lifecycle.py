@@ -226,3 +226,59 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
     assert ranked_candidates == ["cand_strat_A", "cand_strat_C"]
     assert leaderboard[0].rank == 1
     assert leaderboard[1].rank == 2
+
+
+def test_eval_03_unseal_requires_validated_stage(tmp_path: Path) -> None:
+    """Blocking fix: sealed gate may only open from VALIDATED stage."""
+    db_path = tmp_path / "lifecycle.db"
+    mgr = CandidateLifecycleManager(db_path)
+
+    cand = _build_test_candidate("cand_early_unseal_v1")
+    mgr.register_candidate(cand)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.IMPLEMENTED)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.BACKTESTED)
+
+    with pytest.raises(InvalidTransitionError, match="UNSEAL_REQUIRES_VALIDATED_STAGE"):
+        mgr.unseal_gate(cand.candidate_id, "split_annual_2024", authorized_by="auditor_alpha")
+
+    stored = mgr.get_candidate(cand.candidate_id)
+    assert stored.sealed_gate_opened is False
+
+
+def test_eval_03_unseal_verifies_split_and_authorizer(tmp_path: Path) -> None:
+    """Blocking fix: blank dataset_split_id or authorizer is rejected fail-closed."""
+    db_path = tmp_path / "lifecycle.db"
+    mgr = CandidateLifecycleManager(db_path)
+
+    cand = _build_test_candidate("cand_unverified_unseal_v1")
+    mgr.register_candidate(cand)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.IMPLEMENTED)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.BACKTESTED)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.VALIDATED)
+
+    with pytest.raises(ValueError, match="DATASET_SPLIT_ID_REQUIRED"):
+        mgr.unseal_gate(cand.candidate_id, "   ", authorized_by="auditor_alpha")
+    with pytest.raises(ValueError, match="UNSEAL_AUTHORIZED_BY_REQUIRED"):
+        mgr.unseal_gate(cand.candidate_id, "split_annual_2024", authorized_by="  ")
+
+    stored = mgr.get_candidate(cand.candidate_id)
+    assert stored.sealed_gate_opened is False
+
+
+def test_eval_03_transition_and_unseal_are_atomic(tmp_path: Path) -> None:
+    """Blocking fix: failed transition/unseal leaves no partial state."""
+    db_path = tmp_path / "lifecycle.db"
+    mgr = CandidateLifecycleManager(db_path)
+
+    cand = _build_test_candidate("cand_atomic_v1")
+    mgr.register_candidate(cand)
+    mgr.transition_stage(cand.candidate_id, CandidateStage.IMPLEMENTED)
+
+    # Illegal jump must not advance stage nor record a transition
+    with pytest.raises(InvalidTransitionError):
+        mgr.transition_stage(cand.candidate_id, CandidateStage.SEALED_PASS)
+    stored = mgr.get_candidate(cand.candidate_id)
+    assert stored.current_stage == CandidateStage.IMPLEMENTED
+    assert [h.to_stage for h in mgr.get_transition_history(cand.candidate_id)] == [
+        CandidateStage.IMPLEMENTED
+    ]
