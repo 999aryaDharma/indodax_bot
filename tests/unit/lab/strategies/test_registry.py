@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+
 import pandas as pd
 import pytest
 from pydantic import ValidationError
@@ -280,3 +281,71 @@ def test_strat_01_contract_3():
     )
     registered_v2 = registry.register(spec_v2, logic_v2)
     assert registered_v2.specification.version == "1.1.0"
+
+
+def test_registered_specification_is_defensive_copy() -> None:
+    spec = StrategySpecification(
+        strategy_id="freeze", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={"nested": {"value": 1}}, risk_profile={}, split="train",
+    )
+    registry = StrategyRegistry()
+    registered = registry.register(spec, lambda frame: [])
+    spec.parameters["nested"]["value"] = 2
+    exposed = registered.specification
+    exposed.parameters["nested"]["value"] = 3
+    assert registered.specification.parameters["nested"]["value"] == 1
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register(spec, lambda frame: [])
+
+
+def test_logic_hash_includes_closure_and_default_values() -> None:
+    spec = StrategySpecification(
+        strategy_id="closure", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={}, risk_profile={}, split="train",
+    )
+
+    def make_logic(captured: int):
+        return lambda frame: [] if captured >= 0 else []
+
+    registry = StrategyRegistry()
+    registry.register(spec, make_logic(1))
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register(spec, make_logic(2))
+
+    default_spec = spec.model_copy(update={"strategy_id": "defaults"})
+
+    def make_default(value: int):
+        def decide(frame: DecisionFrame, captured: int = value):
+            return [] if captured >= 0 else []
+        return decide
+
+    registry.register(default_spec, make_default(1))
+    with pytest.raises(ValueError, match="PARAMETER_OR_LOGIC_CHANGE_REQUIRES_VERSION_BUMP"):
+        registry.register(default_spec, make_default(2))
+
+
+def test_mutated_strategy_closure_is_rejected_at_decision_time() -> None:
+    state = {"enabled": True}
+    spec = StrategySpecification(
+        strategy_id="mutable", version="1.0.0", family="test", timeframes=["1h"],
+        parameters={}, risk_profile={}, split="train",
+    )
+    registered = StrategyRegistry().register(spec, lambda frame: [] if state["enabled"] else [])
+    state["enabled"] = False
+    frame = DecisionFrame(datetime(2024, 6, 1, tzinfo=UTC), pd.DataFrame(), ())
+    with pytest.raises(ValueError, match="REGISTERED_STRATEGY_LOGIC_MUTATED"):
+        registered.decide(frame)
+
+
+def test_decision_frame_requires_valid_causality_evidence() -> None:
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    missing = pd.DataFrame({"pair": ["btc_idr"]})
+    with pytest.raises(ValueError, match="DECISION_FRAME_REQUIRED_COLUMNS"):
+        create_decision_frame(missing, as_of)
+
+    invalid = pd.DataFrame({
+        "pair": ["btc_idr"], "decision_ts": [pd.NaT], "row_ready_at": [pd.NaT],
+        "eligible": [True],
+    })
+    with pytest.raises(ValueError, match="INVALID_CAUSAL_TIMESTAMP"):
+        DecisionFrame(as_of=as_of, features=invalid, eligible_pairs=("btc_idr",))
