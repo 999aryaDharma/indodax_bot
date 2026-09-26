@@ -19,7 +19,7 @@ Status: IN_PROGRESS — implementation slices committed; independent review and 
 - Failed checkpoint writes restore the previous in-memory period, risk manager, ledger, positions, starting capital and audit trail. Checkpoints retain configured genesis cash separately so a restart can restore a reduced current period with the same startup config.
 - A real loss test debits Rp20 from Rp500,000; the separately authorized period starts at Rp499,980 and retains that as its opening equity across restart. No pump-gap evaluator or new risk threshold is implemented. No Production behavior changed.
 
-## Research RiskEngine gate slice (13b67ca)
+## Research RiskEngine gate slice (cafd1fd)
 
 - Added opt-in policy/evidence contracts and validation at the existing `RiskEngine` assessment boundary. Default callers remain unchanged; no Production caller opts in.
 - BUYs fail closed for missing/unapproved policy, missing/invalid/incomplete evidence, missing risk-period ID, lineage/period mismatch, noncausal or stale evidence, and configured pump-gap/Amihud breach. Eligible SELL intents bypass this additional gate.
@@ -53,6 +53,6 @@ Status: IN_PROGRESS — implementation slices committed; independent review and 
 - Owner has not approved numeric pump-gap threshold or evidence-age limit; do not infer Production values. Test fixture numbers are not defaults.
 - No point-in-time pump-gap producer/provenance is registered. Risk evaluation and qualification remain unavailable until both are versioned and qualified.
 - The new assessment boundary is opt-in but no running Research agent is wired to it yet; current implementation proves the contract, not end-to-end shadow enforcement.
-- Latest full suite after S09 equity carry-forward and TRAIN-01 checksum fix: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q` — 1548 passed, 2 skipped, 11 warnings in 41.73s. Skips are platform-specific `/proc` RSS and Windows symlink capability cases.
+- Historical full suite after S09 equity carry-forward and TRAIN-01 checksum fix, before the Research gate: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q` — 1548 passed, 2 skipped, 11 warnings in 41.73s. Latest final suite result is listed in the gate evidence table above.
 - New period opening equity is the closed portfolio's remaining ledger cash; no reset refills the configured seed capital. The checkpoint stores configured genesis cash separately from current period initial cash so a restart with the same settings resumes the reduced balance correctly.
 - Regression evidence in the extended test drives an actual losing buy/sell through `ResearchLedger`: Rp500,000 seed becomes Rp499,980, and the approved next period starts at Rp499,980 after restart.
