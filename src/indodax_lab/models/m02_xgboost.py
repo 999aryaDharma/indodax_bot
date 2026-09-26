@@ -89,6 +89,22 @@ class M02XGBoostTrainer:
         "outer_validation",
     }
 
+    @staticmethod
+    def _normalize_partition(value: str) -> str:
+        norm = value.strip().lower().replace("-", "_").replace(" ", "_").replace("/", "_")
+        while "__" in norm:
+            norm = norm.replace("__", "_")
+        return norm.strip("_")
+
+    @classmethod
+    def _assert_inner_partition(cls, val_partition_type: str) -> None:
+        norm = cls._normalize_partition(val_partition_type)
+        if norm in cls.FORBIDDEN_EVAL_PARTITIONS or "sealed" in norm or "test" in norm or "outer" in norm:
+            raise SealedPartitionLeakageError(
+                f"SEALED_PARTITION_LEAKAGE: Early stopping partition '{val_partition_type}' is forbidden. "
+                "Early stopping must strictly observe inner validation partitions."
+            )
+
     def __init__(self, config: M02Config) -> None:
         self.config = config
         self._model: xgb.XGBClassifier | None = None
@@ -112,12 +128,7 @@ class M02XGBoostTrainer:
     ) -> M02FittedBundle:
         """Fit XGBoost model with early stopping on inner validation, then calibrate on held-out scores."""
         # 1. Reject sealed test evaluation partition leakage (M02-01-AC1)
-        norm_part = val_partition_type.strip().lower()
-        if norm_part in self.FORBIDDEN_EVAL_PARTITIONS:
-            raise SealedPartitionLeakageError(
-                f"SEALED_PARTITION_LEAKAGE: Early stopping partition '{val_partition_type}' is forbidden. "
-                "Early stopping must strictly observe inner validation partitions."
-            )
+        self._assert_inner_partition(val_partition_type)
 
         # 2. Strict feature column ordering (M02-01-AC3)
         X_tr = X_train[feature_names]

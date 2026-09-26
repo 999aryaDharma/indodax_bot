@@ -49,6 +49,14 @@ Full lab suite verification: 154 passed across strategies, features, labels, eva
 - Self-review: completed by implementation owner (Antigravity).
 - Independent review: PENDING (independent reviewer required before state transition to DONE).
 
+## Fix batch (blocking: robust sealed-partition guard)
+- Finding: exact-match `strip().lower()` allowed `Sealed-Test`, `sealed test`, `outer-test`, `sealed_test_extra` to bypass AC1.
+- Fix: `src/indodax_lab/models/m02_xgboost.py` — `_normalize_partition` (case/separator-insensitive) + block if `sealed`/`test`/`outer` substring or exact forbidden set.
+- Regression: `tests/unit/lab/models/test_m02_partition_robust.py` (7 variants)
+  - RED (behavioral): 4 failed pre-fix with DID NOT RAISE.
+  - GREEN: `python -m pytest tests/unit/lab/models/test_m02_xgboost.py tests/unit/lab/models/test_m02_partition_robust.py -q` → 12 passed.
+- Shared path: `src/indodax_lab/models/__init__.py` untouched.
+
 ## Deviations and known risks
 - Deviations: None.
 - Unresolved issues / blockers: None for M02-01.
