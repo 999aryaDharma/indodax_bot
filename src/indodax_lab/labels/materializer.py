@@ -341,7 +341,7 @@ def materialize_training_dataset(
     split_digest = hashlib.sha256(split_digest_source.encode()).hexdigest()
     id_source = json.dumps({
         "domain": "training-dataset-v2", "features": feature_digest, "labels": label_digest,
-        "split": split_digest, "policy_id": split_manifest.policy_id,
+        "split": split_rows_digest, "policy_id": split_manifest.policy_id,
         "split_parent": split_manifest.split_id,
         "policy_version": split_manifest.policy_version, "snapshot": dataset_snapshot_id,
         "policy_content": split_manifest.policy_content_sha256,
