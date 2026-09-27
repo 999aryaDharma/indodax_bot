@@ -5,12 +5,26 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pyarrow.parquet as pq
+
+
+def _load_snapshot_manifest(path: Path) -> dict[str, Any]:
+    source_root = Path(__file__).resolve().parents[2] / "src"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+    from indodax_lab.data.manifest import content_id_path_component, read_manifest
+
+    manifest = read_manifest(path)
+    expected_directory = content_id_path_component(manifest["dataset_snapshot_id"])
+    if path.parent.name != expected_directory:
+        raise ValueError("SNAPSHOT_MANIFEST_DIRECTORY_ID_MISMATCH")
+    return manifest
 
 
 def _quantile(values: list[float], q: float) -> float:
@@ -27,7 +41,7 @@ def measure(dataset_root: Path) -> dict[str, Any]:
     partitions = 0
 
     for manifest_path in sorted((dataset_root / "snapshots").glob("sha256_*/manifest.json")):
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = _load_snapshot_manifest(manifest_path)
         for part in manifest["partitions"]:
             if "/interval=1h/" not in f"/{part['path']}" or not any(
                 f"/pair={pair}/" in f"/{part['path']}" for pair in ("btc_idr", "eth_idr")
