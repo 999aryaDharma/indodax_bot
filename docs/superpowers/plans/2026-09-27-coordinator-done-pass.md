@@ -121,3 +121,32 @@ carry BLOCKING verdicts; REPORT-01/02 hold for independent reviewer identity
   QA-02/REL-01 additionally on AGENT-01/QA-03. S08-01/S09-01 remain
   IN_PROGRESS on their own external gates (queue-source qualification /
   point-in-time producer registration) - correct disposition, not stale.
+
+**Rulings + activation (2026-09-27, lane continuation without main agent):**
+- Owner decisions taken: (a) JOB-02 measurement via SSH `asus-server` READ-ONLY,
+  never write; (b) activate C12-01/S07-01/RW2-02 ("Aktifkan semua, kerjakan");
+  (c) full repo cleanup ("Bersihkan penuh"); (d) pip install ruff.
+- Ruling R5: ruff 0.16.9 installed to user-site on owner answer - lint gate
+  available for the first time; touched-files baseline 13 findings recorded at
+  bdcc97d; zero-new-findings applies to every diff since.
+- JOB-02 AC4/AC5 code+tests: TDD RED (ImportError: CapacityGuardPolicy) ->
+  GREEN, commit 92e538d; gates 20/113/1459 passed. Independent delta review
+  ses_f1ccd0d11ffevtqOYyw9XamX6i PASS (0 blocking, 6 Minor -> backlog recorded
+  in the JOB-02 handoff). SSH artifact BLOCKED: asus-server offline (Tailscale
+  last seen 2d, ping timeout); background watcher polls 60s x 180, artifact ->
+  Temp\opencode\job02-host-artifact.txt; probes strictly read-only
+  (findmnt/df/cat/awk/stat/sleep).
+- Repo cleanup executed: push --all (112 branches, exit 0); 6 WIP worktrees
+  removed --force (owner-authorized; branches preserved and pushed first);
+  dirty files committed (b2e68b6 strategies import reorder, gate 168 passed;
+  1f53f85 workspace + logs/*.bak ignore); eol-noise docs restored via
+  git checkout (zero content diff); .superpowers/ + .worktrees/ ignored.
+  workspace.json re-dirties while Obsidian runs - known external noise, leave.
+- Sprints activation: plan docs/superpowers/plans/
+  2026-09-27-ready-sprints-activation.md (preflight shared-path scan + rulings:
+  one serial implementer at a time, FF integration only after task-review PASS,
+  coordinator-only manifest transitions). C12-01 claimed IN_PROGRESS (745cb75),
+  owner opencode session ses_f1cbf7ed6ffeQuUybslDqpaJkM, worktree
+  .worktrees/feat-c12-01, branch feat/c12-01-relative-strength-rotation, BASE
+  bdcc97d. S07-01/RW2-02 stay READY until a prior sprint is DONE+integrated
+  (S07-01 shares strategies/__init__.py with C12-01: single writer).

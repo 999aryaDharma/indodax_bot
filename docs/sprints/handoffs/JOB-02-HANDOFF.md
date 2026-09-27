@@ -98,3 +98,20 @@ Full lab suite verification: 109 passed across strategies, features, labels, eva
 - Focused command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/orchestration/test_resources.py -q -p no:cacheprovider` -> **18 passed**.
 - `git diff --check` passed. Independent review of `becc279` is PASS for lease renewal/ownership fencing, non-finite sensor rejection, and checkpoint resume. Previous CHANGES_REQUESTED findings applied to earlier SHA `9771d4627b01065225537f3e938050fa107c3d50`.
 - Owner-approved capacity decision: sensor-age, Production deadline-headroom, and disk-reserve limits remain unset until approved host measurements exist; unset required values and unknown path/device mappings fail closed. JOB-02-AC4/AC5 host measurement, mount mapping, and fail-closed integration evidence remain outstanding. Do not qualify workload capacity or mark JOB-02 DONE from the offline suite.
+
+## Independent delta review record — AC4/AC5 capacity guard (2026-09-27)
+
+- Reviewed SHA: `92e538d` (`feat(JOB-02): add fail-closed capacity guard for AC4/AC5`), delta against prior reviewed `becc279`; strictly additive (`resources.py` +136/-0).
+- Reviewer: independent session `ses_f1ccd0d11ffevtqOYyw9XamX6i` (did not implement the change). Verdict: **PASS** — 0 Critical, 0 Important, 6 Minor.
+- Evidence re-run by the reviewer: `tests/unit/lab/orchestration/test_resources.py` 20 passed; orchestration+operations 113 passed; `tests/unit/lab` 1459 passed; ruff on the 3 touched files = 13 findings forming a byte-identical rule/file set to the pre-change baseline (`92e538d^` via `--stdin-filename`) → 0 introduced. Full `tests -q` outside the lab scope: only pre-existing environment gaps in untouched legacy modules (`pandas_ta_classic` ×2 collection, `telegram` ×5).
+- Behavior proven by the reviewer: `capacity=None` preserves the pre-commit path byte-for-byte (zero deletions, no non-test callers changed); an enabled guard rejects unset required limits (`CAPACITY_LIMIT_UNSET:*`), stale sensors (`SENSOR_STALE:reading.timestamp`), sheds optional Research before/without a Production deadline (`RESEARCH_SHED_PRE_DEADLINE:*` / `PRODUCTION_DEADLINE_UNKNOWN:optional_research_shed`), blocks unresolved mounts (`PATH_MOUNT_UNRESOLVED:*`), and multiplies shared-device reserve demand (`DISK_RESERVE_EXCEEDED:... x N paths`); a naive deadline raises `UTC_TIMEZONE_AWARE_REQUIRED:production_deadline`.
+- Backlog (Minor, non-blocking, deliberately not fixed in this sprint — attach to the pending measurement gate or a future CR):
+  1. `CapacityGuardPolicy` accepts non-finite/negative limits (a NaN age silently admits stale readings) — add model validation or treat them as unset.
+  2. Empty `configured_storage_paths` makes the mount dimension vacuous while the guard reports enabled.
+  3. Future-dated `reading.timestamp` passes (no `SENSOR_FUTURE_TIMESTAMP` check).
+  4. A path with an embedded NUL raises `ValueError` instead of returning `PATH_MOUNT_UNRESOLVED` (fails loud, not open).
+  5. The AC4 test lacks an unknown-sensor-under-guard case, a headroom-unset case, and a differential threshold proof for `x N` multiplication.
+  6. Contention groups by volume `dev-{st_dev}`, not physical disk — physical-disk scope depends on the measured mount inventory.
+  Pre-existing, unrelated (separate CR): unknown `cpu_load_pct` is admitted although `max_cpu_load_pct` is always enforced (no `SENSOR_UNKNOWN:cpu_load_pct`).
+- Open external gate unchanged: AC4/AC5 measured host artifact + measured mount inventory pending SSH access to `asus-server` (offline per Tailscale at last check; strictly read-only probe watcher running). Do not mark JOB-02 DONE from the offline suite.
+- Lint capability gap closed 2026-09-27: ruff 0.16.9 installed to user-site (owner ruling, recorded as R5 in the coordinator ledger); the gate now runs on every change and its repo baseline predates the gate.
