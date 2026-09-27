@@ -125,6 +125,7 @@ class ExperimentSummaryReport(BaseModel):
             "is_dirty": run.is_dirty,
             "environment_hash": run.environment_hash,
             "dataset_snapshot_id": run.dataset_snapshot_id,
+            "dataset_split_id": run.dataset_split_id,
             "dataset_hash": run.dataset_hash,
             "cost_schedule_hash": run.cost_schedule_hash,
             "execution_hash": run.execution_hash,

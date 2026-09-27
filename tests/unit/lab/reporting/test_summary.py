@@ -127,6 +127,7 @@ def test_report_01_contract_1() -> None:
 def test_report_01_contract_2() -> None:
     """REPORT-01-AC2: Shared dan independent dipisahkan."""
     run, eval_result = _build_test_run("run_split_params")
+    run = run.model_copy(update={"dataset_split_id": "split_v2_abc"})
 
     summary = ExperimentSummaryReport.from_run(
         run,
@@ -136,6 +137,7 @@ def test_report_01_contract_2() -> None:
 
     # Shared pipeline lineage
     assert summary.shared_pipeline["dataset_snapshot_id"] == "snapshot_btc_2025_06"
+    assert summary.shared_pipeline["dataset_split_id"] == "split_v2_abc"
     assert summary.shared_pipeline["cost_schedule_hash"] == "cst_indodax_taker_v1"
     assert summary.shared_pipeline["git_sha"] == "git_sha_abc123"
 

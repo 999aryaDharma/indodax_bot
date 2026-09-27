@@ -43,11 +43,11 @@ IDEA -> IMPLEMENTED -> BACKTESTED -> VALIDATED -> SEALED_PASS -> SHADOW -> CHAMP
 Acceptance boundary:
 - Config berubah setelah sealed menjadi challenger baru.
 - Gate dibuka sekali dan dicatat.
-- Invalid run tidak masuk ranking.
+- Candidate config/version must match the registered immutable candidate; the run must match the exact exposed split and be created at or after its exposure audit. Invalid or unbound runs do not rank.
 
 ## Data model, persistence and lifecycle
 
-Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score.
+Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score. Bind each ranked run to the registered candidate configuration and the exact dataset split in its exposure audit. `dataset_snapshot_id` and `split_id` are distinct identities; absent split lineage remains explicit unknown and fails leaderboard eligibility.
 
 Identity and temporal primitives: [domain data model](02-domain-data-model.md). Implemented schemas stay backward compatible unless an accepted migration ADR states otherwise. Optional or absent data retains explicit unknown/missing semantics.
 

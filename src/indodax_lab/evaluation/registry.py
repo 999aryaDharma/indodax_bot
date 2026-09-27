@@ -41,6 +41,7 @@ class ExperimentRunRecord(BaseModel):
     is_dirty: bool = False
     environment_hash: str
     dataset_snapshot_id: str
+    dataset_split_id: str | None = None
     dataset_hash: str
     config_hash: str
     cost_schedule_hash: str
@@ -92,6 +93,8 @@ class ExperimentRunRecord(BaseModel):
             "created_at": self.created_at.isoformat(),
             "promotable": self.promotable,
         }
+        if self.dataset_split_id is not None:
+            payload["dataset_split_id"] = self.dataset_split_id
         serialized = json.dumps(payload, sort_keys=True, default=str)
         return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
@@ -121,6 +124,7 @@ class ExperimentRegistry:
                     is_dirty INTEGER NOT NULL,
                     environment_hash TEXT NOT NULL,
                     dataset_snapshot_id TEXT NOT NULL,
+                    dataset_split_id TEXT,
                     dataset_hash TEXT NOT NULL,
                     config_hash TEXT NOT NULL,
                     cost_schedule_hash TEXT NOT NULL,
@@ -137,6 +141,13 @@ class ExperimentRegistry:
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_candidate ON experiment_runs(candidate_id)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_family ON experiment_runs(family)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_parent ON experiment_runs(parent_run_id)")
+            columns = {
+                row[1] for row in self._conn.execute("PRAGMA table_info(experiment_runs)")
+            }
+            if "dataset_split_id" not in columns:
+                self._conn.execute(
+                    "ALTER TABLE experiment_runs ADD COLUMN dataset_split_id TEXT"
+                )
 
     def record_run(self, run: ExperimentRunRecord) -> None:
         """Atomically record an immutable experiment run.
@@ -166,10 +177,10 @@ class ExperimentRegistry:
                 """
                 INSERT INTO experiment_runs (
                     run_id, parent_run_id, candidate_id, candidate_version, family,
-                    git_sha, is_dirty, environment_hash, dataset_snapshot_id,
+                    git_sha, is_dirty, environment_hash, dataset_snapshot_id, dataset_split_id,
                     dataset_hash, config_hash, cost_schedule_hash, execution_hash,
                     status, metrics_json, error_message, created_at, promotable, content_hash
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run.run_id,
@@ -181,6 +192,7 @@ class ExperimentRegistry:
                     1 if run.is_dirty else 0,
                     run.environment_hash,
                     run.dataset_snapshot_id,
+                    run.dataset_split_id,
                     run.dataset_hash,
                     run.config_hash,
                     run.cost_schedule_hash,
@@ -275,6 +287,9 @@ class ExperimentRegistry:
             is_dirty=bool(row["is_dirty"]),
             environment_hash=row["environment_hash"],
             dataset_snapshot_id=row["dataset_snapshot_id"],
+            dataset_split_id=(
+                row["dataset_split_id"] if "dataset_split_id" in row.keys() else None
+            ),
             dataset_hash=row["dataset_hash"],
             config_hash=row["config_hash"],
             cost_schedule_hash=row["cost_schedule_hash"],

@@ -55,7 +55,8 @@ New capability; dependencies must be DONE before implementation.
 - Promosi mengikuti freeze dan exposure audit sebelum gate berikutnya dibuka.
 - Config berubah setelah sealed menjadi challenger baru.
 - Gate dibuka sekali dan dicatat.
-- Invalid run tidak masuk ranking.
+- Invalid run, candidate config mismatch, pre-exposure run, and absent/mismatched split lineage do not enter ranking.
+- Approved lineage change: `docs/decisions/CR-EVAL-03-run-exposure-lineage.md` and `docs/decisions/ADR-014-experiment-run-split-lineage.md`; canonical identity distinction is in `docs/research/dataset-feature-contracts.md` §11.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -75,13 +76,13 @@ Given input tidak valid pada acceptance boundary di bawah, when diproses, then h
 0. **EVAL-03-FR0:** Promosi mengikuti freeze dan exposure audit sebelum gate berikutnya dibuka.
 1. **EVAL-03-FR1:** Config berubah setelah sealed menjadi challenger baru.
 2. **EVAL-03-FR2:** Gate dibuka sekali dan dicatat.
-3. **EVAL-03-FR3:** Invalid run tidak masuk ranking.
+3. **EVAL-03-FR3:** Invalid or unbound run does not enter candidate ranking.
 
 ## Domain Rules / Invariants
 
 IDEA -> IMPLEMENTED -> BACKTESTED -> VALIDATED -> SEALED_PASS -> SHADOW -> CHAMPION; immutable transitions.
 
-Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score.
+Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score. A ranked run must match the registered candidate config and exact split ID in its exposure audit, and its creation time must be at or after exposure.
 
 Global causality, identity, exact accounting and paper-only constraints apply; tidak ada exception lokal yang mengizinkan pengubahan histori.
 
@@ -96,7 +97,13 @@ Jangan menciptakan layanan paralel bila fungsi ekuivalen sudah ada; perubahan de
 ## Planned Files / Artifacts
 
 - `src/indodax_lab/evaluation/lifecycle.py`
+- `src/indodax_lab/evaluation/registry.py`
+- `src/indodax_lab/evaluation/gates.py`
+- `src/indodax_lab/reporting/summary.py`
 - `tests/unit/lab/evaluation/test_lifecycle.py`
+- `tests/unit/lab/evaluation/test_registry.py`
+- `tests/unit/lab/evaluation/test_gates_fail_closed.py`
+- `tests/unit/lab/reporting/test_summary.py`
 
 Path baru adalah panduan, bukan bukti file sudah ada. Periksa file ekuivalen sebelum membuat modul baru; catat path aktual pada handoff.
 
@@ -110,9 +117,7 @@ Input harus membawa identity dan versi yang disebut di atas. Output memisahkan h
 
 ## Data / Persistence Impact
 
-Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score.
-
-Tidak ada implicit migration database legacy. Artifact/file additions pada scope di atas diberi version/hash. Jika implementasi ternyata membutuhkan schema mutation, revisi migration section melalui CR sebelum melakukannya.
+Record all trials, invalid runs, holdout exposures, policy decisions and parent versions; gate before leaderboard score. CR-EVAL-03 / ADR-014 approve an additive nullable `dataset_split_id` migration in the experiment registry. Existing rows and their content digests remain unchanged; legacy rows without split identity are retained but excluded from ranking. New non-null split IDs participate in run content digests and propagate through multi-seed evaluation and reports.
 
 ## API / External Contract Impact
 
@@ -131,7 +136,7 @@ First establish EVAL-03-AC0: Promosi mengikuti freeze dan exposure audit sebelum
 1. Inspect dependency handoffs and actual module paths; confirm one owner and independent reviewer. Do not mark fresh code complete from historical evidence.
 2. For `EVAL-03-AC1`, build minimal fixture proving: Config berubah setelah sealed menjadi challenger baru. Write `test_eval_03_contract_1` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 3. For `EVAL-03-AC2`, build minimal fixture proving: Gate dibuka sekali dan dicatat. Write `test_eval_03_contract_2` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
-4. For `EVAL-03-AC3`, build minimal fixture proving: Invalid run tidak masuk ranking. Write `test_eval_03_contract_3` or a clearly mapped existing test; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
+4. For `EVAL-03-AC3`, build minimal fixtures proving invalid, config-mismatched, pre-exposure, exposure-missing and split-mismatched runs do not rank. Map to the existing lifecycle fail-closed tests; observe targeted RED (wrong behavior, not missing test dependency), implement only that contract, then prove GREEN.
 5. Integrate through the public boundary using actual output of dependency fixture; verify the declared contract and failure outcome rather than mock call counts alone.
 6. Run the relevant tests below, inspect diff and record output/exit/source SHA. Refactor only after the contract remains green.
 7. Commit scoped code/tests; prepare handoff with acceptance-to-evidence links, migrations and deviations; submit exact SHA for independent review.
@@ -144,7 +149,7 @@ Positive contract: **EVAL-03-AC0**, `test_eval_03_valid_contract` — Promosi me
 |---|---|---|
 | EVAL-03-AC1 | `test_eval_03_contract_1` | Config berubah setelah sealed menjadi challenger baru |
 | EVAL-03-AC2 | `test_eval_03_contract_2` | Gate dibuka sekali dan dicatat |
-| EVAL-03-AC3 | `test_eval_03_contract_3` | Invalid run tidak masuk ranking |
+| EVAL-03-AC3 | `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`; `tests/unit/lab/evaluation/test_lifecycle.py` | Invalid/mismatched config, pre-exposure, missing exposure and absent/mismatched split lineage are excluded |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -195,7 +200,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **EVAL-03-AC0** Promosi mengikuti freeze dan exposure audit sebelum gate berikutnya dibuka. Evidence: valid fixture through the public interface, with expected output independent of implementation.
 - [ ] **EVAL-03-AC1** Config berubah setelah sealed menjadi challenger baru. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **EVAL-03-AC2** Gate dibuka sekali dan dicatat. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **EVAL-03-AC3** Invalid run tidak masuk ranking. Evidence: mapped test, exact command/exit and target SHA.
+- [ ] **EVAL-03-AC3** Invalid run, config mismatch, pre-exposure run, absent exposure audit, or absent/mismatched split lineage does not enter ranking. Evidence: mapped tests, exact command/exit and target SHA.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

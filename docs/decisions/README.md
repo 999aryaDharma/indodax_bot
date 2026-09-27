@@ -20,4 +20,5 @@ Statuses: PROPOSED → ACCEPTED → SUPERSEDED (with replacement ID), or REJECTE
 - [CR-LABEL-01 Candidate-sized execution labels](CR-LABEL-01-candidate-sized-execution-labels.md)
 - [CR-C11 Simulator cash context](CR-C11-simulator-cash-context.md)
 - [CR-EVAL-03 Candidate/run/exposure split lineage](CR-EVAL-03-run-exposure-lineage.md)
+- [ADR-014 Experiment run/split lineage](ADR-014-experiment-run-split-lineage.md)
 - [ADR-013 Simulator cash context in DecisionFrame](ADR-013-simulator-cash-context.md)

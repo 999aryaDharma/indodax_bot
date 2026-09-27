@@ -557,12 +557,17 @@ class CandidateLifecycleManager:
                 continue
             with self._connect() as conn:
                 exposure = conn.execute(
-                    """SELECT exposed_at FROM exposure_audits
+                    """SELECT dataset_split_id, exposed_at FROM exposure_audits
                        WHERE candidate_id = ? AND candidate_version = ?
                        ORDER BY exposed_at DESC LIMIT 1""",
                     (candidate.candidate_id, candidate.candidate_version),
                 ).fetchone()
-            if exposure is None or run.created_at < datetime.fromisoformat(exposure[0]):
+            if (
+                exposure is None
+                or run.dataset_split_id is None
+                or run.dataset_split_id != exposure[0]
+                or run.created_at < datetime.fromisoformat(exposure[1])
+            ):
                 continue
             valid_runs.append((metric_value, run))
 

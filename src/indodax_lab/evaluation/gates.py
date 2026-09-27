@@ -378,6 +378,7 @@ def evaluate_multi_seed_runs(
         "git_sha",
         "environment_hash",
         "dataset_snapshot_id",
+        "dataset_split_id",
         "dataset_hash",
         "config_hash",
         "cost_schedule_hash",
@@ -389,7 +390,9 @@ def evaluate_multi_seed_runs(
         return invalid_result("MULTI_SEED_DUPLICATE_RUN_ID")
 
     required_identity_fields = tuple(
-        field for field in identity_fields if field != "parent_run_id"
+        field
+        for field in identity_fields
+        if field not in {"parent_run_id", "dataset_split_id"}
     )
     missing_identity = [
         field
@@ -470,6 +473,7 @@ def evaluate_multi_seed_runs(
         is_dirty=any(r.is_dirty for r in runs),
         environment_hash=first_run.environment_hash,
         dataset_snapshot_id=first_run.dataset_snapshot_id,
+        dataset_split_id=first_run.dataset_split_id,
         dataset_hash=first_run.dataset_hash,
         config_hash=first_run.config_hash,
         cost_schedule_hash=first_run.cost_schedule_hash,

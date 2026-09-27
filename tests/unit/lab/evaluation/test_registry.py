@@ -1,6 +1,8 @@
 """Unit tests for immutable experiment registry (EVAL-01)."""
 
 from datetime import UTC, datetime
+import json
+import sqlite3
 from typing import Any
 
 import pytest
@@ -22,12 +24,13 @@ def _make_run(
     status: ExperimentRunStatus = ExperimentRunStatus.SUCCESS,
     promotable: bool | None = None,
     metrics: dict[str, Any] | None = None,
+    dataset_split_id: str | None = None,
 ) -> ExperimentRunRecord:
     """Helper to build a valid ExperimentRunRecord."""
     if promotable is None:
         promotable = (not is_dirty) and (status == ExperimentRunStatus.SUCCESS)
 
-    return ExperimentRunRecord(
+    values = dict(
         run_id=run_id,
         parent_run_id=parent_run_id,
         candidate_id=candidate_id,
@@ -46,6 +49,53 @@ def _make_run(
         created_at=datetime(2024, 6, 1, 12, 0, tzinfo=UTC),
         promotable=promotable,
     )
+    if dataset_split_id is not None:
+        values["dataset_split_id"] = dataset_split_id
+    return ExperimentRunRecord(**values)
+
+
+def _write_legacy_registry(path, run: ExperimentRunRecord) -> None:
+    conn = sqlite3.connect(path)
+    conn.execute(
+        """CREATE TABLE experiment_runs (
+            run_id TEXT PRIMARY KEY, parent_run_id TEXT, candidate_id TEXT NOT NULL,
+            candidate_version TEXT NOT NULL, family TEXT NOT NULL, git_sha TEXT NOT NULL,
+            is_dirty INTEGER NOT NULL, environment_hash TEXT NOT NULL,
+            dataset_snapshot_id TEXT NOT NULL, dataset_hash TEXT NOT NULL,
+            config_hash TEXT NOT NULL, cost_schedule_hash TEXT NOT NULL,
+            execution_hash TEXT NOT NULL, status TEXT NOT NULL, metrics_json TEXT NOT NULL,
+            error_message TEXT, created_at TEXT NOT NULL, promotable INTEGER NOT NULL,
+            content_hash TEXT NOT NULL
+        )"""
+    )
+    conn.execute(
+        """INSERT INTO experiment_runs VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )""",
+        (
+            run.run_id,
+            run.parent_run_id,
+            run.candidate_id,
+            run.candidate_version,
+            run.family,
+            run.git_sha,
+            int(run.is_dirty),
+            run.environment_hash,
+            run.dataset_snapshot_id,
+            run.dataset_hash,
+            run.config_hash,
+            run.cost_schedule_hash,
+            run.execution_hash,
+            run.status.value,
+            json.dumps(run.metrics, sort_keys=True, default=str),
+            run.error_message,
+            run.created_at.isoformat(),
+            int(run.promotable),
+            run.content_digest(),
+        ),
+    )
+    conn.commit()
+    conn.close()
 
 
 def test_eval_01_valid_contract():
@@ -211,3 +261,41 @@ def test_eval_01_detects_persisted_ancestry_cycle():
 
     with pytest.raises(ValueError, match="RUN_ANCESTRY_CYCLE"):
         registry.get_ancestry("cycle-a")
+
+
+def test_eval_01_split_id_round_trips_and_binds_content_digest() -> None:
+    registry = ExperimentRegistry()
+    legacy = _make_run("legacy")
+    split_bound = _make_run("bound", dataset_split_id="split_2025@1")
+
+    registry.record_run(split_bound)
+    saved = registry.get_run("bound")
+
+    assert saved is not None
+    assert saved.dataset_split_id == "split_2025@1"
+    assert saved.content_digest() == split_bound.content_digest()
+    assert split_bound.content_digest() != legacy.content_digest()
+
+
+def test_eval_01_additive_migration_preserves_legacy_run_digest(tmp_path) -> None:
+    db_path = tmp_path / "legacy-runs.db"
+    legacy = _make_run("legacy")
+    original_digest = legacy.content_digest()
+    _write_legacy_registry(db_path, legacy)
+
+    registry = ExperimentRegistry(db_path)
+    saved = registry.get_run("legacy")
+    columns = {
+        row[1]
+        for row in registry._conn.execute("PRAGMA table_info(experiment_runs)").fetchall()
+    }
+
+    assert "dataset_split_id" in columns
+    assert saved == legacy
+    assert saved is not None and saved.dataset_split_id is None
+    assert saved is not None and saved.content_digest() == original_digest
+
+    registry._conn.close()
+    reopened = ExperimentRegistry(db_path)
+    assert reopened.get_run("legacy") == legacy
+    assert reopened.get_trial_count() == 1

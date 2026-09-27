@@ -337,6 +337,7 @@ def test_eval_02_multi_seed_rejects_missing_seed_metric() -> None:
         ("candidate_id", "different-candidate"),
         ("candidate_version", "2.0.0"),
         ("dataset_hash", "different-dataset"),
+        ("dataset_split_id", "different-split"),
         ("config_hash", "different-config"),
         ("execution_hash", "different-execution"),
     ],

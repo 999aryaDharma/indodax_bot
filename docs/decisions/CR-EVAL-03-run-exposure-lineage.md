@@ -1,6 +1,6 @@
 # CR-EVAL-03 — Bind scored runs to candidate configuration and exposed split
 
-Status: PROPOSED — owner approval required before the run schema changes.
+Status: ACCEPTED — owner approved additive split-ID lineage on 2026-09-27.
 
 ## Problem
 
@@ -8,7 +8,7 @@ EVAL-03 opens a one-time exposure audit for a candidate version and dataset spli
 
 The canonical training-dataset identity explicitly separates `dataset_snapshot_id` and `split_id@version` in `docs/research/dataset-feature-contracts.md` §11; treating those IDs as interchangeable would corrupt lineage.
 
-## Proposed decision
+## Decision
 
 - Add optional `dataset_split_id` to `ExperimentRunRecord`; include it in the content digest when non-null and persist it in the experiment registry.
 - Apply a reversible additive SQLite migration adding nullable `dataset_split_id`. Existing records remain unchanged and retain their current content digests; their unknown split identity is not inferred.
@@ -34,4 +34,4 @@ Stop producing split-bound leaderboard output and restore the previous reader/co
 
 ## Approval
 
-Owner decision: pending.
+2026-09-27: owner approved the additive `dataset_split_id` field and fail-closed treatment of historical runs without split lineage.

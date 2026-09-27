@@ -182,6 +182,7 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
         is_dirty=False,
         environment_hash="env_001",
         dataset_snapshot_id="ds_001",
+        dataset_split_id="split_annual",
         dataset_hash="dsh_001",
         config_hash="cfg_001",
         cost_schedule_hash="cst_001",
@@ -202,6 +203,7 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
         is_dirty=False,
         environment_hash="env_001",
         dataset_snapshot_id="ds_001",
+        dataset_split_id="split_annual",
         dataset_hash="dsh_001",
         config_hash="cfg_002",
         cost_schedule_hash="cst_001",
@@ -222,6 +224,7 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
         is_dirty=False,
         environment_hash="env_001",
         dataset_snapshot_id="ds_001",
+        dataset_split_id="split_annual",
         dataset_hash="dsh_001",
         config_hash="cfg_003",
         cost_schedule_hash="cst_001",
@@ -232,7 +235,16 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
         promotable=True,
     )
 
-    leaderboard = mgr.compute_leaderboard([run_valid_1, run_invalid, run_valid_2], sort_metric="sharpe_ratio")
+    run_wrong_split = run_valid_1.model_copy(
+        update={"run_id": "run_wrong_split", "dataset_split_id": "other_split"}
+    )
+    run_missing_split = run_valid_2.model_copy(
+        update={"run_id": "run_missing_split", "dataset_split_id": None}
+    )
+    leaderboard = mgr.compute_leaderboard(
+        [run_valid_1, run_invalid, run_valid_2, run_wrong_split, run_missing_split],
+        sort_metric="sharpe_ratio",
+    )
 
     # Verify run_invalid is strictly omitted from leaderboard
     ranked_candidates = [entry.candidate_id for entry in leaderboard]
@@ -240,3 +252,5 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
     assert ranked_candidates == ["cand_strat_A", "cand_strat_C"]
     assert leaderboard[0].rank == 1
     assert leaderboard[1].rank == 2
+    assert mgr.compute_leaderboard([run_wrong_split], sort_metric="sharpe_ratio") == []
+    assert mgr.compute_leaderboard([run_missing_split], sort_metric="sharpe_ratio") == []
