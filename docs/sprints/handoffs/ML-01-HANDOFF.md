@@ -1,11 +1,11 @@
 # ML-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: ML-01 — Train-only preprocessing
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review` (independent delta PASS at exact source SHA)
 - Branch / worktree: `feat/ml-01-train-only-preprocessing`
 - Base SHA: `f8aad02`
 - Code target: `feat(ml-01): train-only preprocessing`
@@ -46,7 +46,7 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - Quality verdict: PASS (zero lookahead leakage, robust statistics, strict schema alignment, immutable fitted artifact).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review at original implementation SHA: pending at the time of this historical entry; superseded by exact-SHA delta review below.
 
 ## Deviations and known risks
 - Deviations: None.
@@ -71,7 +71,7 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - **Files** - `src/indodax_lab/models/preprocessing.py`, `tests/unit/lab/models/test_preprocessing.py` - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_preprocessing.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
-- Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Independent review at the then-reviewed SHA: still pending in this historical fix-cycle entry; superseded by the exact-SHA independent review below.
 
 ## Independent review — coordinator pass (2026-09-27)
 
@@ -84,10 +84,10 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
   (missing/extra rejected; reorder rejected in strict mode, deterministically
   realigned otherwise — tested both); AC3 holds (5× transform leaves artifact
   byte-identical via deepcopy compare).
-- MINOR (backlog, non-blocking): default non-strict transform silently realigns
-  column order (only strict mode rejects); all-NaN column falls back to silent
-  0.0/1.0 defaults (undocumented); duplicate check is O(n^2) (negligible at
-  feature width). No Critical/Important findings.
+- MINOR at the then-reviewed SHA (historical; reordered-input behavior was
+  subsequently fixed and independently reviewed): all-NaN column falls back to
+  silent 0.0/1.0 defaults (undocumented); duplicate check is O(n^2) (negligible
+  at feature width). No Critical/Important findings at that review point.
 - Reviewer: coordinator inline review (implementation pre-exists committed as
   175be32 + fix 9b6dab1; reviewer wrote no code here). Status transition
   (manifest/spec) left to coordinator DONE pass / main agent — not touched.
@@ -97,9 +97,9 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - Coordinator authorization under `.agents/coordination/protocol.md`: this second cycle is necessary because ML-01 publishes the fitted preprocessing artifact/config consumed by downstream model training and inference; mutable or mismatched state undermines their shared feature contract and ML-01 acceptance.
 - Frozen findings fixed from independent review at `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`: default reordered-input acceptance; mutable returned fitted statistics/config drift; statistic maps inconsistent with persisted feature schema.
 - TDD RED at the reviewed base: focused ML-01 suite had 3 failures reproducing these findings.
-- Corrective source commit: superseded by the strict-boundary correction below.
+- Corrective source commits: `2d4192c6d7310b97ac0ae4435ee84f8382442e1a`, superseded by strict-boundary correction `634b9f1d3837ab573af14badc171bf02117a85a5`.
 - Fix: transform always enforces canonical feature order, including artifacts with the legacy `strict_feature_order=False` field; upstream adapters must restore order before calling it. Transform uses the config captured in its artifact; `fit()` and `fitted_artifact` return defensive deep copies; artifact validation requires all statistic maps to match `feature_names`.
 - Focused regression/downstream suite: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py -p no:cacheprovider` -> 25 passed, 1 existing sklearn `OptimizeWarning`.
 - Full model suite: `conda run -n ML python -m pytest tests/unit/lab/models` -> 247 passed, 9 existing sklearn `OptimizeWarning`s.
-- Focused source/test Ruff and `git diff --check` -> passed; Ruff emitted a harmless F401 selector warning under the Python module invocation, so exact standalone lint evidence remains to be rerun.
-- Independent delta review at the superseding source SHA: pending. ML-01 remains REVIEW.
+- Focused source/test Ruff: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/models/preprocessing.py tests/unit/lab/models/test_preprocessing.py` -> passed. `git diff --check` -> passed.
+- Independent delta review at exact source SHA `634b9f1d3837ab573af14badc171bf02117a85a5`: PASS; 10 focused tests passed; probes confirmed both legacy flag settings reject reordered input, canonical restoration succeeds, defensive artifact/config behavior, all 12 invalid statistics-key cases, and serialization roundtrip. No Critical/Important findings; AC0–AC3 satisfied.

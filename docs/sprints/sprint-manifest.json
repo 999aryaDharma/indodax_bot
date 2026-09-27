@@ -4102,7 +4102,7 @@
       "path": "docs/sprints/models/ML-01-train-only-preprocessing.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/ml-01-train-only-preprocessing",
       "requirements": [
         "FR-10"
@@ -4147,19 +4147,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "verified_handoff",
         "path": "docs/sprints/handoffs/ML-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "634b9f1d3837ab573af14badc171bf02117a85a5",
+        "review": "Independent PASS by /root/docs_review at exact source SHA; focused regression suite 25 passed, full model suite 247 passed, Ruff and diff-check passed."
       },
-      "status": "REVIEW",
-      "recovery": {
-        "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "source_spec_status": "PLANNED",
-        "intact_manifest_record": false,
-        "basis": "Implementation handoff exists; independent PASS not established in this recovery.",
-        "confidence": "reconstructed-not-approved"
-      },
+      "status": "DONE",
       "unlocks": [
         "ML-02"
       ]
