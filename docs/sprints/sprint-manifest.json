@@ -1832,7 +1832,7 @@
       "path": "docs/sprints/evaluation/EVAL-03-sealed-candidate-lifecycle.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "verify ses_f1f5b2f64ffeK6bxrjI9CRgTDJ + review ses_f201210c9ffeW8lv1BTI265hiX (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/eval-03-sealed-candidate-lifecycle",
       "requirements": [
         "FR-09"
@@ -1878,8 +1878,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/EVAL-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "status": "REVIEW",
       "recovery": {
@@ -2603,7 +2603,7 @@
       "priority": "P0",
       "status": "REVIEW",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "/root/docs_review",
+      "independent_reviewer": "/root/docs_review; verify ses_f1f5b2f63ffeKLtXy6FNPaFF4J + review ses_f201210c7ffeuJnt0IFN7YK2IY (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/train-01-verified-training-dataset-assembly",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -2626,8 +2626,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/TRAIN-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "acceptance_test_mapping": [
         {
@@ -4685,9 +4685,9 @@
       "spec": "docs/specs/17-operations-security-and-recovery.md",
       "path": "docs/sprints/operations/OPS-02-snapshot-transfer-and-restore.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/ready_sprint_explore (PASS at exact SHA 6183680c76c64df05af1045f39e864f87fe42b8d)",
       "recommended_branch": "feat/ops-02-snapshot-transfer-and-restore",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -4708,10 +4708,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/OPS-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "6183680c76c64df05af1045f39e864f87fe42b8d",
+        "review": "Independent PASS at exact SHA; 44 operations unit/integration tests passed and OPS-02-AC0..AC3 confirmed. Host restore/RPO/RTO/filesystem qualification remains separate operational evidence."
       },
       "acceptance_test_mapping": [
         {
@@ -6530,7 +6530,7 @@
       "path": "docs/sprints/strategies/C04-01-cross-sectional-momentum.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "verify ses_f1f5b2f62ffe6uuffD3Mp4m9qf + review ses_f2028e7cbffeC5KgDwjqEuUHcn (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/c04-01-cross-sectional-momentum",
       "requirements": [
         "FR-08"
@@ -6576,8 +6576,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/C04-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "status": "REVIEW",
       "recovery": {
@@ -6797,7 +6797,7 @@
       "priority": "P0",
       "status": "REVIEW",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1f5b2f07ffe201yXCXjng4hAH + review ses_f2028e7caffenivpXTpnZ0M1pj; fix in working tree (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/c07-01-bollinger-rsi-reversion",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -6820,8 +6820,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/C07-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "acceptance_test_mapping": [
         {
@@ -7330,7 +7330,7 @@
       "path": "docs/sprints/strategies/S01-01-liquidity-screened-breakout.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "verify ses_f1f5b2f1dffeqKbmSVALBST9rv + review ses_f2028e7c9ffeI7yi54KmxiSlQR (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/s01-01-liquidity-screened-breakout",
       "requirements": [
         "FR-08"
@@ -7376,8 +7376,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/S01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "status": "REVIEW",
       "recovery": {
@@ -7420,7 +7420,7 @@
       "path": "docs/sprints/strategies/S02-01-squeeze-expansion.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "verify ses_f1f5b2f1bffebNCzwlaL9mq2Mv + review ses_f2028e7a2ffek7Vs5W7p15tU3E (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/s02-01-squeeze-expansion",
       "requirements": [
         "FR-08"
@@ -7466,8 +7466,8 @@
       "evidence": {
         "kind": "unverified_handoff",
         "path": "docs/sprints/handoffs/S02-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
       },
       "status": "REVIEW",
       "recovery": {

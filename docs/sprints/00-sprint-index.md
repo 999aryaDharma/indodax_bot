@@ -51,7 +51,7 @@ Derived from manifest. Historical DONE does not imply fresh test execution.
 | ML-04 | Portable model bundles and replay | models | P0 | integration | M01-01, M02-01, EVAL-03 | REVIEW | [Spec](models\ML-04-portable-model-bundles-and-replay.md) |
 | R01-01 | Constrained allocation feasibility | models | P2 | spike | QA-01, SHADOW-02 | REVIEW | [Spec](models\R01-01-constrained-allocation-feasibility.md) |
 | OPS-01 | Host profiles and service lifecycle | operations | P0 | release | JOB-02, SHADOW-02 | REVIEW | [Spec](operations\OPS-01-host-profiles-and-service-lifecycle.md) |
-| OPS-02 | Snapshot transfer and restore | operations | P0 | safety | DATA-06, JOB-01 | REVIEW | [Spec](operations\OPS-02-snapshot-transfer-and-restore.md) |
+| OPS-02 | Snapshot transfer and restore | operations | P0 | safety | DATA-06, JOB-01 | DONE | [Spec](operations\OPS-02-snapshot-transfer-and-restore.md) |
 | OPS-03 | Storage retention and integrity maintenance | operations | P0 | safety | OPS-02, EVAL-01 | REVIEW | [Spec](operations\OPS-03-storage-retention-and-integrity-maintenance.md) |
 | JOB-01 | Durable leased jobs | orchestration | P0 | feature | EVAL-01 | DONE | [Spec](orchestration\JOB-01-durable-leased-jobs.md) |
 | JOB-02 | Resource-aware idle admission | orchestration | P0 | safety | JOB-01 | REVIEW | [Spec](orchestration\JOB-02-resource-aware-idle-admission.md) |

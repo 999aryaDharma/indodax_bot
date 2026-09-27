@@ -2,11 +2,11 @@
 
 ## Metadata
 
-Status: REVIEW
+Status: DONE
 
 Priority: P0 | Type: safety | Domain: operations | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (implementation); Codex /root (review remediation) | Independent Reviewer: /root/ready_sprint_explore (PASS on exact SHA 6183680c76c64df05af1045f39e864f87fe42b8d)
 
 Recommended Branch: `feat/ops-02-snapshot-transfer-and-restore`
 
@@ -193,22 +193,22 @@ Restore verified pre-migration copy on a stopped writer, replay from known check
 
 ## Acceptance Criteria
 
-- [ ] **OPS-02-AC0** Dataset antar-host ditransfer dan dipulihkan melalui staging yang diverifikasi. Evidence: valid fixture through the public interface, with expected output independent of implementation.
-- [ ] **OPS-02-AC1** Partial transfer tidak mengganti aktif snapshot. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **OPS-02-AC2** Backup SQLite memakai consistent API bukan copy WAL mentah. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] **OPS-02-AC3** Restore run di root baru mempertahankan IDs. Evidence: mapped test, exact command/exit and target SHA.
-- [ ] Public contract matches this sprint and downstream can consume its actual verified output.
-- [ ] Failure diagnostics are explicit and no forbidden side effect exists.
+- [x] **OPS-02-AC0** Dataset antar-host ditransfer dan dipulihkan melalui staging yang diverifikasi. Evidence: valid fixture through the public interface, with expected output independent of implementation.
+- [x] **OPS-02-AC1** Partial transfer tidak mengganti aktif snapshot. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **OPS-02-AC2** Backup SQLite memakai consistent API bukan copy WAL mentah. Evidence: mapped test, exact command/exit and target SHA.
+- [x] **OPS-02-AC3** Restore run di root baru mempertahankan IDs. Evidence: mapped test, exact command/exit and target SHA.
+- [x] Public contract matches this sprint and downstream can consume its actual verified output.
+- [x] Failure diagnostics are explicit and no forbidden side effect exists.
 
 ## Definition of Done
 
-- [ ] All acceptance criteria mapped to evidence; no required tests skipped silently.
-- [ ] Focused and affected integration/regression checks pass; full suite where required by scope.
-- [ ] No unrelated capability or policy relaxation introduced.
-- [ ] Contracts/docs updated if implementation reveals an approved deviation.
-- [ ] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
-- [ ] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
-- [ ] Coordinator updates manifest and regenerates status/waves only after review PASS.
+- [x] All acceptance criteria mapped to evidence; no required tests skipped silently.
+- [x] Focused and affected integration/regression checks pass; full suite where required by scope.
+- [x] No unrelated capability or policy relaxation introduced.
+- [x] Contracts/docs updated if implementation reveals an approved deviation.
+- [x] Self-reviewed diff and handoff record contain exact source SHA, environment, commands and risks.
+- [x] Independent reviewer verifies spec and quality on that same SHA; no unresolved Critical/Important findings.
+- [x] Coordinator updates manifest and regenerates status/waves only after review PASS.
 
 Historical import note: unchecked boxes describe the gate for future work/reverification; they do not replace imported DONE evidence.
 

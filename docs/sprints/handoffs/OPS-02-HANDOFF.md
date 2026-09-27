@@ -1,11 +1,11 @@
 # OPS-02 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: OPS-02 — Snapshot transfer and restore
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/ready_sprint_explore` (PASS at exact SHA `6183680c76c64df05af1045f39e864f87fe42b8d`)
 - Branch / worktree: `feat/ops-02-snapshot-transfer-and-restore`
 - Base SHA: `950cc17`
 - Code target: `feat(ops-02): snapshot transfer and restore`
@@ -49,7 +49,7 @@ Full lab suite verification: 113 passed across strategies, features, labels, eva
 - Quality verdict: PASS (consistent backup API, atomic staging/publishing, fail-closed checksum checks).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Initial independent review at implementation handoff: PENDING; final remediation review is recorded below.
 
 ## Deviations and known risks
 - Deviations: None.

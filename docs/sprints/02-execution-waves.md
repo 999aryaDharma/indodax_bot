@@ -117,7 +117,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 12
 
 - SPLIT-01 — Sealed purged chronological folds [DONE; CORE]
-- OPS-02 — Snapshot transfer and restore [REVIEW; CORE]
+- OPS-02 — Snapshot transfer and restore [DONE; CORE]
 - JOB-02 — Resource-aware idle admission [REVIEW; CORE]
 - C10-01 — Regime ensemble [REVIEW; CORE]
 - C12-01 — Relative strength rotation [PLANNED; EXTENSION]
