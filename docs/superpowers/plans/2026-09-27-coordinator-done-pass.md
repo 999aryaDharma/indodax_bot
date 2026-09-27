@@ -101,3 +101,23 @@ AGENT-01/QA-03; AGENT-01/OPS-03 routed to orchestration owner (BLOCKED);
 OPS-01/QA-03 need host soak + owner decision (BLOCKED); D03-01/D04-01/L02-01
 carry BLOCKING verdicts; REPORT-01/02 hold for independent reviewer identity
 (handoff claims PASS but records no reviewer session - next up).
+
+**Wave-5 (2026-09-27): remaining closeable sprints cleared.**
+- REPORT-01: held on missing reviewer identity -> fresh independent PASS
+  ses_f1d0bbf80ffe96pu8qNkXrwGag at 0735ff5 (reporting 34, gate 156 passed,
+  exit 0) -> DONE; REPORT-02 (delta ses_f1eafe332ffeVW4mWGJORmNKN1, deps now
+  DONE) -> DONE. Commit 577e5d4.
+- C03-01: corrective a543e59 + f33a86e delta-reviewed by independent
+  ses_f1d0016f1ffePWl2xK1iRr4ysE -> DELTA-PASS (test_c03 9, strategies 168,
+  lab 1457, exit 0) -> DONE; the previously-dirty remediation-evidence section
+  committed together with the delta record.
+- State after: DONE 86, REVIEW 21, READY 3, PLANNED 22, IN_PROGRESS 2,
+  validator PASS.
+- Remaining 21 REVIEW are all gated; none closeable offline. Root external
+  gate is JOB-02 AC4/AC5 (host measurement; handoff explicitly forbids DONE
+  from the offline suite) which gates JOB-03 -> QA-01 -> AGENT-01/R01-01 and
+  QA-01+JOB-02 -> DL-01 -> D01/DL-02/F01/G01/L01/F01-02/L02/D02/D03/D04;
+  OPS-03 on user apply-hold; OPS-01/QA-03 on host soak + owner decision;
+  QA-02/REL-01 additionally on AGENT-01/QA-03. S08-01/S09-01 remain
+  IN_PROGRESS on their own external gates (queue-source qualification /
+  point-in-time producer registration) - correct disposition, not stale.

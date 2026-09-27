@@ -55,3 +55,33 @@ Full lab test suite verification (80+ passing across backtest, risk, execution, 
 - Deviations: None.
 - Unresolved issues / blockers: None for C03-01.
 - Next unlocked consumers: QA-01.
+
+## Current remediation evidence
+
+- Corrective implementation SHA: `a543e5942d9d28ba955f4d872fce3ed4ce1ef144` (initial implementation source remains `1f28c723a73ffde02113585f1280b3a00126559d`).
+- Targeted command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c03.py -q` — 8 passed.
+- Targeted lint: `C:/Users/User/miniconda3/envs/ML/python.exe -m ruff check src/indodax_lab/strategies/c03.py tests/unit/lab/strategies/test_c03.py` — passed.
+- Added regression coverage for invalid ATR, nonpositive/nonfinite prices, an interior hourly gap, stale decision rows, and positive momentum with zero realized volatility.
+- Independent review of corrective SHA: pending.
+
+## Delta re-review of the corrective SHA — closes this (2026-09-27)
+
+- Second corrective commit surfaced by review: `f33a86e20313c32c2edceb056dff73d2d5f249e9`
+  (timestamp-precision normalization before gap math) — also ancestor of HEAD;
+  both corrective commits reviewed together.
+- Verdict: **DELTA-PASS**, independent reviewer opencode session
+  `ses_f1d0016f1ffePWl2xK1iRr4ysE` (read-only, wrote no code) at HEAD
+  `577e5d498a8977734b569c14961c45972ff39820`. Full diff inspected: momentum
+  window completeness, hourly-gap/stale-row/look-ahead refusal,
+  nonpositive/nonfinite price refusal, invalid-ATR refusal, zero-volatility
+  and nonpositive-momentum cash fallback, spec-parameter fail-closed raise —
+  all fail-closed (abstain to cash, no intent emitted). No Critical/Important
+  findings; no contract change.
+- Fresh evidence in review env (Python 3.14.0 / pytest 9.0.3 / pandas 2.3.3):
+  `test_c03.py` **9 passed** exit 0 (the "8 passed" above was the a543e59-era
+  count; the 9th test arrived with f33a86e); `tests/unit/lab/strategies/`
+  **168 passed** exit 0; `tests/unit/lab` **1457 passed** exit 0.
+- Capability gap: ruff not installed in review env — the conda-env ruff claim
+  above is unverifiable here, recorded as a capability gap, not a failure.
+- Minor backlog: over-indented `stop_loss=` kwarg at
+  `src/indodax_lab/strategies/c03.py:144` (cosmetic).
