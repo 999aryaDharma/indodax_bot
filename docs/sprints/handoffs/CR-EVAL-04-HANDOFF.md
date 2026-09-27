@@ -1,6 +1,6 @@
 # CR-EVAL-04 implementation handoff
 
-Status: REVIEW — implementation committed; independent review pending.
+Status: REVIEW — approved implementation independently passed; EVAL-03 coordinator sync remains pending.
 
 ## Identity
 
