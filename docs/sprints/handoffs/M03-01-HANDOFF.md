@@ -71,3 +71,24 @@ Full lab suite verification: 174 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_m03_rf_regime.py -p no:cacheprovider -q` -> `8 passed` (exit 0). Three tests pin the steady-bleed case (> 0), the single-crash case (> 0) and the all-winning book (exactly 0.0), so the fix cannot invent risk either. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/m03_rf_regime.py (286 lines)
+  and tests (8 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_m03_rf_regime.py -q`: 8 passed,
+  0 failed, exit 0 (AC0–AC3 + not-fitted + 3 downside semi-deviation
+  regressions).
+- AC0 holds (train-only labels → proba rows sum to 1.0); AC1 holds (bundle hash
+  unchanged by inference); AC2 holds (unseen class → RegimeAbstainError);
+  AC3 holds (net utility + LPM2 downside report; bleed/crash/all-win cases).
+- MINOR (backlog, non-blocking): "calibrated" claim overreaches — RF raw
+  predict_proba has no Platt/isotonic layer (unlike M01/M02); calibration-curve
+  evidence or a wording fix needs a CR. predict_regime_for_unknown with a
+  *known* label is a silent no-op (untested path); RegimeLabel enum unused by
+  logic; missing train columns raise raw KeyError (same typed-error theme as
+  M01/M02 backlog).
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
