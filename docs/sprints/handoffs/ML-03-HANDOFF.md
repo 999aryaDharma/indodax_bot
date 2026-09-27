@@ -93,3 +93,17 @@ Full lab suite verification: 144 passed across strategies, features, labels, eva
 - Reviewer: coordinator inline review (implementation pre-exists committed;
   reviewer wrote no code here). Status transition (manifest/spec) left to
   coordinator DONE pass / main agent — not touched.
+
+## Corrective review round 2 — objective and budget integrity
+
+- Primary source commit: `079e4030e545266b7bb408b09fd5ffc9e05e6c56`.
+- TDD RED: objective-direction/zero, revision-counter downgrade, and public budget mutation regressions failed before their fixes (5 failed).
+- Fixes: minimize error objectives and maximize reward/skill objectives; ignore non-finite scores for winner selection; freeze budget snapshots and expose a read-only budget property; persist revision hash lineage and validate it against revision count/current search space. Unrevised legacy checkpoints without lineage remain resumable; revised checkpoints without valid lineage fail closed.
+- Documentation records objective direction and non-finite-score behavior in the ML-03 spec.
+- Focused test at primary source SHA: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q tests/unit/lab/models/test_tuning_budget.py -p no:cacheprovider` -> 34 passed.
+- Owning model suite at primary source SHA: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q tests/unit/lab/models --ignore=tests/unit/lab/models/lob -p no:cacheprovider` -> 198 passed, 9 sklearn `OptimizeWarning`s.
+- Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/models/tuning.py tests/unit/lab/models/test_tuning_budget.py` -> passed. `git diff --check` -> passed.
+- Independent review at primary SHA found one Important: accepted uppercase/whitespace objective spelling was not canonicalized before winner-direction lookup. Reproduced with scores 0.1/0.9, where `" INNER_VAL_LOG_LOSS "` incorrectly selected 0.9.
+- Follow-up source commit `c170ba8c2fc8f47b17ea8152189ae8554896aa1e` canonicalizes `target_objective` before model storage and adds the regression. Follow-up focused suite -> 35 passed; Ruff import/F401 check and diff-check passed.
+- Independent delta review of the follow-up SHA: pending. ML-03 remains REVIEW until reviewer PASS and coordinator manifest reconciliation.
+- Independent delta review: **PASS** at exact source SHA `c170ba8c2fc8f47b17ea8152189ae8554896aa1e`. Reviewer confirmed normalized objective spelling drives validation, hashing, export, resume and winner selection; previous fixes remain closed. Reviewer independently reran 35 focused tests and passed an additional normalized hash/export/resume equivalence probe. No Critical/Important findings.
