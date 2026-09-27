@@ -77,7 +77,27 @@ fresh in main tree with TDD (see M06-01 note below). Worktree left untouched.
 - R3: Acceptance-mapping status bumps deferred (main agent's pass didn't do them
   either; validator doesn't require). Follow-up, not gate.
 - R4 (2026-09-27): pip-installed pyarrow (user site, legit project dep) to close
-  collection gaps — unlocked L01/L02 smoke (8 passed), TRAIN-01 integration
+  collection gaps - unlocked L01/L02 smoke (8 passed), TRAIN-01 integration
   (27 passed), full strategies suite (168 passed). Handoff env-gap notes
   corrected in place. Cost if wrong: env-only change, reversible via pip
   uninstall; no repo files affected.
+
+**Wave-4 main-tree DONE pass (2026-09-27, sole-owner lane - no main agent).**
+Coord branches `coord/done-pass-2026-09-27` (2a3b57a) and
+`coord/done-pass-w3-2026-09-27` (3bc0edf) remain pushed-unmerged provenance;
+their proven procedure re-applied directly in main tree at HEAD
+b7c3dfdae9bfbae6044f6effa01be92e5127391a. Flipped 18 REVIEW -> DONE (EVAL-03,
+C04-01, S01-01, S02-01, C07-01, M06-01, ML-02, ML-03, M01-01, M02-01, ML-04,
+M03-01, M04-01, M05-01, SHADOW-01/02/03, C10-01) + 3 PLANNED -> READY (C12-01,
+S07-01, RW2-02). Evidence text re-pinned from coord-w3 proven strings; ML-02
+upgraded to DELTA-PASS delta ses_f1e23a854ffewYoa5xSwvOmjDB (fix 339cfe3);
+EVAL-03 evidence notes checkout sync b7c3dfd (126 evaluation tests green).
+Validator PASS (DONE 83, REVIEW 24, READY 3, PLANNED 22, IN_PROGRESS 2) -
+same state the w3 worktree pass produced. Remaining REVIEW 24 by cause:
+JOB-02 (AC4/AC5 pending) + C03-01 (remediation evidence dirty/uncommitted) are
+cross-thread in-flight; JOB-03 -> QA-01 -> DL-01 chain -> D01/G01/L01/F01/D02/
+DL-02 and R01-01 gate transitively on those; QA-02/REL-01 additionally gate on
+AGENT-01/QA-03; AGENT-01/OPS-03 routed to orchestration owner (BLOCKED);
+OPS-01/QA-03 need host soak + owner decision (BLOCKED); D03-01/D04-01/L02-01
+carry BLOCKING verdicts; REPORT-01/02 hold for independent reviewer identity
+(handoff claims PASS but records no reviewer session - next up).

@@ -1876,12 +1876,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/EVAL-03-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent CONFIRM-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 4 lifecycle tests passed, no new findings. First review ses_f201210c9ffeW8lv1BTI265hiX. Checkout sync b7c3dfd added dataset-split-ID fixtures + naive as_of rejection before any state/audit write (126 evaluation tests green)."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -3609,12 +3609,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 7/7 tests (AC0-AC3 + yaml/guard + allowlist regressions); 3 minor backlog notes."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -3701,12 +3701,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M02-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 8/8 tests (AC0-AC3 + alias/distinct-seed regressions); 3 minor backlog notes."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -3742,7 +3742,7 @@
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/M03-01-random-forest-regime-gate.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/m03-01-random-forest-regime-gate",
@@ -3763,10 +3763,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M03-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 8/8 tests (AC0-AC3 + downside regressions); 4 minor backlog notes."
       },
       "acceptance_test_mapping": [
         {
@@ -3831,7 +3831,7 @@
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/M04-01-quantile-risk-regression.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/m04-01-quantile-risk-regression",
@@ -3852,10 +3852,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M04-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 13/13 tests; confirms prior delta 0896db0; 1 minor backlog note."
       },
       "acceptance_test_mapping": [
         {
@@ -3921,9 +3921,9 @@
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/M05-01-meta-label-signal-filter.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1ed8da6bffeP3jll04dkXc89D; fix committed (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/m05-01-meta-label-signal-filter",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
@@ -3942,10 +3942,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M05-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent DELTA-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); predict-fabrication IMPORTANT fixed RED-to-GREEN, 7/7 tests. Delta ses_f1ed8da6bffeP3jll04dkXc89D."
       },
       "acceptance_test_mapping": [
         {
@@ -4010,9 +4010,9 @@
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/M06-01-market-anomaly-risk-gate.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1f004277ffe7AUq1V79yzP12T + review ses_f1f5b2f1affeFJGR826OWE17WS; fix committed (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/m06-01-market-anomaly-risk-gate",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
@@ -4031,10 +4031,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M06-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent DELTA-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); IMPORTANT keyword-coverage finding closed; 12 m06 tests passed incl. 4-param RED-to-GREEN regression test. Delta ses_f1f004277ffe7AUq1V79yzP12T; first review ses_f1f5b2f1affeFJGR826OWE17WS."
       },
       "acceptance_test_mapping": [
         {
@@ -4186,7 +4186,7 @@
       "path": "docs/sprints/models/ML-02-held-out-calibration-and-cost-mapper.md",
       "priority": "P0",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1e23a854ffewYoa5xSwvOmjDB; fix 339cfe3 committed (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/ml-02-held-out-calibration-and-cost-mapper",
       "requirements": [
         "FR-10"
@@ -4231,12 +4231,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/ML-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent DELTA-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); fail-closed gates closed RED-to-GREEN after audit: finite NET/GROSS forecast refused at payload boundary, calibrator label/finite/1D guards, optimizer-failure gate (soft non-convergence with finite fit documented). 18 mapper + 258 models tests green. Delta ses_f1e23a854ffewYoa5xSwvOmjDB; finding 4 (verified role proof) routed to Change Request, not patched."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -4321,12 +4321,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/ML-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 28/28 tests (AC0-AC3 + allowlist/cap/resume-tamper regressions); 2 minor backlog notes."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -4415,12 +4415,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/ML-04-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 22/22 bundle loader tests; trainer-CLI deviation acknowledged per handoff; 1 minor backlog note (no M02 tree packager)."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -5363,7 +5363,7 @@
       "spec": "docs/specs/14-shadow-portfolios-and-promotion.md",
       "path": "docs/sprints/shadow/SHADOW-01-auditable-forward-paper-decisions.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/shadow-01-auditable-forward-paper-decisions",
@@ -5385,10 +5385,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/SHADOW-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 11/11 tests (AC0-AC3 + fail-closed guards); 4 minor backlog notes."
       },
       "acceptance_test_mapping": [
         {
@@ -5457,7 +5457,7 @@
       "spec": "docs/specs/14-shadow-portfolios-and-promotion.md",
       "path": "docs/sprints/shadow/SHADOW-02-shared-capital-reconciliation.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/shadow-02-shared-capital-reconciliation",
@@ -5483,10 +5483,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/SHADOW-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 18/18 tests (4 AC + 14 restart/governance hardening); seal-integrity note."
       },
       "acceptance_test_mapping": [
         {
@@ -5554,7 +5554,7 @@
       "spec": "docs/specs/14-shadow-portfolios-and-promotion.md",
       "path": "docs/sprints/shadow/SHADOW-03-champion-replacement-gate.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/shadow-03-champion-replacement-gate",
@@ -5576,10 +5576,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/SHADOW-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 4 AC tests + 26 adjacent queue-gate tests; 2 minor backlog notes."
       },
       "acceptance_test_mapping": [
         {
@@ -6567,12 +6567,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/C04-01-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent CONFIRM-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 6 strategy tests passed, no new findings. First review ses_f2028e7cbffeC5KgDwjqEuUHcn."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6788,9 +6788,9 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C07-01-bollinger-rsi-reversion.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "delta ses_f1f5b2f07ffe201yXCXjng4hAH + review ses_f2028e7caffenivpXTpnZ0M1pj; fix in working tree (2026-09-27 batch; SHA pin pending)",
+      "independent_reviewer": "delta ses_f1f5b2f07ffe201yXCXjng4hAH + review ses_f2028e7caffenivpXTpnZ0M1pj; fix committed (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/c07-01-bollinger-rsi-reversion",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -6811,10 +6811,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/C07-01-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent DELTA-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 2 IMPORTANT findings closed; 28 c07/c10/registry tests passed incl. 2 RED-to-GREEN regression tests. Delta ses_f1f5b2f07ffe201yXCXjng4hAH; first review ses_f2028e7caffenivpXTpnZ0M1pj."
       },
       "acceptance_test_mapping": [
         {
@@ -7102,12 +7102,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/C10-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 7/7 tests incl. C07-fix interaction check; 4 minor backlog notes."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7285,7 +7285,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7367,12 +7367,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/S01-01-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent CONFIRM-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 5 strategy tests passed, no new findings. First review ses_f2028e7c9ffeI7yi54KmxiSlQR."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7457,12 +7457,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/S02-01-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "b7c3dfdae9bfbae6044f6effa01be92e5127391a",
+        "review": "Independent CONFIRM-PASS at HEAD b7c3dfdae9bfbae6044f6effa01be92e5127391a (SHA pin pending at commit); 5 strategy tests passed, no new findings. First review ses_f2028e7a2ffek7Vs5W7p15tU3E."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7920,7 +7920,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -9259,7 +9259,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-02-model-registry-and-offline-training-services.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw2-02-model-registry-and-offline-training-services",
