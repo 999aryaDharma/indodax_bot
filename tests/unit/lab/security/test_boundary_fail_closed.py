@@ -186,5 +186,24 @@ def test_qa_02_destructive_escape_target_is_still_rejected(tmp_path: Path) -> No
         safe_resolve_artifact_path(tmp_path, "../../../etc/passwd")
 
 
+def test_qa_02_trade_withdraw_token_password_families_are_detected() -> None:
+    """QA-02-AC2: live trade/withdraw-shaped TOKEN/PASSWORD names must be rejected."""
+    for offending_key in (
+        "WITHDRAW_TOKEN",
+        "API_TOKEN",
+        "TRADE_PASSWORD",
+        "EXCHANGE_PASSWORD",
+    ):
+        with pytest.raises(SecurityViolationError) as exc_info:
+            audit_no_trade_withdraw_keys({offending_key: "value"})
+        assert "FORBIDDEN_CREDENTIALS" in str(exc_info.value)
+        assert offending_key in str(exc_info.value)
+
+
+def test_qa_02_telegram_bot_token_stays_allowed() -> None:
+    """QA-02-AC2: widening TOKEN/PASSWORD detection must not reject TELEGRAM_BOT_TOKEN."""
+    assert audit_no_trade_withdraw_keys({"TELEGRAM_BOT_TOKEN": "123456:ABC"}) == []
+
+
 # Actor for every line this file contributes to review evidence:
 # opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)

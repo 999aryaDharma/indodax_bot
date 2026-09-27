@@ -40,10 +40,17 @@ _CREDENTIAL_PATTERNS_TRADE_WITHDRAW = (
     "TRADE_KEY",
     "TRADE_SECRET",
     "TRADE_TOKEN",
+    "TRADE_PASSWORD",
     "WITHDRAW_KEY",
+    "WITHDRAW_TOKEN",
     "WITHDRAWAL_KEY",
+    "WITHDRAWAL_TOKEN",
     "WITHDRAW_SECRET",
     "WITHDRAWAL_SECRET",
+    "WITHDRAW_PASSWORD",
+    "WITHDRAWAL_PASSWORD",
+    "API_TOKEN",
+    "EXCHANGE_PASSWORD",
     "LIVE_ORDER_SECRET",
     "PRIVATE_EXECUTION_KEY",
 )
@@ -79,7 +86,8 @@ _FORBIDDEN_CREDENTIAL_PATTERNS: tuple[str, ...] = tuple(
 )
 
 # ``*_API_KEY`` / ``*_SECRET*`` / ``*_PRIVATE_KEY`` style families, matched on
-# underscore/dot/dash separated name components.
+# underscore/dot/dash separated name components. TOKEN/PASSWORD families are
+# scoped to trade/withdraw/API authority so TELEGRAM_BOT_TOKEN stays allowed.
 _CREDENTIAL_FAMILY_PATTERNS = (
     re.compile(r"(?:^|[_.\-])SECRETS?(?:$|[_.\-])"),
     re.compile(r"(?:^|[_.\-])API_?KEYS?(?:$|[_.\-])"),
@@ -87,6 +95,10 @@ _CREDENTIAL_FAMILY_PATTERNS = (
     re.compile(r"(?:^|[_.\-])SECRET_?KEYS?(?:$|[_.\-])"),
     re.compile(r"(?:^|[_.\-])PRIVATE_?KEYS?(?:$|[_.\-])"),
     re.compile(r"(?:^|[_.\-])ACCESS_?KEYS?(?:$|[_.\-])"),
+    re.compile(r"(?:^|[_.\-])PASSWORDS?(?:$|[_.\-])"),
+    re.compile(r"(?:^|[_.\-])TRADE_?TOKENS?(?:$|[_.\-])"),
+    re.compile(r"(?:^|[_.\-])WITHDRAW(AL)?_?TOKENS?(?:$|[_.\-])"),
+    re.compile(r"(?:^|[_.\-])API_?TOKENS?(?:$|[_.\-])"),
 )
 
 # Probed by the audit itself to prove the destructive-path boundary is closed.
