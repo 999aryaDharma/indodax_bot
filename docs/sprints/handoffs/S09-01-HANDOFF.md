@@ -57,6 +57,13 @@ Status: IN_PROGRESS — implementation slices reviewed; full acceptance and exte
 - Overall implemented-slice review at exact source SHA `75e2d587b3b47894e2ee37e27283f5a1c3211c6f`: PASS across AC0-AC3; reviewer combined full source review at `cafd1fd` with correction review at `75e2d58`. Reviewer independently ran 12 gate tests at `cafd1fd` and inspected corrective tests at `75e2d58`; reviewer did not independently reproduce the full suite.
 - This scoped PASS does not clear S09's external producer/policy and runtime wiring gates; sprint remains IN_PROGRESS.
 
+## Historical pump-gap range evidence
+
+- Evidence source: `lab-data-fetch2/` Indodax hourly bronze candles, 2021-01-01 through 2025-12-31 UTC. The measurement script verifies 120 snapshot manifests and all referenced partition SHA-256, byte-size, row-count, pair/interval identity and candle quality before calculating returns.
+- Reproducible implementation/output: source commit `0ad47109c919c83abf9dd1184b963c37c5dfcebf`; `scripts/research/measure_s09_pump_gap_ranges.py` and `docs/research/s09-pump-gap-historical-range-v1.json`; readable summary in `docs/research/s09-pump-gap-historical-range-v1.md`.
+- Command: `C:/Users/User/miniconda3/envs/ML/python.exe scripts/research/measure_s09_pump_gap_ranges.py --output docs/research/s09-pump-gap-historical-range-v1.json` — exit 0; 43,823 contiguous returns per pair, zero hourly gaps. Positive-return p95 across years ranged 0.8205–1.6651% BTC/IDR and 0.9089–2.2537% ETH/IDR.
+- This measures historical price movement only. The archived median `available_at - close_time` is about 101 million seconds, so the data cannot establish point-in-time producer freshness or an input-age limit. It does not qualify a live producer or justify numeric threshold approval; preserve the fail-closed, IN_PROGRESS disposition.
+
 ## External gates / risks
 
 - Owner has not approved numeric pump-gap threshold or evidence-age limit; do not infer Production values. Test fixture numbers are not defaults.
