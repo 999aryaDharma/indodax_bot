@@ -74,4 +74,5 @@ Combined suite verification (80 passed across backtest, risk, execution, ledger,
 - Strategy integration gate: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c07.py tests/unit/lab/strategies/test_c10.py tests/unit/lab/strategies/test_registry.py tests/unit/lab/strategies/test_versioned_registry.py -q -p no:cacheprovider` — 42 passed.
 - Full suite at the fix commit: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` — 1,695 passed, 2 skipped, 11 warnings. Skips are the existing Linux `/proc` resource smoke and Windows symlink privilege case.
 - Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/strategies/store.py tests/unit/lab/strategies/test_versioned_registry.py` — passed; scoped diff check passed.
-- Independent delta review: pending at exact source SHA `7269a320c6d9c15644befe3626a575cb29d9c599`.
+- Independent delta review: PASS at exact source SHA `7269a320c6d9c15644befe3626a575cb29d9c599`; reviewer confirmed all three parameter fields match canonical YAML and strategy defaults, strict extra-field rejection remains, and no Critical/Important finding was introduced. Reviewer did not independently rerun tests.
+- The full C07-01 acceptance review is still required on an exact committed tree before coordinator can consider DONE.
