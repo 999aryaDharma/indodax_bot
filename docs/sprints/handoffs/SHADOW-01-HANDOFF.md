@@ -105,3 +105,24 @@ Commands and results:
 
 ### Isolation
 All tests use `tmp_path` stores and constructed models only. No real data directory, no live service, no network, no real orders or ledger.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/paper/contracts.py (341 lines) and
+  both suites (11 tests). Fresh run
+  `python -m pytest tests/unit/lab/paper/test_forward_decisions.py tests/unit/lab/paper/test_forward_decision_fail_closed.py -v`:
+  11 passed, 0 failed, exit 0 (AC0–AC3 + idempotency + 6 fail-closed guards).
+- AC0 holds (PENDING before outcome; frozen immutable record); AC1 holds
+  (telegram failure preserves PENDING with error recorded); AC2 holds (stale +
+  mismatch rejected; NaN/negative age and NaN proba blocked at model
+  validation; missing hash refused); AC3 holds (manual flag preserved; manual
+  cannot become ground truth). Rejections observable via rejected_decisions.
+- MINOR (backlog, non-blocking): mark_as_ground_truth non-manual path falls
+  through returning None (success semantics unmarked/untested); notify unknown
+  id raises raw KeyError (typed-error theme); VOIDED status has no producing
+  code path (operator-void API would be a CR); fail-closed tests accept any
+  exception type (semantically aligned but weak to wrong-exception bugs).
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
