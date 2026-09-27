@@ -73,3 +73,24 @@ Full lab suite verification: 159 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_ml04_bundle_loader.py -p no:cacheprovider -q` -> `22 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/artifacts.py (373 lines) and
+  tests (12 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_ml04_bundle_loader.py -q`: 22 passed,
+  0 failed, exit 0 (AC0–AC3 + hash/tamper/schema/segment/finite regressions).
+- AC0 holds (from_m01 publishes complete bundle; reload gives identical
+  predictions); AC1 holds (weights + full-bundle checksums reject tampering);
+  AC2 holds (missing/incomplete/non-finite/forbidden-segment calibration
+  blocked); AC3 holds (canonical order enforced; reordered input replays
+  identically). No-pickle JSON-only persistence verified by read.
+- Deviation acknowledged per handoff: trainer.py / cli/train_model.py /
+  test_ml_walk_forward.py are integration consumers outside the 4 ACs.
+- MINOR (backlog/CR, non-blocking): no M02 tree-model packager exists —
+  from_m01 is M01-only, so handoff line 27 ("M01/M02 compatible") overclaims;
+  XGBoost bundle packaging needs a separate change request if required.
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
