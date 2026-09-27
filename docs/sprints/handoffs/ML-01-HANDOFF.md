@@ -72,3 +72,22 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_preprocessing.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/preprocessing.py (218 lines) +
+  tests/unit/lab/models/test_preprocessing.py (7 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_preprocessing.py -v`: 7 passed,
+  0 failed, exit 0 (AC0–AC3 + 3 duplicate-schema regression guards).
+- AC0 holds (fitted medians/order stored, test imputed from train median);
+  AC1 holds (extreme test values leave medians untouched); AC2 holds
+  (missing/extra rejected; reorder rejected in strict mode, deterministically
+  realigned otherwise — tested both); AC3 holds (5× transform leaves artifact
+  byte-identical via deepcopy compare).
+- MINOR (backlog, non-blocking): default non-strict transform silently realigns
+  column order (only strict mode rejects); all-NaN column falls back to silent
+  0.0/1.0 defaults (undocumented); duplicate check is O(n^2) (negligible at
+  feature width). No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed as
+  175be32 + fix 9b6dab1; reviewer wrote no code here). Status transition
+  (manifest/spec) left to coordinator DONE pass / main agent — not touched.
