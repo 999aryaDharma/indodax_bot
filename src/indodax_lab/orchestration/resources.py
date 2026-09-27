@@ -4,6 +4,10 @@ Contract:
 Injected resource probes + LOW/MEDIUM/HIGH/GPU profile -> admit/defer with reasons.
 Sensor UNKNOWN tidak dianggap aman.
 ASUS profile tidak mengimpor atau menjalankan training.
+Stale/unknown required sensors under the capacity guard reject admission and
+optional Research load sheds before Production deadlines (JOB-02-AC4).
+Capacity guards resolve configured paths to mounts and account for shared
+physical disk contention (JOB-02-AC5).
 """
 
 from __future__ import annotations
@@ -11,10 +15,12 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 import math
+from pathlib import Path
 from typing import Any, Protocol, Sequence
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from indodax_lab.orchestration.jobs import JobDefinition, JobRecord
+from indodax_lab.operations.recovery import MountCapacityInfo, resolve_path_mount
 
 
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:
@@ -185,6 +191,26 @@ class AdmissionPolicy(BaseModel):
         raise ValueError(f"UNKNOWN_RESOURCE_CLASS:{resource_class}")
 
 
+class CapacityGuardPolicy(BaseModel):
+    """Owner-approved capacity limits for guarded admission (JOB-02-AC4/AC5).
+
+    Every required limit remains unset until supported by measured host
+    evidence. When capacity guarding is requested, an unset required value
+    fails closed, a stale required sensor rejects admission, optional
+    Research load sheds before Production deadlines, and each configured
+    storage path must resolve to its actual mount and device; unknown
+    mappings and unmet shared-disk reserve block admission. Test fixtures
+    supply their own numbers; none of these values are production defaults.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_sensor_age_seconds: float | None = None
+    production_deadline_headroom_seconds: float | None = None
+    disk_reserve_bytes: int | None = None
+    configured_storage_paths: tuple[str, ...] = ()
+
+
 class AdmissionDecision(BaseModel):
     """Structured result of evaluating resource-aware job admission."""
 
@@ -262,6 +288,9 @@ def evaluate_admission(
     host_profile: HostProfile | str,
     running_jobs: Sequence[JobRecord] | None = None,
     policy: AdmissionPolicy | None = None,
+    capacity: CapacityGuardPolicy | None = None,
+    production_deadline: datetime | None = None,
+    optional_research: bool = False,
 ) -> AdmissionDecision:
     """Evaluate whether a job can be admitted on the current host.
 
@@ -270,6 +299,10 @@ def evaluate_admission(
     2. Concurrency limit on Lenovo: at most 1 HIGH/GPU or 2 MEDIUM.
     3. Sensor UNKNOWN is not safe (fails closed).
     4. Hardware thresholds (RAM, idle, thermal, AC power, GPU) must be satisfied.
+    5. When capacity guarding is requested (JOB-02-AC4/AC5), unset required
+       limits fail closed, stale sensors reject admission, optional Research
+       load sheds before Production deadlines, configured paths must resolve
+       to measured mounts, and shared physical disk reserve is enforced.
     """
     profile = HostProfile.parse(host_profile) if isinstance(host_profile, str) else host_profile
     active_policy = policy or AdmissionPolicy()
@@ -429,6 +462,109 @@ def evaluate_admission(
             reading=reading,
             evaluated_at=now,
         )
+
+    # 5. Owner-approved capacity guard (JOB-02-AC4/AC5): fail closed while
+    #    required limits or path mappings lack measured host evidence.
+    if capacity is not None:
+        if production_deadline is not None:
+            _ensure_utc(production_deadline, "production_deadline")
+
+        max_sensor_age = capacity.max_sensor_age_seconds
+        deadline_headroom = capacity.production_deadline_headroom_seconds
+        disk_reserve = capacity.disk_reserve_bytes
+        for limit_name, limit_value in (
+            ("max_sensor_age_seconds", max_sensor_age),
+            ("production_deadline_headroom_seconds", deadline_headroom),
+            ("disk_reserve_bytes", disk_reserve),
+        ):
+            if limit_value is None:
+                return AdmissionDecision(
+                    admitted=False,
+                    reason=f"CAPACITY_LIMIT_UNSET:{limit_name}",
+                    resource_class=resource_class,
+                    host_profile=profile,
+                    reading=reading,
+                    evaluated_at=now,
+                )
+
+        # Stale required sensor rejects admission (AC4).
+        sensor_age_seconds = (now - reading.timestamp).total_seconds()
+        if sensor_age_seconds > max_sensor_age:
+            return AdmissionDecision(
+                admitted=False,
+                reason=(
+                    f"SENSOR_STALE:reading.timestamp:{sensor_age_seconds:.0f}s"
+                    f" > {max_sensor_age:.0f}s"
+                ),
+                resource_class=resource_class,
+                host_profile=profile,
+                reading=reading,
+                evaluated_at=now,
+            )
+
+        # Optional Research load sheds before Production deadlines (AC4).
+        if optional_research:
+            if production_deadline is None:
+                return AdmissionDecision(
+                    admitted=False,
+                    reason="PRODUCTION_DEADLINE_UNKNOWN:optional_research_shed",
+                    resource_class=resource_class,
+                    host_profile=profile,
+                    reading=reading,
+                    evaluated_at=now,
+                )
+            deadline_remaining_seconds = (production_deadline - now).total_seconds()
+            if deadline_remaining_seconds <= deadline_headroom:
+                return AdmissionDecision(
+                    admitted=False,
+                    reason=(
+                        f"RESEARCH_SHED_PRE_DEADLINE:{deadline_remaining_seconds:.0f}s"
+                        f" <= {deadline_headroom:.0f}s"
+                    ),
+                    resource_class=resource_class,
+                    host_profile=profile,
+                    reading=reading,
+                    evaluated_at=now,
+                )
+
+        # Each configured path resolves to its actual mount and device (AC5);
+        # an unknown mapping blocks admission.
+        resolved_paths: list[tuple[str, MountCapacityInfo]] = []
+        for raw_path in capacity.configured_storage_paths:
+            try:
+                resolved_paths.append((raw_path, resolve_path_mount(Path(raw_path))))
+            except OSError as exc:
+                return AdmissionDecision(
+                    admitted=False,
+                    reason=f"PATH_MOUNT_UNRESOLVED:{raw_path}:{exc}",
+                    resource_class=resource_class,
+                    host_profile=profile,
+                    reading=reading,
+                    evaluated_at=now,
+                )
+
+        # Paths sharing one physical device multiply the reserve demand, so
+        # shared physical disk contention is accounted for (AC5).
+        paths_by_device: dict[str, list[tuple[str, MountCapacityInfo]]] = {}
+        for raw_path, mount_info in resolved_paths:
+            paths_by_device.setdefault(mount_info.device, []).append((raw_path, mount_info))
+        for device, device_paths in paths_by_device.items():
+            required_free_bytes = disk_reserve * len(device_paths)
+            free_bytes = device_paths[0][1].free_bytes
+            if free_bytes < required_free_bytes:
+                shared_paths = ",".join(raw_path for raw_path, _ in device_paths)
+                return AdmissionDecision(
+                    admitted=False,
+                    reason=(
+                        f"DISK_RESERVE_EXCEEDED:{device}:{free_bytes}B"
+                        f"<{required_free_bytes}B(reserve {disk_reserve}B"
+                        f" x {len(device_paths)} paths: {shared_paths})"
+                    ),
+                    resource_class=resource_class,
+                    host_profile=profile,
+                    reading=reading,
+                    evaluated_at=now,
+                )
 
     return AdmissionDecision(
         admitted=True,

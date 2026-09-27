@@ -5,13 +5,18 @@ Acceptance Criteria:
 - JOB-02-AC1 (test_job_02_contract_1): Sensor UNKNOWN tidak dianggap aman.
 - JOB-02-AC2 (test_job_02_contract_2): AC terputus memicu checkpoint pause.
 - JOB-02-AC3 (test_job_02_contract_3): ASUS profile tidak mengimpor atau menjalankan training.
+- JOB-02-AC4 (test_job_02_capacity_4): Unknown or stale required resource sensors reject admission
+  and optional Research load sheds before Production deadlines fail.
+- JOB-02-AC5 (test_job_02_mount_capacity): Capacity guards resolve each configured path to its
+  actual mount and account for shared physical disk contention.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
+import shutil
 import time
 import pytest
 from pydantic import ValidationError
@@ -26,6 +31,7 @@ from indodax_lab.orchestration.resources import (
     AdmissionDecision,
     AdmissionPolicy,
     AsusProfileTrainingProhibitedError,
+    CapacityGuardPolicy,
     HostProfile,
     ResourceClass,
     StaticResourceProbe,
@@ -695,3 +701,196 @@ def test_worker_renews_short_lease_during_long_step(tmp_path: Path) -> None:
 
     assert result.status == "SUCCESS"
     assert queue.claim_job("worker-2", as_of=datetime.now(UTC)) is None
+
+
+# ---------------------------------------------------------------------------
+# JOB-02-AC4 / JOB-02-AC5: owner-approved capacity guard (fail closed)
+# ---------------------------------------------------------------------------
+
+
+def _admissible_reading(**overrides: object) -> SystemResourceReading:
+    """Fresh reading that satisfies every legacy HIGH threshold (AC4/AC5)."""
+    values: dict[str, object] = {
+        "ac_power_connected": True,
+        "free_ram_gb": 16.0,
+        "user_idle_seconds": 900.0,
+        "cpu_temp_celsius": 52.0,
+        "cpu_load_pct": 15.0,
+        "gpu_available": True,
+    }
+    values.update(overrides)
+    return SystemResourceReading(**values)  # type: ignore[arg-type]
+
+
+def _fully_measured_capacity(storage_path: Path, **overrides: object) -> CapacityGuardPolicy:
+    """Fixture-only approved limits (test numbers are never production defaults)."""
+    values: dict[str, object] = {
+        "max_sensor_age_seconds": 60.0,
+        "production_deadline_headroom_seconds": 300.0,
+        "disk_reserve_bytes": 1,
+        "configured_storage_paths": (str(storage_path),),
+    }
+    values.update(overrides)
+    return CapacityGuardPolicy(**values)  # type: ignore[arg-type]
+
+
+def test_job_02_capacity_4(tmp_path: Path) -> None:
+    """JOB-02-AC4: Unknown or stale required resource sensors reject admission
+    and optional Research load sheds before Production deadlines fail."""
+    job = _build_test_job("job_capacity_4", resource_class=ResourceClass.HIGH)
+
+    # 1. Required limits unset -> admission fails closed (measured evidence pending).
+    unset = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=CapacityGuardPolicy(),
+    )
+    assert unset.admitted is False
+    assert unset.reason == "CAPACITY_LIMIT_UNSET:max_sensor_age_seconds"
+
+    unset_disk = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=CapacityGuardPolicy(
+            max_sensor_age_seconds=60.0,
+            production_deadline_headroom_seconds=300.0,
+        ),
+    )
+    assert unset_disk.admitted is False
+    assert unset_disk.reason == "CAPACITY_LIMIT_UNSET:disk_reserve_bytes"
+
+    # 2. Stale required sensor rejects admission.
+    stale = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(timestamp=datetime.now(UTC) - timedelta(hours=1)),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+    )
+    assert stale.admitted is False
+    assert stale.reason is not None
+    assert stale.reason.startswith("SENSOR_STALE:reading.timestamp")
+
+    # 3. Optional Research load sheds when a Production deadline is within headroom.
+    shed = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+        production_deadline=datetime.now(UTC) + timedelta(seconds=60),
+        optional_research=True,
+    )
+    assert shed.admitted is False
+    assert shed.reason is not None
+    assert shed.reason.startswith("RESEARCH_SHED_PRE_DEADLINE:")
+
+    # 4. Unknown Production deadline fails closed for optional Research load.
+    unknown_deadline = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+        production_deadline=None,
+        optional_research=True,
+    )
+    assert unknown_deadline.admitted is False
+    assert unknown_deadline.reason == "PRODUCTION_DEADLINE_UNKNOWN:optional_research_shed"
+
+    # 5. Non-optional (Production) load is not shed; optional load admits on a
+    #    distant deadline with fresh sensors and satisfied disk reserve.
+    production_load = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+        production_deadline=datetime.now(UTC) + timedelta(seconds=60),
+        optional_research=False,
+    )
+    assert production_load.admitted is True
+
+    distant = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+        production_deadline=datetime.now(UTC) + timedelta(hours=6),
+        optional_research=True,
+    )
+    assert distant.admitted is True
+
+    # 6. Non-UTC Production deadline is rejected (UTC chronology contract).
+    with pytest.raises(ValueError, match="UTC_TIMEZONE_AWARE_REQUIRED:production_deadline"):
+        evaluate_admission(
+            job=job,
+            reading=_admissible_reading(),
+            host_profile=HostProfile.LENOVO,
+            capacity=_fully_measured_capacity(tmp_path),
+            production_deadline=datetime(2025, 6, 1, 12, 0),
+            optional_research=True,
+        )
+
+
+def test_job_02_mount_capacity(tmp_path: Path) -> None:
+    """JOB-02-AC5: Capacity guards resolve each configured path to its actual
+    mount and account for shared physical disk contention."""
+    job = _build_test_job("job_mount_capacity", resource_class=ResourceClass.HIGH)
+    data_dir = tmp_path / "data_root"
+    data_dir.mkdir()
+    other_dir = tmp_path / "checkpoints"
+    other_dir.mkdir()
+
+    # 1. Unknown path mapping blocks admission (fail closed).
+    missing = tmp_path / "never_created"
+    unresolved = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(
+            tmp_path, configured_storage_paths=(str(missing),)
+        ),
+    )
+    assert unresolved.admitted is False
+    assert unresolved.reason is not None
+    assert unresolved.reason.startswith(f"PATH_MOUNT_UNRESOLVED:{missing}")
+
+    # 2. Existing configured path resolves to its mount with sufficient reserve.
+    resolved_ok = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(data_dir),
+    )
+    assert resolved_ok.admitted is True
+
+    # 3. Insufficient disk reserve rejects, and the diagnostic names the device.
+    free_bytes = shutil.disk_usage(str(data_dir)).free
+    assert free_bytes > 1
+    exhausted = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(data_dir, disk_reserve_bytes=10**15),
+    )
+    assert exhausted.admitted is False
+    assert exhausted.reason is not None
+    assert exhausted.reason.startswith("DISK_RESERVE_EXCEEDED:dev-")
+    assert "x 1 paths" in exhausted.reason
+
+    # 4. Two configured paths sharing one physical device multiply the reserve
+    #    demand: the same limit admits a single path but not a shared one.
+    shared_device = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(
+            data_dir,
+            disk_reserve_bytes=10**15,
+            configured_storage_paths=(str(data_dir), str(other_dir)),
+        ),
+    )
+    assert shared_device.admitted is False
+    assert shared_device.reason is not None
+    assert shared_device.reason.startswith("DISK_RESERVE_EXCEEDED:")
+    assert "x 2 paths" in shared_device.reason
+    assert str(data_dir) in shared_device.reason or str(other_dir) in shared_device.reason
