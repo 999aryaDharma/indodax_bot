@@ -6,13 +6,15 @@ BB/Keltner squeeze followed by volume expansion and no-chase cap -> versioned LO
 
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
+
 import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
-from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
 from indodax_lab.contracts.decision import SignalIntent
+from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
 from indodax_lab.strategies.registry import StrategyRegistry
 
 
@@ -51,18 +53,38 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         curr_row = p_df.iloc[-1]
         prev_row = p_df.iloc[-2]
-
-        if pd.isna(curr_row.get("close")) or pd.isna(curr_row.get("high")) or pd.isna(curr_row.get("low")):
+        try:
+            interval_ns = pd.tseries.frequencies.to_offset(spec.timeframes[0]).nanos
+            bar_interval = pd.Timedelta(interval_ns, unit="ns")
+        except (IndexError, ValueError):
             continue
-        if "eligible" in curr_row and not curr_row["eligible"]:
+        decision_times = pd.to_datetime(p_df["decision_ts"], utc=True)
+        window_times = decision_times.iloc[-lookback_bars - 1 :]
+        if (
+            bar_interval <= pd.Timedelta(0)
+            or window_times.iloc[-1] != pd.Timestamp(frame.as_of)
+            or not window_times.diff().iloc[1:].eq(bar_interval).all()
+        ):
             continue
 
         # Lookback window for prior bar indicators (excluding current bar to establish squeeze regime)
         prior_window = p_df.iloc[-lookback_bars - 1 : -1]
+        try:
+            prior_closes = [float(value) for value in prior_window["close"]]
+            prev_close = float(prev_row["close"])
+            curr_close = float(curr_row["close"])
+            prev_atr = float(prev_row.get("atr_14", prev_row.get("atr")))
+            curr_atr = float(curr_row.get("atr_14", curr_row.get("atr")))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not all(math.isfinite(value) for value in (*prior_closes, prev_close, curr_close, prev_atr, curr_atr)):
+            continue
+        if prev_close <= 0.0 or curr_close <= 0.0 or prev_atr <= 0.0 or curr_atr <= 0.0:
+            continue
+
         prev_mean = float(prior_window["close"].mean())
         prev_std = float(prior_window["close"].std(ddof=1)) if len(prior_window) > 1 else 0.0
-        prev_atr = float(prev_row.get("atr_14", prev_row.get("atr", 0.0)))
-        if prev_atr <= 0:
+        if not math.isfinite(prev_mean) or not math.isfinite(prev_std):
             continue
 
         prev_bb_upper = prev_mean + bb_std_mult * prev_std
@@ -80,25 +102,24 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         if not was_in_squeeze:
             continue
 
-        curr_close = float(curr_row["close"])
-        prev_close = float(prev_row["close"])
-        if prev_close <= 0:
-            continue
-
-        curr_atr = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
-        if curr_atr <= 0:
-            continue
-
         # S02-01-AC3: Gap above chase cap is rejected
         gap_pct = (curr_close - prev_close) / prev_close
-        if gap_pct > max_chase_pct:
+        if not math.isfinite(gap_pct) or gap_pct > max_chase_pct:
             continue
 
         # S02-01-AC2: Expansion without volume is rejected
         vol_col = "base_volume" if "base_volume" in p_df.columns else "volume"
-        curr_vol = float(curr_row.get(vol_col, 0.0))
-        avg_vol = float(prior_window[vol_col].mean()) if vol_col in prior_window.columns else 0.0
-        if curr_vol < (avg_vol * volume_mult):
+        if vol_col not in p_df.columns:
+            continue
+        try:
+            volumes = [float(value) for value in prior_window[vol_col]]
+            curr_vol = float(curr_row[vol_col])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not all(math.isfinite(value) and value >= 0.0 for value in (*volumes, curr_vol)):
+            continue
+        avg_vol = sum(volumes) / len(volumes)
+        if avg_vol <= 0.0 or curr_vol < (avg_vol * volume_mult):
             continue
 
         # Expansion detection using PRIOR window bands only (no self-reference)
@@ -107,7 +128,9 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
             continue
 
         # Valid expansion confirmed
-        stop_loss = max(0.0, curr_close - atr_mult * curr_atr)
+        stop_loss = curr_close - atr_mult * curr_atr
+        if not (math.isfinite(stop_loss) and 0.0 < stop_loss < curr_close):
+            continue
 
         intent = SignalIntent(
             intent_id=f"s02_{pair}_{int(frame.as_of.timestamp())}",
@@ -116,7 +139,7 @@ def s02_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
             side=OrderSide.BUY,
             desired_qty=base_qty,
             limit_price=Decimal(str(curr_close)),
-            stop_loss=Decimal(str(stop_loss)) if stop_loss > 0 else None,
+            stop_loss=Decimal(str(stop_loss)),
             strategy_id=spec.strategy_id,
         )
         intents.append(intent)

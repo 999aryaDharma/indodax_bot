@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pandas as pd
 import pytest
 
@@ -213,3 +214,50 @@ def test_s02_bands_self_referential_regression() -> None:
     # Should still detect expansion correctly - using prior_window only
     # This test ensures we don't regress to self-referential bands
     assert len(intents) == 1, "Valid expansion should be detected using prior bands only"
+
+
+@pytest.mark.parametrize("case", ["missing", "zero", "nan"])
+def test_s02_missing_or_invalid_volume_abstains(case: str) -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_s02_bars(as_of, scenario="valid_expansion")
+    if case == "missing":
+        df = df.drop(columns=["base_volume", "volume"])
+    elif case == "zero":
+        df.loc[:, ["base_volume", "volume"]] = 0.0
+    else:
+        df.loc[df.index[-1], ["base_volume", "volume"]] = float("nan")
+
+    assert s02_decide(create_decision_frame(df, as_of), load_s02_specification()) == []
+
+
+@pytest.mark.parametrize("atr", [float("nan"), 100000000.0])
+def test_s02_invalid_or_unbounded_atr_abstains(atr: float) -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_s02_bars(as_of, scenario="valid_expansion")
+    df.loc[df.index[-1], "atr_14"] = atr
+
+    assert s02_decide(create_decision_frame(df, as_of), load_s02_specification()) == []
+
+
+@pytest.mark.parametrize("problem", ["stale", "gap"])
+def test_s02_stale_or_discontinuous_lookback_abstains(problem: str) -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_s02_bars(as_of, scenario="valid_expansion")
+    if problem == "stale":
+        df.loc[:, ["decision_ts", "row_ready_at"]] -= timedelta(hours=1)
+    else:
+        df.loc[df.index[-2], ["decision_ts", "row_ready_at"]] -= timedelta(hours=1)
+
+    assert s02_decide(create_decision_frame(df, as_of), load_s02_specification()) == []
+
+
+@pytest.mark.parametrize("problem", ["missing_close", "infinite_atr"])
+def test_s02_incomplete_lookback_abstains(problem: str) -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_s02_bars(as_of, scenario="valid_expansion")
+    if problem == "missing_close":
+        df.loc[df.index[-10], "close"] = float("nan")
+    else:
+        df.loc[df.index[-2], "atr_14"] = float("inf")
+
+    assert s02_decide(create_decision_frame(df, as_of), load_s02_specification()) == []
