@@ -76,3 +76,12 @@ Combined suite verification (80 passed across backtest, risk, execution, ledger,
 - Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/strategies/store.py tests/unit/lab/strategies/test_versioned_registry.py` — passed; scoped diff check passed.
 - Independent delta review: PASS at exact source SHA `7269a320c6d9c15644befe3626a575cb29d9c599`; reviewer confirmed all three parameter fields match canonical YAML and strategy defaults, strict extra-field rejection remains, and no Critical/Important finding was introduced. Reviewer did not independently rerun tests.
 - The full C07-01 acceptance review is still required on an exact committed tree before coordinator can consider DONE.
+
+## Comprehensive review fix round — 2026-09-27
+
+- Previous comprehensive review: CHANGES_REQUESTED with three IMPORTANT findings: invalid computed stop, missing/non-finite indicators, and stale-bar replay through C07/C10.
+- Fix commit: `006680f2003f402579bc5803893d9d603efe97a4`.
+- C07 now abstains unless the latest feature bar timestamp equals `DecisionFrame.as_of`, required signal/trend inputs are finite, and ATR-derived stop/target are finite and ordered `0 < stop < entry < target`. C10 reversion inherits the shared C07 freshness guard.
+- Regression tests: the pre-fix run reproduced 7 failing cases (non-finite ADX/DI/BB width/BB z, oversized ATR stop, stale C07 bar, stale C10 delegated bar); post-fix `test_c07.py test_c10.py` — 23 passed. Full strategy suite — 159 passed. Full suite — 1,704 passed, 2 skipped, 11 warnings (Windows/Linux-specific skips documented by pytest).
+- Ruff `--select I,F401` on the three scoped code/test files and scoped `git diff --check` passed.
+- Independent comprehensive delta review of the three findings is pending at exact source SHA `006680f2003f402579bc5803893d9d603efe97a4`; status remains REVIEW.
