@@ -133,6 +133,27 @@ Commands and results:
 ### Isolation
 All tests use a `tmp_path` SQLite state file, a synthetic cost schedule, and a hard halt driven through the public `observe_equity` surface. `fetch_live_market_data` is **never** called. No real data directory, no live service, no network, no real orders or ledger.
 
-### Deferred minors (recorded, not fixed — one fix cycle only)
+### Deferred minors (recorded, not fixed - one fix cycle only)
 - `LiveShadowEngine.load_state` truncates the restored audit log to `self.audit_log[-200:]`, so a long-lived shadow deployment silently drops the oldest audit entries on every restart. Worth a separate retention decision for the audit log.
 - `save_state` builds `event_id` from `f"{event_type}:{now.isoformat()}:{len(self.closed_trades)}:{len(self.open_positions)}"`; two saves within the same clock tick with identical counts would collide on the event id.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/paper/portfolio.py (297 lines) and
+  src/indodax_lab/paper/live_shadow_engine.py reset/state/governance paths
+  (lines 100-379) plus scan of scan/exit paths. Fresh runs:
+  test_shared_reconciliation.py 4 passed; test_shared_ledger_restart_hardening.py
+  + test_live_shadow_engine_governance.py 14 passed; total 18/18 exit 0.
+- AC0 holds (Rp500k shared allocation, exact Decimal); AC1 holds (duplicate
+  event → DUPLICATE_EVENT_ID, balances untouched); AC2 holds (max-2 cap +
+  survives restart with behavior refusal, not just state); AC3 holds (sealed
+  SHA-256 checkpoint restores identical cash/positions/events; tampered
+  refused; legacy basis reconstructed). Authorized reset preserves breaches,
+  closed trades and audit; failed reset restores in-memory state.
+- Seal semantics noted: fingerprint proves integrity-since-creation, not
+  authorship — a freshly forged sealed checkpoint would verify. Forgery needs
+  code execution; disk-tamper path is covered. Backlog, non-blocking.
+- The 2 deferred minors above stand as recorded. No new Critical/Important.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
