@@ -9,6 +9,7 @@ Guarantees:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 import pytest
@@ -116,3 +117,100 @@ def test_dl_01_contract_3() -> None:
 
     # Ensure max_epochs ceiling of 50 is strictly respected
     assert config.max_epochs == 50
+
+
+def test_dl_01_checkpoint_carries_scheduler_state(tmp_path: Path) -> None:
+    """AC0: Checkpoint persists scheduler state; legacy JSON without it loads as None."""
+    checkpoint_file = tmp_path / "checkpoint_sched.json"
+    ckpt = NeuralTrainingCheckpoint(
+        epoch=3,
+        model_id="d01_mlp_v1",
+        input_hash="hash_sched_001",
+        model_state={"w": [1.0]},
+        optimizer_state={"step": 10},
+        scheduler_state={"scheduler": "cosine", "last_lr": [0.0009], "step": 3},
+        rng_state={"seed": 7},
+        best_val_metric=0.5,
+    )
+    save_checkpoint(ckpt, checkpoint_file)
+
+    loaded = load_checkpoint(checkpoint_file, expected_input_hash="hash_sched_001")
+    assert loaded.scheduler_state == {"scheduler": "cosine", "last_lr": [0.0009], "step": 3}
+
+    # Backward compat: pre-scheduler checkpoint JSON without the key still loads.
+    legacy_file = tmp_path / "checkpoint_legacy.json"
+    legacy_payload = {
+        k: v for k, v in json.loads(checkpoint_file.read_text(encoding="utf-8")).items() if k != "scheduler_state"
+    }
+    legacy_file.write_text(json.dumps(legacy_payload), encoding="utf-8")
+    legacy_loaded = load_checkpoint(legacy_file, expected_input_hash="hash_sched_001")
+    assert legacy_loaded.scheduler_state is None
+
+
+def test_dl_01_unverified_resume_requires_opt_in(tmp_path: Path) -> None:
+    """AC2: Resume without expected_input_hash is fail-closed unless explicitly opted in."""
+    checkpoint_file = tmp_path / "checkpoint_unverified.json"
+    ckpt = NeuralTrainingCheckpoint(
+        epoch=2,
+        model_id="d01_mlp_v1",
+        input_hash="hash_sched_001",
+        model_state={"w": [1.0]},
+        optimizer_state={"step": 10},
+        rng_state={"seed": 7},
+        best_val_metric=0.5,
+    )
+    save_checkpoint(ckpt, checkpoint_file)
+
+    with pytest.raises(ResumeInputMismatchError) as exc_info:
+        load_checkpoint(checkpoint_file)
+    assert "RESUME_INPUT_UNVERIFIED" in str(exc_info.value)
+
+    # Explicit opt-in acknowledges the unverified resume.
+    loaded = load_checkpoint(checkpoint_file, allow_unverified=True)
+    assert loaded.epoch == 2
+
+
+def test_dl_01_trainer_loop_stops_on_patience_and_restores_best() -> None:
+    """AC3: NeuralTrainer loop honors patience 7 and restores best weights."""
+    config = NeuralTrainingConfig(max_epochs=50, patience=7, min_delta=0.001)
+    trainer = NeuralTrainer(config=config)
+
+    val_losses = [
+        1.0, 0.9, 0.8, 0.7, 0.65, 0.60, 0.58, 0.55, 0.53, 0.50,  # Best at epoch 9
+        0.51, 0.52, 0.54, 0.53, 0.55, 0.56, 0.58, 0.60, 0.62, 0.65,
+    ]
+
+    def epoch_fn(epoch: int) -> tuple[float, dict[str, float]]:
+        return val_losses[epoch], {"epoch": float(epoch), "loss": val_losses[epoch]}
+
+    trainer.fit(epoch_fn)
+
+    assert trainer.tracker.should_stop is True
+    assert trainer.epochs_run == 17  # epochs 0..16, stopping 7 epochs after best at 9
+    assert trainer.tracker.best_epoch == 9
+    assert trainer.restore_best_weights() == {"epoch": 9.0, "loss": 0.50}
+
+
+def test_dl_01_trainer_loop_never_exceeds_fifty_epochs() -> None:
+    """AC3: NeuralTrainer loop caps at 50 epochs even when loss always improves."""
+    config = NeuralTrainingConfig(max_epochs=50, patience=7, min_delta=0.001)
+    trainer = NeuralTrainer(config=config)
+    calls: list[int] = []
+
+    def epoch_fn(epoch: int) -> tuple[float, dict[str, int]]:
+        calls.append(epoch)
+        return 1.0 - 0.01 * (epoch + 1), {"epoch": epoch}
+
+    trainer.fit(epoch_fn)
+
+    assert trainer.epochs_run == 50
+    assert calls == list(range(50))
+    assert trainer.restore_best_weights() == {"epoch": 49}
+
+
+def test_dl_01_training_config_rejects_over_budget() -> None:
+    """AC3: Epoch/patience caps are enforced by config, not left to callers."""
+    with pytest.raises(ValueError, match="MAX_EPOCHS_EXCEEDED"):
+        NeuralTrainingConfig(max_epochs=51)
+    with pytest.raises(ValueError, match="PATIENCE_EXCEEDED"):
+        NeuralTrainingConfig(patience=8)
