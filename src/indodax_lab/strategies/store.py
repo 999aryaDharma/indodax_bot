@@ -54,6 +54,9 @@ class _C07Parameters(_PairParameters):
     adx_trend_threshold: float = Field(default=0.25, ge=0)
     atr_multiplier: float = Field(default=1.5, gt=0)
     desired_qty: Decimal = Field(default=Decimal("0.1"), gt=0)
+    di_spread_threshold: float = -0.15
+    sideways_regimes: list[str] = Field(default_factory=lambda: ["sideways", "ranging", "neutral"])
+    downtrend_regimes: list[str] = Field(default_factory=lambda: ["downtrend", "strong_downtrend"])
 
 
 _PARAMETER_MODELS: dict[str, type[BaseModel]] = {"C02": _C02Parameters, "C07": _C07Parameters}
