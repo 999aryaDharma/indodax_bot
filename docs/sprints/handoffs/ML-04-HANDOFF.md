@@ -94,3 +94,17 @@ Full lab suite verification: 159 passed across strategies, features, labels, eva
 - Reviewer: coordinator inline review (implementation pre-exists committed;
   reviewer wrote no code here). Status transition (manifest/spec) left to
   coordinator DONE pass / main agent — not touched.
+
+## Independent review fix cycle — ML-04 Important findings
+
+Implementation source SHA: `86b391c275cc1ad693c7d7a9fc9f53ab6acf0e0a`.
+
+First independent review at `9b6dab1239ae89eb8edbe22c4ec194f802173cd4` found: (1) null calibration method/count fields loaded when the overall digest was recomputed; (2) shallow-frozen list/dict metadata could be mutated after hash verification and change predictions without changing `bundle_hash`.
+
+Fixes: validate calibration method/count types and count consistency; recursively freeze JSON metadata, use tuple feature/weight sequences, verify the canonical digest before inference and serialization, and reject stale-digest `model_copy(update=...)` values.
+
+TDD evidence: focused RED at pre-fix state: 5 failed as expected (four null metadata cases plus nested mutation). A separate `model_copy` regression failed before the digest check. GREEN at `86b391c`: `conda run -n ML python -m pytest -q tests/unit/lab/models/test_ml04_bundle_loader.py` — 28 passed; `conda run -n ML python -m pytest -q tests/unit/lab/models --ignore=tests/unit/lab/models/lob` — 192 passed, 9 existing sklearn OptimizeWarnings; `ruff check --select I,F401 ...` — passed; `git diff --check` — passed. Full Ruff still reports existing E501/UP037 findings in these files; no broad formatting cleanup was included.
+
+Independent delta review: PASS by `docs_review` at exact SHA `86b391c275cc1ad693c7d7a9fc9f53ab6acf0e0a`; both Important findings closed, no new Critical/Important findings. Reviewer independently ran focused ML-04 suite: 28 passed.
+
+DONE remains gated on dependency sprint reviews: M01-01, M02-01 and EVAL-03.
