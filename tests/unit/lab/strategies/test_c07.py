@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pandas as pd
 import pytest
 
@@ -276,3 +277,37 @@ def test_c07_di_spread_threshold_is_configurable():
     assert len(c07_decide(frame, lax_spec)) == 1, (
         "di_spread above configured threshold must not reject"
     )
+
+
+@pytest.mark.parametrize("column,value", [
+    ("adx_14", float("nan")),
+    ("di_spread_14", float("nan")),
+    ("bb_width", float("inf")),
+    ("bb_z", float("-inf")),
+    ("rsi_14", float("nan")),
+])
+def test_c07_nonfinite_required_indicators_abstain(column, value):
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_c07_features(as_of=as_of)
+    df.loc[df.index[-1], column] = value
+    frame = create_decision_frame(df, as_of=as_of)
+
+    assert c07_decide(frame, load_c07_specification()) == []
+
+
+def test_c07_nonpositive_computed_stop_abstains():
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_c07_features(as_of=as_of)
+    df.loc[df.index[-1], "atr_14"] = df.loc[df.index[-1], "close"]
+    frame = create_decision_frame(df, as_of=as_of)
+
+    assert c07_decide(frame, load_c07_specification()) == []
+
+
+def test_c07_stale_latest_bar_abstains():
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_c07_features(as_of=as_of)
+    df.loc[df.index[-1], ["decision_ts", "row_ready_at"]] = as_of - timedelta(hours=1)
+    frame = create_decision_frame(df, as_of=as_of)
+
+    assert c07_decide(frame, load_c07_specification()) == []

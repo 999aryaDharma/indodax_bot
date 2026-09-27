@@ -6,13 +6,15 @@ Extreme BB and RSI deviation only under available sideways regime -> versioned L
 
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
+
 import pandas as pd
 
 from indodax_lab.backtest.costs import OrderSide
-from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
 from indodax_lab.contracts.decision import SignalIntent
+from indodax_lab.strategies.base import DecisionFrame, StrategySpecification
 from indodax_lab.strategies.registry import StrategyRegistry
 
 
@@ -57,24 +59,27 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
             continue
 
         curr_row = p_df.iloc[-1]
-
-        if pd.isna(curr_row.get("close")):
-            continue
-        if "eligible" in curr_row and not curr_row["eligible"]:
+        if pd.to_datetime(curr_row["decision_ts"], utc=True) != pd.Timestamp(frame.as_of):
             continue
 
-        close = float(curr_row["close"])
+        try:
+            close = float(curr_row["close"])
+            bb_width_val = float(curr_row["bb_width"])
+            bb_z = float(curr_row["bb_z"])
+            rsi = float(curr_row.get("rsi_14", curr_row.get("rsi")))
+            adx = float(curr_row.get("adx_14", curr_row.get("adx")))
+            di_spread = float(curr_row.get("di_spread_14", curr_row.get("di_spread")))
+        except (KeyError, TypeError, ValueError):
+            continue
+        if not all(math.isfinite(value) for value in (close, bb_width_val, bb_z, rsi, adx, di_spread)):
+            continue
+        if close <= 0.0:
+            continue
 
         # C07-01-AC3: Zero or degenerate band width gives abstain
-        bb_width_val = curr_row.get("bb_width")
-        if bb_width_val is None or pd.isna(bb_width_val) or float(bb_width_val) <= 0.0:
+        if bb_width_val <= 0.0:
             continue
 
-        bb_z = float(curr_row.get("bb_z", 0.0)) if not pd.isna(curr_row.get("bb_z")) else 0.0
-        rsi = float(curr_row.get("rsi_14", curr_row.get("rsi", 50.0)))
-        adx = float(curr_row.get("adx_14", curr_row.get("adx", 0.0)))
-        di_spread = float(curr_row.get("di_spread_14", curr_row.get("di_spread", 0.0)))
-        
         # Guard: regime must be explicitly available (not default)
         if "regime" not in curr_row or pd.isna(curr_row.get("regime")):
             continue
@@ -93,12 +98,16 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         is_oversold = (bb_z <= -bb_std) and (rsi <= rsi_oversold)
 
         if is_sideways and is_oversold:
-            atr_val = float(curr_row.get("atr_14", curr_row.get("atr", 0.0)))
-            # Guard: abstain when ATR <= 0 (no valid stop/target)
-            if atr_val <= 0.0:
+            try:
+                atr_val = float(curr_row.get("atr_14", curr_row.get("atr")))
+            except (TypeError, ValueError):
                 continue
-            stop_loss = max(0.0, close - atr_mult * atr_val)
+            if not math.isfinite(atr_val) or atr_val <= 0.0:
+                continue
+            stop_loss = close - atr_mult * atr_val
             take_profit = close + atr_mult * atr_val
+            if not (math.isfinite(stop_loss) and math.isfinite(take_profit) and 0.0 < stop_loss < close < take_profit):
+                continue
 
             intent = SignalIntent(
                 intent_id=f"c07_{pair}_{int(frame.as_of.timestamp())}",
@@ -107,7 +116,7 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
                 side=OrderSide.BUY,
                 desired_qty=desired_qty,
                 limit_price=Decimal(str(close)),
-                stop_loss=Decimal(str(stop_loss)) if stop_loss > 0 else None,
+                stop_loss=Decimal(str(stop_loss)),
                 take_profit=Decimal(str(take_profit)),
                 strategy_id=spec.strategy_id,
             )

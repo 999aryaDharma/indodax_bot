@@ -1,9 +1,8 @@
 """Unit tests for C10 Regime ensemble strategy (C10-01)."""
 
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+
 import pandas as pd
-import pytest
 
 from indodax_lab.backtest.costs import OrderSide
 from indodax_lab.backtest.events import SignalIntent
@@ -196,3 +195,18 @@ def test_c10_frozen_member_versions() -> None:
     intent = intents[0]
     # Intent should record actual member version from loaded spec
     assert str(c01_spec.version) in intent.intent_id or c01_spec.version in intent.intent_id
+
+
+def test_c10_reversion_stale_latest_bar_abstains() -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    df = _build_c10_bars(as_of, regime="sideways")
+    df.loc[df.index[-1], "rsi_14"] = 22.0
+    df.loc[df.index[-1], "bb_z"] = -2.5
+    df.loc[df.index[-1], "bb_width"] = 0.04
+    df.loc[df.index[-1], "adx_14"] = 0.12
+    df.loc[df.index[-1], "di_spread_14"] = 0.01
+    df.loc[df.index[-1], ["decision_ts", "row_ready_at"]] = as_of - timedelta(hours=1)
+
+    frame = create_decision_frame(features=df, as_of=as_of)
+
+    assert c10_decide(frame, load_c10_specification()) == []
