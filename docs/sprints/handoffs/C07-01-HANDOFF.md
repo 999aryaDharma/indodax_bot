@@ -61,3 +61,17 @@ Combined suite verification (80 passed across backtest, risk, execution, ledger,
 - Fresh run `python -m pytest tests/unit/lab/strategies/test_c07.py tests/unit/lab/strategies/test_c10.py tests/unit/lab/strategies/test_registry.py -q`: 28 passed, 0 failed, including 2 new regression tests with demonstrated RED (old code) → GREEN (fixed) cycle.
 - First review: ses_f2028e7caffenivpXTpnZ0M1pj. Delta re-review: ses_f1f5b2f07ffe201yXCXjng4hAH. Fix implemented in working tree (uncommitted).
 - Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
+
+## Cross-sprint registry compatibility correction
+
+- Owner: Codex `/root`; base checkout `e84d88609583be5b8936f1ab0aa8560f932edcac`; reviewer: `/root/docs_review`.
+- Scope: make the durable strategy registry accept and preserve the three C07 fields already required by the canonical C07 config and decision function: `di_spread_threshold`, `sideways_regimes`, `downtrend_regimes`.
+- Requested paths: `src/indodax_lab/strategies/store.py`, `tests/unit/lab/strategies/test_versioned_registry.py`, this handoff. `src/indodax_lab/strategies/__init__.py` remains owned by the concurrent thread and is excluded.
+- Regression evidence before fix: `tests/unit/lab/strategies/test_versioned_registry.py` fails five C07 cases with `extra_forbidden` for those exact YAML fields.
+- Delta re-review required; C07-01 status remains REVIEW until coordinator reconciles the exact committed evidence.
+- Fix commit: `7269a320c6d9c15644befe3626a575cb29d9c599`.
+- Focused GREEN: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_versioned_registry.py -q -p no:cacheprovider` — 14 passed; `test_seed_manifest_preserves_yaml_strategy_and_risk_defaults[C07]` now preserves all canonical parameters.
+- Strategy integration gate: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_c07.py tests/unit/lab/strategies/test_c10.py tests/unit/lab/strategies/test_registry.py tests/unit/lab/strategies/test_versioned_registry.py -q -p no:cacheprovider` — 42 passed.
+- Full suite at the fix commit: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q -p no:cacheprovider` — 1,695 passed, 2 skipped, 11 warnings. Skips are the existing Linux `/proc` resource smoke and Windows symlink privilege case.
+- Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/strategies/store.py tests/unit/lab/strategies/test_versioned_registry.py` — passed; scoped diff check passed.
+- Independent delta review: pending at exact source SHA `7269a320c6d9c15644befe3626a575cb29d9c599`.
