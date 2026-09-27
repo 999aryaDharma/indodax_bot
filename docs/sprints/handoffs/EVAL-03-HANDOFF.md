@@ -117,3 +117,15 @@ Full lab suite verification: 121 passed across strategies, features, labels, eva
 - No new findings against src/indodax_lab/evaluation/lifecycle.py (atomic transitions, VALIDATED predecessor gate, single-open gate, INVALID_RUN exclusion all hold).
 - First review: ses_f201210c9ffeW8lv1BTI265hiX. Verification: ses_f1f5b2f64ffeK6bxrjI9CRgTDJ.
 - Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
+
+## Independent review fix cycle — UTC timestamp validation
+
+Implementation source SHA: `0727de02d69972bf31d644e6956da76c3eb52731`.
+
+Independent review at `64769f883a15c76bbf680b52d6530053edae4ae0` found that naive `as_of` values were written to lifecycle/audit rows before Pydantic rejected the returned record. `transition_stage` could advance the candidate and then leave it unreadable; `unseal_gate` had the same post-commit validation hazard.
+
+Fix: both methods now call the existing UTC validator before generating/starting their write transaction. RED at pre-fix state: both regressions failed because the public call did not produce the required early `UTC_TIMEZONE_AWARE_REQUIRED:as_of` rejection (and invalid state was committed). GREEN: `conda run -n ML python -m pytest -q tests/unit/lab/evaluation/test_lifecycle_fail_closed.py -k naive` — 2 passed; full affected EVAL unit scope — 124 passed using the current shared working-tree snapshot of `test_lifecycle_fail_closed.py` (which includes concurrent fixture corrections for EVAL-03 split exposure). The snapshot copy was temporary and removed; no concurrent owner changes were staged.
+
+Focused Ruff `I,F401` and `git diff --check` passed. Independent delta review by `docs_review`: PASS at exact source SHA `0727de02d69972bf31d644e6956da76c3eb52731`; reviewer confirmed naive and non-UTC rejection before transaction entry and verified state/audit remain unchanged.
+
+No Critical/Important finding remains in this delta. EVAL-03 status awaits the coordinator batch pass and any remaining dependency reconciliation; no manifest change is made here.
