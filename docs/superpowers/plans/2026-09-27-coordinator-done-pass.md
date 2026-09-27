@@ -27,6 +27,21 @@ record. No commit (main agent tree is dirty; SHA pinning stays pending).
 (branch `coord/done-pass-2026-09-27`): 6 DONE + mechanical READY (ML-01, C12-01,
 S07-01). Validator PASS exit 0 (134 nodes, 264 edges, 0 cycles). Clean diff,
 nothing committed — ready for main agent to review/commit.
+
+## Autonomous review lane (est. 2026-09-27, owner directive: gas terus)
+
+Loop per sprint: (1) check files exist + git-clean, (2) read impl + tests fully,
+(3) fresh pytest, (4) verdict PASS/BLOCKING, (5) handoff review record (additive),
+(6) commit handoff, (7) next. NEVER touch manifest/spec in shared tree. NEVER
+touch main-agent-active paths (orchestration/*, strategies/__init__.py,
+C03-01 handoff, REPORT-01 spec, test_lifecycle_fail_closed.py).
+- [x] ML-01 PASS (7/7) — handoff committed
+- [x] ML-02 PASS (7/7) — handoff committed
+- [x] ML-03 PASS (28/28) — handoff record appended, committing now
+- [ ] M01-01 (deps ML-03) → M02-01 (deps ML-03+M01-01) → ML-04 (deps M01+M02+EVAL-03)
+- [ ] Wave-2 models M03-01/M04-01/M05-01 (deps ML-04) as substance allows
+- [ ] Stop conditions: BLOCKING finding → fix cycle (TDD) or hand to owner;
+  main-agent path collision → skip + record; missing dep substance → stop lane.
 **Lane C1 (2026-09-27): SUPERSEDED.** `fix/M06-01` worktree is stale (base 36b28ea,
 no keyword guard at all) + holds others' uncommitted work. Fix instead applied
 fresh in main tree with TDD (see M06-01 note below). Worktree left untouched.

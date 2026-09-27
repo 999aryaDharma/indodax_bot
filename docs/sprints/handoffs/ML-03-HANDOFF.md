@@ -74,3 +74,22 @@ Full lab suite verification: 144 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_tuning_budget.py -p no:cacheprovider -q` -> `28 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/tuning.py (307 lines) and
+  tests/unit/lab/models/test_tuning_budget.py (16 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_tuning_budget.py -q`: 28 passed,
+  0 failed, exit 0 (AC0–AC3 + allowlist/cap/resume-tamper regressions).
+- AC0 holds (exact inner-validation allowlist; sealed/test lookalikes rejected);
+  AC1 holds (failed trials consume budget; exhaustion blocks); AC2 holds (space,
+  cap and counter tampering all rejected on resume; matching checkpoint resumes
+  with identical budget); AC3 holds (30-trial + 1-revision caps enforced on both
+  wrapper and budget record; revision never resets consumed count).
+- MINOR (backlog, non-blocking): duplicate trial_id registration is accepted
+  (consumes budget twice, ambiguous audit trail); TrialOutcome.evaluated_at has
+  no UTC-aware validator unlike sibling modules.
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
