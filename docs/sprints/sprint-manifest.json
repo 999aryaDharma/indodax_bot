@@ -5172,9 +5172,9 @@
       "spec": "docs/specs/18-reports-and-telegram.md",
       "path": "docs/sprints/reporting/REPORT-01-compact-experiment-reports.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "independent review ses_f1d0bbf80ffe96pu8qNkXrwGag (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/report-01-compact-experiment-reports",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -5195,10 +5195,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/REPORT-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "0735ff55b9820648c7d767caa8a3db5478275f58",
+        "review": "Independent PASS at HEAD 0735ff55b9820648c7d767caa8a3db5478275f58 (remediation SHA 5c587dec44afa33d68381bdfb3d82a9ce768cfcf confirmed ancestor); reviewer ses_f1d0bbf80ffe96pu8qNkXrwGag (read-only). reporting 34 passed, test_summary 13 passed, orchestration+verification 86 passed, full affected gate 156 passed, all exit 0. Identity-mismatch raises, deterministic ordering and NO_DATA/unranked gating verified by independent probe; no I/O in module; no Critical/Important findings. Minor backlog in handoff."
       },
       "acceptance_test_mapping": [
         {
@@ -5267,9 +5267,9 @@
       "spec": "docs/specs/18-reports-and-telegram.md",
       "path": "docs/sprints/reporting/REPORT-02-read-only-telegram-research-status.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1eafe332ffeVW4mWGJORmNKN1; fix committed (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/report-02-read-only-telegram-research-status",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -5290,10 +5290,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/REPORT-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "0735ff55b9820648c7d767caa8a3db5478275f58",
+        "review": "Independent DELTA-PASS at HEAD 0735ff55b9820648c7d767caa8a3db5478275f58 (SHA pin pending at commit); all 4 telegram callbacks gated first-statement, denial via query.answer, chat resolution covers bare queries, sweep confirms 11 inbound handlers gated; suites 25 passed, exit 0; authorized flows unchanged. Delta ses_f1eafe332ffeVW4mWGJORmNKN1; first review ses_f1eba02d9ffelOK7osrXuhJvYl."
       },
       "acceptance_test_mapping": [
         {

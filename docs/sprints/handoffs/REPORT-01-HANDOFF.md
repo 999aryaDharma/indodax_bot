@@ -116,4 +116,22 @@ Full lab suite verification: 134 passed across strategies, features, labels, eva
 - Affected gate: `tests/unit/lab/orchestration tests/unit/lab/reporting tests/unit/lab/verification tests/integration/lab/test_telegram_status.py tests/regression/test_release_candidate.py tests/research/test_rl_reward_contract.py` -> **144 passed**.
 - `git diff --check` passed. Ruff reports existing findings in `summary.py`; no clean lint claim is made.
 - Final independent review: **PASS** at exact remediation SHA `5c587dec44afa33d68381bdfb3d82a9ce768cfcf`; reviewer ran 13 focused tests and identity probes. Owner's 144-test broader gate was not independently rerun.
+
+## Independent reviewer identity — closes the held transition (2026-09-27)
+
+- The remediation section above recorded a PASS but no reviewer session, so the
+  manifest held REPORT-01 at REVIEW (DONE requires an identified independent
+  approver; identity is never fabricated).
+- Fresh read-only independent review: opencode session
+  `ses_f1d0bbf80ffe96pu8qNkXrwGag` at HEAD `0735ff55b9820648c7d767caa8a3db5478275f58`
+  (remediation SHA `5c587dec44afa33d68381bdfb3d82a9ce768cfcf` confirmed ancestor,
+  exit 0). Verdict: **PASS**, no Critical/Important findings.
+- Fresh evidence: `tests/unit/lab/reporting/` 34 passed exit 0 (test_summary.py
+  13 passed); orchestration+verification 86 passed; full affected gate incl.
+  telegram status, release candidate, RL reward = 156 passed exit 0. In-memory
+  probe: byte-identical output under reversed input; EVALUATION_IDENTITY_MISMATCH
+  raises in both entry points; unmeasured run rendered NO_DATA/unranked; module
+  performs no I/O.
+- Minor backlog unchanged (MarkdownV2 escaping owned by REPORT-02, `_md_cell`
+  space substitution, unranked reason granularity, data-quality threshold).
 - Sprint remains REVIEW until coordinator updates the shared manifest and projections after the concurrent manifest edits are resolved.
