@@ -6,7 +6,7 @@ Status: REVIEW
 
 Priority: P0 | Type: safety | Domain: orchestration | Portfolio: CORE
 
-Implementation Owner: UNASSIGNED | Independent Reviewer: UNASSIGNED
+Implementation Owner: Antigravity (initial implementation); Codex /root (remediation) | Independent Reviewer: /root/ready_sprint_explore (PASS on code SHA becc27902590aba816d1f84d7c4e08fcafa79f55; AC4/AC5 pending)
 
 Recommended Branch: `feat/job-02-resource-aware-idle-admission`
 

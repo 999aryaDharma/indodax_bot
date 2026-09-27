@@ -5,11 +5,11 @@ Status: REVIEW
 ## Identity
 - Sprint ID: JOB-02 — Resource-aware idle admission
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/ready_sprint_explore` (PASS for remediation code at exact SHA `becc27902590aba816d1f84d7c4e08fcafa79f55`; AC4/AC5 remain pending)
 - Branch / worktree: `feat/job-02-resource-aware-idle-admission`
 - Base SHA: `33cee17`
 - Code target: `feat(job-02): resource-aware idle admission`
-- Evidence SHA relation: `29b4e570417e9edd7fa5df6ba36c8b1de3d9cb9f`
+- Current remediation SHA: `becc27902590aba816d1f84d7c4e08fcafa79f55` (initial implementation SHA: `29b4e570417e9edd7fa5df6ba36c8b1de3d9cb9f`)
 
 ## Files and contracts
 - Planned files:
@@ -91,10 +91,10 @@ Full lab suite verification: 109 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `resolve_resource_class` returns the first match in the `job_type` heuristic and never reports that it guessed, so a genuinely undeclared job that happens to contain a keyword is indistinguishable from one that declared its class. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `resume_from_checkpoint` validates the checkpoint but does not quarantine or delete it, so every call re-raises on the same corrupt file until an operator removes it. A `*.corrupt` rename on rejection would be a new state machine and is recorded as backlog.
 
-## Current remediation evidence — review pending
+## Current remediation evidence — code review PASS; capacity qualification pending
 
 - Exact code SHA: `becc279` (`fix(job-02): fence leases and reject invalid sensors`).
 - Regression coverage rejects NaN/Infinity sensor readings, keeps a one-second queue lease alive through a 1.2-second step, and requires valid current worker claims for execution/resume.
 - Focused command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/orchestration/test_resources.py -q -p no:cacheprovider` -> **18 passed**.
-- `git diff --check` passed. Independent review of `becc279` is pending; previous CHANGES_REQUESTED findings apply to earlier SHA `9771d4627b01065225537f3e938050fa107c3d50` and are not represented as reviewed on this SHA.
+- `git diff --check` passed. Independent review of `becc279` is PASS for lease renewal/ownership fencing, non-finite sensor rejection, and checkpoint resume. Previous CHANGES_REQUESTED findings applied to earlier SHA `9771d4627b01065225537f3e938050fa107c3d50`.
 - Owner-approved capacity decision: sensor-age, Production deadline-headroom, and disk-reserve limits remain unset until approved host measurements exist; unset required values and unknown path/device mappings fail closed. JOB-02-AC4/AC5 host measurement, mount mapping, and fail-closed integration evidence remain outstanding. Do not qualify workload capacity or mark JOB-02 DONE from the offline suite.
