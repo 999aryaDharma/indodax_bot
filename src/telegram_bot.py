@@ -71,13 +71,28 @@ async def _reject_unauthorized_chat(update: Update) -> bool:
 
     Returns True when access was denied (a denial reply has been sent), False when the
     caller may proceed. Every handler invokes this as its first statement so no status,
-    history, position or report data is ever produced for a stranger.
+    history, position or report data is ever produced for a stranger. Callback-query
+    updates (which carry no ``update.message``) are denied via ``query.answer`` and
+    resolve the chat from ``effective_chat`` first, then the callback message / sender.
     """
     effective_chat = getattr(update, "effective_chat", None)
     chat_id = getattr(effective_chat, "id", None)
+    if chat_id is None:
+        query = getattr(update, "callback_query", None)
+        msg = getattr(query, "message", None) if query is not None else None
+        chat_id = getattr(msg, "chat_id", None)
+        if chat_id is None:
+            from_user = getattr(query, "from_user", None) if query is not None else None
+            chat_id = getattr(from_user, "id", None)
     if _is_chat_authorized(chat_id):
         return False
     logger.warning("Telegram command rejected: unauthorized chat %s", chat_id)
+    query = getattr(update, "callback_query", None)
+    if query is not None:
+        await query.answer(
+            _ACCESS_DENIED_MESSAGE, show_alert=True,
+        )
+        return True
     await update.message.reply_text(
         _ACCESS_DENIED_MESSAGE, parse_mode=ParseMode.MARKDOWN_V2
     )
@@ -545,6 +560,8 @@ async def callback_exec(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Parse callback_data → panggil position_tracker.open_position()
     → kirim konfirmasi dengan real trading plan.
     """
+    if await _reject_unauthorized_chat(update):
+        return
     query = update.callback_query
     observation = await _record_callback_intent(query, "exec", "EXECUTE")
     if observation is None:
@@ -632,6 +649,8 @@ async def callback_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Handler untuk tombol [ ❌ Skip Sinyal Ini ].
     Hapus cooldown pair agar bot bisa kirim sinyal lagi lebih cepat.
     """
+    if await _reject_unauthorized_chat(update):
+        return
     query = update.callback_query
     observation = await _record_callback_intent(query, "skip", "SKIP")
     if observation is None:
@@ -659,11 +678,15 @@ async def callback_skip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def callback_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk tombol loading state (tidak melakukan apa-apa)."""
+    if await _reject_unauthorized_chat(update):
+        return
     await update.callback_query.answer()
 
 
 async def callback_paper(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk tombol Paper Trading — buka simulasi trade."""
+    if await _reject_unauthorized_chat(update):
+        return
     query = update.callback_query
     observation = await _record_callback_intent(query, "paper", "PAPER")
     if observation is None:
