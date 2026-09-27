@@ -16,7 +16,7 @@ def _build_s01_bars(
     n_bars: int = 25,
     breakout: bool = True,
     spread_bps: float | None = 15.0,
-    depth: float | None = 1.0,
+    depth: float | None = 12000000.0,
     pair: str = "btc_idr",
 ) -> pd.DataFrame:
     """Build causal feature frame for S01 with controllable breakout, spread, and depth."""
@@ -72,7 +72,7 @@ def test_s01_01_valid_contract() -> None:
     as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
     spec = load_s01_specification()
 
-    df = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=1.0)
+    df = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=12000000.0)
     frame = create_decision_frame(features=df, as_of=as_of)
 
     intents = s01_decide(frame, spec)
@@ -106,14 +106,15 @@ def test_s01_01_contract_2() -> None:
     as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
     spec = load_s01_specification()
 
-    # Depth is 0.04 (< base_qty 0.1)
-    df = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=0.04)
+    # Depth is quote IDR: 4.4M / 110M IDR per BTC = 0.04 BTC (< base_qty 0.1).
+    df = _build_s01_bars(as_of, breakout=True, spread_bps=15.0, depth=4400000.0)
     frame = create_decision_frame(features=df, as_of=as_of)
 
     intents = s01_decide(frame, spec)
     assert len(intents) == 1
     intent = intents[0]
-    assert intent.desired_qty == Decimal("0.04")
+    assert Decimal("0") < intent.desired_qty <= Decimal("0.04")
+    assert intent.desired_qty * intent.limit_price <= Decimal("4400000")
 
 
 def test_s01_01_contract_3() -> None:
@@ -122,7 +123,7 @@ def test_s01_01_contract_3() -> None:
     spec = load_s01_specification()
 
     # Case A: Missing spread_bps
-    df_no_spread = _build_s01_bars(as_of, breakout=True, spread_bps=None, depth=1.0)
+    df_no_spread = _build_s01_bars(as_of, breakout=True, spread_bps=None, depth=12000000.0)
     frame_a = create_decision_frame(features=df_no_spread, as_of=as_of)
     assert len(s01_decide(frame_a, spec)) == 0
 

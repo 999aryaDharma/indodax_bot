@@ -23,6 +23,7 @@ import sqlite3
 import pytest
 
 from indodax_lab.evaluation.lifecycle import (
+    CandidateFrozenError,
     CandidateLifecycleManager,
     CandidateRecord,
     CandidateStage,
@@ -238,6 +239,11 @@ def test_eval_03_concurrent_double_unseal_opens_the_gate_once(tmp_path: Path) ->
 def test_eval_03_non_finite_metric_is_excluded_from_leaderboard(tmp_path: Path) -> None:
     """EVAL-03-F4: NaN evidence must not be ranked as a neutral or top result."""
     mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    for candidate_id in ("cand_ok_1", "cand_ok_2"):
+        candidate = _candidate(candidate_id)
+        mgr.register_candidate(candidate)
+        _advance_to_validated(mgr, candidate_id)
+        mgr.unseal_gate(candidate_id, "split_v1", authorized_by="reviewer")
 
     board = mgr.compute_leaderboard(
         [
@@ -252,6 +258,64 @@ def test_eval_03_non_finite_metric_is_excluded_from_leaderboard(tmp_path: Path) 
     ranked = [entry.candidate_id for entry in board]
     assert ranked == ["cand_ok_1", "cand_ok_2"]
     assert [entry.rank for entry in board] == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("stage", "gate_opened"),
+    [(CandidateStage.CHAMPION, False), (CandidateStage.IDEA, True)],
+)
+def test_eval_03_registration_cannot_bypass_lifecycle(
+    tmp_path: Path, stage: CandidateStage, gate_opened: bool
+) -> None:
+    mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    cand = _candidate("cand_bypass").model_copy(
+        update={"current_stage": stage, "sealed_gate_opened": gate_opened}
+    )
+
+    with pytest.raises(ValueError, match="CANDIDATE_MUST_START_IDEA_GATE_CLOSED"):
+        mgr.register_candidate(cand)
+
+
+def test_eval_03_leaderboard_requires_registered_exposed_candidate(tmp_path: Path) -> None:
+    mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    exposed = _candidate("cand_exposed")
+    closed = _candidate("cand_closed")
+    mgr.register_candidate(exposed)
+    mgr.register_candidate(closed)
+    _advance_to_validated(mgr, exposed.candidate_id)
+    _advance_to_validated(mgr, closed.candidate_id)
+    mgr.unseal_gate(exposed.candidate_id, "split_v1", authorized_by="reviewer")
+
+    board = mgr.compute_leaderboard(
+        [
+            _run("run_exposed", exposed.candidate_id, 1.0),
+            _run("run_closed", closed.candidate_id, 2.0),
+            _run("run_unregistered", "cand_unregistered", 3.0),
+        ]
+    )
+
+    assert [entry.candidate_id for entry in board] == [exposed.candidate_id]
+
+
+def test_eval_03_config_update_cannot_win_race_with_freeze(tmp_path: Path, monkeypatch) -> None:
+    mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    cand = _candidate("cand_config_race")
+    mgr.register_candidate(cand)
+    original_fetch = mgr._fetch_candidate
+
+    def freeze_after_read(conn, candidate_id):
+        record = original_fetch(conn, candidate_id)
+        conn.execute(
+            "UPDATE candidates SET current_stage = ?, sealed_gate_opened = 1 WHERE candidate_id = ?",
+            (CandidateStage.SEALED_PASS.value, candidate_id),
+        )
+        return record
+
+    monkeypatch.setattr(mgr, "_fetch_candidate", freeze_after_read)
+    with pytest.raises(CandidateFrozenError, match="CONFIG_MUTATION_FORBIDDEN"):
+        mgr.update_config(cand.candidate_id, "cfg_after_freeze")
+
+    assert mgr.get_candidate(cand.candidate_id).config_hash == cand.config_hash
 
 
 # Actor for every line this file contributes to review evidence:

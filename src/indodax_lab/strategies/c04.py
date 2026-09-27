@@ -6,7 +6,7 @@ PIT rank return top-K with liquidity and stable tie break -> versioned LONG/FLAT
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
 from typing import Any
 import pandas as pd
@@ -53,11 +53,22 @@ def c04_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         start_row = window.iloc[0]
         curr_row = window.iloc[-1]
 
-        # Invariant: Future listing date or explicit ineligibility cannot enter rank
-        if "listing_date" in curr_row and pd.notna(curr_row["listing_date"]):
-            listing_dt = pd.to_datetime(curr_row["listing_date"], utc=True)
-            if listing_dt > frame.as_of:
-                continue
+        # Canonical universe data uses listed_at; retain listing_date for legacy frames.
+        listing_column = next(
+            (column for column in ("listed_at", "listing_date") if column in curr_row.index),
+            None,
+        )
+        listing_value = curr_row.get(listing_column) if listing_column else None
+        listing_dt = (
+            pd.to_datetime(listing_value, utc=True, errors="coerce")
+            if listing_column is not None and listing_value is not None and not pd.isna(listing_value)
+            else None
+        )
+        invalid_listing_time = listing_dt is not None and (
+            pd.isna(listing_dt) or listing_dt > frame.as_of
+        )
+        if invalid_listing_time:
+            continue
 
         if "eligible" in curr_row and not curr_row["eligible"]:
             continue
@@ -110,24 +121,39 @@ def c04_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         return []
 
     # C04-01-AC3: Cash reserved once on rotation
-    # Total deployed across the rotation is bounded by (1.0 - cash_reserve_pct) * base_qty
-    # Each slot gets an equal fraction of the deployable pool based on top_k
+    # Preserve the quantity cap and reserve the configured quote cash once per rotation.
     deployable_qty = base_qty * (Decimal("1") - cash_reserve_pct)
     per_slot_qty = deployable_qty / Decimal(str(top_k))
-    per_slot_qty_rounded = Decimal(str(round(per_slot_qty, 4)))
+    cash_per_slot = None
+    if frame.available_cash_idr is not None:
+        cash_per_slot = (
+            frame.available_cash_idr
+            * (Decimal("1") - cash_reserve_pct)
+            / Decimal(str(top_k))
+        )
 
     intents: list[SignalIntent] = []
     for cand in selected:
         pair = cand["pair"]
         curr_close = cand["curr_close"]
         stop_loss = cand["stop_loss"]
+        desired_qty = per_slot_qty
+        if cash_per_slot is not None:
+            desired_qty = min(
+                desired_qty,
+                cash_per_slot / Decimal(str(curr_close)),
+            ).quantize(Decimal("0.0001"), rounding=ROUND_DOWN)
+        else:
+            desired_qty = Decimal(str(round(desired_qty, 4)))
+        if desired_qty <= 0:
+            continue
 
         intent = SignalIntent(
             intent_id=f"c04_{pair}_{int(frame.as_of.timestamp())}",
             decision_ts=frame.as_of,
             pair=pair,
             side=OrderSide.BUY,
-            desired_qty=per_slot_qty_rounded,
+            desired_qty=desired_qty,
             limit_price=Decimal(str(curr_close)),
             stop_loss=Decimal(str(stop_loss)) if stop_loss > 0 else None,
             strategy_id=spec.strategy_id,

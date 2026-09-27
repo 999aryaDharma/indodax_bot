@@ -19,6 +19,7 @@ def _build_c04_pair_bars(
     volume: float = 500.0,
     eligible: bool = True,
     listing_date: datetime | None = None,
+    listed_at: datetime | None = None,
 ) -> pd.DataFrame:
     """Build causal feature frame for a single pair with specified return over lookback."""
     start_dt = as_of - timedelta(hours=n_bars - 1)
@@ -45,6 +46,8 @@ def _build_c04_pair_bars(
         }
         if listing_date is not None:
             row["listing_date"] = listing_date
+        if listed_at is not None:
+            row["listed_at"] = listed_at
         rows.append(row)
 
     df = pd.DataFrame(rows)
@@ -252,3 +255,46 @@ def test_c04_listing_date_test_isolation() -> None:
     selected_pairs2 = [intent.pair for intent in intents2]
     assert "ineligible_idr" not in selected_pairs2, f"Ineligible must be rejected even with valid listing, got: {selected_pairs2}"
     assert "btc_idr" in selected_pairs2
+
+
+def test_c04_uses_canonical_future_listed_at() -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c04_specification()
+    btc_df = _build_c04_pair_bars(as_of, "btc_idr", return_pct=0.05)
+    future_df = _build_c04_pair_bars(
+        as_of,
+        "future_idr",
+        return_pct=0.50,
+        listed_at=as_of + timedelta(days=1),
+        eligible=True,
+    )
+    frame = create_decision_frame(features=pd.concat([btc_df, future_df], ignore_index=True), as_of=as_of)
+
+    intents = c04_decide(frame, spec)
+
+    assert "future_idr" not in [intent.pair for intent in intents]
+
+
+def test_c04_caps_quote_cash_across_different_pair_prices() -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    spec = load_c04_specification()
+    btc_df = _build_c04_pair_bars(as_of, "btc_idr", return_pct=0.05)
+    eth_df = _build_c04_pair_bars(as_of, "eth_idr", return_pct=0.10)
+    # Synthetic but heterogeneous prices exercise quote-cash sizing per pair.
+    eth_df.loc[:, "close"] *= 2
+    eth_df.loc[:, "high"] *= 2
+    eth_df.loc[:, "low"] *= 2
+    frame = create_decision_frame(
+        features=pd.concat([btc_df, eth_df], ignore_index=True),
+        as_of=as_of,
+        available_cash_idr=Decimal("10000"),
+    )
+
+    intents = c04_decide(frame, spec)
+
+    total_notional = sum(
+        (intent.desired_qty * intent.limit_price for intent in intents), start=Decimal("0")
+    )
+    assert len(intents) == 2
+    assert total_notional <= Decimal("8000")
+    assert all(intent.desired_qty > 0 for intent in intents)

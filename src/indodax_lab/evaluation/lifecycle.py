@@ -250,6 +250,8 @@ class CandidateLifecycleManager:
 
     def register_candidate(self, candidate: CandidateRecord) -> CandidateRecord:
         """Register a new candidate in the lifecycle registry."""
+        if candidate.current_stage != CandidateStage.IDEA or candidate.sealed_gate_opened:
+            raise ValueError("CANDIDATE_MUST_START_IDEA_GATE_CLOSED")
         with self._connect() as conn:
             conn.execute(
                 """
@@ -443,23 +445,33 @@ class CandidateLifecycleManager:
 
         Sealed or validated candidates cannot be mutated in place.
         """
-        candidate = self.get_candidate(candidate_id)
         frozen_stages = {
             CandidateStage.VALIDATED,
             CandidateStage.SEALED_PASS,
             CandidateStage.SHADOW,
             CandidateStage.CHAMPION,
         }
-        if candidate.current_stage in frozen_stages or candidate.sealed_gate_opened:
-            raise CandidateFrozenError(
-                f"CONFIG_MUTATION_FORBIDDEN: candidate {candidate_id} is at stage {candidate.current_stage}; spawn new challenger"
-            )
+        with self._atomic() as conn:
+            candidate = self._fetch_candidate(conn, candidate_id)
+            if candidate.current_stage in frozen_stages or candidate.sealed_gate_opened:
+                raise CandidateFrozenError(
+                    f"CONFIG_MUTATION_FORBIDDEN: candidate {candidate_id} is at stage {candidate.current_stage}; spawn new challenger"
+                )
 
-        with self._connect() as conn:
-            conn.execute(
-                "UPDATE candidates SET config_hash = ?, updated_at = ? WHERE candidate_id = ?",
-                (new_config_hash, datetime.now(UTC).isoformat(), candidate_id),
+            cur = conn.execute(
+                """UPDATE candidates SET config_hash = ?, updated_at = ?
+                   WHERE candidate_id = ? AND current_stage = ? AND sealed_gate_opened = 0""",
+                (
+                    new_config_hash,
+                    datetime.now(UTC).isoformat(),
+                    candidate_id,
+                    candidate.current_stage.value,
+                ),
             )
+            if cur.rowcount != 1:
+                raise CandidateFrozenError(
+                    f"CONFIG_MUTATION_FORBIDDEN: candidate {candidate_id} changed lifecycle state; spawn new challenger"
+                )
 
     def fork_challenger(
         self,
@@ -532,6 +544,15 @@ class CandidateLifecycleManager:
             except (TypeError, ValueError):
                 continue
             if not math.isfinite(metric_value):
+                continue
+            try:
+                candidate = self.get_candidate(run.candidate_id)
+            except CandidateNotFoundError:
+                continue
+            if (
+                candidate.candidate_version != run.candidate_version
+                or not candidate.sealed_gate_opened
+            ):
                 continue
             valid_runs.append((metric_value, run))
 

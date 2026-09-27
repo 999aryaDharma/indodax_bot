@@ -6,7 +6,7 @@ Breakout with spread/depth gate relative to simulated size -> versioned LONG/FLA
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from pathlib import Path
 import pandas as pd
 
@@ -79,6 +79,8 @@ def s01_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
             continue
 
         curr_close = float(curr_row["close"])
+        if curr_close <= 0:
+            continue
 
         # Previous N completed bars excluding current decision bar
         prev_window = p_df.iloc[-lookback_bars - 1 : -1]
@@ -92,11 +94,11 @@ def s01_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
         if curr_close <= prev_n_high or curr_vol < (avg_vol * volume_mult):
             continue
 
-        # S01-01-AC2: Depth restricts size
-        if avail_depth < float(base_qty):
-            desired_qty = Decimal(str(round(avail_depth, 4)))
-        else:
-            desired_qty = base_qty
+        # Universe depth is quote currency; convert to base quantity at decision price.
+        depth_base_qty = Decimal(str(avail_depth)) / Decimal(str(curr_close))
+        desired_qty = min(base_qty, depth_base_qty).quantize(
+            Decimal("0.0001"), rounding=ROUND_DOWN
+        )
 
         if desired_qty < Decimal(str(min_depth)) or desired_qty <= Decimal("0"):
             continue
