@@ -39,6 +39,12 @@ C03-01 handoff, REPORT-01 spec, test_lifecycle_fail_closed.py).
 - [x] ML-02 PASS (7/7) — handoff committed
 - [x] ML-03 PASS (28/28) — handoff record appended, committing now
 - [ ] M01-01 (deps ML-03) → M02-01 (deps ML-03+M01-01) → ML-04 (deps M01+M02+EVAL-03)
+- [x] M01-01 PASS (7/7) — committed | M02-01 PASS (8/8) — committed |
+  ML-04 PASS (22/22) — committed | M03-01 PASS (8/8) — committed |
+  M04-01 PASS (13/13) — committed
+- [x] M05-01 BLOCKING found live (predict .get fabrication) → TDD fix RED→GREEN
+  (7/7) → delta ses_f1ed8da6 DELTA-PASS → fix+record committed
+- [ ] SHADOW-01 (deps EVAL-03+ML-04+DATA-05, substance PASS/PASS/DONE) — next
 - [ ] Wave-2 models M03-01/M04-01/M05-01 (deps ML-04) as substance allows
 - [ ] Stop conditions: BLOCKING finding → fix cycle (TDD) or hand to owner;
   main-agent path collision → skip + record; missing dep substance → stop lane.

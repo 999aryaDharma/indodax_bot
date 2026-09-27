@@ -55,3 +55,27 @@ Combined suite verification (104 passed across backtest, risk, execution, ledger
 - Deviations: None.
 - Unresolved issues / blockers: None for C10-01.
 - Next unlocked consumers: QA-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/strategies/c10.py (109 lines) and
+  tests (7 tests). Fresh run
+  `python -m pytest tests/unit/lab/strategies/test_c10.py -v`: 7 passed,
+  0 failed, exit 0 (AC0–AC3 + take-profit preservation + frozen versions +
+  stale-bar abstain).
+- AC0 holds (trend/reversion delegation → comparable C10 intent); AC1 holds
+  (unknown/missing regime → cash); AC2 holds (future regime filtered by frame);
+  AC3 holds (member id+version in intent_id; stop/take preserved).
+- Notably verified ON TOP of the fixed C07 allowlist: reversion path still
+  enters on sideways/oversold and preserves take_profit — the C07 fix does not
+  break the ensemble.
+- MINOR (backlog, non-blocking): C10 reversion_regimes ("range") vs C07
+  sideways_regimes ("ranging") vocab drift — "range" routes to C07 which
+  abstains (fail-closed, but align vocab); trend/reversion _version config
+  params are dead (overwritten by loaded specs); intent_id second-precision
+  collision theme; member YAML specs reloaded from disk on every decide call
+  (cache them).
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
