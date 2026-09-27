@@ -96,6 +96,7 @@ class SearchSpace(BaseModel):
                 f"objective. Search objectives must exactly match one of "
                 f"{sorted(ALLOWED_TARGET_OBJECTIVES)}; sealed/outer/test lookalikes are rejected."
             )
+        data["target_objective"] = obj
         super().__init__(**data)
 
     def space_hash(self) -> str:

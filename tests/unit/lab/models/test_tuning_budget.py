@@ -536,6 +536,25 @@ def test_ml_03_winning_recipe_respects_objective_direction_and_zero(
     assert search.get_winning_recipe().trial_id == winner
 
 
+def test_ml_03_winning_recipe_uses_canonicalized_objective() -> None:
+    space = SearchSpace(
+        space_id="sp_normalized_direction",
+        version="1.0.0",
+        params={},
+        target_objective=" INNER_VAL_LOG_LOSS ",
+    )
+    search = BoundedTrialSearch(space)
+    for trial_id, score in (("low", 0.1), ("high", 0.9)):
+        search.register_trial(
+            trial_id=trial_id,
+            params={},
+            status=TrialStatus.SUCCESS,
+            objective_score=score,
+        )
+
+    assert search.get_winning_recipe().trial_id == "low"
+
+
 def test_ml_03_revision_history_rejects_checkpoint_counter_downgrade() -> None:
     original = SearchSpace(
         space_id="sp_revision_original",
