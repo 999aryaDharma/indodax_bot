@@ -71,3 +71,22 @@ Full lab suite verification: 183 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_m05_meta_label.py -p no:cacheprovider -q` -> `6 passed` (exit 0). A companion test pins the homogeneous case still trains and still publishes all three sorted feature names. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- First review finding (IMPORTANT, live-proven): predict_take_proba used
+  trade.features.get(f, 0.0), scoring schema-mismatched trades on fabricated
+  data with no error (probe returned [1.]), while train already rejected such
+  schema. Fix cycle (TDD): new test_m05_01_predict_rejects_schema_mismatched_trades
+  demonstrated RED (DID NOT RAISE), then predict validates every trade against
+  the fitted bundle schema (InconsistentFeatureSchemaError with missing=/
+  unexpected= detail) and indexes directly — GREEN 7/7 exit 0.
+- Delta re-review ses_f1ed8da6bffeP3jll04dkXc89D: DELTA-PASS. Fix confirmed at
+  m05_meta_label.py:237-249; no .get fabrication remains on any inference path;
+  AC0–AC3 all hold.
+- Other ACs verified: AC0 proba in [0,1]; AC1 manual rejected; AC2 overlap
+  purged; AC3 base-vs-filtered on identical candidates.
+- No Critical/Important findings remaining.
+- Fix implemented in working tree (uncommitted); reviewer roles separated
+  (implementer ≠ delta reviewer). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.

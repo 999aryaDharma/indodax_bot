@@ -240,3 +240,30 @@ def test_m05_01_consistent_trade_feature_schema_is_accepted() -> None:
     trainer = M05MetaLabelTrainer(config=config)
     bundle = trainer.train(_make_base_trades(n=40, seed=42))
     assert bundle.feature_names == ["breakout_strength", "volatility", "volume_z"]
+
+
+def test_m05_01_predict_rejects_schema_mismatched_trades() -> None:
+    """M05-01 REGRESSION: predict must not silently fabricate 0.0 for missing keys.
+
+    The train-side schema guard was fixed, but predict_take_proba still used
+    ``trade.features.get(f, 0.0)`` — a trade missing a fitted key was scored on
+    fabricated data with no error. Live probe returned [1.] for such a trade.
+    """
+    config = M05Config(model_id="M05", version="1.0.0", take_threshold=0.55, n_estimators=10, seed=42)
+    trainer = M05MetaLabelTrainer(config=config)
+    trainer.train(_make_base_trades(n=40, seed=42))
+
+    short = _make_base_trades(n=5, seed=7)[0].model_copy(
+        update={"trade_id": "short", "features": {"volatility": 0.02, "volume_z": 0.1}}
+    )
+    with pytest.raises(InconsistentFeatureSchemaError, match="INCONSISTENT_FEATURE_SCHEMA"):
+        trainer.predict_take_proba([short])
+
+    extra = _make_base_trades(n=5, seed=7)[0].model_copy(
+        update={
+            "trade_id": "extra",
+            "features": {**_make_base_trades(n=5, seed=7)[0].features, "insider_flow": 1.0},
+        }
+    )
+    with pytest.raises(InconsistentFeatureSchemaError, match="INCONSISTENT_FEATURE_SCHEMA"):
+        trainer.predict_take_proba([extra])

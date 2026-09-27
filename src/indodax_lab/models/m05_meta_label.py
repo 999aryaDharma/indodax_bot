@@ -231,7 +231,22 @@ class M05MetaLabelTrainer:
         if not trades:
             return np.empty((0,), dtype=np.float64)
 
-        X_rows = [[trade.features.get(f, 0.0) for f in self._bundle.feature_names] for trade in trades]
+        # Same fail-closed schema contract as train(): a trade missing a fitted
+        # key (or carrying an unexpected one) must be rejected, never scored on
+        # fabricated 0.0 values.
+        expected_keys = set(self._bundle.feature_names)
+        for trade in trades:
+            trade_keys = set(trade.features.keys())
+            if trade_keys != expected_keys:
+                missing = sorted(expected_keys - trade_keys)
+                unexpected = sorted(trade_keys - expected_keys)
+                raise InconsistentFeatureSchemaError(
+                    f"INCONSISTENT_FEATURE_SCHEMA: trade '{trade.trade_id}' feature keys differ from "
+                    f"the fitted schema {self._bundle.feature_names}. missing={missing} "
+                    f"unexpected={unexpected}. Every candidate must expose the same feature keys."
+                )
+
+        X_rows = [[trade.features[f] for f in self._bundle.feature_names] for trade in trades]
         X = np.array(X_rows, dtype=np.float64)
 
         proba = self._clf.predict_proba(X)
