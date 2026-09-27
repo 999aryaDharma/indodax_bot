@@ -88,3 +88,24 @@ Full lab suite verification: 179 passed across strategies, features, labels, eva
 - Diff check on source/tests/handoff — passed.
 - Delta review: PASS at exact code SHA `0896db0c28338b711fb82d6cd118c56e9784c061`; reviewer confirmed coverage shape/finiteness guards and the fitted-state/training-data identity fix, with no new Critical/Important findings. Reviewer independently ran the focused M04 suite: 13 passed. The broader model suite was owner-run only.
 - M04-01 remains REVIEW because its ML-04 dependency remains REVIEW; this PASS closes only the frozen M04 correction findings.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS (confirming). Full read of src/indodax_lab/models/m04_quantile_risk.py
+  (306 lines) and tests (9 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_m04_quantile_risk.py -q`: 13 passed,
+  0 failed, exit 0 (AC0–AC3 + invalid-label/bundle-identity/leakage-family
+  regressions + not-fitted guard).
+- AC0 holds (dual quantile models → bounded intervals); AC1 holds (config
+  crossing rejected; prediction bounds monotonic by construction); AC2 holds
+  (nominal vs actual coverage recorded; malformed labels rejected); AC3 holds
+  (substring target-family guard; 8 derived spellings rejected; legitimate
+  risk features accepted).
+- Prior delta PASS at 0896db0 (13 independently rerun) still stands; this pass
+  re-verified on current tree with no code changes since.
+- MINOR (backlog, non-blocking): missing train/predict columns raise raw
+  pandas KeyError instead of a typed error (recurring theme across M01/M02).
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
