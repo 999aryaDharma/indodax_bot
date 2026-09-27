@@ -108,3 +108,13 @@ Full lab suite verification: 139 passed across strategies, features, labels, eva
   contract change. Recommended: file a Change Request; do not bolt a string
   assertion onto calibrator.fit and call it proof.
 - Files: calibration.py, execution_mapper.py, test_execution_mapper.py.
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1e23a854ffewYoa5xSwvOmjDB, commit 339cfe3).
+  18 passed (mapper file) + 258 models suite, exit 0. Finite gate fires at
+  construction; guards ordered shape→finite→binary; diverged fit raises
+  (ValueError subclass, existing callers safe); soft-fail policy documented +
+  pinned; M01/M02/D02 callers verified compatible; finding 4 correctly
+  unpatched (CR). Residuals minor: duplicated assert line; new error class not
+  re-exported in models/__init__.py.

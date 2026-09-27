@@ -117,3 +117,14 @@ Full lab suite verification: 121 passed across strategies, features, labels, eva
 - No new findings against src/indodax_lab/evaluation/lifecycle.py (atomic transitions, VALIDATED predecessor gate, single-open gate, INVALID_RUN exclusion all hold).
 - First review: ses_f201210c9ffeW8lv1BTI265hiX. Verification: ses_f1f5b2f64ffeK6bxrjI9CRgTDJ.
 - Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
+
+## Checkout sync (2026-09-27, sole owner lane)
+
+- Proven live: committed tree failed 2 fixtures (non-finite-metric leaderboard,
+  registered-exposed leaderboard) for missing dataset_split_id; dirty fixtures
+  fixed both (14/14). Change kept and committed here.
+- Ported timestamp remediation from fix/eval03-transition-utc-atomic (fd4b68f):
+  naive as_of now rejected via _ensure_utc BEFORE any state/audit write in both
+  transition_stage and unseal_gate (live probe: naive was persisted, surfacing
+  only later as read-back ValidationError). 2 regression tests added.
+- Combined evaluation gate: 126 passed, exit 0.

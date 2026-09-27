@@ -51,8 +51,13 @@ def _advance_to_validated(mgr: CandidateLifecycleManager, candidate_id: str) -> 
     mgr.transition_stage(candidate_id, CandidateStage.VALIDATED)
 
 
-def _run(run_id: str, candidate_id: str, sharpe: float) -> ExperimentRunRecord:
-    return ExperimentRunRecord(
+def _run(
+    run_id: str,
+    candidate_id: str,
+    sharpe: float,
+    dataset_split_id: str | None = None,
+) -> ExperimentRunRecord:
+    values = dict(
         run_id=run_id,
         candidate_id=candidate_id,
         candidate_version="1.0.0",
@@ -70,6 +75,9 @@ def _run(run_id: str, candidate_id: str, sharpe: float) -> ExperimentRunRecord:
         created_at=BASE_TS,
         promotable=True,
     )
+    if dataset_split_id is not None:
+        values["dataset_split_id"] = dataset_split_id
+    return ExperimentRunRecord(**values)
 
 
 def test_eval_03_unseal_from_idea_stage_is_refused(tmp_path: Path) -> None:
@@ -129,6 +137,50 @@ def test_eval_03_unseal_from_validated_still_succeeds(tmp_path: Path) -> None:
     audit = mgr.unseal_gate(cand.candidate_id, "split_v1", authorized_by="reviewer")
     assert audit.candidate_id == cand.candidate_id
     assert mgr.get_candidate(cand.candidate_id).sealed_gate_opened is True
+
+
+def test_eval_03_naive_transition_time_is_rejected_before_state_or_audit_write(
+    tmp_path: Path,
+) -> None:
+    mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    cand = _candidate("cand_naive_transition_time")
+    mgr.register_candidate(cand)
+
+    with pytest.raises(ValueError, match="UTC_TIMEZONE_AWARE_REQUIRED:as_of"):
+        mgr.transition_stage(
+            cand.candidate_id,
+            CandidateStage.IMPLEMENTED,
+            as_of=datetime(2025, 1, 1),
+        )
+
+    assert mgr.get_candidate(cand.candidate_id).current_stage == CandidateStage.IDEA
+    assert mgr.get_transition_history(cand.candidate_id) == []
+
+
+def test_eval_03_naive_unseal_time_is_rejected_without_opening_gate_or_audit(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "lifecycle.db"
+    mgr = CandidateLifecycleManager(db_path)
+    cand = _candidate("cand_naive_unseal_time")
+    mgr.register_candidate(cand)
+    _advance_to_validated(mgr, cand.candidate_id)
+
+    with pytest.raises(ValueError, match="UTC_TIMEZONE_AWARE_REQUIRED:as_of"):
+        mgr.unseal_gate(
+            cand.candidate_id,
+            "split_v1",
+            authorized_by="reviewer",
+            as_of=datetime(2025, 1, 1),
+        )
+
+    assert mgr.get_candidate(cand.candidate_id).sealed_gate_opened is False
+    with sqlite3.connect(str(db_path)) as conn:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM exposure_audits WHERE candidate_id = ?",
+            (cand.candidate_id,),
+        ).fetchone()[0]
+    assert count == 0
 
 
 _FAULT_STATE: dict[str, object] = {"armed": False, "needle": ""}
@@ -249,8 +301,8 @@ def test_eval_03_non_finite_metric_is_excluded_from_leaderboard(tmp_path: Path) 
         [
             _run("run_nan", "cand_nan", float("nan")),
             _run("run_inf", "cand_inf", float("inf")),
-            _run("run_ok_1", "cand_ok_1", 1.8),
-            _run("run_ok_2", "cand_ok_2", 1.2),
+            _run("run_ok_1", "cand_ok_1", 1.8, "split_v1"),
+            _run("run_ok_2", "cand_ok_2", 1.2, "split_v1"),
         ],
         sort_metric="sharpe_ratio",
     )
@@ -288,13 +340,15 @@ def test_eval_03_leaderboard_requires_registered_exposed_candidate(tmp_path: Pat
 
     board = mgr.compute_leaderboard(
         [
-            _run("run_exposed", exposed.candidate_id, 1.0),
-            _run("run_config_mismatch", exposed.candidate_id, 4.0).model_copy(
+            _run("run_exposed", exposed.candidate_id, 1.0, "split_v1"),
+            _run("run_config_mismatch", exposed.candidate_id, 4.0, "split_v1").model_copy(
                 update={"config_hash": "different_config"}
             ),
-            _run("run_before_exposure", exposed.candidate_id, 5.0).model_copy(
+            _run("run_before_exposure", exposed.candidate_id, 5.0, "split_v1").model_copy(
                 update={"created_at": BASE_TS - timedelta(seconds=1)}
             ),
+            _run("run_wrong_split", exposed.candidate_id, 6.0, "other_split"),
+            _run("run_no_split", exposed.candidate_id, 7.0),
             _run("run_closed", closed.candidate_id, 2.0),
             _run("run_unregistered", "cand_unregistered", 3.0),
         ]
