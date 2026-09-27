@@ -15,7 +15,11 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 from indodax_lab.models.dl.checkpoint import require_torch
-from indodax_lab.models.lob.dataset import BookSnapshot
+from indodax_lab.models.lob.dataset import (
+    BookSnapshot,
+    LOBDatasetEligibilityGate,
+    SessionGapBrokenWindowError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -247,17 +251,62 @@ class DeepLOBModel:
 
 
 class DeepLOBTrainer:
-    """Trainer and validator for DeepLOB baseline."""
+    """Trainer and validator for DeepLOB baseline.
+
+    Mandatory call contract: every train and predict path MUST route book
+    snapshots through this trainer first — either by calling
+    :meth:`validate_unbroken_sequence` directly or via the
+    :meth:`prepare_training_windows` / :meth:`prepare_predict_windows`
+    gateways below. Any pair/session crossing, non-chronological timestamp,
+    non-monotonic or gapped sequence_id, or time gap above
+    ``max_gap_seconds`` raises :class:`GappedBookBlockedError` fail-closed.
+    """
 
     def __init__(self, config: DeepLOBConfig) -> None:
         self.config = config
 
     def validate_unbroken_sequence(self, snapshots: list[BookSnapshot]) -> None:
-        """Validate that book snapshots form an unbroken sequence without gaps."""
-        for i in range(1, len(snapshots)):
-            delta = (snapshots[i].timestamp - snapshots[i - 1].timestamp).total_seconds()
-            if delta > self.config.max_gap_seconds:
-                raise GappedBookBlockedError(
-                    f"GAPPED_BOOK_BLOCKED: Sequence gap of {delta:.1f}s between index {i-1} and {i} "
-                    f"exceeds allowable max_gap_seconds={self.config.max_gap_seconds}"
-                )
+        """Validate that book snapshots form an unbroken sequence without gaps.
+
+        Delegates to the LOB-01 ``LOBDatasetEligibilityGate`` boundary and
+        sequence checks so DeepLOB enforces the same fail-closed semantics,
+        re-raising every rejection as :class:`GappedBookBlockedError`.
+        """
+        gate = LOBDatasetEligibilityGate(max_gap_seconds=self.config.max_gap_seconds)
+        try:
+            gate.validate_contiguous_window(snapshots)
+        except (SessionGapBrokenWindowError, ValueError) as exc:
+            raise GappedBookBlockedError(f"GAPPED_BOOK_BLOCKED: {exc}") from exc
+
+    def prepare_training_windows(
+        self,
+        snapshots: list[BookSnapshot],
+        window_len: int | None = None,
+        stride: int = 1,
+    ) -> list[list[BookSnapshot]]:
+        """Gate training inputs: validate the sequence, then slice windows."""
+        return self._gated_windows(snapshots, window_len=window_len, stride=stride)
+
+    def prepare_predict_windows(
+        self,
+        snapshots: list[BookSnapshot],
+        window_len: int | None = None,
+        stride: int = 1,
+    ) -> list[list[BookSnapshot]]:
+        """Gate inference inputs: validate the sequence, then slice windows."""
+        return self._gated_windows(snapshots, window_len=window_len, stride=stride)
+
+    def _gated_windows(
+        self,
+        snapshots: list[BookSnapshot],
+        window_len: int | None,
+        stride: int,
+    ) -> list[list[BookSnapshot]]:
+        """Shared wired path: fail-closed validation before any window use."""
+        self.validate_unbroken_sequence(snapshots)
+        gate = LOBDatasetEligibilityGate(max_gap_seconds=self.config.max_gap_seconds)
+        return gate.segment_continuous_windows(
+            snapshots,
+            window_len=window_len if window_len is not None else self.config.lookback_len,
+            stride=stride,
+        )
