@@ -348,8 +348,131 @@ def test_ml_02_intent_id_is_deterministic_within_process_and_keeps_shape() -> No
     assert len(intent_id.rsplit("_", 1)[1]) == 5
     assert intent_id.rsplit("_", 1)[1].isdigit()
 
+    assert intent_id.rsplit("_", 1)[1].isdigit()
+
     # A materially different decision must not collide with the first one.
     other = mapper.evaluate_forecast(_payload(0.0037))
     assert other.signal_intent is not None
     assert other.signal_intent.intent_id != intent_id
+
+
+# ---------------------------------------------------------------------------
+# ML-02 fix cycle: non-finite forecast values must never become intents
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad_value", [float("inf"), float("-inf"), float("nan")])
+@pytest.mark.parametrize("kind", [ForecastKind.NET_RETURN, ForecastKind.GROSS_RETURN])
+def test_ml_02_nonfinite_net_gross_forecast_is_rejected(
+    bad_value: float, kind: ForecastKind
+) -> None:
+    """CRITICAL: +inf NET/GROSS forecast produced a SignalIntent (infinite edge).
+
+    Non-finite model output is corrupt data, not a strong signal. It must be
+    refused at the payload boundary before any edge comparison.
+    """
+    with pytest.raises(ValueError, match="FINITE_VALUE_REQUIRED"):
+        ForecastPayload(
+            kind=kind,
+            value=bad_value,
+            pair="BTC_IDR",
+            decision_ts=datetime(2025, 6, 1, 12, 0, tzinfo=UTC),
+            desired_qty=Decimal("0.05"),
+        )
+
+
+# ---------------------------------------------------------------------------
+# ML-02 fix cycle: calibrator input validation
+# ---------------------------------------------------------------------------
+
+
+def _calibrator() -> HeldOutCalibrator:
+    return HeldOutCalibrator(min_calibration_samples=50, min_positives=10)
+
+
+def _balanced_labels(n: int = 100, seed: int = 7) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    return (rng.random(n) > 0.5).astype(int)
+
+
+def test_ml_02_calibrator_rejects_non_binary_labels() -> None:
+    """Labels outside {0, 1} must be refused — a third class silently warps targets."""
+    cal = _calibrator()
+    scores = np.random.default_rng(7).normal(0.0, 1.0, size=100)
+    bad_labels = np.array([0] * 50 + [2] * 50)
+    with pytest.raises(ValueError, match="CALIBRATION_LABELS_MUST_BE_BINARY"):
+        cal.fit(scores, bad_labels, segment_type="inner_heldout")
+
+
+def test_ml_02_calibrator_rejects_non_finite_inputs() -> None:
+    """Non-finite scores or labels must be refused before optimization."""
+    cal = _calibrator()
+    labels = _balanced_labels()
+    scores = np.random.default_rng(7).normal(0.0, 1.0, size=100)
+
+    bad_scores = scores.copy()
+    bad_scores[0] = np.inf
+    with pytest.raises(ValueError, match="CALIBRATION_INPUTS_MUST_BE_FINITE"):
+        cal.fit(bad_scores, labels, segment_type="inner_heldout")
+
+    bad_labels = labels.astype(float)
+    bad_labels[1] = np.nan
+    with pytest.raises(ValueError, match="CALIBRATION_INPUTS_MUST_BE_FINITE"):
+        cal.fit(scores, bad_labels, segment_type="inner_heldout")
+
+
+def test_ml_02_calibrator_rejects_non_1d_inputs() -> None:
+    """2D score/label arrays must be refused — silent flattening hides shape bugs."""
+    cal = _calibrator()
+    scores = np.random.default_rng(7).normal(0.0, 1.0, size=(100, 1))
+    labels = _balanced_labels().reshape(100, 1)
+    with pytest.raises(ValueError, match="CALIBRATION_INPUTS_MUST_BE_1D"):
+        cal.fit(scores, labels, segment_type="inner_heldout")
+
+
+def test_ml_02_calibrator_failed_optimization_is_not_published(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A diverged optimizer run must raise, never publish an artifact."""
+    import indodax_lab.models.calibration as calibration_module
+
+    class _DivergedResult:
+        success = False
+        fun = float("nan")
+        x = np.array([np.nan, np.nan])
+
+    monkeypatch.setattr(
+        calibration_module, "minimize", lambda *args, **kwargs: _DivergedResult()
+    )
+    cal = _calibrator()
+    scores = np.random.default_rng(7).normal(0.0, 1.0, size=100)
+    with pytest.raises(ValueError, match="CALIBRATION_OPTIMIZATION_FAILED"):
+        cal.fit(scores, _balanced_labels(), segment_type="inner_heldout")
+
+
+def test_ml_02_calibrator_soft_non_convergence_with_finite_fit_still_publishes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """success=False with a finite usable fit publishes (iteration-limit stop).
+
+    Observed with XGBoost margin inputs on some scipy builds: Nelder-Mead
+    reports non-convergence while returning finite parameters with finite loss.
+    The gate targets unusable (non-finite) results, not the flag alone, so
+    historical legitimate fits keep working.
+    """
+    import indodax_lab.models.calibration as calibration_module
+
+    class _SoftResult:
+        success = False
+        fun = 48.5
+        x = np.array([1.0, 0.0])
+
+    monkeypatch.setattr(
+        calibration_module, "minimize", lambda *args, **kwargs: _SoftResult()
+    )
+    cal = _calibrator()
+    scores = np.random.default_rng(7).normal(0.0, 1.0, size=100)
+    artifact = cal.fit(scores, _balanced_labels(), segment_type="inner_heldout")
+    assert artifact.a == 1.0
+    assert artifact.b == 0.0
 

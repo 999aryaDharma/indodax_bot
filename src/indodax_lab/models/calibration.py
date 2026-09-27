@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Sequence
+import math
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 from scipy.optimize import minimize
@@ -20,6 +21,10 @@ class CalibrationSegmentError(ValueError):
 
 class InsufficientCalibrationDataError(ValueError):
     """Raised when the calibration dataset is too small or has insufficient class counts."""
+
+
+class CalibrationOptimizationError(ValueError):
+    """Raised when the Platt-scaling optimizer fails to converge."""
 
 
 class NotFittedError(RuntimeError):
@@ -105,6 +110,22 @@ class HeldOutCalibrator:
         scores_arr = np.asarray(heldout_scores, dtype=np.float64)
         labels_arr = np.asarray(heldout_labels, dtype=np.float64)
 
+        if scores_arr.ndim != 1 or labels_arr.ndim != 1:
+            raise ValueError(
+                "CALIBRATION_INPUTS_MUST_BE_1D: scores and labels must be "
+                f"one-dimensional, got shapes {scores_arr.shape} and {labels_arr.shape}."
+            )
+        if not np.isfinite(scores_arr).all() or not np.isfinite(labels_arr).all():
+            raise ValueError(
+                "CALIBRATION_INPUTS_MUST_BE_FINITE: scores and labels must contain "
+                "only finite values; NaN or infinite entries are refused."
+            )
+        if not set(np.unique(labels_arr).tolist()).issubset({0.0, 1.0}):
+            raise ValueError(
+                "CALIBRATION_LABELS_MUST_BE_BINARY: calibration labels must be "
+                "0/1 only; a third class would silently warp the Platt targets."
+            )
+
         if len(scores_arr) != len(labels_arr):
             raise ValueError("LENGTH_MISMATCH: scores and labels must have the same length")
 
@@ -135,7 +156,24 @@ class HeldOutCalibrator:
             return float(np.sum(np.logaddexp(0.0, logits) - target * logits))
 
         res = minimize(_loss, x0=np.array([1.0, 0.0]), method="Nelder-Mead")
-        a_fit, b_fit = float(res.x[0]), float(res.x[1])
+        # A failed optimizer run must never publish garbage: non-finite
+        # parameters (or a non-finite final loss) mean the fit diverged and no
+        # artifact may be produced from it. A bare success=False with finite
+        # parameters (e.g. Nelder-Mead stopping on iteration/precision limits,
+        # as observed with XGBoost margin inputs on some scipy builds) still
+        # yields a usable, finite Platt mapping and is published — the gate
+        # targets unusable results, not the flag alone.
+        x_fit = np.asarray(res.x, dtype=np.float64).ravel()
+        try:
+            final_loss = float(res.fun)
+        except (TypeError, ValueError):
+            final_loss = float("nan")
+        if x_fit.shape != (2,) or not np.isfinite(x_fit).all() or not math.isfinite(final_loss):
+            raise CalibrationOptimizationError(
+                "CALIBRATION_OPTIMIZATION_FAILED: Platt-scaling optimizer did not "
+                "produce a usable finite fit; no artifact is published from a failed fit."
+            )
+        a_fit, b_fit = float(x_fit[0]), float(x_fit[1])
 
         self._fitted_artifact = FittedCalibratorArtifact(
             method=self.method,

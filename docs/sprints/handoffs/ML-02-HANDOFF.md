@@ -90,4 +90,21 @@ Full lab suite verification: 139 passed across strategies, features, labels, eva
 - No Critical/Important findings.
 - Reviewer: coordinator inline review (implementation pre-exists committed;
   reviewer wrote no code here). Status transition (manifest/spec) left to
-  coordinator DONE pass / main agent — not touched.
+  coordinator DONE pass / main agent - not touched.
+
+## Fix cycle (2026-09-27, main-agent audit findings 1–3 fixed; finding 4 → CR)
+
+- TDD RED→GREEN, all demonstrated: (1) non-finite NET/GROSS forecast refused at
+  payload boundary (FINITE_VALUE_REQUIRED, 6 params); (2) calibrator refuses
+  non-binary labels, non-finite inputs, non-1D inputs; (3) diverged optimizer
+  (non-finite x/fun) raises CALIBRATION_OPTIMIZATION_FAILED instead of
+  publishing. Refinement during GREEN: bare success=False with finite usable
+  fit still publishes (Nelder-Mead iteration-limit stops observed on XGBoost
+  margins) — gate targets unusable results, documented in code; M02 suite
+  (255 passed) forced the refinement, full models suite now 258 passed exit 0.
+- Finding 4 (verified inner-held-out role proof from split): NOT patched here.
+  Real provenance needs split/fold identity threaded from the TRAIN-01
+  materializer through ML-01/ML-02/M01/M02 trainer contracts — a cross-sprint
+  contract change. Recommended: file a Change Request; do not bolt a string
+  assertion onto calibrator.fit and call it proof.
+- Files: calibration.py, execution_mapper.py, test_execution_mapper.py.

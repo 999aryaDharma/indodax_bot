@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 import hashlib
+import math
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -96,6 +97,23 @@ class ForecastPayload(BaseModel):
     @classmethod
     def validate_utc(cls, v: datetime) -> datetime:
         return _ensure_utc(v, "decision_ts")
+
+    @field_validator("value", mode="before")
+    @classmethod
+    def require_finite_value(cls, v: Any) -> float:
+        """Refuse non-finite model output before any edge comparison (ML-02).
+
+        A +inf/-inf/NaN forecast would otherwise flow into the net-edge
+        comparison (+inf always exceeds any margin) and be published as a
+        SignalIntent. Corrupt model output is refused fail-closed here.
+        """
+        try:
+            numeric = float(v)
+        except (TypeError, ValueError):
+            raise ValueError(f"FINITE_VALUE_REQUIRED:forecast value must be numeric, got {v!r}")
+        if not math.isfinite(numeric):
+            raise ValueError(f"FINITE_VALUE_REQUIRED:forecast value must be finite, got {v!r}")
+        return numeric
 
     @field_validator("desired_qty", mode="before")
     @classmethod
