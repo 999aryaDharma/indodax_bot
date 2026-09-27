@@ -74,3 +74,23 @@ Full lab suite verification: 149 passed across strategies, features, labels, eva
 - **Note** - `configs/models/M01_logistic_v1.yaml` uses the documented `elasticnet`/`saga` pair and is unaffected. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/m01_logistic.py (246 lines),
+  configs/models/M01_logistic_v1.yaml and tests (7 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_m01_logistic.py -q`: 7 passed,
+  0 failed, exit 0 (AC0–AC3 + yaml/guard + 2 allowlist regressions).
+- AC0 holds (reproducible calibrated probabilities; identical seed gives
+  identical probs and bundle hash); AC1 holds (invalid solver/penalty rejected
+  at config time, unknown penalties refused by allowlist); AC2 holds (extreme
+  imbalance blocked with reason); AC3 holds (net utility vs 0.0 cash + naive
+  always-long baselines).
+- MINOR (backlog, non-blocking): evaluate_utility takes y_val but never reads
+  it (uses realized_returns); missing feature column at predict time raises raw
+  pandas KeyError instead of a typed error; caller is trusted to pass genuine
+  inner-held-out validation data (segment label is asserted, provenance is not).
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
