@@ -90,3 +90,11 @@ Full lab suite verification: 109 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `JobRecord.parameters` defaults to `{}`, so a job persisted before this change, or one submitted with no `parameters` at all, still resolves by the `job_type` substring heuristic. Persisting an explicit class column rather than reconstructing it from a JSON blob would be a schema change and is listed for a CR rather than added here.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `resolve_resource_class` returns the first match in the `job_type` heuristic and never reports that it guessed, so a genuinely undeclared job that happens to contain a keyword is indistinguishable from one that declared its class. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Deferred (Minor) - not blocking: `resume_from_checkpoint` validates the checkpoint but does not quarantine or delete it, so every call re-raises on the same corrupt file until an operator removes it. A `*.corrupt` rename on rejection would be a new state machine and is recorded as backlog.
+
+## Current remediation evidence — review pending
+
+- Exact code SHA: `becc279` (`fix(job-02): fence leases and reject invalid sensors`).
+- Regression coverage rejects NaN/Infinity sensor readings, keeps a one-second queue lease alive through a 1.2-second step, and requires valid current worker claims for execution/resume.
+- Focused command: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/orchestration/test_resources.py -q -p no:cacheprovider` -> **18 passed**.
+- `git diff --check` passed. Independent review of `becc279` is pending; previous CHANGES_REQUESTED findings apply to earlier SHA `9771d4627b01065225537f3e938050fa107c3d50` and are not represented as reviewed on this SHA.
+- Owner-approved capacity decision: sensor-age, Production deadline-headroom, and disk-reserve limits remain unset until approved host measurements exist; unset required values and unknown path/device mappings fail closed. JOB-02-AC4/AC5 host measurement, mount mapping, and fail-closed integration evidence remain outstanding. Do not qualify workload capacity or mark JOB-02 DONE from the offline suite.

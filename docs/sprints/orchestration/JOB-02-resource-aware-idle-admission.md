@@ -178,6 +178,8 @@ Bound resource use by the owning input batch/run/queue limits. Measure rows/even
 
 Record baseline, identify algorithmic hotspot, then propose a versioned threshold for host activation. No fabricated elapsed-time acceptance. Research model search obeys ADR-003 budgets.
 
+Owner-approved capacity defaults: sensor-age limits, Production deadline-headroom limits, and disk-reserve limits remain unset until supported by measured host evidence. If a required value is unset, admission fails closed. Configured storage paths must map to measured mount paths and device IDs; an unknown mapping blocks admission. Do not infer supported host capacity from historical fixtures.
+
 ## Observability
 
 Emit `JOB-02` scope, input identities, output/run identity, config/policy version and reason code. For each listed guard, tests must assert the diagnostic identifies what was rejected without logging private payloads. Record elapsed/resource observations only outside content-addressed identities.

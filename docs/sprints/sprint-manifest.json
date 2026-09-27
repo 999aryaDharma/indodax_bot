@@ -2409,9 +2409,9 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/LABEL-02-triple-barrier-outcomes.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review (PASS at exact code SHA 812f68b1dee68710eae40177dcc92be87a403b98)",
       "recommended_branch": "feat/label-02-triple-barrier-outcomes",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -2433,10 +2433,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/LABEL-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "812f68b1dee68710eae40177dcc92be87a403b98",
+        "review": "Independent PASS at exact code SHA; 13 focused tests and 199 affected tests passed; handoff records evidence."
       },
       "acceptance_test_mapping": [
         {
@@ -2504,9 +2504,9 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/SPLIT-01-sealed-purged-chronological-folds.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "/root/docs_review (PASS at exact remediation SHA 0f431959fb470390317e09d9e7709a5351c07a63)",
       "recommended_branch": "feat/split-01-sealed-purged-chronological-folds",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -2528,10 +2528,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/SPLIT-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "0f431959fb470390317e09d9e7709a5351c07a63",
+        "review": "Independent PASS at exact remediation SHA; 25 split tests and 58 combined tests passed; handoff records evidence."
       },
       "acceptance_test_mapping": [
         {

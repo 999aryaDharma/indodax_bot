@@ -92,7 +92,7 @@ None. Verify external gates and shared-file ownership before claim.
 ## Wave 11
 
 - EVAL-02 — Hard gates and selection diagnostics [DONE; CORE]
-- LABEL-02 — Triple barrier outcomes [REVIEW; CORE]
+- LABEL-02 — Triple barrier outcomes [DONE; CORE]
 - JOB-01 — Durable leased jobs [DONE; CORE]
 - C01-01 — Donchian breakout [DONE; CORE]
 - C02-01 — EMA pullback [DONE; CORE]
@@ -116,7 +116,7 @@ None. Verify external gates and shared-file ownership before claim.
 
 ## Wave 12
 
-- SPLIT-01 — Sealed purged chronological folds [REVIEW; CORE]
+- SPLIT-01 — Sealed purged chronological folds [DONE; CORE]
 - OPS-02 — Snapshot transfer and restore [REVIEW; CORE]
 - JOB-02 — Resource-aware idle admission [REVIEW; CORE]
 - C10-01 — Regime ensemble [REVIEW; CORE]
