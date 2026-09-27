@@ -67,6 +67,12 @@ Full lab suite verification: 271 passed across all domains (13.17s).
   Dep D01-01 REVIEW (gate). Smoke needs pyarrow-env run before DONE.
 - Reviewer ses_f1ebdb6ecffeUQMZtZxWzXEuDG. Fix cycle required before DONE.
 
+## Update (2026-09-27): smoke env gap closed
+
+- pyarrow installed (user site); fresh run `test_deeplob_smoke.py`: passed
+  (8/8 with test_tlob_smoke.py, exit 0). Smoke evidence now established —
+  remaining items are the wired-gap fix (committed separately) and dep D01-01.
+
 ## Delta re-review (2026-09-27)
 
 - Verdict: DELTA-PASS (ses_f1ea3534cffeSDtgVlelnbVkEA). validate_unbroken_sequence

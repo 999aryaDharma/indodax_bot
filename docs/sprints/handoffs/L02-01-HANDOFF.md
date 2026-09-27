@@ -223,3 +223,10 @@ tensor-extraction path remains in `tests/integration/lab/test_tlob_smoke.py`.
   from_model; cooperative budget enforcement; manifest omits unit test path;
   pre-existing ruff style.
 - Reviewer ses_f1ebdb6ebffereL9HTpxNeQEex. Gates first, then DONE.
+
+## Update (2026-09-27): smoke env gap closed
+
+- pyarrow installed (user site); fresh run `test_tlob_smoke.py` (with
+  test_deeplob_smoke.py): **8 passed, exit 0**. Mapped AC0–AC3 smoke evidence
+  now established on this tree — the "unit-only evidence" gate item is
+  discharged. Remaining gate: dep L01-01 DONE.

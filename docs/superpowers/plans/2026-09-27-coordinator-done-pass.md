@@ -71,8 +71,13 @@ fresh in main tree with TDD (see M06-01 note below). Worktree left untouched.
 
 **Rulings:**
 - R1: Subagent verdicts recorded with session IDs, never fabricated reviewer names.
-- R2: Exact-SHA pinning pending — tree has uncommitted changes (mine: C07*;
+- R2: Exact-SHA pinning pending - tree has uncommitted changes (mine: C07*;
   main agent: orchestration/strategies/handoffs). Handoffs record HEAD 28d89ba
   + dirty-file note. Cost if wrong: DONE claims float without pinned SHA.
 - R3: Acceptance-mapping status bumps deferred (main agent's pass didn't do them
   either; validator doesn't require). Follow-up, not gate.
+- R4 (2026-09-27): pip-installed pyarrow (user site, legit project dep) to close
+  collection gaps — unlocked L01/L02 smoke (8 passed), TRAIN-01 integration
+  (27 passed), full strategies suite (168 passed). Handoff env-gap notes
+  corrected in place. Cost if wrong: env-only change, reversible via pip
+  uninstall; no repo files affected.

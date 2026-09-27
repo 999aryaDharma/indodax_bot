@@ -112,3 +112,11 @@ Full lab suite verification: 117 passed across strategies, features, labels, eva
 - `tests/integration/lab/test_training_materialization.py`: 27 errors, all `ImportError` (pyarrow/fastparquet not installed) — pre-existing environment gap, not a defect.
 - First review: ses_f201210c7ffeuJnt0IFN7YK2IY. Verification: ses_f1f5b2f63ffeKLtXy6FNPaFF4J.
 - Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
+
+## Update (2026-09-27): integration env gap closed
+
+- pyarrow installed (user site); fresh run
+  `tests/integration/lab/test_training_materialization.py -q`: **27 passed,
+  exit 0**. The 27 integration errors are gone — including
+  test_generated_fold_cutoffs_exclude_delayed_labels_from_training, which
+  passes with its explicit embargo opt-out intact. No test changes needed.
