@@ -145,9 +145,15 @@ class StagedFoundationAdapter:
             )
         return cutoff
 
-    def _validate_timestamps(self, timestamps: list[datetime]) -> None:
+    def _validate_timestamps(self, timestamps: list[datetime], expected_count: int) -> None:
         """Validate that all test observations strictly occur after training cutoff."""
         cutoff = self._require_known_cutoff()
+        if len(timestamps) != expected_count:
+            raise ContaminatedDatesClaimError(
+                f"CONTAMINATED_DATES_FORBIDDEN: timestamp count {len(timestamps)} "
+                f"!= test sample count {expected_count}; every scored observation "
+                "requires one post-cutoff timestamp"
+            )
         for ts in timestamps:
             if ts <= cutoff:
                 raise ContaminatedDatesClaimError(
@@ -241,7 +247,7 @@ class StagedFoundationAdapter:
         test_timestamps: list[datetime],
     ) -> StageEvaluationResult:
         """Stage 0: Evaluate zero-shot performance on post-cutoff test set."""
-        self._validate_timestamps(test_timestamps)
+        self._validate_timestamps(test_timestamps, len(test_x))
         features = self._require_finite_features(test_x, "test_x")
         return self._score(
             AdaptationStage.ZERO_SHOT,
@@ -265,7 +271,7 @@ class StagedFoundationAdapter:
                 "STAGE_PRECONDITION_NOT_MET: ZERO_SHOT required before executing FROZEN_PROBE"
             )
 
-        self._validate_timestamps(test_timestamps)
+        self._validate_timestamps(test_timestamps, len(test_x))
         train_features = self._require_finite_features(train_x, "train_x")
         test_features = self._require_finite_features(test_x, "test_x")
 
@@ -298,7 +304,7 @@ class StagedFoundationAdapter:
                 "STAGE_PRECONDITION_NOT_MET: FROZEN_PROBE required before executing BOUNDED_ADAPTER"
             )
 
-        self._validate_timestamps(test_timestamps)
+        self._validate_timestamps(test_timestamps, len(test_x))
         train_features = self._require_finite_features(train_x, "train_x")
         test_features = self._require_finite_features(test_x, "test_x")
 
@@ -396,7 +402,7 @@ class StagedFoundationAdapter:
                 f"overlaps training cutoff {cutoff.isoformat()}"
             )
         if test_timestamps is not None:
-            self._validate_timestamps(test_timestamps)
+            self._validate_timestamps(test_timestamps, len(test_x))
 
         probs = self.predict_proba(test_x)
 

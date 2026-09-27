@@ -392,3 +392,25 @@ def test_f01_02_decision_ts_must_be_post_cutoff() -> None:
             desired_qty=Decimal("0.05"),
             test_timestamps=[datetime(2023, 6, 1, 0, 0, tzinfo=UTC)] * len(test_x),
         )
+
+
+def test_f01_02_timestamp_count_mismatch_rejected() -> None:
+    """IMPORTANT: _validate_timestamps must enforce len(timestamps)==len(test_x).
+
+    Empty/short timestamp lists must not seal a certified StageEvaluationResult.
+    """
+    fake_adapter = FakeFoundationModelAdapter()
+    _, provenance = fake_adapter.get_test_weights_and_provenance()
+    train_x, train_y, _ = _generate_synthetic_foundation_features(n_samples=40)
+    test_x, test_y, test_ts = _generate_synthetic_foundation_features(
+        n_samples=20, start_dt=datetime(2024, 7, 1, 0, 0, tzinfo=UTC)
+    )
+
+    adapter = StagedFoundationAdapter(provenance=provenance)
+
+    with pytest.raises(ContaminatedDatesClaimError, match="CONTAMINATED_DATES_FORBIDDEN"):
+        adapter.run_zero_shot(test_x=test_x, test_y=test_y, test_timestamps=[])
+
+    short_ts = test_ts[:5]
+    with pytest.raises(ContaminatedDatesClaimError, match="CONTAMINATED_DATES_FORBIDDEN"):
+        adapter.run_zero_shot(test_x=test_x, test_y=test_y, test_timestamps=short_ts)
