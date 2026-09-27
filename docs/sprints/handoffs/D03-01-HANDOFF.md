@@ -52,3 +52,14 @@ Full lab suite verification: 259 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for D03-01.
 - Next unlocked consumers: D04-01, tournament comparison.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING on process gate only (no Critical defect). Fresh run
+  `test_d03_01.py -v`: 6 passed, exit 0. Causality probed strict (past maxdiff
+  0.0); bidirectional hardcoded off with rejection error. AC0–AC3 verified.
+- IMPORTANT (gate): dep D02-01 REVIEW, not DONE — hold DONE until it lands.
+- MINOR: handoff "arbitrary padding length invariance" overclaim (probed
+  0.136 diff; only value-invariance proven); AC3 mapping omits folds test;
+  min_delta/gradient_clip recipe drift; empty-slice fail-closed path untested.
+- Reviewer ses_f1ec1c53cffeL0e6e2yNE56LFm. No fix cycle needed; gate only.

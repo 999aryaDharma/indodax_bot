@@ -51,3 +51,15 @@ Full lab suite verification: 239 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for DL-02.
 - Next unlocked consumers: D02-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (code PASS, gated by evidence + dep). Fresh run
+  `test_sequence_dataset.py -v`: 15 passed, exit 0. AC0–AC3 verified + probes
+  (mask use, gap segmentation, t <= eval_ts).
+- IMPORTANT (gate): dep DL-01 REVIEW, not DONE. IMPORTANT (evidence): handoff
+  pins stale SHA de3b277 (+111 lines changed since; 15 tests now, not 4/239).
+- MINOR: RED rows ModuleNotFoundError; SessionGapBrokenWindowError never raised;
+  padded window_timestamps length ≠ mask length; unused import; default
+  padding_value=0.0 in price features (mask-mandatory assumed).
+- Reviewer ses_f1ec1c53fffeDkXGf3XuQEgNoU. Handoff refresh + dep landing first.

@@ -51,3 +51,14 @@ Full lab suite verification: 247 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for D02-01.
 - Next unlocked consumers: D03-01, D04-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING on process gate only (code PASS). Fresh run
+  `test_d02_01.py -v`: 4 passed, exit 0 + supplementary multi-cutoff causality
+  probe (exact-zero future leakage). AC0–AC3 verified.
+- IMPORTANT (gate): deps D01-01 + DL-02 REVIEW, not DONE — hold DONE until both
+  land; no code action.
+- MINOR: FLOP estimate omits residual MACs; 3 unused imports; RED rows are
+  ModuleNotFoundError.
+- Reviewer ses_f1ec1c53dffetXU93sGFZ46ydX. No fix cycle needed; gate only.

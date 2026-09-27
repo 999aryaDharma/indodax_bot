@@ -52,3 +52,14 @@ Full lab suite verification: 263 passed across all domains (12.65s).
 - Deviations: None.
 - Unresolved issues / blockers: None for D04-01.
 - Next unlocked consumers: Research tournament comparisons.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING on process gate only (all code findings MINOR). Fresh run
+  `test_d04_01.py -v`: 4 passed, exit 0. AC0–AC3 verified + masking semantics
+  and lazy-torch isolation.
+- IMPORTANT (gate): dep D02-01 REVIEW, not DONE — hold DONE until it lands.
+- MINOR: RED rows ModuleNotFoundError; lookahead raises ValueError instead of
+  FutureUniverseError; diagnostic attention ignores mask; inversion invisible
+  when lookback==variates; asset→column ordering obligation undocumented.
+- Reviewer ses_f1ec1c53cffdsV3CmVAGacltRd. No fix cycle needed; gate only.

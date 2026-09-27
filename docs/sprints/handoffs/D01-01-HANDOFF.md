@@ -51,3 +51,16 @@ Full lab suite verification: 235 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for D01-01.
 - Next unlocked consumers: D02-01, G01-01, F01-02, L01-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (2 IMPORTANT + 5 MINOR + dep gate). Fresh run
+  `test_d01_training_smoke.py -v`: 4 passed, exit 0 (torch present).
+- IMPORTANT: resume restores best_val_loss value but not best weights
+  (best_weights=null) and corrupts best_epoch provenance — AC3 broken.
+- IMPORTANT: SameSampleComparator never reads M01's feature list nor checks
+  index identity — cross-model divergence undetected (AC1 broken).
+- MINOR: dead search_budget_max_configs / min_delta drop; no torch importorskip
+  guard; weak input_hash; stale evidence SHA; M02 comparator + NaN-loss path
+  unevidenced. Dep DL-01 REVIEW (gate).
+- Reviewer ses_f1ec1c53effeqodBog4aEwjQLS. Fix cycle required before DONE.

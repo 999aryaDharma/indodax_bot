@@ -54,3 +54,18 @@ Full lab suite verification: 227 passed across all domains.
 - Deviations: None.
 - Unresolved issues / blockers: None for DL-01.
 - Next unlocked consumers: D01-01, DL-02, F01-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (3 IMPORTANT + 3 MINOR + dep gate). Fresh run
+  `tests/unit/lab/models/dl/test_early_stopping.py -v`: 4 passed, exit 0
+  (torch present, no env gap; core-import isolation probed clean).
+- IMPORTANT: checkpoint.py lacks scheduler_state despite contract
+  (model/optimizer/scheduler/RNG); load_checkpoint with expected_input_hash=None
+  skips verification (fail-open, probed); NeuralTrainer (training.py:37-59) is a
+  stub — no train loop, no best-weight restore, 50-epoch cap relies on callers.
+- IMPORTANT (gate): deps QA-01/JOB-02 are REVIEW, not DONE; handoff misstates
+  JOB-02 as DONE.
+- MINOR: RED rows are ModuleNotFoundError (not behavioral RED); __init__ eagerly
+  imports out-of-scope DL modules; handoff overclaims ("best restored", "227 passed").
+- Reviewer ses_f1ec1c540ffeOzKDxIrPZOA3bB. Fix cycle required before DONE.
