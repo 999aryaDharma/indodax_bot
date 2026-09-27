@@ -86,6 +86,8 @@ Train-only preprocessing; held-out calibration; bundle all fitted transforms, fe
 
 Global causality, identity, exact accounting and paper-only constraints apply; tidak ada exception lokal yang mengizinkan pengubahan histori.
 
+Winner selection minimizes `inner_val_brier`, `inner_val_log_loss`, `inner_val_mae`, and `inner_val_rmse`; it maximizes the other registered objectives. Non-finite scores are ineligible for winning-recipe selection.
+
 ## Architecture / Design Contract
 
 Layer owner: `src/indodax_lab/models`. Konsumsi hanya public contracts dependency yang tercantum. Side effect berada pada boundary adapter/repository; pure calculation tidak melakukan HTTP.

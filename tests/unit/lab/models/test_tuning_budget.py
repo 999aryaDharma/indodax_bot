@@ -10,6 +10,7 @@ Acceptance Criteria:
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from indodax_lab.models.tuning import (
     BoundedTrialSearch,
@@ -504,4 +505,78 @@ def test_ml_03_from_state_preserves_the_budget_a_matching_checkpoint_reports() -
     assert resumed.budget.consumed_trials == 1
     assert resumed.budget.remaining_trials == ADR003_MAX_TRIALS - 1
     assert len(resumed.trials) == 1
+
+
+@pytest.mark.parametrize(
+    ("objective", "trials", "winner"),
+    [
+        ("inner_val_log_loss", (("low", 0.1), ("high", 0.9)), "low"),
+        ("inner_val_brier", (("zero", 0.0), ("positive", 0.1)), "zero"),
+        ("inner_val_pnl", (("negative", -1.0), ("zero", 0.0)), "zero"),
+    ],
+)
+def test_ml_03_winning_recipe_respects_objective_direction_and_zero(
+    objective: str, trials: tuple[tuple[str, float], ...], winner: str
+) -> None:
+    space = SearchSpace(
+        space_id="sp_direction",
+        version="1.0.0",
+        params={},
+        target_objective=objective,
+    )
+    search = BoundedTrialSearch(space)
+    for trial_id, score in trials:
+        search.register_trial(
+            trial_id=trial_id,
+            params={},
+            status=TrialStatus.SUCCESS,
+            objective_score=score,
+        )
+
+    assert search.get_winning_recipe().trial_id == winner
+
+
+def test_ml_03_revision_history_rejects_checkpoint_counter_downgrade() -> None:
+    original = SearchSpace(
+        space_id="sp_revision_original",
+        version="1.0.0",
+        params={"C": [0.1]},
+        target_objective="inner_val_sharpe",
+    )
+    revised = SearchSpace(
+        space_id="sp_revision_once",
+        version="1.1.0",
+        params={"C": [0.2]},
+        target_objective="inner_val_sharpe",
+    )
+    search = BoundedTrialSearch(original)
+    search.revise_search_space(revised)
+    state = search.export_state()
+    state["budget"]["revision_count"] = 0
+
+    with pytest.raises(ResumeConfigMismatchError, match="revision history"):
+        BoundedTrialSearch.from_state(state, search_space=revised)
+
+
+def test_ml_03_legacy_unrevised_checkpoint_remains_resumable() -> None:
+    space = _search_space()
+    state = _state_with_one_trial()
+    state.pop("initial_search_space_hash")
+    state.pop("revision_history")
+
+    resumed = BoundedTrialSearch.from_state(state, search_space=space)
+
+    assert resumed.budget.revision_count == 0
+    assert resumed.budget.consumed_trials == 1
+
+
+def test_ml_03_public_budget_fields_cannot_be_mutated_after_validation() -> None:
+    search = BoundedTrialSearch(_search_space())
+
+    with pytest.raises(ValidationError):
+        search.budget.max_trials = ADR003_MAX_TRIALS + 1
+    with pytest.raises(ValidationError):
+        search.budget.consumed_trials = 0
+    with pytest.raises(AttributeError):
+        search.budget = TrialBudget()
 

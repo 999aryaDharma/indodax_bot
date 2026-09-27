@@ -9,11 +9,13 @@ Guarantees:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from enum import StrEnum
 import hashlib
 import json
+import math
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -62,6 +64,10 @@ ALLOWED_TARGET_OBJECTIVES = frozenset(
     }
 )
 
+MINIMIZE_OBJECTIVES = frozenset(
+    {"inner_val_brier", "inner_val_log_loss", "inner_val_mae", "inner_val_rmse"}
+)
+
 
 class TrialStatus(StrEnum):
     """Execution status of a single hyperparameter evaluation trial."""
@@ -105,9 +111,9 @@ class SearchSpace(BaseModel):
 
 
 class TrialBudget(BaseModel):
-    """Mutable budget tracker enforcing trial counts and revision limits (ADR-003)."""
+    """Immutable budget snapshot enforcing trial counts and revision limits (ADR-003)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     max_trials: int = ADR003_MAX_TRIALS
     max_revisions: int = ADR003_MAX_REVISIONS
@@ -163,13 +169,20 @@ class BoundedTrialSearch:
         max_revisions: int = ADR003_MAX_REVISIONS,
     ) -> None:
         self.search_space = search_space
-        self.budget = TrialBudget(
+        self._budget = TrialBudget(
             max_trials=max_trials,
             max_revisions=max_revisions,
             consumed_trials=0,
             revision_count=0,
         )
+        self._initial_search_space_hash = search_space.space_hash()
+        self._revision_history: list[dict[str, str]] = []
         self.trials: list[TrialOutcome] = []
+
+    @property
+    def budget(self) -> TrialBudget:
+        """Read-only snapshot of the current search budget."""
+        return self._budget
 
     def register_trial(
         self,
@@ -198,7 +211,9 @@ class BoundedTrialSearch:
         )
 
         self.trials.append(outcome)
-        self.budget.consumed_trials += 1
+        self._budget = self.budget.model_copy(
+            update={"consumed_trials": self.budget.consumed_trials + 1}
+        )
         return outcome
 
     def revise_search_space(self, new_search_space: SearchSpace) -> None:
@@ -209,22 +224,36 @@ class BoundedTrialSearch:
                 "Per ADR-003, at most 1 near-miss revision is permitted per model."
             )
 
+        old_hash = self.search_space.space_hash()
+        new_hash = new_search_space.space_hash()
         self.search_space = new_search_space
-        self.budget.revision_count += 1
+        self._revision_history.append({"from_hash": old_hash, "to_hash": new_hash})
+        self._budget = self.budget.model_copy(
+            update={"revision_count": self.budget.revision_count + 1}
+        )
 
     def get_winning_recipe(self) -> TrialOutcome:
         """Identify best parameter configuration among successful trials."""
-        successful_trials = [t for t in self.trials if t.status == TrialStatus.SUCCESS and t.objective_score is not None]
+        successful_trials = [
+            t
+            for t in self.trials
+            if t.status == TrialStatus.SUCCESS
+            and t.objective_score is not None
+            and math.isfinite(t.objective_score)
+        ]
         if not successful_trials:
             raise ValueError("NO_SUCCESSFUL_TRIALS_FOUND: Cannot retrieve winning recipe when zero trials succeeded.")
 
-        return max(successful_trials, key=lambda t: t.objective_score or float("-inf"))
+        select = min if self.search_space.target_objective in MINIMIZE_OBJECTIVES else max
+        return select(successful_trials, key=lambda t: t.objective_score)
 
     def export_state(self) -> dict[str, Any]:
         """Export state checkpoint for durable persistence and resumption."""
         return {
             "search_space": self.search_space.model_dump(mode="json"),
             "search_space_hash": self.search_space.space_hash(),
+            "initial_search_space_hash": self._initial_search_space_hash,
+            "revision_history": list(self._revision_history),
             "budget": self.budget.model_dump(mode="json"),
             "trials": [t.model_dump(mode="json") for t in self.trials],
         }
@@ -294,14 +323,54 @@ class BoundedTrialSearch:
                 f"count in [0, {max_revisions}]. Resume is strictly rejected."
             )
 
+        revision_history = state.get("revision_history")
+        initial_hash = state.get("initial_search_space_hash")
+        if revision_history is None and claimed_revisions == 0:
+            # Legacy checkpoints without revision metadata are safe only when they
+            # claim no revisions and still match the current search-space hash.
+            revision_history = []
+            initial_hash = current_hash
+        if (
+            not isinstance(revision_history, list)
+            or len(revision_history) != claimed_revisions
+            or not isinstance(initial_hash, str)
+        ):
+            raise ResumeConfigMismatchError(
+                "RESUME_CONFIG_MISMATCH: Checkpoint revision history does not match "
+                "revision_count. Resume is strictly rejected."
+            )
+        previous_hash = initial_hash
+        for revision in revision_history:
+            if (
+                not isinstance(revision, dict)
+                or revision.get("from_hash") != previous_hash
+                or not isinstance(revision.get("to_hash"), str)
+            ):
+                raise ResumeConfigMismatchError(
+                    "RESUME_CONFIG_MISMATCH: Checkpoint revision history is invalid. "
+                    "Resume is strictly rejected."
+                )
+            previous_hash = revision["to_hash"]
+        if previous_hash != current_hash:
+            raise ResumeConfigMismatchError(
+                "RESUME_CONFIG_MISMATCH: Checkpoint revision history does not reach "
+                "the current search space. Resume is strictly rejected."
+            )
+
         instance = cls(
             search_space=search_space,
             max_trials=max_trials,
             max_revisions=max_revisions,
         )
         # Re-derived from the trial log, not read back from the checkpoint.
-        instance.budget.consumed_trials = reconstructed_consumed
-        instance.budget.revision_count = claimed_revisions
+        instance._budget = instance.budget.model_copy(
+            update={
+                "consumed_trials": reconstructed_consumed,
+                "revision_count": claimed_revisions,
+            }
+        )
+        instance._initial_search_space_hash = initial_hash
+        instance._revision_history = revision_history
         instance.trials.extend(outcomes)
 
         return instance
