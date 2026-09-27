@@ -73,3 +73,21 @@ Full lab suite verification: 139 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_execution_mapper.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/execution_mapper.py (224 lines),
+  src/indodax_lab/models/calibration.py (159 lines) and tests (7 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_execution_mapper.py -v`: 7 passed,
+  0 failed, exit 0 (AC0–AC3 + edge/guard + 2 intent-id determinism regressions).
+- AC0 holds (strict net-edge hurdle; probability payoff math verified 0.0125);
+  AC1 holds (train/test/sealed_test forbidden, inner held-out only); AC2 holds
+  (too-small + skewed class representation blocked); AC3 holds (gross/net
+  equivalents reach identical decisions and edges; costs applied exactly once
+  per ADR-002). Intent-id process-stable digest regression verified.
+- MINOR (backlog, non-blocking): Nelder-Mead calibration fit ignores
+  `res.success`, so non-converged Platt params would be stored silently.
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
