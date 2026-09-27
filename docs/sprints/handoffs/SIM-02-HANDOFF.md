@@ -33,15 +33,14 @@
   files; no lint-clean claim is made.
 - Independent review: PASS by `/root/sim01_final_review` on exact commit
   `40e364efe93455cc0b210e264bd9a1b3fe7d4a59`; no Critical or Important findings.
-  SIM-02 remains REVIEW because SIM-01 is still REVIEW behind COST-01. No manifest
-  transition is claimed.
+  At that recovery point SIM-02 remained REVIEW because SIM-01 was still REVIEW behind COST-01; later close-out evidence below records the final disposition.
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: SIM-02 — Portfolio risk and circuit breakers
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: /root/docs_review (PASS at exact code SHA `a9dde4711fd9515b3a6b27a1736ecd8287ddc106`)
 - Branch / worktree: `feat/sim-02-portfolio-risk-and-circuit-breakers`
 - Base SHA: `d045d5f`
 - Code target: `feat(sim-02): portfolio risk and circuit breakers`
@@ -82,7 +81,7 @@ Combined suite verification (34 tests across backtest, risk, execution, ledger, 
 - Quality verdict: PASS (zero network, strictly immutable policy schemas, Decimal precision, UTC-aware).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: PASS on exact code SHA `a9dde4711fd9515b3a6b27a1736ecd8287ddc106`; no Critical or Important findings remain.
 
 ## Deviations and known risks
 - Deviations: None.

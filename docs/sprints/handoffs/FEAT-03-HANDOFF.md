@@ -1,11 +1,11 @@
 # FEAT-03 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: FEAT-03 — As-of market context
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: /root/feat01_independent_review (PASS at exact code SHA `ba0cd66301fd89f8397e7152287c5c75c9f84ef1`)
 - Branch / worktree: `feat/feat-03-as-of-market-context`
 - Base SHA: `0db1c8f`
 - Code target: `feat(feat-03): as-of market context`

@@ -6,7 +6,7 @@ The provenance section below is retained as historical source evidence; its clai
 are not accepted as current verification. Current audited implementation is on
 `fix/feat-01-immutable-params` at code SHA
 `627a74c994f29ecffd6e8270a1c459d731c7acd8` (base cost remediation
-`a42b242b99c286911c5968ea2f59ce932387ebac`). COST-01 remains REVIEW.
+`a42b242b99c286911c5968ea2f59ce932387ebac`). At that audit point COST-01 remained REVIEW.
 
 - Corrected handoff's invalid historical code SHA: original implementation is
   `9c9504fc113e79488c73258f6cc93e04fdd56f46`; historical SHA was not used as fresh
@@ -41,7 +41,7 @@ are not accepted as current verification. Current audited implementation is on
   These public sources do not disclose the complete account-applicable trading-fee
   matrix for all historical intervals; historical fixtures cannot fill that gap.
 
-Status: REVIEW
+Status: DONE
 
 ## Owner evidence update (2026-09-24)
 
@@ -108,7 +108,7 @@ Owner action remains: provide the archived/source-backed complete matrix for (1)
 ## Identity
 - Sprint ID: COST-01 — Time-valid exchange cost schedules
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: /root/docs_review (PASS on exact documentation SHA `9dc19e962ad0921e6b702d6b90142c43296d1d83`; tests on code/config snapshot `101e5d3ab4d42b7669f357c479105606ce4915a5`)
 - Branch / worktree: `feat/cost-01-time-valid-exchange-cost-schedules`
 - Base SHA: `faf1698`
 - Code SHA: `9c9504feea4ca33320f7724fe282a5bc651ec30f`
@@ -147,7 +147,7 @@ Combined verification with previous capabilities (29 tests total) passed (1.33s)
 - Quality verdict: PASS (zero network, strictly immutable schemas, Decimal precision, UTC-aware).
 - Findings: None.
 - Self-review: completed by implementation owner (Antigravity).
-- Independent review: PENDING (independent reviewer required before state transition to DONE).
+- Independent review: PASS at the exact documentation SHA recorded in the capability close-out below; historical tariff evidence remains an external gate.
 
 ## Deviations and known risks
 - Deviations: None.
