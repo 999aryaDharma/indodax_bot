@@ -133,7 +133,8 @@ class StorageCleaner:
                     safe_path = self.validate_safe_path(raw_path)
                     if not safe_path.is_file():
                         raise ValueError(f"registered artifact path is missing: {raw_path!r}")
-                    protected_paths.add(safe_path.relative_to(self.storage_root).as_posix())
+                    rel_path = safe_path.relative_to(self.storage_root).as_posix()
+                    protected_paths.add(os.path.normcase(rel_path))
             return protected_paths
         except ProtectedArtifactRegistryError:
             raise
@@ -219,7 +220,7 @@ class StorageCleaner:
                 rel_path = safe_path.relative_to(self.storage_root).as_posix()
 
                 # Invariant 1: resolve identity to concrete paths; never compare basenames.
-                if rel_path in protected_paths:
+                if os.path.normcase(rel_path) in protected_paths:
                     continue
 
                 # Invariant 2: Check age vs retention cutoff
@@ -241,7 +242,7 @@ class StorageCleaner:
                 try:
                     file_path = self.validate_safe_path(file_path)
                     rel_path = file_path.relative_to(self.storage_root).as_posix()
-                    if rel_path in self._get_protected_artifact_paths():
+                    if os.path.normcase(rel_path) in self._get_protected_artifact_paths():
                         rejected.append(f"{rel_path}: PROTECTED_ARTIFACT_REACHABILITY_CHANGED")
                         continue
                     current_stat = file_path.lstat()

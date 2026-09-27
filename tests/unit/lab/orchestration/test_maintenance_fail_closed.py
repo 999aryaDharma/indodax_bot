@@ -149,6 +149,25 @@ def test_ops_03_protected_resolver_from_registry() -> None:
         assert "archive/weights.onnx" in report.deleted_files
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows path identity is case-insensitive")
+def test_ops_03_registry_path_case_matches_windows_file_identity() -> None:
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        artifact = root / "maintenance.py"
+        artifact.write_bytes(b"protected")
+        old_time = datetime.now(UTC) - timedelta(days=10)
+        os.utime(artifact, (old_time.timestamp(), old_time.timestamp()))
+        cleaner = StorageCleaner(
+            root,
+            RetentionPolicy(retention_days=1, dry_run=True),
+            protected_resolver=lambda _: {"champion": {"MAINTENANCE.PY"}},
+        )
+
+        report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=True)
+
+        assert "maintenance.py" not in report.deletion_candidates
+
+
 def test_ops_03_registry_lookup_failure_aborts_cleanup() -> None:
     with tempfile.TemporaryDirectory() as root_dir:
         root = Path(root_dir)
