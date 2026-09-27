@@ -2601,14 +2601,14 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/TRAIN-01-verified-training-dataset-assembly.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "/root/docs_review; verify ses_f1f5b2f63ffeKLtXy6FNPaFF4J + review ses_f201210c7ffeuJnt0IFN7YK2IY (2026-09-27 batch; SHA pin pending)",
+      "independent_reviewer": "/root/docs_review — PASS at exact source SHA 7e97539861eda3b1cdbffb159d2f435f730a737b",
       "recommended_branch": "feat/train-01-verified-training-dataset-assembly",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
       ],
-      "current_context": "TRAIN-01 remains REVIEW; a corrective split-checksum change is committed at source SHA 7e97539861eda3b1cdbffb159d2f435f730a737b. The split content checksum now binds assignments and policy identity, while the existing v2 dataset ID remains stable for unchanged inputs. Focused checksum tests: 8 passed; full suite: 1548 passed, 2 platform skips. Independent review of the corrective SHA is pending.",
+      "current_context": "Implemented and independently verified at exact source SHA 7e97539861eda3b1cdbffb159d2f435f730a737b. Full-scope PASS across AC0–AC3; 27 integration + 8 CLI checksum + 14 fail-closed tests passed, with 12 additional negative probes. Owner full-suite evidence: 1,548 passed, 2 skipped. Dataset, label and cost qualification remain separate activation gates.",
       "unlocks": [
         "ML-01"
       ],
@@ -2624,10 +2624,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/TRAIN-01-HANDOFF.md",
-        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "source_commit": "7e97539861eda3b1cdbffb159d2f435f730a737b",
+        "review": "Independent full-scope PASS by /root/docs_review at exact source SHA 7e97539861eda3b1cdbffb159d2f435f730a737b; AC0–AC3 verified; focused integration/CLI/fail-closed checks: 49 passed; 12 additional negative probes passed. Owner full suite: 1,548 passed, 2 skipped."
       },
       "acceptance_test_mapping": [
         {

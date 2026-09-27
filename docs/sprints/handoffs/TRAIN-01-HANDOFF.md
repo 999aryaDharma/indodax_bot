@@ -1,11 +1,11 @@
 # TRAIN-01 handoff
 
-Status: REVIEW
+Status: DONE
 
 ## Identity
 - Sprint ID: TRAIN-01 — Verified training dataset assembly
 - Implementation agent: Antigravity
-- Independent reviewer: UNASSIGNED (pending independent review)
+- Independent reviewer: `/root/docs_review` — full-scope PASS at exact source SHA `7e97539861eda3b1cdbffb159d2f435f730a737b`
 - Branch / worktree: `feat/train-01-verified-training-dataset-assembly`
 - Base SHA: `3c18507`
 - Code target: `feat(train-01): verified training dataset assembly`
@@ -120,3 +120,11 @@ Full lab suite verification: 117 passed across strategies, features, labels, eva
   exit 0**. The 27 integration errors are gone — including
   test_generated_fold_cutoffs_exclude_delayed_labels_from_training, which
   passes with its explicit embargo opt-out intact. No test changes needed.
+
+## Independent exact-SHA review — 2026-09-27
+
+- Reviewed source SHA: `7e97539861eda3b1cdbffb159d2f435f730a737b`.
+- Verdict: **PASS**, no Critical/Important findings. Reviewer checked AC0–AC3: exact sample/identity/split partitions; duplicate join rejection; declared and physical outcome leakage rejection; checksum, availability, UTC, chronology and fold-cutoff failures.
+- Independent focused verification from the pinned source: `tests/integration/lab/test_training_materialization.py` — 27 passed; `tests/unit/lab/cli/test_build_training_dataset_checksum.py` — 8 passed; `tests/unit/lab/labels/test_materializer_fail_closed.py` — 14 passed. Twelve additional negative probes passed.
+- Ruff `--select I,F401` on `src/indodax_lab/labels/materializer.py` passed; `git diff --check` passed.
+- Owner full-suite evidence retained above: 1,548 passed, 2 skipped. Real dataset, label and cost qualification remain separate activation gates.
