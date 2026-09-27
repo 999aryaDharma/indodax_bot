@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,7 +19,6 @@ from indodax_lab.models.artifacts import (
     PortableBundle,
     PortableBundleLoader,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -325,3 +325,46 @@ def test_loader_rejects_non_finite_calibration_parameters() -> None:
 
     with pytest.raises(ValueError, match="FINITE"):
         PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+@pytest.mark.parametrize("field", ["method", "n_samples", "n_positives", "n_negatives"])
+def test_loader_rejects_null_calibration_metadata_with_valid_hash(field: str) -> None:
+    payload = json.loads(_build_portable_bundle(["feat_0", "feat_1"]).to_bytes())
+    payload["calibration"][field] = None
+    payload["bundle_hash"] = _canonical_payload_hash(payload)
+
+    with pytest.raises(MissingCalibrationMetadataError):
+        PortableBundleLoader().load_from_bytes(json.dumps(payload).encode("utf-8"))
+
+
+def test_loaded_bundle_metadata_cannot_be_mutated_after_hash_verification() -> None:
+    X = _make_feature_df(n=4, n_features=2)
+    X.columns = ["feat_0", "feat_1"]
+    loaded = PortableBundleLoader().load_from_bytes(
+        _build_portable_bundle(["feat_0", "feat_1"]).to_bytes()
+    )
+    before = loaded.predict_proba(X)
+
+    with pytest.raises(TypeError):
+        loaded.calibration["b"] = 100.0
+    with pytest.raises(TypeError):
+        loaded.preprocessing["feature_names"][0] = "tampered"
+    with pytest.raises(TypeError):
+        loaded.feature_names[0] = "tampered"
+    with pytest.raises(TypeError):
+        loaded.coefficients[0] = 999.0
+
+    np.testing.assert_array_equal(loaded.predict_proba(X), before)
+
+
+def test_bundle_copy_with_changed_metadata_fails_before_inference() -> None:
+    X = _make_feature_df(n=4, n_features=2)
+    X.columns = ["feat_0", "feat_1"]
+    loaded = PortableBundleLoader().load_from_bytes(
+        _build_portable_bundle(["feat_0", "feat_1"]).to_bytes()
+    )
+    changed_calibration = {**loaded.calibration, "b": 100.0}
+    changed = loaded.model_copy(update={"calibration": changed_calibration})
+
+    with pytest.raises(BundleChecksumMismatchError, match="BUNDLE_CHANGED_AFTER_VERIFICATION"):
+        changed.predict_proba(X)

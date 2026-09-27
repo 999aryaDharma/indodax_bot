@@ -24,7 +24,6 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from indodax_lab.models.calibration import HeldOutCalibrator
 
-
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
@@ -52,6 +51,24 @@ class BundleFeatureMismatchError(ValueError):
 
 _REQUIRED_CALIBRATION_FIELDS = {"method", "a", "b", "n_samples", "n_positives", "n_negatives", "segment_type"}
 _SUPPORTED_SCHEMA_VERSION = "2.0.0"
+
+
+class _FrozenDict(dict[str, Any]):
+    """JSON-compatible dictionary that rejects in-place mutation."""
+
+    def _reject_mutation(self, *args: Any, **kwargs: Any) -> None:
+        raise TypeError("VERIFIED_BUNDLE_METADATA_IMMUTABLE")
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = _reject_mutation
+    __ior__ = _reject_mutation
+
+
+def _freeze_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return _FrozenDict({key: _freeze_json(member) for key, member in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_json(member) for member in value)
+    return value
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
@@ -99,6 +116,22 @@ def _assert_inner_heldout_calibration(calibration: dict[str, Any]) -> None:
             f"held-out segment. Allowed: {sorted(HeldOutCalibrator.VALID_SEGMENTS)}."
         )
 
+    method = calibration.get("method")
+    if not isinstance(method, str) or not method.strip():
+        raise MissingCalibrationMetadataError("CALIBRATION_METHOD_REQUIRED")
+
+    counts: dict[str, int] = {}
+    for field in ("n_samples", "n_positives", "n_negatives"):
+        value = calibration.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise MissingCalibrationMetadataError(f"CALIBRATION_COUNT_INVALID:{field}")
+        counts[field] = value
+    if (
+        counts["n_samples"] <= 0
+        or counts["n_positives"] + counts["n_negatives"] != counts["n_samples"]
+    ):
+        raise MissingCalibrationMetadataError("CALIBRATION_COUNTS_INCONSISTENT")
+
     for field in ("a", "b"):
         value = calibration.get(field)
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
@@ -128,9 +161,9 @@ class PortableBundle(BaseModel):
     model_id: str
     version: str
     schema_version: str
-    feature_names: list[str]
+    feature_names: tuple[str, ...]
     # Logistic weights
-    coefficients: list[float]
+    coefficients: tuple[float, ...]
     intercept: float
     # Platt calibration parameters
     calibration: dict[str, Any]
@@ -153,6 +186,16 @@ class PortableBundle(BaseModel):
 
     @model_validator(mode="after")
     def _validate_replay_contract(self) -> "PortableBundle":
+        for field in (
+            "feature_names",
+            "coefficients",
+            "calibration",
+            "preprocessing",
+            "provenance",
+            "config_snapshot",
+        ):
+            object.__setattr__(self, field, _freeze_json(getattr(self, field)))
+
         if self.schema_version != _SUPPORTED_SCHEMA_VERSION:
             raise ValueError(
                 f"SCHEMA_VERSION_UNSUPPORTED:{self.schema_version};expected={_SUPPORTED_SCHEMA_VERSION}"
@@ -246,8 +289,14 @@ class PortableBundle(BaseModel):
 
     def to_bytes(self) -> bytes:
         """Serialize bundle to UTF-8 JSON bytes for storage or transmission."""
+        self._verify_content_hash()
         payload = self.model_dump(mode="json")
         return _canonical_json_bytes(payload)
+
+    def _verify_content_hash(self) -> None:
+        """Reject model copies whose inference metadata no longer matches the verified digest."""
+        if _bundle_content_hash(self.model_dump(mode="json")) != self.bundle_hash:
+            raise BundleChecksumMismatchError("BUNDLE_CHANGED_AFTER_VERIFICATION")
 
     # ------------------------------------------------------------------
     # Inference
@@ -265,6 +314,7 @@ class PortableBundle(BaseModel):
         Returns:
             1-D float64 array of calibrated probabilities, one per row.
         """
+        self._verify_content_hash()
         missing = [f for f in self.feature_names if f not in X.columns]
         if missing:
             raise BundleFeatureMismatchError(
@@ -272,7 +322,7 @@ class PortableBundle(BaseModel):
             )
 
         # Enforce canonical order
-        X_ordered = X[self.feature_names].to_numpy(dtype=np.float64)
+        X_ordered = X[list(self.feature_names)].to_numpy(dtype=np.float64)
         coefs = np.asarray(self.coefficients, dtype=np.float64)
         raw_scores = X_ordered @ coefs + self.intercept
 
