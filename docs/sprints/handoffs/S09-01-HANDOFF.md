@@ -60,8 +60,9 @@ Status: IN_PROGRESS — implementation slices reviewed; full acceptance and exte
 ## Historical pump-gap range evidence
 
 - Evidence source: `lab-data-fetch2/` Indodax hourly bronze candles, 2021-01-01 through 2025-12-31 UTC. The measurement script verifies 120 snapshot manifests and all referenced partition SHA-256, byte-size, row-count, pair/interval identity and candle quality before calculating returns.
-- Reproducible implementation/output: source commit `0ad47109c919c83abf9dd1184b963c37c5dfcebf`; `scripts/research/measure_s09_pump_gap_ranges.py` and `docs/research/s09-pump-gap-historical-range-v1.json`; readable summary in `docs/research/s09-pump-gap-historical-range-v1.md`.
+- Reproducible implementation/output: measurement/report commit `0ad47109c919c83abf9dd1184b963c37c5dfcebf`, with manifest-identity correction at `85e9142d4e61a05b1e47972e295aff6f05427314`; `scripts/research/measure_s09_pump_gap_ranges.py` and `docs/research/s09-pump-gap-historical-range-v1.json`; readable summary in `docs/research/s09-pump-gap-historical-range-v1.md`.
 - Command: `C:/Users/User/miniconda3/envs/ML/python.exe scripts/research/measure_s09_pump_gap_ranges.py --output docs/research/s09-pump-gap-historical-range-v1.json` — exit 0; 43,823 contiguous returns per pair, zero hourly gaps. Positive-return p95 across years ranged 0.8205–1.6651% BTC/IDR and 0.9089–2.2537% ETH/IDR.
+- Corrected evidence check: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/research/test_s09_pump_gap_ranges.py -q -p no:cacheprovider` — 2 passed; manifest canonical ID and snapshot-directory binding now use `indodax_lab.data.manifest` and have negative regression coverage. Exact JSON reproduction was rechecked after the correction. Independent re-review of the correction is pending.
 - This measures historical price movement only. The archived median `available_at - close_time` is about 101 million seconds, so the data cannot establish point-in-time producer freshness or an input-age limit. It does not qualify a live producer or justify numeric threshold approval; preserve the fail-closed, IN_PROGRESS disposition.
 
 ## External gates / risks
