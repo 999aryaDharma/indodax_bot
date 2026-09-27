@@ -298,3 +298,24 @@ def test_c04_caps_quote_cash_across_different_pair_prices() -> None:
     assert len(intents) == 2
     assert total_notional <= Decimal("8000")
     assert all(intent.desired_qty > 0 for intent in intents)
+
+
+def test_c04_no_cash_fallback_rounds_down_reserved_quantity() -> None:
+    as_of = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+    base_spec = load_c04_specification()
+    spec = base_spec.model_copy(
+        update={"parameters": {**base_spec.parameters, "top_k": 3}}
+    )
+    bars = pd.concat(
+        [
+            _build_c04_pair_bars(as_of, "btc_idr", return_pct=0.05),
+            _build_c04_pair_bars(as_of, "eth_idr", return_pct=0.10),
+            _build_c04_pair_bars(as_of, "sol_idr", return_pct=0.15),
+        ],
+        ignore_index=True,
+    )
+    intents = c04_decide(create_decision_frame(features=bars, as_of=as_of), spec)
+
+    total_quantity = sum((intent.desired_qty for intent in intents), start=Decimal("0"))
+    assert len(intents) == 3
+    assert total_quantity <= Decimal("0.08")

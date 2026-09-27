@@ -144,7 +144,7 @@ def c04_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
                 cash_per_slot / Decimal(str(curr_close)),
             ).quantize(Decimal("0.0001"), rounding=ROUND_DOWN)
         else:
-            desired_qty = Decimal(str(round(desired_qty, 4)))
+            desired_qty = desired_qty.quantize(Decimal("0.0001"), rounding=ROUND_DOWN)
         if desired_qty <= 0:
             continue
 

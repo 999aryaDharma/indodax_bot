@@ -155,15 +155,22 @@ def test_eval_03_contract_3(tmp_path: Path) -> None:
     """EVAL-03-AC3: Invalid run tidak masuk ranking."""
     db_path = tmp_path / "lifecycle.db"
     mgr = CandidateLifecycleManager(db_path)
+    base_time = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
     for candidate_id in ("cand_strat_A", "cand_strat_C"):
-        candidate = _build_test_candidate(candidate_id)
+        config_hash = "cfg_001" if candidate_id == "cand_strat_A" else "cfg_003"
+        candidate = _build_test_candidate(candidate_id).model_copy(
+            update={"config_hash": config_hash}
+        )
         mgr.register_candidate(candidate)
         mgr.transition_stage(candidate_id, CandidateStage.IMPLEMENTED)
         mgr.transition_stage(candidate_id, CandidateStage.BACKTESTED)
         mgr.transition_stage(candidate_id, CandidateStage.VALIDATED)
-        mgr.unseal_gate(candidate_id, "split_annual", authorized_by="lead_researcher")
-
-    base_time = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+        mgr.unseal_gate(
+            candidate_id,
+            "split_annual",
+            authorized_by="lead_researcher",
+            as_of=base_time,
+        )
 
     # Run 1: Valid run with Sharpe 1.8
     run_valid_1 = ExperimentRunRecord(

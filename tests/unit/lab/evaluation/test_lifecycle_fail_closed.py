@@ -16,7 +16,7 @@ opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sqlite3
 
@@ -39,7 +39,7 @@ def _candidate(candidate_id: str) -> CandidateRecord:
         candidate_id=candidate_id,
         candidate_version="1.0.0",
         strategy_name="C01_Donchian",
-        config_hash="cfg_hash_initial",
+        config_hash="cfg_001",
         current_stage=CandidateStage.IDEA,
         created_at=BASE_TS,
     )
@@ -243,7 +243,7 @@ def test_eval_03_non_finite_metric_is_excluded_from_leaderboard(tmp_path: Path) 
         candidate = _candidate(candidate_id)
         mgr.register_candidate(candidate)
         _advance_to_validated(mgr, candidate_id)
-        mgr.unseal_gate(candidate_id, "split_v1", authorized_by="reviewer")
+        mgr.unseal_gate(candidate_id, "split_v1", authorized_by="reviewer", as_of=BASE_TS)
 
     board = mgr.compute_leaderboard(
         [
@@ -284,11 +284,17 @@ def test_eval_03_leaderboard_requires_registered_exposed_candidate(tmp_path: Pat
     mgr.register_candidate(closed)
     _advance_to_validated(mgr, exposed.candidate_id)
     _advance_to_validated(mgr, closed.candidate_id)
-    mgr.unseal_gate(exposed.candidate_id, "split_v1", authorized_by="reviewer")
+    mgr.unseal_gate(exposed.candidate_id, "split_v1", authorized_by="reviewer", as_of=BASE_TS)
 
     board = mgr.compute_leaderboard(
         [
             _run("run_exposed", exposed.candidate_id, 1.0),
+            _run("run_config_mismatch", exposed.candidate_id, 4.0).model_copy(
+                update={"config_hash": "different_config"}
+            ),
+            _run("run_before_exposure", exposed.candidate_id, 5.0).model_copy(
+                update={"created_at": BASE_TS - timedelta(seconds=1)}
+            ),
             _run("run_closed", closed.candidate_id, 2.0),
             _run("run_unregistered", "cand_unregistered", 3.0),
         ]

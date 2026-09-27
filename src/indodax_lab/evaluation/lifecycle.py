@@ -551,8 +551,18 @@ class CandidateLifecycleManager:
                 continue
             if (
                 candidate.candidate_version != run.candidate_version
+                or candidate.config_hash != run.config_hash
                 or not candidate.sealed_gate_opened
             ):
+                continue
+            with self._connect() as conn:
+                exposure = conn.execute(
+                    """SELECT exposed_at FROM exposure_audits
+                       WHERE candidate_id = ? AND candidate_version = ?
+                       ORDER BY exposed_at DESC LIMIT 1""",
+                    (candidate.candidate_id, candidate.candidate_version),
+                ).fetchone()
+            if exposure is None or run.created_at < datetime.fromisoformat(exposure[0]):
                 continue
             valid_runs.append((metric_value, run))
 
