@@ -344,3 +344,66 @@ def test_successful_transfer_retry_is_idempotent(tmp_path: Path) -> None:
     assert retry.manifest_hash == first.manifest_hash
     assert retry.published_root == first.published_root
     assert retry.active_reference.read_bytes() == first.active_reference.read_bytes()
+
+
+def test_directory_backup_omits_live_sqlite_sidecars_but_keeps_wal_rows(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    queue = source / "queue"
+    queue.mkdir(parents=True)
+    database = queue / "jobs.db"
+    writer = sqlite3.connect(database)
+    writer.execute("PRAGMA journal_mode=WAL")
+    writer.execute("CREATE TABLE jobs (id INTEGER PRIMARY KEY, value TEXT)")
+    writer.commit()
+    writer.execute("INSERT INTO jobs(value) VALUES ('committed-in-wal')")
+    writer.commit()
+    assert Path(f"{database}-wal").exists()
+
+    bundle = create_backup_bundle(source, ["queue"], tmp_path / "bundle")
+
+    assert not (bundle / "queue/jobs.db-wal").exists()
+    assert not (bundle / "queue/jobs.db-shm").exists()
+    restored = sqlite3.connect(bundle / "queue/jobs.db")
+    try:
+        assert restored.execute("SELECT value FROM jobs").fetchall() == [
+            ("committed-in-wal",)
+        ]
+    finally:
+        restored.close()
+        writer.close()
+
+
+def test_existing_version_manifest_must_match_requested_hash(tmp_path: Path) -> None:
+    bundle = _simple_bundle(tmp_path, "version-identity", (b"a", b"b"))
+    destination = tmp_path / "destination"
+    first = stage_and_publish_transfer(bundle, destination)
+    manifest_path = first.published_root / "transfer_manifest.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    data["bundle_id"] = "substituted-bundle"
+    manifest_path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(CorruptTransferError, match="IMMUTABLE_VERSION_MANIFEST_MISMATCH"):
+        stage_and_publish_transfer(bundle, destination)
+
+
+def test_staged_manifest_must_match_preflight_identity(tmp_path: Path) -> None:
+    bundle = _simple_bundle(tmp_path, "staging-identity", (b"a", b"b"))
+    destination = tmp_path / "destination"
+    from indodax_lab.operations import staging
+
+    real_copy = staging._copy_file_durable
+
+    def mutate_manifest_before_copy(source: Path, target: Path) -> None:
+        if source.name == "transfer_manifest.json":
+            data = json.loads(source.read_text(encoding="utf-8"))
+            data["bundle_id"] = "substituted-during-staging"
+            source.write_text(json.dumps(data), encoding="utf-8")
+        real_copy(source, target)
+
+    with patch.object(staging, "_copy_file_durable", side_effect=mutate_manifest_before_copy):
+        with pytest.raises(CorruptTransferError, match="TRANSFER_MANIFEST_CHANGED_DURING_STAGING"):
+            stage_and_publish_transfer(bundle, destination)
+
+    assert not (destination / "active.json").exists()

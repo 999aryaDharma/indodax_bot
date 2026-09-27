@@ -183,6 +183,48 @@ def test_verified_backup_publishes_a_faithful_copy(tmp_path: Path) -> None:
     assert rows == 8, "the verified backup did not carry every committed row"
 
 
+def test_backup_verifies_schema_and_pages_from_same_read_snapshot(
+    tmp_path: Path,
+) -> None:
+    source = _make_wal_db(tmp_path / "queue.db", rows=8)
+    target = tmp_path / "out" / "queue.db"
+    writer = sqlite3.connect(source)
+    real_inventory = backup_mod._database_inventory
+    changed = False
+
+    def write_after_snapshot(conn: sqlite3.Connection):
+        nonlocal changed
+        result = real_inventory(conn)
+        if not changed:
+            writer.execute("INSERT INTO jobs(payload) VALUES ('late-row')")
+            writer.commit()
+            changed = True
+        return result
+
+    with patch.object(backup_mod, "_database_inventory", side_effect=write_after_snapshot):
+        backup_sqlite_db(source, target)
+    writer.close()
+
+    restored = sqlite3.connect(target)
+    try:
+        assert restored.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 8
+    finally:
+        restored.close()
+
+
+def test_failed_atomic_replace_cleans_staged_database(tmp_path: Path) -> None:
+    source = _make_wal_db(tmp_path / "queue.db")
+    out_dir = tmp_path / "out"
+    target = out_dir / "queue.db"
+
+    with patch.object(backup_mod.os, "replace", side_effect=OSError("publish failed")):
+        with pytest.raises(OSError, match="publish failed"):
+            backup_sqlite_db(source, target)
+
+    assert not target.exists()
+    assert not _strays(out_dir, ignore=set())
+
+
 # ---------------------------------------------------------------------------
 # OPS-02-F2: bundle publication is atomic, so an interruption is recoverable
 # ---------------------------------------------------------------------------

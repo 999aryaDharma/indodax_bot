@@ -121,3 +121,16 @@ Every test writes only under `tmp_path` and creates throwaway SQLite files in-pr
 - `RestoreResult.status` in `operations/restore.py` is hardcoded to `"SUCCESS"` rather than derived from the underlying transfer result, so a future non-success path would report success. Not reachable today because the wrapper propagates the underlying exception.
 - `is_sqlite_database()` trusts the file extension alone for `.db`/`.sqlite`/`.sqlite3`, so a non-SQLite file with a database extension is routed into the backup path. Now caught by the header check plus `_verify_sqlite_backup`, but the routing decision itself is still extension-first.
 - `_ensure_utc()` in `backup.py` is dead code — no caller in the module.
+
+## Independent review remediation — cycle 2
+
+The independent review of the implementation SHA identified three Important findings and one Minor cleanup issue. They are addressed in the current working tree; final independent review is pending.
+
+| Finding | Resolution | Regression evidence |
+|---|---|---|
+| Live SQLite `-wal`/`-shm`/`-journal` sidecars were copied as ordinary directory members. | Directory traversal and explicitly selected files now omit SQLite sidecars; database backup API preserves committed WAL rows. | `test_directory_backup_omits_live_sqlite_sidecars_but_keeps_wal_rows` |
+| Internally valid staged/existing bundles were not bound to the preflight manifest identity. | Staged and final manifests must hash to the original preflight manifest before activation. | `test_staged_manifest_must_match_preflight_identity`; `test_existing_version_manifest_must_match_requested_hash` |
+| Source metadata could be read outside one pinned SQLite snapshot. | Source backup opens a read transaction before inventory/page-count checks and backup. | `test_backup_verifies_schema_and_pages_from_same_read_snapshot` injects a concurrent WAL writer after the read snapshot is pinned. |
+| Publish failure could leave a temporary SQLite file. | Fsync/replace now share cleanup handling with backup and verification errors. | `test_failed_atomic_replace_cleans_staged_database` |
+
+Focused validation: `rtk pytest tests/unit/lab/operations tests/integration/lab/test_backup_restore.py -q` → **44 passed**. Exact SHA and independent review will be recorded after commit. Host restore rehearsal, stopped-writer reactivation, measured RPO/RTO, and Windows/Linux filesystem durability remain external qualification gates.

@@ -211,6 +211,7 @@ def backup_sqlite_db(source_db_path: Path | str, target_backup_path: Path | str)
         try:
             source_conn = sqlite3.connect(str(src), timeout=10.0)
             backup_conn = sqlite3.connect(str(temp_target), timeout=10.0)
+            source_conn.execute("BEGIN")
             expected_objects = _database_inventory(source_conn)
             expected_pages = _page_count(source_conn)
             source_conn.backup(backup_conn)
@@ -237,12 +238,18 @@ def backup_sqlite_db(source_db_path: Path | str, target_backup_path: Path | str)
         _fsync_directory(target.parent)
         raise
 
-    # Windows rejects fsync on a read-only CRT descriptor. Opening the completed
-    # backup read/write does not mutate it and gives fsync the required handle.
-    with temp_target.open("r+b") as backup_stream:
-        os.fsync(backup_stream.fileno())
-    os.replace(temp_target, target)
-    _fsync_directory(target.parent)
+    try:
+        # Windows rejects fsync on a read-only CRT descriptor. Opening the completed
+        # backup read/write does not mutate it and gives fsync the required handle.
+        with temp_target.open("r+b") as backup_stream:
+            os.fsync(backup_stream.fileno())
+        os.replace(temp_target, target)
+        _fsync_directory(target.parent)
+    except BaseException:
+        _remove_sqlite_sidecars(temp_target)
+        temp_target.unlink(missing_ok=True)
+        _fsync_directory(target.parent)
+        raise
     return target
 
 
@@ -306,6 +313,8 @@ def create_backup_bundle(
                         relative = directory_path.relative_to(src_root).as_posix()
                         raise ValueError(f"UNSAFE_SYMLINK_SOURCE:{relative}")
                 for fname in files:
+                    if fname.endswith(("-wal", "-shm", "-journal")):
+                        continue
                     file_src = root_path / fname
                     file_rel = file_src.relative_to(src_root).as_posix()
                     safe_source = _assert_no_symlink_path(src_root, file_rel)
@@ -313,6 +322,8 @@ def create_backup_bundle(
                         raise ValueError(f"DUPLICATE_NORMALIZED_PATH:{file_rel}")
                     files_to_copy[file_rel] = safe_source
         elif source_path.is_file():
+            if source_path.name.endswith(("-wal", "-shm", "-journal")):
+                continue
             if rel_path_str in files_to_copy:
                 raise ValueError(f"DUPLICATE_NORMALIZED_PATH:{rel_path_str}")
             files_to_copy[rel_path_str] = source_path

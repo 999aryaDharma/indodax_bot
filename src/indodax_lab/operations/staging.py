@@ -263,7 +263,9 @@ def stage_and_publish_transfer(
             staged_file = temp_publish_dir / rel_path
             _copy_file_durable(source_file, staged_file)
         _copy_file_durable(b_dir / "transfer_manifest.json", temp_publish_dir / "transfer_manifest.json")
-        verify_bundle(temp_publish_dir)
+        staged_manifest = verify_bundle(temp_publish_dir)
+        if _manifest_hash(staged_manifest) != manifest_hash:
+            raise CorruptTransferError("TRANSFER_MANIFEST_CHANGED_DURING_STAGING")
         _fsync_tree(temp_publish_dir)
         try:
             os.replace(temp_publish_dir, final_version)
@@ -274,7 +276,9 @@ def stage_and_publish_transfer(
                 raise
 
     # Never trust a pre-existing/racing immutable target solely by its name.
-    verify_bundle(final_version)
+    published_manifest = verify_bundle(final_version)
+    if _manifest_hash(published_manifest) != manifest_hash:
+        raise CorruptTransferError("IMMUTABLE_VERSION_MANIFEST_MISMATCH")
     _fsync_directory(versions_root)
 
     active_reference = dest_root / "active.json"
