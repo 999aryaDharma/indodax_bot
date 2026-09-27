@@ -52,6 +52,10 @@ FORBIDDEN_FEATURE_KEYWORDS = (
     "future",
     "forward",
     "outcome",
+    "direction",
+    "bull",
+    "bear",
+    "signal",
     "y_true",
     "y_pred",
 )

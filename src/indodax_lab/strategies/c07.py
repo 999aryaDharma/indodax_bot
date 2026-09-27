@@ -39,6 +39,15 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
     adx_trend_thresh = float(spec.parameters.get("adx_trend_threshold", 0.25))
     atr_mult = float(spec.parameters.get("atr_multiplier", 1.5))
     desired_qty = Decimal(str(spec.parameters.get("desired_qty", "0.1")))
+    di_spread_thresh = float(spec.parameters.get("di_spread_threshold", -0.15))
+    sideways_regimes = [
+        str(r).lower()
+        for r in spec.parameters.get("sideways_regimes", ["sideways", "ranging", "neutral"])
+    ]
+    downtrend_regimes = [
+        str(r).lower()
+        for r in spec.parameters.get("downtrend_regimes", ["downtrend", "strong_downtrend"])
+    ]
 
     intents: list[SignalIntent] = []
 
@@ -73,14 +82,14 @@ def c07_decide(frame: DecisionFrame, spec: StrategySpecification | None = None) 
 
         # C07-01-AC1: Strong downtrend strictly rejects entry
         is_strong_downtrend = (
-            regime in ("downtrend", "strong_downtrend")
-            or (di_spread < -0.15 and adx > adx_trend_thresh)
+            regime in downtrend_regimes
+            or (di_spread < di_spread_thresh and adx > adx_trend_thresh)
         )
         if is_strong_downtrend:
             continue
 
         # C07-01-AC2: Sideways oversold gives bounded intent
-        is_sideways = (regime in ("sideways", "ranging")) or (adx <= adx_trend_thresh)
+        is_sideways = regime in sideways_regimes
         is_oversold = (bb_z <= -bb_std) and (rsi <= rsi_oversold)
 
         if is_sideways and is_oversold:

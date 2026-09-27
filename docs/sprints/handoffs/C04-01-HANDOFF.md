@@ -55,3 +55,10 @@ Full lab test suite verification (80 passing in domain suite; 80 passing in univ
 - Deviations: None.
 - Unresolved issues / blockers: None for C04-01.
 - Next unlocked consumers: C12-01, S07-01, QA-01, G01-01.
+
+## Independent review — coordinator DONE pass (2026-09-27)
+
+- Verdict: CONFIRM-PASS. Fresh run `python -m pytest tests/unit/lab/strategies/test_c04.py -v`: 6 passed, 0 failed (AC0–AC3 plus NaN-volume and listing-date regression guards).
+- No new findings. MINOR observation carried as backlog: missing/zero ATR defaults to stop-at-entry rather than fail-closed omit.
+- First review: ses_f2028e7cbffeC5KgDwjqEuUHcn. Verification: ses_f1f5b2f62ffe6uuffD3Mp4m9qf.
+- Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.

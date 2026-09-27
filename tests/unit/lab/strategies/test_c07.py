@@ -220,3 +220,59 @@ def test_c07_atr_missing_or_zero_abstains():
     frame_b = create_decision_frame(df_b, as_of=as_of)
     intents_b = c07_decide(frame_b, spec)
     assert len(intents_b) == 0, f"Expected FLAT when ATR=0, got {len(intents_b)} intents"
+
+
+def test_c07_unknown_regime_abstains():
+    """REGRESSION (review finding): unknown regime must not fall through to ADX check.
+
+    Old code: is_sideways = regime in (sideways, ranging) OR adx <= thresh.
+    Unknown regime (e.g. 'uptrend', 'bull') with low ADX incorrectly entered.
+    New contract: regime must be in configured sideways_regimes allowlist.
+    """
+    spec = load_c07_specification()
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+
+    for unknown in ("uptrend", "bull", "bear", "unknown"):
+        df = _build_c07_features(
+            as_of=as_of,
+            bb_z=-2.5,
+            bb_width=0.04,
+            rsi=22.0,
+            adx=0.10,  # low ADX would previously force sideways=True
+            di_spread=0.0,
+            regime=unknown,
+        )
+        frame = create_decision_frame(df, as_of=as_of)
+        intents = c07_decide(frame, spec)
+        assert len(intents) == 0, (
+            f"Unknown regime {unknown!r} must abstain, got {len(intents)} intents"
+        )
+
+
+def test_c07_di_spread_threshold_is_configurable():
+    """REGRESSION (review finding): di_spread downtrend threshold comes from config."""
+    as_of = datetime(2024, 6, 1, 12, 0, tzinfo=UTC)
+
+    base = _build_c07_features(
+        as_of=as_of,
+        bb_z=-2.5,
+        bb_width=0.04,
+        rsi=22.0,
+        adx=0.40,
+        di_spread=-0.10,
+        regime="sideways",
+    )
+
+    strict_spec = load_c07_specification().model_copy(
+        update={"parameters": {**load_c07_specification().parameters, "di_spread_threshold": -0.05}}
+    )
+    frame = create_decision_frame(base, as_of=as_of)
+    assert c07_decide(frame, strict_spec) == [], "di_spread below configured threshold must reject"
+
+    lax_spec = load_c07_specification().model_copy(
+        update={"parameters": {**load_c07_specification().parameters, "di_spread_threshold": -0.20}}
+    )
+    frame = create_decision_frame(base, as_of=as_of)
+    assert len(c07_decide(frame, lax_spec)) == 1, (
+        "di_spread above configured threshold must not reject"
+    )

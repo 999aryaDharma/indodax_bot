@@ -12,6 +12,14 @@ parameters:
   adx_trend_threshold: 0.25
   atr_multiplier: 1.5
   desired_qty: "0.1"
+  di_spread_threshold: -0.15
+  sideways_regimes:
+    - "sideways"
+    - "ranging"
+    - "neutral"
+  downtrend_regimes:
+    - "downtrend"
+    - "strong_downtrend"
 risk_profile:
   max_position_pct: 0.25
   stop_loss_pct: 0.02

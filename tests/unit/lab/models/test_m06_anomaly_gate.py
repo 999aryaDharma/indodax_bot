@@ -201,3 +201,20 @@ def test_m06_01_legitimate_liquidity_features_are_still_accepted() -> None:
     gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
     bundle = gate.train(df_train, feature_names=feature_names)
     assert bundle.feature_names == feature_names
+
+
+@pytest.mark.parametrize("sneaky", ["direction", "bull", "bear", "signal"])
+def test_m06_01_directional_feature_name_rejected(sneaky: str) -> None:
+    """M06-01-AC2 REGRESSION: bare directional words must be refused, not just compounds.
+
+    The substring guard covered forward_return/target/label but a feature literally
+    named ``direction`` (or bull/bear/signal) trained successfully, letting
+    future-derived directional info into the fitted distribution.
+    """
+    df_train = _make_liquidity_df(n=60, seed=42)
+    df_train[sneaky] = 1.0  # present so the name guard itself is exercised
+    gate = M06AnomalyGate(config=M06Config(contamination=0.1, n_estimators=20, seed=42))
+
+    feature_names = ["volume_base", "spread_bps", "depth_idr", "trade_count"]
+    with pytest.raises(DirectionalClaimForbiddenError, match="DIRECTIONAL_CLAIM_FORBIDDEN"):
+        gate.train(df_train, feature_names=feature_names + [sneaky])
