@@ -9,11 +9,14 @@ Interrupted cleanup dapat rerun tanpa menghapus live data.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import os
-from pathlib import Path
+import stat as stat_module
 import uuid
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Callable
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -24,32 +27,42 @@ def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
 
 
 def _is_symlink_or_junction(path: Path) -> bool:
-    """Check if path is a symlink or junction, without raising on permission errors."""
+    """Reject symlinks, junctions, all Windows reparse points, and unknown states."""
     try:
-        return path.is_symlink()
-    except OSError:
+        if path.is_symlink():
+            return True
+        is_junction = getattr(path, "is_junction", None)
+        if callable(is_junction) and is_junction():
+            return True
+        if os.name == "nt":
+            attrs = path.lstat().st_file_attributes
+            return bool(attrs & getattr(stat_module, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400))
         return False
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True
 
 
-def _assert_no_symlink_or_junction(path: Path, root: Path) -> None:
-    """Walk from path up to root (exclusive), rejecting any symlink or junction component."""
-    # Check the path itself
-    if _is_symlink_or_junction(path):
-        raise SymlinkEscapeError(
-            f"SYMLINK_DETECTED: path '{path}' is a symlink; delete the link, not its target"
-        )
-    # Check each parent up to root
-    current = path.parent
-    while current != root and current != current.parent:
+def _assert_no_symlink_or_junction(path: Path) -> None:
+    """Walk every existing path component to the filesystem root."""
+    current = path
+    while True:
         if _is_symlink_or_junction(current):
             raise SymlinkEscapeError(
-                f"SYMLINK_DETECTED: path component '{current}' is a symlink"
+                f"SYMLINK_DETECTED: path component '{current}' is a symlink or junction"
             )
+        if current == current.parent:
+            break
         current = current.parent
 
 
 class SymlinkEscapeError(ValueError):
     """Raised when an artifact or target path escapes the allowed storage boundary or is a symlink/junction."""
+
+
+class ProtectedArtifactRegistryError(RuntimeError):
+    """Raised when authoritative protected-artifact reachability is unavailable or invalid."""
 
 
 class RetentionPolicy(BaseModel):
@@ -91,23 +104,41 @@ class StorageCleaner:
         self,
         storage_root: Path | str,
         policy: RetentionPolicy | None = None,
-        protected_resolver: Callable[[str], set[str]] | None = None,
+        protected_resolver: Callable[[str], Mapping[str, set[str]]] | None = None,
     ) -> None:
-        # OPS-03-R6: reject symlink/junction at root
-        root = Path(storage_root).resolve()
-        _assert_no_symlink_or_junction(root, root.parent)
-        self.storage_root = root
+        # Inspect the supplied root before resolve can hide a link or junction.
+        root = Path(os.path.abspath(storage_root))
+        _assert_no_symlink_or_junction(root)
+        self.storage_root = root.resolve()
         self.policy = policy or RetentionPolicy()
         self._protected_resolver = protected_resolver
 
-    def _get_protected_artifact_ids(self) -> set[str]:
-        """Resolve protected artifact IDs from registry, falling back to policy names."""
-        if self._protected_resolver:
-            try:
-                return self._protected_resolver(str(self.storage_root))
-            except Exception:
-                pass
-        return set(self.policy.protected_artifact_ids)
+    def _get_protected_artifact_paths(self) -> set[str]:
+        """Resolve opaque registry IDs to exact root-relative paths, failing closed."""
+        if self._protected_resolver is None:
+            raise ProtectedArtifactRegistryError("PROTECTED_ARTIFACT_REGISTRY_UNAVAILABLE")
+        try:
+            references = self._protected_resolver(str(self.storage_root))
+            if not isinstance(references, Mapping):
+                raise ValueError("registry resolver must return artifact_id -> paths")
+            if not self.policy.protected_artifact_ids.issubset(references):
+                raise ValueError("required protected artifact ID is missing from registry")
+            protected_paths: set[str] = set()
+            for artifact_id, paths in references.items():
+                if not isinstance(artifact_id, str) or not artifact_id.strip():
+                    raise ValueError("registry returned a blank artifact ID")
+                if not isinstance(paths, (set, frozenset)) or not paths:
+                    raise ValueError(f"registry returned invalid paths for artifact ID {artifact_id!r}")
+                for raw_path in paths:
+                    safe_path = self.validate_safe_path(raw_path)
+                    if not safe_path.is_file():
+                        raise ValueError(f"registered artifact path is missing: {raw_path!r}")
+                    protected_paths.add(safe_path.relative_to(self.storage_root).as_posix())
+            return protected_paths
+        except ProtectedArtifactRegistryError:
+            raise
+        except Exception as err:
+            raise ProtectedArtifactRegistryError("PROTECTED_ARTIFACT_REGISTRY_UNAVAILABLE") from err
 
     def validate_safe_path(self, target_path: str | Path) -> Path:
         """Verify that target_path resides safely within storage_root without escaping.
@@ -119,9 +150,9 @@ class StorageCleaner:
         candidate = Path(target_path)
         if not candidate.is_absolute():
             candidate = self.storage_root / candidate
+        candidate = Path(os.path.abspath(candidate))
 
-        # OPS-03-R1: check each component for symlink/junction before resolving
-        _assert_no_symlink_or_junction(candidate, self.storage_root)
+        _assert_no_symlink_or_junction(candidate)
 
         # Now resolve and verify containment
         resolved = candidate.resolve()
@@ -165,9 +196,9 @@ class StorageCleaner:
                 executed_at=now,
             )
 
-        protected_ids = self._get_protected_artifact_ids()
+        protected_paths = self._get_protected_artifact_paths()
         scanned_count = 0
-        candidates: list[Path] = []
+        candidates: list[tuple[Path, os.stat_result]] = []
         candidate_relpaths: list[str] = []
         candidate_bytes = 0
         rejected: list[str] = []
@@ -187,35 +218,60 @@ class StorageCleaner:
                 # Relative path from storage root
                 rel_path = safe_path.relative_to(self.storage_root).as_posix()
 
-                # Invariant 1: Check protected names/IDs (OPS-03-AC1, R2, R3)
-                if fname in protected_ids or rel_path in protected_ids:
+                # Invariant 1: resolve identity to concrete paths; never compare basenames.
+                if rel_path in protected_paths:
                     continue
 
                 # Invariant 2: Check age vs retention cutoff
                 try:
-                    stat = safe_path.stat()
+                    file_stat = safe_path.lstat()
                 except FileNotFoundError:
                     # File already gone (idempotent rerun)
                     continue
-                if stat.st_mtime < cutoff_timestamp:
-                    candidates.append(safe_path)
+                if stat_module.S_ISREG(file_stat.st_mode) and file_stat.st_mtime < cutoff_timestamp:
+                    candidates.append((safe_path, file_stat))
                     candidate_relpaths.append(rel_path)
-                    candidate_bytes += stat.st_size
+                    candidate_bytes += file_stat.st_size
 
         deleted_paths: list[str] = []
         freed_bytes = 0
 
         if not is_dry:
-            for file_path in candidates:
+            for file_path, scanned_stat in candidates:
                 try:
-                    if file_path.exists():
-                        fsize = file_path.stat().st_size
-                        file_path.unlink()
-                        freed_bytes += fsize
-                        deleted_paths.append(file_path.relative_to(self.storage_root).as_posix())
+                    file_path = self.validate_safe_path(file_path)
+                    rel_path = file_path.relative_to(self.storage_root).as_posix()
+                    if rel_path in self._get_protected_artifact_paths():
+                        rejected.append(f"{rel_path}: PROTECTED_ARTIFACT_REACHABILITY_CHANGED")
+                        continue
+                    current_stat = file_path.lstat()
                 except FileNotFoundError:
                     # Gracefully handle already-deleted file from previous interrupted run (OPS-03-AC3)
                     continue
+                except ProtectedArtifactRegistryError:
+                    rejected.append("PROTECTED_ARTIFACT_REGISTRY_UNAVAILABLE_DURING_APPLY")
+                    break
+                except SymlinkEscapeError as err:
+                    rejected.append(f"{file_path}: {err}")
+                    continue
+
+                identity = lambda value: (
+                    value.st_dev,
+                    value.st_ino,
+                    value.st_size,
+                    value.st_mtime_ns,
+                    value.st_ctime_ns,
+                )
+                if (
+                    not stat_module.S_ISREG(current_stat.st_mode)
+                    or identity(current_stat) != identity(scanned_stat)
+                    or current_stat.st_mtime >= cutoff_timestamp
+                ):
+                    rejected.append(f"{rel_path}: CANDIDATE_CHANGED_AFTER_SCAN")
+                    continue
+                file_path.unlink()
+                freed_bytes += current_stat.st_size
+                deleted_paths.append(rel_path)
 
         return CleanupReport(
             report_id=f"clean_{uuid.uuid4().hex[:8]}",

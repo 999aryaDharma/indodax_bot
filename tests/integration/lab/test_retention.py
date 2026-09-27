@@ -9,13 +9,13 @@ Acceptance Criteria:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import os
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
 import pytest
 
 from indodax_lab.orchestration.maintenance import (
-    CleanupReport,
     RetentionPolicy,
     StorageCleaner,
     SymlinkEscapeError,
@@ -42,6 +42,10 @@ def _setup_storage_environment(root: Path) -> tuple[Path, Path, Path]:
     return old_referenced, recent_unreferenced, old_unreferenced
 
 
+def _empty_protected_registry(_: str) -> dict[str, set[str]]:
+    return {}
+
+
 def test_ops_03_valid_contract(tmp_path: Path) -> None:
     """OPS-03-AC0: Cleanup hanya menghapus artifact tidak direferensikan setelah retention dan dry-run audit."""
     storage_root = tmp_path / "storage"
@@ -59,9 +63,11 @@ def test_ops_03_valid_contract(tmp_path: Path) -> None:
 
     policy = RetentionPolicy(
         retention_days=30,
-        protected_artifact_ids={"art_old_referenced.bin"},
+        protected_artifact_ids={"old-reference"},
     )
-    cleaner = StorageCleaner(storage_root, policy)
+    cleaner = StorageCleaner(storage_root, policy, protected_resolver=lambda _: {
+        "old-reference": {"artifacts/art_old_referenced.bin"}
+    })
 
     # 1. Dry run audit: identifies candidate without deletion
     dry_report = cleaner.scan_and_clean(as_of=now, dry_run=True)
@@ -105,9 +111,16 @@ def test_ops_03_contract_1(tmp_path: Path) -> None:
 
     policy = RetentionPolicy(
         retention_days=30,
-        protected_artifact_ids={"champion_weights.pt", "sealed_test_fold.parquet"},
+        protected_artifact_ids={"champion-id", "sealed-snapshot-id"},
     )
-    cleaner = StorageCleaner(storage_root, policy)
+    cleaner = StorageCleaner(
+        storage_root,
+        policy,
+        protected_resolver=lambda _: {
+            "champion-id": {"champion_weights.pt"},
+            "sealed-snapshot-id": {"sealed_test_fold.parquet"},
+        },
+    )
 
     report = cleaner.scan_and_clean(as_of=now, dry_run=False)
 
@@ -129,7 +142,11 @@ def test_ops_03_contract_2(tmp_path: Path) -> None:
     secret_file.write_bytes(b"API_SECRET_KEY=confidential")
 
     policy = RetentionPolicy(retention_days=30)
-    cleaner = StorageCleaner(storage_root, policy)
+    cleaner = StorageCleaner(
+        storage_root,
+        policy,
+        protected_resolver=lambda _: {"live-id": {"live_data.parquet"}},
+    )
 
     # Test path escaping storage root
     escaping_path = "../outside_sensitive/secret.env"
@@ -160,9 +177,13 @@ def test_ops_03_contract_3(tmp_path: Path) -> None:
 
     policy = RetentionPolicy(
         retention_days=30,
-        protected_artifact_ids={"live_data.parquet"},
+        protected_artifact_ids={"live-id"},
     )
-    cleaner = StorageCleaner(storage_root, policy)
+    cleaner = StorageCleaner(
+        storage_root,
+        policy,
+        protected_resolver=lambda _: {"live-id": {"live_data.parquet"}},
+    )
 
     # Simulate interrupted cleanup where dead_artifact_1 was manually deleted or interrupted halfway
     dead_artifact_1.unlink()

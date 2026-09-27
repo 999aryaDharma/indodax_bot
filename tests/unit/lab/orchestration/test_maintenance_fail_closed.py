@@ -14,13 +14,15 @@ from unittest.mock import patch
 import pytest
 
 from indodax_lab.orchestration.maintenance import (
-    CleanupReport,
     RetentionPolicy,
     StorageCleaner,
     SymlinkEscapeError,
-    _assert_no_symlink_or_junction,
     _is_symlink_or_junction,
 )
+
+
+def _empty_protected_registry(_: str) -> dict[str, set[str]]:
+    return {}
 
 
 def test_ops_03_r1_symlink_target_not_deleted() -> None:
@@ -48,7 +50,7 @@ def test_ops_03_r1_symlink_target_not_deleted() -> None:
             mock_is_symlink.side_effect = lambda p: p == link
 
             policy = RetentionPolicy(retention_days=1, dry_run=False)
-            cleaner = StorageCleaner(root, policy)
+            cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
             report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
 
         # The outside target must still exist
@@ -78,7 +80,7 @@ def test_ops_03_r4_single_escape_does_not_abort_audit() -> None:
             mock_is_symlink.side_effect = lambda p: p == escape
 
             policy = RetentionPolicy(retention_days=1, dry_run=True)
-            cleaner = StorageCleaner(root, policy)
+            cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
             report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=True)
 
         # Audit must complete: scanned_count includes both files
@@ -118,19 +120,25 @@ def test_ops_03_protected_resolver_from_registry() -> None:
     with tempfile.TemporaryDirectory() as root_dir:
         root = Path(root_dir)
         # Champion artifact with a different filename
-        champion = root / "champion_model_v42.onnx"
+        champion = root / "models" / "2025" / "weights.onnx"
+        champion.parent.mkdir(parents=True)
         champion.write_bytes(b"model")
         old_time = datetime.now(UTC) - timedelta(days=10)
         os.utime(champion, (old_time.timestamp(), old_time.timestamp()))
         # Old file with the protected name but NOT the champion
-        old = root / "champion_model_v1.onnx"
+        old = root / "archive" / "weights.onnx"
+        old.parent.mkdir()
         old.write_bytes(b"old")
         os.utime(old, (old_time.timestamp(), old_time.timestamp()))
 
-        def registry_resolver(storage_root: str) -> set[str]:
-            return {"champion_model_v42.onnx"}  # Only the actual champion
+        def registry_resolver(storage_root: str) -> dict[str, set[str]]:
+            return {"sha256:champion-model": {"models/2025/weights.onnx"}}
 
-        policy = RetentionPolicy(retention_days=1, dry_run=False)
+        policy = RetentionPolicy(
+            retention_days=1,
+            protected_artifact_ids={"sha256:champion-model"},
+            dry_run=False,
+        )
         cleaner = StorageCleaner(root, policy, protected_resolver=registry_resolver)
         report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
 
@@ -138,7 +146,114 @@ def test_ops_03_protected_resolver_from_registry() -> None:
         assert champion.exists()
         # Old file with same base name but different ID is NOT protected
         assert not old.exists()
-        assert "champion_model_v1.onnx" in report.deleted_files
+        assert "archive/weights.onnx" in report.deleted_files
+
+
+def test_ops_03_registry_lookup_failure_aborts_cleanup() -> None:
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        artifact = root / "weights-v42.onnx"
+        artifact.write_bytes(b"champion")
+        old_time = datetime.now(UTC) - timedelta(days=10)
+        os.utime(artifact, (old_time.timestamp(), old_time.timestamp()))
+
+        def unavailable(_: str) -> dict[str, set[str]]:
+            raise RuntimeError("registry unavailable")
+
+        cleaner = StorageCleaner(
+            root,
+            RetentionPolicy(retention_days=1, dry_run=False),
+            protected_resolver=unavailable,
+        )
+        with pytest.raises(RuntimeError, match="PROTECTED_ARTIFACT_REGISTRY_UNAVAILABLE"):
+            cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
+        assert artifact.exists()
+
+
+def test_ops_03_apply_rechecks_new_registry_reachability() -> None:
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        artifact = root / "weights-v42.onnx"
+        artifact.write_bytes(b"champion")
+        old_time = datetime.now(UTC) - timedelta(days=10)
+        os.utime(artifact, (old_time.timestamp(), old_time.timestamp()))
+        calls = 0
+
+        def resolver(_: str) -> dict[str, set[str]]:
+            nonlocal calls
+            calls += 1
+            return {} if calls == 1 else {"sha256:champion": {"weights-v42.onnx"}}
+
+        cleaner = StorageCleaner(
+            root,
+            RetentionPolicy(retention_days=1, dry_run=False),
+            protected_resolver=resolver,
+        )
+        report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
+
+        assert artifact.exists()
+        assert report.deleted_count == 0
+        assert any("PROTECTED_ARTIFACT_REACHABILITY_CHANGED" in item for item in report.rejected_candidates)
+
+
+def test_ops_03_apply_rejects_replaced_candidate() -> None:
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        artifact = root / "expired.bin"
+        artifact.write_bytes(b"old")
+        old_time = datetime.now(UTC) - timedelta(days=10)
+        os.utime(artifact, (old_time.timestamp(), old_time.timestamp()))
+        calls = 0
+
+        def resolver(_: str) -> dict[str, set[str]]:
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                artifact.write_bytes(b"replacement is current")
+            return {}
+
+        cleaner = StorageCleaner(
+            root,
+            RetentionPolicy(retention_days=1, dry_run=False),
+            protected_resolver=resolver,
+        )
+        report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
+
+        assert artifact.exists()
+        assert artifact.read_bytes() == b"replacement is current"
+        assert report.deleted_count == 0
+        assert any("CANDIDATE_CHANGED_AFTER_SCAN" in item for item in report.rejected_candidates)
+
+
+def test_ops_03_junction_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    path = Path("junction-probe")
+    path_type = type(path)
+    monkeypatch.setattr(path_type, "is_junction", lambda self: self == path, raising=False)
+
+    assert _is_symlink_or_junction(path)
+
+
+def test_ops_03_root_link_rejected_before_resolution(monkeypatch: pytest.MonkeyPatch) -> None:
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        target = root / "real"
+        target.mkdir()
+        alias = root / "alias"
+        alias.mkdir()
+        path_type = type(alias)
+        original_resolve = path_type.resolve
+
+        def resolve_as_target(path: Path, *args, **kwargs) -> Path:
+            return target if path == alias else original_resolve(path, *args, **kwargs)
+
+        monkeypatch.setattr(path_type, "resolve", resolve_as_target)
+        monkeypatch.setattr(
+            "indodax_lab.orchestration.maintenance._is_symlink_or_junction",
+            lambda path: Path(path) == alias,
+        )
+
+        with pytest.raises(SymlinkEscapeError, match="SYMLINK_DETECTED"):
+            StorageCleaner(alias, protected_resolver=_empty_protected_registry)
 
 
 def test_ops_03_idempotent_rerun_no_crash() -> None:
@@ -154,7 +269,7 @@ def test_ops_03_idempotent_rerun_no_crash() -> None:
         os.utime(f2, (old_time.timestamp(), old_time.timestamp()))
 
         policy = RetentionPolicy(retention_days=1, dry_run=False)
-        cleaner = StorageCleaner(root, policy)
+        cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
 
         # First run
         r1 = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
@@ -180,7 +295,7 @@ def test_ops_03_dry_run_shows_would_free_bytes() -> None:
         os.utime(f2, (old_time.timestamp(), old_time.timestamp()))
 
         policy = RetentionPolicy(retention_days=1, dry_run=True)
-        cleaner = StorageCleaner(root, policy)
+        cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
         report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=True)
 
         assert report.dry_run is True
@@ -201,7 +316,7 @@ def test_ops_03_rejected_candidates_in_report() -> None:
             mock_is_symlink.side_effect = lambda p: p == link
 
             policy = RetentionPolicy(retention_days=1, dry_run=True)
-            cleaner = StorageCleaner(root, policy)
+            cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
             report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=True)
 
         assert len(report.rejected_candidates) == 1
@@ -250,7 +365,7 @@ def test_ops_03_dry_run_false_deletes() -> None:
         os.utime(f, (old_time.timestamp(), old_time.timestamp()))
 
         policy = RetentionPolicy(retention_days=1, dry_run=False)
-        cleaner = StorageCleaner(root, policy)
+        cleaner = StorageCleaner(root, policy, protected_resolver=_empty_protected_registry)
         report = cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
 
         assert not f.exists()
