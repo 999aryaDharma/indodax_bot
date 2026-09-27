@@ -97,3 +97,16 @@ Full lab suite verification: 211 passed across strategies, features, labels, eva
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `_reject_unauthorized_chat` returns a bare denial message with no audit trail of which chat id was rejected. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: the fake Telegram modules in the test duplicate the shape of the real `telegram` package and will need maintenance when `python-telegram-bot` is actually installed. Recorded as backlog.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (2 IMPORTANT + 3 MINOR + dep gate). Fresh runs (fake
+  transports only): 19 passed, exit 0. AC0–AC3 hold on the gated surface; no
+  leak to unauthorized parties there.
+- IMPORTANT: callback_exec/skip/paper/noop do state-changing work + reply with
+  real plan details with ZERO chat-authorization check — gate every callback
+  before _record_callback_intent + regression tests.
+- IMPORTANT (docs): handoff misstates REPORT-01/SHADOW-02 as DONE (both REVIEW).
+- MINOR: ModuleNotFoundError RED rows; unescaped dynamic fields in MarkdownV2;
+  narrow secret-regex shapes. Deps REPORT-01/SHADOW-02 REVIEW (gate).
+- Reviewer ses_f1eba02d9ffelOK7osrXuhJvYl. Fix cycle queued (callback gate).

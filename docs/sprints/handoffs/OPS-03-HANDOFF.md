@@ -96,5 +96,21 @@ No test was written and no test was run against `maintenance.py` for this sprint
 ### Capability gap recorded
 `ruff` is **not installed** in this environment, so no static lint gate could be run for this or any other sprint in the batch. Per `AGENTS.md` this is recorded as a capability gap rather than worked around; no project-local or unknown binary was installed as a substitute.
 
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (1 CRITICAL + routing). Fresh runs: 4 + 11 passed, exit 0.
+  AC0/AC2/AC3 hold; AC1 holds on exact names only.
+- CRITICAL (probed live): champion/sealed protection matches exact filenames —
+  `champion_model_v42.onnx` (60d old) was DELETED despite policy; resolver hook
+  has no registry adapter. Resolve protected paths from real registry/manifest,
+  match resolved paths, fail closed when unreachable.
+- IMPORTANT: resolver exceptions swallowed → fail-open downgrade on outage.
+- IMPORTANT: junctions bypass is_symlink-only guard.
+- Routing: CONCUR with handoff — maintenance.py sits in orchestration batch
+  territory (main agent active). This lane does NOT fix; routed to
+  orchestration owner. Recommend BLOCKED pending routing.
+- Deps OPS-02 DONE / EVAL-01 DONE satisfied.
+- Reviewer ses_f1eba0288ffe112qNmQ6FN27qm.
+
 ### Cross-batch conflict flagged to the coordinator
 `src/indodax_lab/orchestration/maintenance.py` is claimed by OPS-03 but sits in a directory owned by the orchestration batch. Either (a) route OPS-03 to the orchestration owner, or (b) grant a documented path exception for this single file. **Do not** let two agents edit `orchestration/maintenance.py` concurrently. **Recommend marking OPS-03 BLOCKED pending that routing decision** — the OPS-03-R1 finding is Critical and must not ship unresolved.

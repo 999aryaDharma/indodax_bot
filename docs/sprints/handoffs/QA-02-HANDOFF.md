@@ -107,3 +107,15 @@ Full lab suite verification: 215 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the boundary scanner reports credential-shaped names but has no allowlist for known-safe fixtures, so the test fixtures that legitimately contain key-shaped strings will need an exclusion mechanism as the suite grows. Building that mechanism is new capability rather than a defect repair and was not attempted inside this single fix cycle.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (1 CRITICAL + dep gate). Fresh runs: 13 passed, exit 0;
+  bypass PROVEN live (WITHDRAW_TOKEN/API_TOKEN/TRADE_PASSWORD/EXCHANGE_PASSWORD
+  all ALLOWED by the audit).
+- CRITICAL: audit_no_trade_withdraw_keys misses PASSWORD-family and
+  trade/withdraw-scoped TOKEN-family — add matchers keeping TELEGRAM_BOT_TOKEN
+  allowed per regression tests.
+- IMPORTANT (process): deps REPORT-02/AGENT-01 REVIEW. MINOR: stale tournament
+  clock claim; unwired SecurityAuditRunner; narrow threat table.
+- Reviewer ses_f1eba02b0ffeSevfvtZ6qTIPvK. Fix cycle queued (credential matcher).

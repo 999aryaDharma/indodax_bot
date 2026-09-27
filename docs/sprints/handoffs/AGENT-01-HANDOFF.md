@@ -101,4 +101,21 @@ No test was written for this sprint, because a behavioural regression test would
 `ruff` is **not installed** in this environment, so no static lint gate could be run for this or any other sprint in the batch. Per `AGENTS.md` this is recorded as a capability gap rather than worked around; no project-local or unknown binary was installed as a substitute.
 
 ### Cross-batch conflict flagged to the coordinator
-`src/indodax_lab/orchestration/curator_policy.py` and `tests/unit/lab/orchestration/test_curator_policy.py` are claimed by AGENT-01 but sit in directories owned by the orchestration batch. Either (a) route AGENT-01 to the orchestration owner, or (b) grant a documented path exception for these two files. **Do not** let two agents edit them concurrently. **Recommend marking AGENT-01 BLOCKED pending that routing decision** — AGENT-01-R1 is Critical and AGENT-01-R1/R4 mean the sprint's three declared acceptance boundaries are each only nominally satisfied.
+`src/indodax_lab/orchestration/curator_policy.py` and `tests/unit/lab/orchestration/test_curator_policy.py` are claimed by AGENT-01 but sit in directories owned by the orchestration batch. Either (a) route AGENT-01 to the orchestration owner, or (b) grant a documented path exception for these two files. **Do not** let two agents edit them concurrently. **Recommend marking AGENT-01 BLOCKED pending that routing decision** - AGENT-01-R1 is Critical and AGENT-01-R1/R4 mean the sprint's three declared acceptance boundaries are each only nominally satisfied.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (2 IMPORTANT code + dep gate). Fresh run
+  `test_curator_policy.py -v`: 18 passed, exit 0; F1/F2 proven live.
+  AC0/AC1/AC2 hold; AC3 partial. No auto-merge/evaluator-mutation path exists.
+- IMPORTANT: blank approver "   " normalizes to "" and passes self-check as
+  APPROVED — reject blank with ProposalValidationError.
+- IMPORTANT: submit_proposal silently overwrites (APPROVED→PENDING, audit
+  erased) — raise on duplicate proposal_id.
+- IMPORTANT (process): deps REPORT-01/JOB-03 REVIEW. MINOR: raw approver
+  storage, bare KeyError, unvalidated CR fields, in-memory-only scope,
+  ModuleNotFoundError RED rows.
+- Routing: CONCUR with handoff — files live in orchestration batch territory
+  and main agent is active there. This lane does NOT fix; routed to
+  orchestration owner. Recommend BLOCKED pending routing.
+- Reviewer ses_f1eba02b2ffezu67m1vTzXEqY7.

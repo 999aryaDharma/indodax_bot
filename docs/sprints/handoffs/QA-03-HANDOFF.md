@@ -94,3 +94,20 @@ Full lab suite verification: 219 passed across strategies, features, labels, eva
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Do not issue a further fix cycle against the current ownership. The two findings above need one of: (a) `src/indodax_lab/operations/recovery.py` added to the implementing batch's ownership so QA-03-F1 can be fixed with an atomic write and a non-swallowing `_load()`; and (b) a root-cause and design review for QA-03-F2, because three acceptance criteria describe host measurement and durable single-writer risk state that no unit-level patch can deliver, and QA-03-AC4 in particular requires a 24-hour physical soak on the ASUS host.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Until then QA-03 should be set BLOCKED rather than DONE. It currently unlocks REL-01 and PM-06, so the coordinator should treat those two as not unlocked by a passing QA-03.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (AC4/AC5/AC6 FAIL + evidence-doc + gates). Fresh runs:
+  14 passed, exit 0 — but AC4/5/6 mapped tests DO NOT EXIST (zero grep hits);
+  only framework tests under other names, all fixture-based, zero ASUS measured
+  artifacts anywhere.
+- IMPORTANT: no 24h ASUS soak artifact (AC4); no mount-inventory/contention
+  mapping (AC5, shared_with=[] hardcoded); no 12h unattended qualification with
+  single-writer/risk/retry evidence (AC6, defaults assert the conclusion).
+- IMPORTANT: capacity-evidence.md certifies hosts the code path returns
+  UNVERIFIED for — rewrite to UNVERIFIED/pending or attach measured artifact.
+- IMPORTANT (process): deps OPS-01/OPS-03/QA-01 REVIEW; handoff misstates OPS-03
+  DONE. Manifest files list omits real impl/test paths (MINOR).
+- CONCUR with handoff: set BLOCKED, not DONE; needs operator-owned 24h soak +
+  design review, not another unit patch. REL-01/PM-06 stay locked behind it.
+- Reviewer ses_f1eba02afffeaDtrRY4NbHiocz.

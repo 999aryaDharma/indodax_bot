@@ -115,3 +115,18 @@ Every test builds an in-process `HostServiceProfile` and injects a plain `dict` 
 - `ManagedService.handle_signal` silently returns for any signal name other than `SIGTERM`/`SIGINT`. A `SIGHUP` reload or an unexpected signal is a no-op with no diagnostic. Consider rejecting unrecognised signal names explicitly.
 - `ManagedService.start()`/`stop()` have no state guard, so starting a `RUNNING` service runs the start hook a second time.
 - `HostServiceProfile.data_root` is not validated for symlink or junction escape at construction time, unlike the equivalent checks in `operations/backup.py`.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (5 IMPORTANT + dep gate). Fresh runs: 17 + 36 passed,
+  exit 0 — but AC4/AC5/AC6 mapped tests DO NOT EXIST (zero grep hits);
+  AC0/AC1 only partial (separation unproven, lock unwired); AC2/AC3 pass.
+- IMPORTANT: AC4/AC5/AC6 wholly absent (no budgets/headroom, no mount
+  inventory, no unattended recovery) — needs implementation or explicit CR
+  descope, not a patch.
+- IMPORTANT: SingleWriterLock never acquired by ManagedService — duplicate
+  writers possible despite AC1.
+- IMPORTANT: ADR-009 isolation unproven (shared user/env/workdir/data_root,
+  no Production/Research split).
+- IMPORTANT (process): deps JOB-02/SHADOW-02 REVIEW.
+- Reviewer ses_f1eba02acffeFn9j3Cr7HPRGUq.

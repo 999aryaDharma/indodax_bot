@@ -109,3 +109,19 @@ Full lab suite verification: 223 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `verify_and_execute_rollback` does not reconcile the active directory entry set when a target artifact is absent from the active directory after a successful replace; only file content is rolled back. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `_derive_software_readiness` re-reads and re-parses the manifest on every `package_release` call. Fine for a once-per-release path; a cache would be unnecessary complexity.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `evaluate_release_status` still accepts `software_ready` directly as a boolean, so a caller outside `package_release` can still pass `True` without evidence. That entry point is unchanged from the original contract and was out of scope for this fix cycle.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (3 IMPORTANT + dep gates). Fresh run
+  `test_release_candidate.py -q`: 19 passed, exit 0 — code behaves (NOT_READY
+  with per-sprint reasons; genuine restore; unknown tiers refused).
+- IMPORTANT: release-evidence.md records QA-01/02/03 PASSED vs manifest REVIEW
+  (fix doc, manifest-owned).
+- IMPORTANT: deploy/release-lab.sh hardcodes READY with no manifest derivation.
+- IMPORTANT: verify_and_execute_rollback joins unsanitized keys (../ escape
+  proven) — reject absolute/.. or enforce is_relative_to.
+- MINOR: software_ready bool bypass; non-string tier AttributeError; manifest
+  omits release.py paths; stale evidence table.
+- Deps QA-01/QA-02/QA-03/REPORT-02 all REVIEW (gate).
+- Reviewer ses_f1eba02aeffe26lqrg4nB099aD. Fix cycle queued (rollback
+  traversal + doc/runbook).
