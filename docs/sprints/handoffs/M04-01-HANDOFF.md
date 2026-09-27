@@ -86,4 +86,5 @@ Full lab suite verification: 179 passed across strategies, features, labels, eva
 - Owning model suite: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` — 185 passed, 9 warnings.
 - Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/models/m04_quantile_risk.py tests/unit/lab/models/test_m04_quantile_risk.py` — passed.
 - Diff check on source/tests/handoff — passed.
-- Delta review: pending at exact code SHA `0896db0c28338b711fb82d6cd118c56e9784c061`.
+- Delta review: PASS at exact code SHA `0896db0c28338b711fb82d6cd118c56e9784c061`; reviewer confirmed coverage shape/finiteness guards and the fitted-state/training-data identity fix, with no new Critical/Important findings. Reviewer independently ran the focused M04 suite: 13 passed. The broader model suite was owner-run only.
+- M04-01 remains REVIEW because its ML-04 dependency remains REVIEW; this PASS closes only the frozen M04 correction findings.
