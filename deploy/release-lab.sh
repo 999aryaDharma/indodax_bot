@@ -38,12 +38,39 @@ python -m pytest \
 
 echo "✓ Full test suite passed without errors."
 
-# Step 3: Candidate Packaging
+# Step 3: Candidate Packaging — software readiness is DERIVED from the sprint
+# manifest authority via package_release (REL-01-AC0). It is never assumed:
+# without manifest evidence of all core sprints DONE, packaging stops NOT_READY.
 GIT_SHA=$(git rev-parse HEAD)
+MANIFEST_PATH="${MANIFEST_PATH:-${ROOT_DIR}/docs/sprints/sprint-manifest.json}"
 echo ">>> Freezing Release Candidate SHA: ${GIT_SHA}"
 echo ">>> Release Tag: ${RELEASE_TAG}"
-echo ">>> Software RC Status: READY"
+echo ">>> Deriving software readiness from manifest: ${MANIFEST_PATH}"
+SW_STATUS=$(python - "${MANIFEST_PATH}" "${RELEASE_TAG}" "${GIT_SHA}" <<'EOF'
+import sys
+from indodax_lab.verification.release import ReleaseCandidateManager
+manifest_path, tag, sha = sys.argv[1], sys.argv[2], sys.argv[3]
+pkg = ReleaseCandidateManager().package_release(
+    tag=tag,
+    git_sha=sha,
+    core_sprints=["QA-01", "QA-02", "QA-03", "REPORT-02"],
+    champion_id="pending_forward_evaluation",
+    forward_days=0,
+    forward_trades=0,
+    artifacts_manifest={},
+    manifest_path=manifest_path,
+)
+print(pkg.software_rc_status)
+for reason in pkg.readiness_reasons:
+    print(f"    - {reason}", file=sys.stderr)
+EOF
+)
+echo ">>> Software RC Status: ${SW_STATUS} (derived from sprint manifest)"
 echo ">>> Champion Status: PENDING_FORWARD_EVALUATION (Longevity evaluation continues in forward paper mode)"
+if [ "${SW_STATUS}" != "READY" ]; then
+    echo "ERROR: Core sprints are not all DONE in ${MANIFEST_PATH}; release candidate is NOT_READY. See reasons above."
+    exit 1
+fi
 
 echo "================================================================"
 echo " Release Candidate ${RELEASE_TAG} verified and packaged cleanly."

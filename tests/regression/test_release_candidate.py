@@ -425,6 +425,57 @@ def test_rollback_rejects_empty_target_manifest(tmp_path: Path) -> None:
     assert (active_dir / "weights.json").read_bytes() == b'{"v": "1.1.0"}'
 
 
+def test_rollback_rejects_path_traversal_keys(tmp_path: Path) -> None:
+    """REL-01-AC1: manifest keys must not escape the artifacts/active dirs.
+
+    A ``../evil`` key resolves outside both directories on read AND write;
+    an absolute key does the same. Both must be refused fail-closed with
+    RollbackIntegrityError and leave outside files untouched.
+    """
+    manager = ReleaseCandidateManager()
+    artifacts_dir = tmp_path / "artifacts"
+    active_dir = tmp_path / "active"
+    artifacts_dir.mkdir()
+    active_dir.mkdir()
+
+    # Planted outside both dirs: pre-fix code resolves
+    # artifacts_dir / "../evil.json" -> tmp_path / "evil.json" (read escape)
+    # and restores to active_dir / "../evil.json" (write escape).
+    outside = tmp_path / "evil.json"
+    outside.write_bytes(b'{"original": true}')
+    traversal_manifest = {
+        "../evil.json": hashlib.sha256(outside.read_bytes()).hexdigest(),
+    }
+    with pytest.raises(RollbackIntegrityError) as exc_info:
+        manager.verify_and_execute_rollback(
+            current_version="v1.1.0",
+            target_version="v1.0.0",
+            target_manifest=traversal_manifest,
+            artifacts_dir=artifacts_dir,
+            active_dir=active_dir,
+        )
+    assert "ROLLBACK_PATH_ESCAPE" in str(exc_info.value)
+    assert outside.read_bytes() == b'{"original": true}'
+    assert list(active_dir.iterdir()) == []
+
+    # Absolute keys escape the same way and must be refused too.
+    abs_outside = tmp_path / "abs_outside.json"
+    abs_outside.write_bytes(b'{"abs": 1}')
+    abs_manifest = {
+        str(abs_outside): hashlib.sha256(abs_outside.read_bytes()).hexdigest(),
+    }
+    with pytest.raises(RollbackIntegrityError) as exc_info2:
+        manager.verify_and_execute_rollback(
+            current_version="v1.1.0",
+            target_version="v1.0.0",
+            target_manifest=abs_manifest,
+            artifacts_dir=artifacts_dir,
+            active_dir=active_dir,
+        )
+    assert "ROLLBACK_PATH_ESCAPE" in str(exc_info2.value)
+    assert abs_outside.read_bytes() == b'{"abs": 1}'
+
+
 def test_rel_01_contract_2() -> None:
     """AC2: Optional experimental work tidak diam-diam dipromosikan."""
     manager = ReleaseCandidateManager()

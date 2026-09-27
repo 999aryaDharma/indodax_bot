@@ -13,7 +13,7 @@ import hashlib
 import json
 import os
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -219,7 +219,8 @@ class ReleaseCandidateManager:
         pre-restore content and the error is raised.
 
         Raises:
-            RollbackIntegrityError: If the manifest is empty, no restore destination was
+            RollbackIntegrityError: If the manifest is empty, declares an unsafe
+                key (absolute path or ``..`` traversal), no restore destination was
                 supplied, a target artifact is missing or fails its checksum, the restore
                 fails, or the post-restore verification does not match.
         """
@@ -229,6 +230,9 @@ class ReleaseCandidateManager:
                 "artifacts, so no previous state could be restored. Refused instead of "
                 "reporting success (REL-01-AC1)."
             )
+
+        for manifest_key in target_manifest:
+            self._reject_unsafe_manifest_key(manifest_key, target_version)
 
         if active_dir is None:
             raise RollbackIntegrityError(
@@ -314,6 +318,36 @@ class ReleaseCandidateManager:
                 )
 
         return True
+
+    @staticmethod
+    def _reject_unsafe_manifest_key(filename: str, target_version: str) -> None:
+        """Refuse a manifest key that could escape the artifacts/active dirs (REL-01-AC1).
+
+        Keys are joined onto both directories for reading and restoring, so an
+        absolute key or any ``..`` segment would read/write outside them. Such
+        keys are refused fail-closed before any disk access. Both POSIX and
+        Windows flavors are inspected so ``..\\evil`` cannot slip through on
+        either platform.
+        """
+        candidates = (
+            Path(filename).parts,
+            PurePosixPath(filename).parts,
+            PureWindowsPath(filename).parts,
+        )
+        if (
+            not filename
+            or not str(filename).strip()
+            or Path(filename).is_absolute()
+            or PurePosixPath(filename).is_absolute()
+            or PureWindowsPath(filename).is_absolute()
+            or any(part == ".." for parts in candidates for part in parts)
+        ):
+            raise RollbackIntegrityError(
+                f"ROLLBACK_PATH_ESCAPE: Rollback target '{target_version}' declares "
+                f"unsafe artifact key {filename!r}; keys must be relative names "
+                "without '..' segments so restore stays inside the artifacts and "
+                "active directories (REL-01-AC1)."
+            )
 
     @staticmethod
     def _undo_partial_restore(
