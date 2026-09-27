@@ -166,3 +166,10 @@ pre-fix source, so the RED isolates the new findings rather than the original co
   stage=FULL_FINE_TUNE field. Note: caller-supplied rows scored with
   test_timestamps=None is recorded hardening context, not a separate blocker.
 - Reviewer ses_f1ebdb707ffety8u0uLcdPPJOi. Fix cycle required before DONE.
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1ea3534dffepYgEGDRq6Ze72A). Length-equality guard
+  added to _validate_timestamps and wired into all 4 call sites; empty AND
+  short lists raise ContaminatedDatesClaimError. Suites 21 passed, exit 0.
+  Residual: over-long list covered by same guard but unexercised (minor).

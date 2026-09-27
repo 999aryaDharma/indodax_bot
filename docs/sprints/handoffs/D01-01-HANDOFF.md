@@ -64,3 +64,10 @@ Full lab suite verification: 235 passed across all domains.
   guard; weak input_hash; stale evidence SHA; M02 comparator + NaN-loss path
   unevidenced. Dep DL-01 REVIEW (gate).
 - Reviewer ses_f1ec1c53effeqodBog4aEwjQLS. Fix cycle required before DONE.
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1ea35342ffe1gKeKVXZh4uyft). Latest checkpoints embed
+  best_weights+best_epoch; resume restores all three (sibling authoritative);
+  comparator fails closed on index/feature divergence. Smoke 6 passed, exit 0;
+  resume-equals-uninterrupted confirmed (max prob diff 0.0).

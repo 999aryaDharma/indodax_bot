@@ -66,3 +66,12 @@ Full lab suite verification: 271 passed across all domains (13.17s).
   import; ModuleNotFoundError RED rows; stale LOB-01 REVIEW line in handoff.
   Dep D01-01 REVIEW (gate). Smoke needs pyarrow-env run before DONE.
 - Reviewer ses_f1ebdb6ecffeUQMZtZxWzXEuDG. Fix cycle required before DONE.
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1ea3534cffeSDtgVlelnbVkEA). validate_unbroken_sequence
+  now delegates to LOBDatasetEligibilityGate (all 5 boundary modes re-raised as
+  GappedBookBlockedError); prepare_training/predict_windows gateways wire the
+  check into entry paths. New test file 11 passed; lob dir 43 passed (pyarrow
+  collects excluded as ENV-GAP). Residual: real train()/predict() torch loop,
+  when added, must call through the gateways.

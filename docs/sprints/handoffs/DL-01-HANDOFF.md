@@ -69,3 +69,12 @@ Full lab suite verification: 227 passed across all domains.
 - MINOR: RED rows are ModuleNotFoundError (not behavioral RED); __init__ eagerly
   imports out-of-scope DL modules; handoff overclaims ("best restored", "227 passed").
 - Reviewer ses_f1ec1c540ffeOzKDxIrPZOA3bB. Fix cycle required before DONE.
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1ea3534bffeFa9HXmPLxX2uL1). scheduler_state added
+  (round-trips, legacy-compatible); load_checkpoint requires hash or explicit
+  allow_unverified (fail-closed); NeuralTrainer loop honors 50-epoch cap,
+  patience 7, best-restore (torch-free, isolation intact). Focused 9 + affected
+  24/38 passed, exit 0. Residuals minor (no lower-bound validation, generic
+  pre-fit error).

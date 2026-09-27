@@ -132,3 +132,12 @@ Full lab suite verification: 231 passed across all domains.
   test consumes dep fixtures — coordinator waives with rationale or files CR.
 - MINOR: handoff evidence table stale (4-test state at 1c24f9b; 12 now).
 - Reviewer ses_f1ebdb6eaffeL7n0Wydx7KtBuW. Doc/gate first, then DONE.
+
+## Fix + delta (2026-09-27)
+
+- Doc corrected to code truth: recommendation INCONCLUSIVE/unevaluated (no
+  simulator, no measured Sharpes); cost-drag and baseline sections stripped of
+  numeric Sharpe claims with do-not-cite guards. The withdrawn NOT_RECOMMENDED
+  wording is preserved in the edit as an explicit retraction note.
+- Handoff evidence-table staleness + dep gates (QA-01/SHADOW-02 REVIEW) remain
+  as process items for coordinator.
