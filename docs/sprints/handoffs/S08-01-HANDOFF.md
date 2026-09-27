@@ -50,6 +50,7 @@ Status: REVIEWED_PARTIAL — implementation independently passed; external queue
 - CR-S08 boundary and 5-second Research freshness default accepted by the owner on 2026-09-27. `observed_at` age is checked at decision/quote time. This default is not real producer qualification.
 - S08 thresholds/notional in YAML are research hypothesis defaults, not profitability evidence or Production risk policy.
 - There is no qualified real Indodax per-order queue producer/reconstruction or 90-day queue-coverage report. Queue-mode simulation requires explicit policy/evidence; candidate promotion remains blocked without the qualified report.
+- Read-only local archive inventory on 2026-09-27: all seven local `lab-data*` roots contained 413 matching wire metadata records; every dataset path was `candles` and every request used Indodax `history_v2` (412 HTTP 200, one HTTP 403). No order-book or public-trade wire records were found in these local roots. This inventory does not observe remote processes; it confirms the required book/trade evidence is not available from the checked local archives.
 - A valid queue observation only passes the precondition; fill outcomes still use the existing conservative bar proxy. No strategy-local OMS or ledger was created.
 - Rollback: stop selecting S08 and revert the scoped code commit; existing `bar_proxy_v1` call sites retain default behavior. No Production state or credentials were accessed.
 - Next gate: real queue source qualification with measured book/trade coverage.
