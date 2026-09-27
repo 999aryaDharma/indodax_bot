@@ -33,3 +33,10 @@ Disable apply and keep audit/dry-run. For shared locks, retain the lock contract
 ## Owner decision
 
 Pending. Select shared host lock, registry deletion claim/tombstone, or hold OPS-03 apply for separately scheduled integration.
+
+## Repository evidence (2026-09-28)
+
+- `CandidateRecord` in `src/indodax_lab/evaluation/lifecycle.py` stores candidate identity/config/stage but no artifact ID or path; transition writes are transactionally recorded by `CandidateLifecycleManager.transition_candidate`.
+- Immutable artifact publication is called from `data/publication.py`, CLI dataset builders/backfill, `universe/snapshot.py`, `universe/coingecko_adapter.py`, data wire/sentry stores, and `orchestration/queue.py` (which has its own `_publish_artifact`). These are not currently wrapped by one retention coordination contract.
+- Therefore there is no existing complete Champion/SEALED_PASS -> artifact-path index to adapt, and a cleaner-only lock would not serialize lifecycle transitions or all publishers. Option 1 requires centralizing/wrapping all of these write paths. Option 2 requires a new authoritative artifact reachability index linked transactionally to candidate transitions and publication.
+- Manifest recheck on 2026-09-28: DONE 63, REVIEW 44, PLANNED 25, IN_PROGRESS 2 (`S08-01`, `S09-01`), READY none. No alternate eligible sprint can be selected under the coordinator protocol while those dependency gates remain unsettled.
