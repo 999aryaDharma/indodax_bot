@@ -166,3 +166,15 @@ positive-evidence test, which is expected to pass both before and after the fix.
   pre-existing at HEAD; the count for the owned file set is now **36** versus **55** at HEAD.
 - Owned suite: `python -m pytest tests/unit/lab/models/test_f01_01.py tests/unit/lab/models/test_f01_02.py tests/unit/lab/models/test_g01_01.py tests/unit/lab/models/lob/test_l02_01.py -q -p no:cacheprovider` -> Exit 0, `50 passed in 4.16s`.
 - Recorded by `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Fresh run `test_g01_01.py -v`: 14 passed, exit 0 (4 AC + 10
+  remediation/characterisation). AC0–AC3 verified under strict PIT:
+  future-only frames raise; mixed frames truncate byte-identically; unlisted/
+  dateless nodes raise; baselines compared on identical forwards.
+- MINOR: mixed-frame truncation (not raise) — clarify contract doc; "panel
+  regression" baseline is unfitted momentum passthrough — fit or rename;
+  threshold/top_k unvalidated.
+- Process note: deps D01-01 + C04-01 REVIEW (gate for DONE).
+- No Critical/Important findings. Reviewer ses_f1ebdb706ffeOQoWcpSWGb63tf.

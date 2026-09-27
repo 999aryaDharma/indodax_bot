@@ -52,3 +52,17 @@ Full lab suite verification: 271 passed across all domains (13.17s).
 - Deviations: None.
 - Unresolved issues / blockers: None for L01-01.
 - Next unlocked consumers: L02-01.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (2 IMPORTANT code + dep gate + env gap). Smoke suite
+  uncollectable here (pyarrow missing — ENV-GAP, not defect); AC0–AC3 spot
+  probed behaviorally OK (shapes, cost-hurdle, gap raise, comparator).
+- IMPORTANT: validate_unbroken_sequence checks timestamp delta only — ignores
+  pair/session crossing, sequence gaps, negative deltas (mirror LOB-01 checks).
+- IMPORTANT: gap enforcement is opt-in helper, unwired from train/predict —
+  "gapped book blocks run" holds only if callers remember.
+- MINOR: "spread and latency" overclaims (no latency term); unused comparator
+  import; ModuleNotFoundError RED rows; stale LOB-01 REVIEW line in handoff.
+  Dep D01-01 REVIEW (gate). Smoke needs pyarrow-env run before DONE.
+- Reviewer ses_f1ebdb6ecffeUQMZtZxWzXEuDG. Fix cycle required before DONE.

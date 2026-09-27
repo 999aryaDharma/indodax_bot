@@ -119,3 +119,16 @@ Full lab suite verification: 231 passed across all domains.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `CostAwareRewardFunction` coefficients are still plain floats rather than `Decimal`, so reward arithmetic is binary floating point. Recorded as backlog given the reward is currently unevaluated.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: `evaluate_rl_allocation_feasibility` returns the same three-line narrative findings plus the new config line regardless of inputs, so the findings list carries little signal. Recorded as backlog.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Minor: the new `ValueError` guards all raise the built-in type rather than a module-specific error class, so a caller cannot distinguish an allocation rejection from a volatility rejection without string matching the message prefix. The message prefixes are stable and tested, so this is acceptable for now.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (2 IMPORTANT incl. doc-vs-code). Fresh run
+  `test_rl_reward_contract.py -q`: 12 passed, exit 0. AC1/AC3 verified;
+  no live/scheduler/export code anywhere (grep); module has no callers.
+- IMPORTANT: docs/research/rl-feasibility.md claims evaluated NOT_RECOMMENDED
+  with sharpes (-0.45/0.65) while code returns INCONCLUSIVE/UNEVALUATED with
+  None sharpes — rewrite doc to code truth or supply missing evidence.
+- IMPORTANT (gate): deps QA-01 + SHADOW-02 REVIEW, not DONE; no integration
+  test consumes dep fixtures — coordinator waives with rationale or files CR.
+- MINOR: handoff evidence table stale (4-test state at 1c24f9b; 12 now).
+- Reviewer ses_f1ebdb6eaffeL7n0Wydx7KtBuW. Doc/gate first, then DONE.

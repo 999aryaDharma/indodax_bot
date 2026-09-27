@@ -210,3 +210,16 @@ tensor-extraction path remains in `tests/integration/lab/test_tlob_smoke.py`.
   `TLOBChallengerSearchEvidence`, `TLOBConfigSearch`, `TLOBInputShapeError`,
   `measure_inference_latency_ms`).
 - Recorded by `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (gates; code findings all MINOR). Fresh: 16 unit passed;
+  smoke uncollectable (pyarrow ENV-GAP — mapped AC0–AC3 evidence not
+  established here, needs pyarrow-env run before DONE); inline harness OK
+  (shapes, latency bound, abstain). No guaranteed-fill path; budget capped via
+  registry; underperformers archived.
+- IMPORTANT (gates): dep L01-01 REVIEW; mapped smoke evidence missing in this env.
+- MINOR: clip-floor docstring; config lower bounds; blank-ID acceptance in
+  from_model; cooperative budget enforcement; manifest omits unit test path;
+  pre-existing ruff style.
+- Reviewer ses_f1ebdb6ebffereL9HTpxNeQEex. Gates first, then DONE.

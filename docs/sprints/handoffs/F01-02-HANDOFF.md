@@ -154,3 +154,15 @@ pre-fix source, so the RED isolates the new findings rather than the original co
   pre-existing at HEAD; the count for the owned file set is now **36** versus **55** at HEAD.
 - Owned suite: `python -m pytest tests/unit/lab/models/test_f01_01.py tests/unit/lab/models/test_f01_02.py tests/unit/lab/models/test_g01_01.py tests/unit/lab/models/lob/test_l02_01.py -q -p no:cacheprovider` -> Exit 0, `50 passed in 4.16s`.
 - Recorded by `opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)`.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: BLOCKING (1 IMPORTANT + 2 MINOR + dep gates F01-01/D01-01 REVIEW).
+  Fresh run `test_f01_02.py -v`: 10 passed, exit 0; AC0–AC2 verified.
+- IMPORTANT: _validate_timestamps never enforces len(timestamps)==len(test_x) —
+  empty/short timestamp lists still seal certified StageEvaluationResult (PoC:
+  empty → sealed n=20). Require length equality, raise ContaminatedDatesClaimError.
+- MINOR: predict_proba message overclaims zero-shot sufficiency; inert
+  stage=FULL_FINE_TUNE field. Note: caller-supplied rows scored with
+  test_timestamps=None is recorded hardening context, not a separate blocker.
+- Reviewer ses_f1ebdb707ffety8u0uLcdPPJOi. Fix cycle required before DONE.
