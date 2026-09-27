@@ -227,7 +227,22 @@ class D01MLPTrainer:
             checkpoint = load_checkpoint(resume_from, expected_input_hash=input_hash)
             start_epoch = checkpoint.epoch + 1
             tracker.best_val_loss = checkpoint.best_val_metric
-            tracker.best_epoch = checkpoint.epoch
+            # Restore best epoch/weights consistently: latest checkpoints embed both
+            # (best_epoch inside rng_state, best_weights top-level). The sibling
+            # best_checkpoint.json is authoritative for the global best when present.
+            best_weights_dict = checkpoint.best_weights
+            best_epoch_restored = checkpoint.rng_state.get("best_epoch")
+            sibling_best = Path(resume_from).parent / "best_checkpoint.json"
+            if sibling_best.exists() and sibling_best.resolve() != Path(resume_from).resolve():
+                sibling_ckpt = load_checkpoint(sibling_best, expected_input_hash=input_hash)
+                if sibling_ckpt.best_weights is not None:
+                    best_weights_dict = sibling_ckpt.best_weights
+                best_epoch_restored = sibling_ckpt.epoch
+            tracker.best_epoch = (
+                int(best_epoch_restored)
+                if best_epoch_restored is not None
+                else checkpoint.epoch
+            )
             # Restore model weights
             weights_tensor = {
                 k: torch.tensor(v, dtype=torch.float32)
@@ -235,10 +250,10 @@ class D01MLPTrainer:
             }
             model.load_state_dict(weights_tensor)
             # Restore best weights from checkpoint if available
-            if checkpoint.best_weights is not None:
+            if best_weights_dict is not None:
                 best_weights_tensor = {
                     k: torch.tensor(v, dtype=torch.float32)
-                    for k, v in checkpoint.best_weights.items()
+                    for k, v in best_weights_dict.items()
                 }
                 tracker.best_weights = best_weights_tensor
             # Restore optimizer state
@@ -342,8 +357,17 @@ class D01MLPTrainer:
                         "torch_rng": torch_rng,
                         "numpy_rng": numpy_rng_serializable,
                         "python_rng": python_rng_serializable,
+                        "best_epoch": tracker.best_epoch,
                     },
                     best_val_metric=tracker.best_val_loss,
+                    best_weights=(
+                        {
+                            k: v.cpu().numpy().tolist()
+                            for k, v in tracker.best_weights.items()
+                        }
+                        if tracker.best_weights is not None
+                        else None
+                    ),
                 )
                 # Also save best weights at the point they were achieved
                 if tracker.best_weights is not None and epoch == tracker.best_epoch:
@@ -455,13 +479,50 @@ class SameSampleComparator:
                 f"SAMPLE_COUNT_MISMATCH: X_val rows={len(X_val)} != y_val rows={len(y_val)}"
             )
 
+        # 1b. Sample index identity validation (fail-closed on sample-ID mismatch)
+        if not X_val.index.equals(y_val.index):
+            raise SampleComparatorMismatchError(
+                "SAMPLE_INDEX_MISMATCH: X_val index != y_val index; "
+                "comparator requires identical sample IDs."
+            )
+
         # 2. Feature column validation
-        expected_cols = set(d01_trainer._feature_names)
+        d01_features = list(getattr(d01_trainer, "_feature_names", None) or [])
+        if not d01_features:
+            d01_bundle = getattr(d01_trainer, "_bundle", None)
+            if d01_bundle is not None:
+                d01_features = list(d01_bundle.feature_names)
+        if not d01_features:
+            raise SampleComparatorMismatchError(
+                "FEATURE_COLUMNS_MISMATCH: D01 trainer has no fitted feature list; "
+                "cannot verify same-sample comparison."
+            )
+        expected_cols = set(d01_features)
         actual_cols = set(X_val.columns)
         if not expected_cols.issubset(actual_cols):
             missing = expected_cols - actual_cols
             raise SampleComparatorMismatchError(
                 f"FEATURE_COLUMNS_MISMATCH: Missing required features in comparator: {missing}"
+            )
+
+        # 2b. M01 vs D01 feature identity, order-sensitive (fail-closed on divergence)
+        m01_bundle = getattr(m01_trainer, "_bundle", None)
+        if m01_bundle is None:
+            try:
+                m01_bundle = m01_trainer.bundle
+            except (AttributeError, RuntimeError):
+                m01_bundle = None
+        m01_features = list(m01_bundle.feature_names) if m01_bundle is not None else None
+        if m01_features is None:
+            raise SampleComparatorMismatchError(
+                "FEATURE_COLUMNS_MISMATCH: M01 trainer has no fitted feature list; "
+                "cannot verify same-sample comparison."
+            )
+        if m01_features != d01_features:
+            raise SampleComparatorMismatchError(
+                f"FEATURE_COLUMNS_MISMATCH: M01 features {m01_features} != "
+                f"D01 features {d01_features} (order-sensitive); "
+                "comparator requires identical feature schemas."
             )
 
         # 3. Compute probability forecasts

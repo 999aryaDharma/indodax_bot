@@ -165,6 +165,115 @@ def test_d01_01_contract_1() -> None:
         )
 
 
+def test_d01_01_contract_3_resume_restores_global_best(tmp_path: Path) -> None:
+    """D01-01-AC3 (IMPORTANT): resume-from-latest restores best weights/epoch, not just best loss value.
+
+    RED: latest checkpoint persists best_val_metric but best_weights=null and resume sets
+    tracker.best_epoch to the latest epoch, so the post-resume model differs from the global best.
+    """
+    X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
+
+    config = D01MLPConfig(
+        hidden_dims=(16,),
+        learning_rate=0.05,
+        batch_size=32,
+        max_epochs=10,
+        patience=7,
+        seed=1,
+    )
+
+    # Uninterrupted reference run defines the global best.
+    ref_trainer = D01MLPTrainer(config=config)
+    ref_bundle = ref_trainer.fit(X_train, y_train, X_val, y_val)
+    ref_probs = ref_trainer.predict_proba(X_val)
+
+    # Guard: the best epoch must be interior so the interrupt can strictly follow it.
+    assert ref_bundle.best_epoch + 2 < config.max_epochs
+    interrupt_at = ref_bundle.best_epoch + 2
+
+    checkpoint_dir = tmp_path / "checkpoints"
+    first_trainer = D01MLPTrainer(config=config)
+    first_trainer.fit(
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        checkpoint_dir=checkpoint_dir,
+        interrupt_after_epoch=interrupt_at,
+    )
+    assert (checkpoint_dir / "latest_checkpoint.json").exists()
+
+    resumed_trainer = D01MLPTrainer(config=config)
+    resumed_bundle = resumed_trainer.fit(
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        checkpoint_dir=checkpoint_dir,
+        resume_from=checkpoint_dir / "latest_checkpoint.json",
+    )
+
+    assert resumed_bundle.best_epoch == ref_bundle.best_epoch
+    assert resumed_bundle.best_val_loss == pytest.approx(ref_bundle.best_val_loss)
+    np.testing.assert_allclose(
+        resumed_trainer.predict_proba(X_val), ref_probs, rtol=1e-5, atol=1e-6
+    )
+
+
+def test_d01_01_contract_1_rejects_divergent_features_and_index() -> None:
+    """D01-01-AC1 (IMPORTANT): comparator asserts M01 vs D01 feature identity order-sensitively.
+
+    RED: M01 trained on ['a','b'] vs D01 on ['a','b','c'] still compares OK, and shifted
+    sample indexes compare OK.
+    """
+    X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
+    feature_names = list(X_train.columns)
+    subset = feature_names[:2]
+
+    # M01 on feature subset vs D01 on full features must fail-closed.
+    m01_narrow = M01LogisticTrainer(config=M01Config(penalty="l2", solver="lbfgs", C=1.0, seed=42))
+    m01_narrow.train_and_calibrate(X_train[subset], y_train, X_val[subset], y_val, subset)
+
+    d01_full = D01MLPTrainer(config=D01MLPConfig(hidden_dims=(16,), max_epochs=10, patience=4, seed=42))
+    d01_full.fit(X_train, y_train, X_val, y_val)
+
+    comparator = SameSampleComparator()
+    with pytest.raises(SampleComparatorMismatchError, match="FEATURE"):
+        comparator.compare(
+            X_val=X_val,
+            y_val=y_val,
+            m01_trainer=m01_narrow,
+            d01_trainer=d01_full,
+        )
+
+    # Same feature set but different order must fail-closed order-sensitively.
+    m01_reordered = M01LogisticTrainer(config=M01Config(penalty="l2", solver="lbfgs", C=1.0, seed=42))
+    reversed_names = list(reversed(feature_names))
+    m01_reordered.train_and_calibrate(
+        X_train[reversed_names], y_train, X_val[reversed_names], y_val, reversed_names
+    )
+    with pytest.raises(SampleComparatorMismatchError, match="FEATURE"):
+        comparator.compare(
+            X_val=X_val,
+            y_val=y_val,
+            m01_trainer=m01_reordered,
+            d01_trainer=d01_full,
+        )
+
+    # Shifted sample index identity must fail-closed.
+    m01_full = M01LogisticTrainer(config=M01Config(penalty="l2", solver="lbfgs", C=1.0, seed=42))
+    m01_full.train_and_calibrate(X_train, y_train, X_val, y_val, feature_names)
+    X_val_reindexed = X_val.copy()
+    X_val_reindexed.index = X_val.index + 1000
+    with pytest.raises(SampleComparatorMismatchError, match="INDEX"):
+        comparator.compare(
+            X_val=X_val_reindexed,
+            y_val=y_val,
+            m01_trainer=m01_full,
+            d01_trainer=d01_full,
+        )
+
+
 def test_d01_01_contract_2() -> None:
     """D01-01-AC2: Tiga finalist seed tidak cherry-pick dengan search budget <= 12 configs."""
     X_train, y_train, X_val, y_val = _generate_synthetic_tabular_data()
