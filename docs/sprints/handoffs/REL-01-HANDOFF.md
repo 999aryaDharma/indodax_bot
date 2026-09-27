@@ -125,3 +125,12 @@ Full lab suite verification: 223 passed across strategies, features, labels, eva
 - Deps QA-01/QA-02/QA-03/REPORT-02 all REVIEW (gate).
 - Reviewer ses_f1eba02aeffe26lqrg4nB099aD. Fix cycle queued (rollback
   traversal + doc/runbook).
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1eafe331ffeXspCHOOHQyxjAL). Traversal guard
+  live-probed (../, absolute POSIX/Windows, empty, subdir/../ all raise;
+  benign keys pass); E2E benign rollback verified; runbook derives NOT_READY
+  with 4 STATUS_REVIEW reasons (fail-closed exit 1). Suite 20 passed, exit 0;
+  bash -n clean. Follow-up folded in: REPORT-02/REL-01 doc rows corrected to
+  REVIEW like the QA rows.

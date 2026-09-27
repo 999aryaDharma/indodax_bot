@@ -18,8 +18,8 @@ This document records the qualification evidence, verified gates, package manife
 | **Tournament Checkpoint** | Offline multi-candidate evaluation, lifecycle outcomes (INVALID, HARD_FAIL, NEAR_MISS, PASS) | `tests/regression/test_wave1_tournament.py` (QA-01) | **REVIEW** (pending; sprint-manifest.json is the status authority) |
 | **Boundary Security** | No live order/withdraw keys, path traversal blocked, pickle forbidden, Telegram allowlist enforced | `tests/security/test_lab_boundaries.py` (QA-02) | **REVIEW** (pending; sprint-manifest.json is the status authority) |
 | **Capacity & Recovery** | Measured host profiles (Lenovo/Asus), disk-full atomic guard, idempotent metric replay ledger | `tests/integration/lab/test_operational_recovery.py` (QA-03) | **REVIEW** (pending; sprint-manifest.json is the status authority) |
-| **Telegram Status** | Read-only research queue, champion and health reporting; chat allowlist | `tests/integration/lab/test_telegram_status.py` (REPORT-02) | **PASSED** |
-| **Release Qualification** | Rollback integrity, experimental isolation, decoupled forward status | `tests/regression/test_release_candidate.py` (REL-01) | **PASSED** |
+| **Telegram Status** | Read-only research queue, champion and health reporting; chat allowlist | `tests/integration/lab/test_telegram_status.py` (REPORT-02) | **REVIEW** (pending; sprint-manifest.json is the status authority) |
+| **Release Qualification** | Rollback integrity, experimental isolation, decoupled forward status | `tests/regression/test_release_candidate.py` (REL-01) | **REVIEW** (pending; sprint-manifest.json is the status authority) |
 
 ## Invariants and Operating Rules
 

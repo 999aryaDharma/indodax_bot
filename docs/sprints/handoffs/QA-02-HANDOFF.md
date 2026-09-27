@@ -119,3 +119,11 @@ Full lab suite verification: 215 passed across strategies, features, labels, eva
 - IMPORTANT (process): deps REPORT-02/AGENT-01 REVIEW. MINOR: stale tournament
   clock claim; unwired SecurityAuditRunner; narrow threat table.
 - Reviewer ses_f1eba02b0ffeSevfvtZ6qTIPvK. Fix cycle queued (credential matcher).
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1eafe333ffeUWDsHXUqg0mJ36). PASSWORD + scoped-TOKEN
+  families added; live probe rejects all 4 bypass names (+ prefixed variants)
+  while TELEGRAM_BOT_TOKEN/CHAT_ID and legit names stay allowed. Full QA-02
+  suite 15 passed, exit 0. Residuals informational only (SECRET_SANTA-class
+  fail-closed over-matches with no repo usage).

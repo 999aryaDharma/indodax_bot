@@ -110,3 +110,10 @@ Full lab suite verification: 211 passed across strategies, features, labels, eva
 - MINOR: ModuleNotFoundError RED rows; unescaped dynamic fields in MarkdownV2;
   narrow secret-regex shapes. Deps REPORT-01/SHADOW-02 REVIEW (gate).
 - Reviewer ses_f1eba02d9ffelOK7osrXuhJvYl. Fix cycle queued (callback gate).
+
+## Delta re-review (2026-09-27)
+
+- Verdict: DELTA-PASS (ses_f1eafe332ffeVW4mWGJORmNKN1). All 4 callbacks gated
+  first-statement; denial via query.answer; chat resolution covers bare queries;
+  sweep confirms all 11 inbound handlers gated (send_signal/send_text are
+  outbound-only). Suites 25 passed, exit 0; authorized flows unchanged.
