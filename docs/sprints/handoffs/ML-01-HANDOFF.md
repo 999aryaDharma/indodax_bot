@@ -91,3 +91,15 @@ Full lab suite verification: 129 passed across strategies, features, labels, eva
 - Reviewer: coordinator inline review (implementation pre-exists committed as
   175be32 + fix 9b6dab1; reviewer wrote no code here). Status transition
   (manifest/spec) left to coordinator DONE pass / main agent — not touched.
+
+## Emergency second review-fix cycle — shared model preprocessing contract
+
+- Coordinator authorization under `.agents/coordination/protocol.md`: this second cycle is necessary because ML-01 publishes the fitted preprocessing artifact/config consumed by downstream model training and inference; mutable or mismatched state undermines their shared feature contract and ML-01 acceptance.
+- Frozen findings fixed from independent review at `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`: default reordered-input acceptance; mutable returned fitted statistics/config drift; statistic maps inconsistent with persisted feature schema.
+- TDD RED at the reviewed base: focused ML-01 suite had 3 failures reproducing these findings.
+- Corrective source commit: superseded by the strict-boundary correction below.
+- Fix: transform always enforces canonical feature order, including artifacts with the legacy `strict_feature_order=False` field; upstream adapters must restore order before calling it. Transform uses the config captured in its artifact; `fit()` and `fitted_artifact` return defensive deep copies; artifact validation requires all statistic maps to match `feature_names`.
+- Focused regression/downstream suite: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest -q tests/unit/lab/models/test_preprocessing.py tests/unit/lab/models/test_m01_logistic.py tests/unit/lab/models/test_m02_xgboost.py -p no:cacheprovider` -> 25 passed, 1 existing sklearn `OptimizeWarning`.
+- Full model suite: `conda run -n ML python -m pytest tests/unit/lab/models` -> 247 passed, 9 existing sklearn `OptimizeWarning`s.
+- Focused source/test Ruff and `git diff --check` -> passed; Ruff emitted a harmless F401 selector warning under the Python module invocation, so exact standalone lint evidence remains to be rerun.
+- Independent delta review at the superseding source SHA: pending. ML-01 remains REVIEW.

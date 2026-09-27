@@ -84,7 +84,7 @@ Train-only preprocessing; held-out calibration; bundle all fitted transforms, fe
 
 Global causality, identity, exact accounting and paper-only constraints apply; tidak ada exception lokal yang mengizinkan pengubahan histori.
 
-Feature order is strict by default. Deterministic name-based restoration is permitted only when explicitly selected by a verified upstream adapter. Fitted statistics and the config captured at fit time are authoritative; returned artifacts cannot mutate the preprocessor's stored state, and every statistics map must match the declared feature schema.
+Feature order is always strict at the preprocessor boundary. Upstream adapters must restore canonical order before calling `transform()`. Fitted statistics and the config captured at fit time are authoritative; returned artifacts cannot mutate the preprocessor's stored state, and every statistics map must match the declared feature schema.
 
 ## Architecture / Design Contract
 

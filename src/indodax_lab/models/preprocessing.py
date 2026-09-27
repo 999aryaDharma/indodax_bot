@@ -41,7 +41,7 @@ class PreprocessorConfig(BaseModel):
     clip_outliers: bool = True
     clip_quantile_lower: float = 0.01
     clip_quantile_upper: float = 0.99
-    # Explicitly opts into deterministic name-based alignment for an upstream verified adapter.
+    # Legacy serialized field. Adapters must restore canonical order before transform().
     strict_feature_order: bool = True
 
 
@@ -190,7 +190,7 @@ class TabularPreprocessor:
         if extra:
             raise FeatureAlignmentError(f"UNEXPECTED_EXTRA_FEATURES:{sorted(extra)}")
 
-        if config.strict_feature_order and list(df.columns) != artifact.feature_names:
+        if list(df.columns) != artifact.feature_names:
             raise FeatureAlignmentError(
                 f"FEATURE_ORDER_MISMATCH: expected {artifact.feature_names}, got {list(df.columns)}"
             )

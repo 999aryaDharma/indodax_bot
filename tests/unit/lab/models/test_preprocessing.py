@@ -137,14 +137,12 @@ def test_ml_01_contract_2() -> None:
         preprocessor.transform(reordered_test_df)
     assert "FEATURE_ORDER_MISMATCH" in str(exc_order.value)
 
-    adapter_preprocessor = TabularPreprocessor(
-        PreprocessorConfig(strict_feature_order=False)
-    )
+    adapter_preprocessor = TabularPreprocessor(PreprocessorConfig(strict_feature_order=False))
     adapter_preprocessor.fit(train_df)
-    pd.testing.assert_frame_equal(
-        adapter_preprocessor.transform(reordered_test_df),
-        adapter_preprocessor.transform(reordered_test_df[train_df.columns]),
-    )
+    with pytest.raises(FeatureAlignmentError, match="FEATURE_ORDER_MISMATCH"):
+        adapter_preprocessor.transform(reordered_test_df)
+    restored = reordered_test_df[train_df.columns]
+    assert list(adapter_preprocessor.transform(restored).columns) == list(train_df.columns)
 
 
 def test_ml_01_contract_3() -> None:
