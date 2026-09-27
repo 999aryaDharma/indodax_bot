@@ -124,7 +124,7 @@ Every test writes only under `tmp_path` and creates throwaway SQLite files in-pr
 
 ## Independent review remediation — cycle 2
 
-The independent review of the implementation SHA identified three Important findings and one Minor cleanup issue. They are addressed in the current working tree; final independent review is pending.
+The first independent review identified three Important findings and one Minor cleanup issue. The findings are addressed at implementation SHA `6183680c76c64df05af1045f39e864f87fe42b8d`.
 
 | Finding | Resolution | Regression evidence |
 |---|---|---|
@@ -133,4 +133,6 @@ The independent review of the implementation SHA identified three Important find
 | Source metadata could be read outside one pinned SQLite snapshot. | Source backup opens a read transaction before inventory/page-count checks and backup. | `test_backup_verifies_schema_and_pages_from_same_read_snapshot` injects a concurrent WAL writer after the read snapshot is pinned. |
 | Publish failure could leave a temporary SQLite file. | Fsync/replace now share cleanup handling with backup and verification errors. | `test_failed_atomic_replace_cleans_staged_database` |
 
-Focused validation: `rtk pytest tests/unit/lab/operations tests/integration/lab/test_backup_restore.py -q` → **44 passed**. Exact SHA and independent review will be recorded after commit. Host restore rehearsal, stopped-writer reactivation, measured RPO/RTO, and Windows/Linux filesystem durability remain external qualification gates.
+Final review: `/root/ready_sprint_explore` returned **PASS** on exact SHA `6183680c76c64df05af1045f39e864f87fe42b8d`, with no Critical or Important findings. Reviewer independently ran `PYTHONPATH=src; rtk pytest tests/unit/lab/operations tests/integration/lab/test_backup_restore.py -q -p no:cacheprovider` → **44 passed** and confirmed OPS-02-AC0..AC3. No project runtime or real database was accessed.
+
+Non-blocking durability caveat: if directory `fsync` fails after `os.replace` succeeds in `backup_sqlite_db`, the function raises although the verified target may already have replaced the prior target. The publish is complete but durability is uncertain; this does not create a partial/corrupt artifact. Host restore rehearsal, stopped-writer reactivation, measured RPO/RTO, and Windows/Linux filesystem durability remain operational qualification evidence, separate from the local OPS-02 acceptance gate.
