@@ -72,3 +72,11 @@ Full lab suite verification: 187 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_m06_anomaly_gate.py -p no:cacheprovider -q` -> `8 passed` (exit 0). A companion test pins that the documented liquidity feature set `volume_base, spread_bps, depth_idr, trade_count` still trains, so the new guard is not over-tight. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator DONE pass (2026-09-27)
+
+- Verdict: DELTA-PASS. The IMPORTANT keyword-coverage finding is closed in src/indodax_lab/models/m06_anomaly_gate.py (FORBIDDEN_FEATURE_KEYWORDS += direction/bull/bear/signal; substring match unchanged).
+- Fresh run `python -m pytest tests/unit/lab/models/test_m06_anomaly_gate.py -v`: 12 passed, 0 failed, including new test_m06_01_directional_feature_name_rejected[direction|bull|bear|signal] with demonstrated RED (DID NOT RAISE x4) → GREEN. Legitimate liquidity set still accepted (no over-tight guard); forward_return rejection intact.
+- 2 MINOR observations carried as backlog (+inf scoring fail-open; zero-row raw ValueError). Handoff RED-provenance note acknowledged.
+- First review: ses_f1f5b2f1affeFJGR826OWE17WS. Delta re-review: ses_f1f004277ffe7AUq1V79yzP12T. Fix implemented in main working tree (uncommitted).
+- Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.

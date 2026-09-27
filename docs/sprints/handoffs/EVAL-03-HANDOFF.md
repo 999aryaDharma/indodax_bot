@@ -110,3 +110,10 @@ Full lab suite verification: 121 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | ### Out of scope - coordinator action required
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | - Finding (Important, not fixed here): the non-finite leaderboard exclusion in EVAL-03-F4 silently drops the row rather than recording that a run was excluded for an unusable metric, so a candidate that trained and evaluated but could not be ranked leaves no trace. Persisting an explicit excluded-metric record is a schema change and therefore a change-control item rather than a defect repair inside this fix cycle.
+
+## Independent review — coordinator DONE pass (2026-09-27)
+
+- Verdict: CONFIRM-PASS. Fresh run `python -m pytest tests/unit/lab/evaluation/test_lifecycle.py -v`: 4 passed, 0 failed (AC0–AC3).
+- No new findings against src/indodax_lab/evaluation/lifecycle.py (atomic transitions, VALIDATED predecessor gate, single-open gate, INVALID_RUN exclusion all hold).
+- First review: ses_f201210c9ffeW8lv1BTI265hiX. Verification: ses_f1f5b2f64ffeK6bxrjI9CRgTDJ.
+- Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.

@@ -54,3 +54,10 @@ Combined suite verification (84 passed across backtest, risk, execution, ledger,
 - Deviations: None.
 - Unresolved issues / blockers: None for S01-01.
 - Next unlocked consumers: S07-01, QA-01.
+
+## Independent review — coordinator DONE pass (2026-09-27)
+
+- Verdict: CONFIRM-PASS. Fresh run `python -m pytest tests/unit/lab/strategies/test_s01.py -v`: 5 passed, 0 failed (AC0–AC3).
+- No new findings.
+- First review: ses_f2028e7c9ffeI7yi54KmxiSlQR. Verification: ses_f1f5b2f1dffeqKbmSVALBST9rv.
+- Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.

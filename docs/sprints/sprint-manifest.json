@@ -1876,12 +1876,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/EVAL-03-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent CONFIRM-PASS at HEAD 28d89ba (dirty tree, SHA pin pending); 4 focused lifecycle tests passed, no new findings. First review ses_f201210c9ffeW8lv1BTI265hiX."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -2601,7 +2601,7 @@
       "spec": "docs/specs/09-labels-splits-and-training-data.md",
       "path": "docs/sprints/labels/TRAIN-01-verified-training-dataset-assembly.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "/root/docs_review; verify ses_f1f5b2f63ffeKLtXy6FNPaFF4J + review ses_f201210c7ffeuJnt0IFN7YK2IY (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/train-01-verified-training-dataset-assembly",
@@ -2624,10 +2624,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/TRAIN-01-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent CONFIRM-PASS at HEAD 28d89ba (dirty tree, SHA pin pending); 14 materializer fail-closed + 80 labels unit tests passed; 27 integration tests blocked by missing pyarrow/fastparquet env gap. First review ses_f201210c7ffeuJnt0IFN7YK2IY."
       },
       "acceptance_test_mapping": [
         {
@@ -4010,9 +4010,9 @@
       "spec": "docs/specs/12-tabular-models-and-training.md",
       "path": "docs/sprints/models/M06-01-market-anomaly-risk-gate.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "delta ses_f1f004277ffe7AUq1V79yzP12T + review ses_f1f5b2f1affeFJGR826OWE17WS; fix in working tree (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/m06-01-market-anomaly-risk-gate",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler"
@@ -4031,10 +4031,10 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/M06-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
+        "review": "Independent DELTA-PASS at HEAD 28d89ba (dirty tree incl. fix, SHA pin pending); IMPORTANT keyword-coverage finding closed; 12 m06 tests passed incl. 4-param RED-to-GREEN regression test, legitimate features still accepted. Delta ses_f1f004277ffe7AUq1V79yzP12T; first review ses_f1f5b2f1affeFJGR826OWE17WS."
       },
       "acceptance_test_mapping": [
         {
@@ -5668,7 +5668,7 @@
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/cost-01-time-valid-exchange-cost-schedules",
       "external_gates": [
-        "Official historical Indodax fee matrix/effective boundaries remain unverified for affected market × side × role × interval; fee-based net-performance claims and promotion are blocked there. Unknown/unverified rates must yield unavailable/fail-closed results, never zero/current-fee substitution or a shortened window. This evidence gate does not block engineering on explicit fixtures."
+        "Official historical Indodax fee matrix/effective boundaries remain unverified for affected market \u00d7 side \u00d7 role \u00d7 interval; fee-based net-performance claims and promotion are blocked there. Unknown/unverified rates must yield unavailable/fail-closed results, never zero/current-fee substitution or a shortened window. This evidence gate does not block engineering on explicit fixtures."
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency DATA-01 supplies: CanonicalPair, Candle, TradeEvent + path roots -> validated immutable records.",
       "unlocks": [
@@ -5872,7 +5872,7 @@
       "independent_reviewer": "/root/docs_review",
       "recommended_branch": "feat/sim-01-conservative-execution-simulator",
       "external_gates": [
-        "Historical Indodax fee evidence remains incomplete: runs touching unverified market × side × role × intervals must report net performance unavailable/fail closed and cannot support promotion; never substitute zero/current fees or shorten the window. SIM engineering/review may proceed on explicit scoped fixtures that do not claim representative historical net profitability."
+        "Historical Indodax fee evidence remains incomplete: runs touching unverified market \u00d7 side \u00d7 role \u00d7 intervals must report net performance unavailable/fail closed and cannot support promotion; never substitute zero/current fees or shorten the window. SIM engineering/review may proceed on explicit scoped fixtures that do not claim representative historical net profitability."
       ],
       "current_context": "New capability; dependencies must be DONE before implementation.\n\n- Dependency COST-01 supplies: market, side, role, event_ts -> service/tax/exchange components and min notional with sources; [valid_from,valid_to).\n- Dependency BAR-01 supplies: PASS trades + continuity + fixed/train-only threshold -> separate bar_type datasets, end-exclusive windows.",
       "unlocks": [
@@ -6574,12 +6574,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/C04-01-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent CONFIRM-PASS at HEAD 28d89ba (dirty tree, SHA pin pending); 6 strategy tests passed, no new findings. First review ses_f2028e7cbffeC5KgDwjqEuUHcn."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -6795,7 +6795,7 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C07-01-bollinger-rsi-reversion.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "delta ses_f1f5b2f07ffe201yXCXjng4hAH + review ses_f2028e7caffenivpXTpnZ0M1pj; fix in working tree (2026-09-27 batch; SHA pin pending)",
       "recommended_branch": "feat/c07-01-bollinger-rsi-reversion",
@@ -6818,10 +6818,10 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/C07-01-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent DELTA-PASS at HEAD 28d89ba (dirty tree incl. fix, SHA pin pending); 2 IMPORTANT findings closed; 28 c07/c10/registry tests passed incl. 2 new RED-to-GREEN regression tests. Delta ses_f1f5b2f07ffe201yXCXjng4hAH; first review ses_f2028e7caffenivpXTpnZ0M1pj."
       },
       "acceptance_test_mapping": [
         {
@@ -7292,7 +7292,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7374,12 +7374,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/S01-01-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent CONFIRM-PASS at HEAD 28d89ba (dirty tree, SHA pin pending); 5 strategy tests passed, no new findings. First review ses_f2028e7c9ffeI7yi54KmxiSlQR."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7464,12 +7464,12 @@
         }
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "reviewed_handoff",
         "path": "docs/sprints/handoffs/S02-01-HANDOFF.md",
         "source_commit": "28d89ba50bca4fad570a13b0a852431df22f9d59",
-        "review": "Confirm-pass was recorded on a dirty working tree; final committed source SHA is not pinned. Keep REVIEW until handoff/spec match and independent review verifies the exact committed SHA."
+        "review": "Independent CONFIRM-PASS at HEAD 28d89ba (dirty tree, SHA pin pending); 5 strategy tests passed, no new findings. First review ses_f2028e7a2ffek7Vs5W7p15tU3E."
       },
-      "status": "REVIEW",
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -7927,7 +7927,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "PLANNED",
+      "status": "READY",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
@@ -11108,7 +11108,7 @@
       "goal": "Synchronized form/visual editing of one backend-validated pipeline draft.",
       "contract": "POST /research/pipelines/drafts; PATCH /research/pipelines/drafts/{id} with expected_revision; POST /research/experiments; POST /research/experiments/{id}/run. Form and SVG graph use one PipelineManifest state; server validates every mutation.",
       "checks": [
-        "Form→graph→form roundtrip has identical semantic digest",
+        "Form\u2192graph\u2192form roundtrip has identical semantic digest",
         "Stale edit returns conflict and preserves saved draft",
         "Invalid cycle blocks experiment submission",
         "Clone completed experiment creates new identity",
@@ -11155,7 +11155,7 @@
         {
           "criterion": "RW8-02-AC0",
           "test_case": "test_rw8_02_0",
-          "behavior": "Form→graph→form roundtrip has identical semantic digest",
+          "behavior": "Form\u2192graph\u2192form roundtrip has identical semantic digest",
           "status": "PLANNED_BEHAVIOR_MAPPING"
         },
         {

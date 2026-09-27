@@ -54,3 +54,10 @@ Combined suite verification (80 passed across backtest, risk, execution, ledger,
 - Deviations: None.
 - Unresolved issues / blockers: None for C07-01.
 - Next unlocked consumers: C10-01, QA-01.
+
+## Independent review — coordinator DONE pass (2026-09-27)
+
+- Verdict: DELTA-PASS. Both prior IMPORTANT findings verified closed in src/indodax_lab/strategies/c07.py + configs/strategies/C07_v1.yaml (config-driven sideways/downtrend allowlists with unknown-regime abstain; configurable di_spread_threshold default -0.15).
+- Fresh run `python -m pytest tests/unit/lab/strategies/test_c07.py tests/unit/lab/strategies/test_c10.py tests/unit/lab/strategies/test_registry.py -q`: 28 passed, 0 failed, including 2 new regression tests with demonstrated RED (old code) → GREEN (fixed) cycle.
+- First review: ses_f2028e7caffenivpXTpnZ0M1pj. Delta re-review: ses_f1f5b2f07ffe201yXCXjng4hAH. Fix implemented in working tree (uncommitted).
+- Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
