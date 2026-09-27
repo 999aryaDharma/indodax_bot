@@ -118,3 +118,13 @@ Evidence at source SHA `d0392e6`:
 Independent delta review: PENDING at exact source SHA `d0392e614b50750990c54a053ec3f603a728ff64`.
 
 Remaining integration gate: the repository still has no concrete Champion/SEALED_PASS registry adapter. The cleaner now requires the injected authoritative ID-to-path resolver and fails closed without it. OPS-03 must remain REVIEW until the application integration supplies and verifies that resolver; unit callbacks alone do not prove production reachability.
+
+### Delta review round 2 — Windows path identity
+
+Follow-up source SHA: `d01d4f3ce2050979c6deb5fa4aea59bd450f5053`. Registry and scanned paths now use platform-aware `os.path.normcase`; a Windows-only regression verifies differently cased registry paths still protect the same file.
+
+Checks at this SHA: `conda run -n ML python -m pytest -q tests/unit/lab/orchestration/test_maintenance_fail_closed.py tests/integration/lab/test_retention.py` — 21 passed; focused Ruff import/unused checks — passed; `git diff --check` — passed.
+
+Independent delta review round 2: PENDING.
+
+Unresolved qualification boundaries: application must provide the authoritative Champion/SEALED_PASS ID-to-path resolver, and apply must be coordinated with registry/filesystem writers to eliminate mutation races. Until both are addressed or explicitly bounded by a verified operational maintenance boundary, keep OPS-03 REVIEW.
