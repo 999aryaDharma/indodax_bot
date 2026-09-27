@@ -98,3 +98,23 @@ No test was written and no test was run against `maintenance.py` for this sprint
 
 ### Cross-batch conflict flagged to the coordinator
 `src/indodax_lab/orchestration/maintenance.py` is claimed by OPS-03 but sits in a directory owned by the orchestration batch. Either (a) route OPS-03 to the orchestration owner, or (b) grant a documented path exception for this single file. **Do not** let two agents edit `orchestration/maintenance.py` concurrently. **Recommend marking OPS-03 BLOCKED pending that routing decision** — the OPS-03-R1 finding is Critical and must not ship unresolved.
+
+## OPS-03 follow-up hardening — 2026-09-27
+
+Implementation source SHA: `d0392e614b50750990c54a053ec3f603a728ff64` (`fix/ops03-reachability-and-apply-guards`).
+
+Closed findings from the independent review at `7030d00c19cd6555ba53a5df9e1762ee0de6a678`:
+- Registry lookup and malformed/missing reachability now fail closed; no empty-set fallback.
+- Opaque registry IDs map to exact root-relative paths; basename matching is removed.
+- Root/path components are checked before resolution, including junction/reparse-point detection where supported.
+- Apply rechecks registry protection, path safety, file identity and retention age before unlink.
+
+Evidence at source SHA `d0392e6`:
+- `conda run -n ML python -m pytest -q tests/unit/lab/orchestration/test_maintenance_fail_closed.py tests/integration/lab/test_retention.py` — 20 passed.
+- `ruff check src/indodax_lab/orchestration/maintenance.py tests/unit/lab/orchestration/test_maintenance_fail_closed.py tests/integration/lab/test_retention.py --select I,F401` — passed.
+- `git diff --check` — passed.
+- Default Python environment could not collect because `scipy` is absent; project `bot_trading` environment lacks pytest. Used existing `ML` environment with pytest and scipy; no dependencies installed.
+
+Independent delta review: PENDING at exact source SHA `d0392e614b50750990c54a053ec3f603a728ff64`.
+
+Remaining integration gate: the repository still has no concrete Champion/SEALED_PASS registry adapter. The cleaner now requires the injected authoritative ID-to-path resolver and fails closed without it. OPS-03 must remain REVIEW until the application integration supplies and verifies that resolver; unit callbacks alone do not prove production reachability.
