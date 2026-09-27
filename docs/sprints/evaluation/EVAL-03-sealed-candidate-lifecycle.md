@@ -57,6 +57,7 @@ New capability; dependencies must be DONE before implementation.
 - Gate dibuka sekali dan dicatat.
 - Invalid run, candidate config mismatch, pre-exposure run, and absent/mismatched split lineage do not enter ranking.
 - Approved lineage change: `docs/decisions/CR-EVAL-03-run-exposure-lineage.md` and `docs/decisions/ADR-014-experiment-run-split-lineage.md`; canonical identity distinction is in `docs/research/dataset-feature-contracts.md` §11.
+- Approved CR-EVAL-04 adds a durable reason-coded exclusion record when a run is otherwise ranking-eligible but its selected metric is NaN or infinite. Ranking remains unchanged; missing/unconvertible metrics and ineligible runs do not produce this record.
 - Define or preserve the owning interface, specific fixtures, diagnostics and migration evidence required by these behaviors.
 
 ## Out of Scope
@@ -150,6 +151,7 @@ Positive contract: **EVAL-03-AC0**, `test_eval_03_valid_contract` — Promosi me
 | EVAL-03-AC1 | `test_eval_03_contract_1` | Config berubah setelah sealed menjadi challenger baru |
 | EVAL-03-AC2 | `test_eval_03_contract_2` | Gate dibuka sekali dan dicatat |
 | EVAL-03-AC3 | `tests/unit/lab/evaluation/test_lifecycle_fail_closed.py`; `tests/unit/lab/evaluation/test_lifecycle.py` | Invalid/mismatched config, pre-exposure, missing exposure and absent/mismatched split lineage are excluded |
+| CR-EVAL-04 | `tests/unit/lab/evaluation/test_eval_04_metric_exclusions.py` | Eligible non-finite metrics are excluded and recorded idempotently; ineligible runs are not recorded; additive schema opens on legacy DBs |
 
 Unit/contract tests prove the listed inputs, outputs and guards. Integration tests pass real artifact/record output from prerequisite fixture into this capability. Stateful boundaries also require temp-root/DB failure-injection and retry tests; pure transforms use golden/future-perturbation instead of artificial concurrency tests.
 
@@ -191,6 +193,8 @@ Technical invalidity can retry after root fix with cap; HARD_FAIL archive; tunin
 
 Existing code paths are preserved unless this sprint explicitly owns their behavior change. Material incompatibility requires documented consumers, schema/version transition and rollback evidence before review.
 
+CR-EVAL-04 additively creates `leaderboard_metric_exclusions` in the lifecycle SQLite database. It stores only immutable run/exposure/candidate/split/metric identity, a digest, stable reason code and recording time; it never serializes the non-finite metric. Initialization is idempotent and leaves existing rows/digests unchanged. Rollback stops writes/reads but retains the table and records.
+
 ## Rollback / Recovery
 
 Disable use of the new candidate/output version and keep the last verified compatible version. Do not overwrite historical artifacts; rebuild/retry from the same verified immutable inputs. For code-only pure changes, revert scoped commit after checking downstream compatibility.
@@ -201,6 +205,7 @@ Disable use of the new candidate/output version and keep the last verified compa
 - [ ] **EVAL-03-AC1** Config berubah setelah sealed menjadi challenger baru. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **EVAL-03-AC2** Gate dibuka sekali dan dicatat. Evidence: mapped test, exact command/exit and target SHA.
 - [ ] **EVAL-03-AC3** Invalid run, config mismatch, pre-exposure run, absent exposure audit, or absent/mismatched split lineage does not enter ranking. Evidence: mapped tests, exact command/exit and target SHA.
+- [ ] **CR-EVAL-04** Otherwise eligible NaN/Infinity metric runs remain unranked and produce one durable `RANK_METRIC_NON_FINITE` exclusion bound to run digest, exposure, candidate/version, split and metric; repeats are idempotent. Ineligible or unconvertible metrics produce no record. Additive initialization preserves legacy rows and is safe to repeat.
 - [ ] Public contract matches this sprint and downstream can consume its actual verified output.
 - [ ] Failure diagnostics are explicit and no forbidden side effect exists.
 

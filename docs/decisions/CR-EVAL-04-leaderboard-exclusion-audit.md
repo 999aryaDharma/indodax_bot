@@ -1,6 +1,6 @@
 # CR-EVAL-04 — Persist leaderboard metric exclusions
 
-Status: PROPOSED — owner decision required before schema or behavior changes.
+Status: APPROVED — owner decision received 2026-09-27; implementation authorized.
 
 ## Problem
 
@@ -36,4 +36,4 @@ Stop producing new exclusion records and stop exposing the optional query. Leave
 
 ## Approval
 
-Owner decision: pending.
+Owner decision: Approve CR-EVAL-04 (2026-09-27).

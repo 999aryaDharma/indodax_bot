@@ -18,6 +18,7 @@ from indodax_lab.evaluation.lifecycle import (
     GateAlreadyOpenedError,
     InvalidTransitionError,
     LeaderboardEntry,
+    LeaderboardMetricExclusion,
     TransitionRecord,
 )
 from indodax_lab.evaluation.registry import (
@@ -54,6 +55,7 @@ __all__ = [
     "GateAlreadyOpenedError",
     "InvalidTransitionError",
     "LeaderboardEntry",
+    "LeaderboardMetricExclusion",
     "MultiSeedEvaluationResult",
     "TransitionRecord",
     "compute_deflated_sharpe_ratio",

@@ -9,15 +9,17 @@ Invalid run tidak masuk ranking.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from enum import StrEnum
-from contextlib import contextmanager
+import hashlib
 import json
 import math
-from pathlib import Path
 import sqlite3
-from typing import Any, Iterator, Sequence
 import uuid
+from contextlib import contextmanager
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
+from pathlib import Path
+from typing import Iterator, Sequence
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from indodax_lab.evaluation.registry import ExperimentRunRecord, ExperimentRunStatus
@@ -126,6 +128,28 @@ class LeaderboardEntry(BaseModel):
     metric_value: float
     sort_metric: str
     run_id: str
+
+
+class LeaderboardMetricExclusion(BaseModel):
+    """Append-only reason record for an eligible run omitted from ranking."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    exclusion_id: str
+    run_id: str
+    run_digest: str
+    exposure_id: str
+    candidate_id: str
+    candidate_version: str
+    dataset_split_id: str
+    metric_name: str
+    reason_code: str
+    recorded_at: datetime
+
+    @field_validator("recorded_at", mode="after")
+    @classmethod
+    def validate_utc(cls, value: datetime) -> datetime:
+        return _ensure_utc(value, "recorded_at")
 
 
 _ALLOWED_TRANSITIONS: dict[CandidateStage, set[CandidateStage]] = {
@@ -244,6 +268,22 @@ class CandidateLifecycleManager:
                     dataset_split_id TEXT NOT NULL,
                     authorized_by TEXT NOT NULL,
                     exposed_at TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS leaderboard_metric_exclusions (
+                    exclusion_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL,
+                    run_digest TEXT NOT NULL,
+                    exposure_id TEXT NOT NULL,
+                    candidate_id TEXT NOT NULL,
+                    candidate_version TEXT NOT NULL,
+                    dataset_split_id TEXT NOT NULL,
+                    metric_name TEXT NOT NULL,
+                    reason_code TEXT NOT NULL,
+                    recorded_at TEXT NOT NULL
                 );
                 """
             )
@@ -540,12 +580,6 @@ class CandidateLifecycleManager:
             if run.status != ExperimentRunStatus.SUCCESS or sort_metric not in run.metrics:
                 continue
             try:
-                metric_value = float(run.metrics[sort_metric])
-            except (TypeError, ValueError):
-                continue
-            if not math.isfinite(metric_value):
-                continue
-            try:
                 candidate = self.get_candidate(run.candidate_id)
             except CandidateNotFoundError:
                 continue
@@ -557,7 +591,7 @@ class CandidateLifecycleManager:
                 continue
             with self._connect() as conn:
                 exposure = conn.execute(
-                    """SELECT dataset_split_id, exposed_at FROM exposure_audits
+                    """SELECT exposure_id, dataset_split_id, exposed_at FROM exposure_audits
                        WHERE candidate_id = ? AND candidate_version = ?
                        ORDER BY exposed_at DESC LIMIT 1""",
                     (candidate.candidate_id, candidate.candidate_version),
@@ -565,9 +599,20 @@ class CandidateLifecycleManager:
             if (
                 exposure is None
                 or run.dataset_split_id is None
-                or run.dataset_split_id != exposure[0]
-                or run.created_at < datetime.fromisoformat(exposure[1])
+                or run.dataset_split_id != exposure[1]
+                or run.created_at < datetime.fromisoformat(exposure[2])
             ):
+                continue
+            try:
+                metric_value = float(run.metrics[sort_metric])
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(metric_value):
+                self._record_metric_exclusion(
+                    run=run,
+                    exposure_id=exposure[0],
+                    metric_name=sort_metric,
+                )
                 continue
             valid_runs.append((metric_value, run))
 
@@ -590,3 +635,72 @@ class CandidateLifecycleManager:
                 )
             )
         return entries
+
+    def _record_metric_exclusion(
+        self,
+        *,
+        run: ExperimentRunRecord,
+        exposure_id: str,
+        metric_name: str,
+    ) -> None:
+        reason_code = "RANK_METRIC_NON_FINITE"
+        identity = {
+            "run_digest": run.content_digest(),
+            "exposure_id": exposure_id,
+            "candidate_id": run.candidate_id,
+            "candidate_version": run.candidate_version,
+            "dataset_split_id": run.dataset_split_id,
+            "metric_name": metric_name,
+            "reason_code": reason_code,
+        }
+        exclusion_id = hashlib.sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        recorded_at = datetime.now(UTC)
+        with self._atomic() as conn:
+            conn.execute(
+                """INSERT INTO leaderboard_metric_exclusions (
+                       exclusion_id, run_id, run_digest, exposure_id, candidate_id,
+                       candidate_version, dataset_split_id, metric_name, reason_code,
+                       recorded_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(exclusion_id) DO NOTHING""",
+                (
+                    exclusion_id,
+                    run.run_id,
+                    identity["run_digest"],
+                    exposure_id,
+                    run.candidate_id,
+                    run.candidate_version,
+                    run.dataset_split_id,
+                    metric_name,
+                    reason_code,
+                    recorded_at.isoformat(),
+                ),
+            )
+
+    def get_leaderboard_exclusions(self) -> list[LeaderboardMetricExclusion]:
+        """Read persisted metric exclusions in recording order."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """SELECT exclusion_id, run_id, run_digest, exposure_id, candidate_id,
+                          candidate_version, dataset_split_id, metric_name, reason_code,
+                          recorded_at
+                   FROM leaderboard_metric_exclusions
+                   ORDER BY recorded_at, exclusion_id"""
+            ).fetchall()
+        return [
+            LeaderboardMetricExclusion(
+                exclusion_id=row[0],
+                run_id=row[1],
+                run_digest=row[2],
+                exposure_id=row[3],
+                candidate_id=row[4],
+                candidate_version=row[5],
+                dataset_split_id=row[6],
+                metric_name=row[7],
+                reason_code=row[8],
+                recorded_at=datetime.fromisoformat(row[9]),
+            )
+            for row in rows
+        ]
