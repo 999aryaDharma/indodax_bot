@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import json
 from pathlib import Path
+from threading import Event, Thread
 from typing import Any, Callable
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,7 +44,7 @@ class WorkerConfig(BaseModel):
     worker_id: str
     host_profile: HostProfile
     checkpoint_dir: Path
-    poll_interval_seconds: float = 1.0
+    poll_interval_seconds: float = Field(default=1.0, gt=0)
 
 
 class ExecutionResult(BaseModel):
@@ -96,31 +97,65 @@ class ResearchWorker:
         if self.config.host_profile == HostProfile.ASUS and is_training_job(job):
             guard_asus_training_import(self.config.host_profile)
 
+        # A persisted worker must keep its queue lease alive while a step runs.
+        # Heartbeats use the queue's fresh UTC clock, never a timestamp captured
+        # before a potentially long computation.
+        self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation)
+        heartbeat_stop = Event()
+        heartbeat_errors: list[Exception] = []
+        heartbeat_interval = min(
+            self.config.poll_interval_seconds,
+            job.lease_duration_seconds / 3,
+        )
+
+        def maintain_lease() -> None:
+            while not heartbeat_stop.wait(heartbeat_interval):
+                try:
+                    self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation)
+                except Exception as exc:
+                    heartbeat_errors.append(exc)
+                    heartbeat_stop.set()
+
+        heartbeat_thread = Thread(target=maintain_lease, daemon=True)
+        heartbeat_thread.start()
         last_completed_step = start_step - 1
         last_state: dict[str, Any] | None = None
 
-        for step_idx in range(start_step, total_steps):
-            # Check resource probe before executing step
-            reading = self.probe.read()
-            if reading.ac_power_connected is False:
-                return self._trigger_checkpoint_pause(job.job_id, last_completed_step, last_state)
+        try:
+            for step_idx in range(start_step, total_steps):
+                if heartbeat_errors:
+                    raise heartbeat_errors[0]
+                reading = self.probe.read()
+                if reading.ac_power_connected is False:
+                    self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation)
+                    return self._trigger_checkpoint_pause(
+                        job.job_id, last_completed_step, last_state
+                    )
 
-            # Execute step
-            last_state = step_fn(step_idx)
-            last_completed_step = step_idx
+                last_state = step_fn(step_idx)
+                last_completed_step = step_idx
 
-            # Check resource probe immediately after completing step
-            post_reading = self.probe.read()
-            if post_reading.ac_power_connected is False:
-                return self._trigger_checkpoint_pause(job.job_id, last_completed_step, last_state)
+                if heartbeat_errors:
+                    raise heartbeat_errors[0]
+                post_reading = self.probe.read()
+                if post_reading.ac_power_connected is False:
+                    self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation)
+                    return self._trigger_checkpoint_pause(
+                        job.job_id, last_completed_step, last_state
+                    )
 
-        return ExecutionResult(
-            status="SUCCESS",
-            reason=None,
-            last_completed_step=last_completed_step,
-            checkpoint_path=None,
-            metrics={"total_completed_steps": total_steps},
-        )
+            return ExecutionResult(
+                status="SUCCESS",
+                reason=None,
+                last_completed_step=last_completed_step,
+                checkpoint_path=None,
+                metrics={"total_completed_steps": total_steps},
+            )
+        finally:
+            heartbeat_stop.set()
+            heartbeat_thread.join()
+            if heartbeat_errors:
+                raise heartbeat_errors[0]
 
     def _trigger_checkpoint_pause(
         self,
@@ -209,6 +244,7 @@ class ResearchWorker:
         next_step = data["last_completed_step"] + 1
 
         if next_step >= total_steps:
+            self.queue.heartbeat(job.job_id, self.config.worker_id, job.generation)
             return ExecutionResult(
                 status="SUCCESS",
                 reason="ALREADY_COMPLETED",

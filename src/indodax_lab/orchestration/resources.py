@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+import math
 from typing import Any, Protocol, Sequence
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from indodax_lab.orchestration.jobs import JobDefinition, JobRecord
 
@@ -71,6 +72,26 @@ class SystemResourceReading(BaseModel):
     @classmethod
     def validate_timestamp(cls, value: datetime) -> datetime:
         return _ensure_utc(value, "timestamp")
+
+    @model_validator(mode="after")
+    def validate_sensor_values(self) -> "SystemResourceReading":
+        for name in (
+            "free_ram_gb",
+            "user_idle_seconds",
+            "cpu_temp_celsius",
+            "cpu_load_pct",
+            "gpu_temp_celsius",
+        ):
+            value = getattr(self, name)
+            if value is not None and not math.isfinite(value):
+                raise ValueError(f"RESOURCE_SENSOR_NON_FINITE:{name}")
+        if self.free_ram_gb is not None and self.free_ram_gb < 0:
+            raise ValueError("RESOURCE_SENSOR_OUT_OF_RANGE:free_ram_gb")
+        if self.user_idle_seconds is not None and self.user_idle_seconds < 0:
+            raise ValueError("RESOURCE_SENSOR_OUT_OF_RANGE:user_idle_seconds")
+        if self.cpu_load_pct is not None and not 0 <= self.cpu_load_pct <= 100:
+            raise ValueError("RESOURCE_SENSOR_OUT_OF_RANGE:cpu_load_pct")
+        return self
 
 
 class ResourceProbe(Protocol):

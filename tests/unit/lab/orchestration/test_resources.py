@@ -12,7 +12,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import json
 from pathlib import Path
+import time
 import pytest
+from pydantic import ValidationError
 
 from indodax_lab.orchestration.jobs import (
     JobDefinition,
@@ -197,7 +199,7 @@ def test_job_02_contract_2(tmp_path: Path) -> None:
         probe=probe,
     )
 
-    claimed = queue.claim_job("worker_lenovo_01", as_of=datetime(2025, 6, 1, 12, 0, tzinfo=UTC))
+    claimed = queue.claim_job("worker_lenovo_01", as_of=datetime.now(UTC))
     assert claimed is not None
 
     # Multi-step task tracking completed steps
@@ -559,7 +561,8 @@ def test_valid_checkpoint_still_resumes_from_the_next_step(tmp_path: Path) -> No
     """Regression guard: the integrity guards must not break legitimate resume."""
     queue = SqliteJobQueue(tmp_path / "queue.db")
     queue.submit_job(_build_test_job("good_resume"))
-    record = queue.get_job("good_resume")
+    record = queue.claim_job("w1")
+    assert record is not None
 
     worker = ResearchWorker(
         config=WorkerConfig(
@@ -600,7 +603,8 @@ def test_completed_workload_still_reports_already_completed(tmp_path: Path) -> N
     """Regression guard: a fully completed checkpoint must not be treated as corrupt."""
     queue = SqliteJobQueue(tmp_path / "queue.db")
     queue.submit_job(_build_test_job("all_done"))
-    record = queue.get_job("all_done")
+    record = queue.claim_job("w1")
+    assert record is not None
 
     worker = ResearchWorker(
         config=WorkerConfig(
@@ -636,3 +640,58 @@ def test_completed_workload_still_reports_already_completed(tmp_path: Path) -> N
     assert result.status == "SUCCESS"
     assert result.reason == "ALREADY_COMPLETED"
 
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("free_ram_gb", float("nan")),
+        ("user_idle_seconds", float("inf")),
+        ("cpu_temp_celsius", float("nan")),
+        ("cpu_load_pct", float("inf")),
+    ],
+)
+def test_non_finite_sensor_readings_are_rejected(field: str, value: float) -> None:
+    values = {
+        "ac_power_connected": True,
+        "free_ram_gb": 8.0,
+        "user_idle_seconds": 900.0,
+        "cpu_temp_celsius": 50.0,
+        "cpu_load_pct": 10.0,
+        "gpu_available": True,
+    }
+    values[field] = value
+
+    with pytest.raises(ValidationError):
+        SystemResourceReading(**values)
+
+
+def test_worker_renews_short_lease_during_long_step(tmp_path: Path) -> None:
+    queue = SqliteJobQueue(tmp_path / "queue.db")
+    queue.submit_job(
+        _build_test_job(
+            "long_step",
+            resource_class=ResourceClass.HIGH,
+        ).model_copy(update={"lease_duration_seconds": 1})
+    )
+    claimed_at = datetime.now(UTC)
+    job = queue.claim_job("worker-1", as_of=claimed_at)
+    assert job is not None
+    worker = ResearchWorker(
+        config=WorkerConfig(
+            worker_id="worker-1",
+            host_profile=HostProfile.LENOVO,
+            checkpoint_dir=tmp_path / "checkpoints",
+            poll_interval_seconds=0.1,
+        ),
+        queue=queue,
+        probe=StaticResourceProbe(SystemResourceReading(ac_power_connected=True)),
+    )
+
+    result = worker.execute_steps(
+        job,
+        total_steps=1,
+        step_fn=lambda _: (time.sleep(1.2) or {"finished": True}),
+    )
+
+    assert result.status == "SUCCESS"
+    assert queue.claim_job("worker-2", as_of=datetime.now(UTC)) is None
