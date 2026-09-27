@@ -71,3 +71,19 @@ Full lab suite verification: 179 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_m04_quantile_risk.py -p no:cacheprovider -q` -> `7 passed` (exit 0). - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review correction — M04-01
+
+- Correction owner: Codex `/root`; reviewer: `/root/docs_review`.
+- Review finding base: code commit `9b6dab1239ae89eb8edbe22c4ec194f802173cd4`; reviewed tree `a14ba0053096db4a7a0cbd2e1440140c1937cc9f`.
+- Requested paths: `src/indodax_lab/models/m04_quantile_risk.py`, `tests/unit/lab/models/test_m04_quantile_risk.py`.
+- Independent Important findings: AC2 accepted mismatched, 2-D or non-finite labels and reported misleading coverage; fitted bundle hash included recipe/config and feature names but did not bind fitted state or training data.
+- Planned correction: validate coverage labels before scoring; bind canonical training values and both fitted quantile tree states into explicit hashes and the bundle identity.
+- Delta review is required at the exact correction commit. M04 remains REVIEW; ML-04 dependency remains REVIEW and is a separate qualification gate.
+- Code/test commit: `0896db0c28338b711fb82d6cd118c56e9784c061`.
+- RED: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/models/test_m04_quantile_risk.py::test_m04_01_ac2_rejects_invalid_coverage_labels tests/unit/lab/models/test_m04_quantile_risk.py::test_m04_01_bundle_identity_binds_fitted_state_and_training_data -q -p no:cacheprovider` — 4 failed for the reported defects (label mismatch broadcast, 2-D/NaN labels accepted, missing fitted/training hashes).
+- GREEN: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/models/test_m04_quantile_risk.py -q -p no:cacheprovider` — 13 passed.
+- Owning model suite: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/models/ --ignore=tests/unit/lab/models/lob/ -p no:cacheprovider -q` — 185 passed, 9 warnings.
+- Lint: `C:/Users/User/miniconda3/envs/ML/Scripts/ruff.exe check --select I,F401 src/indodax_lab/models/m04_quantile_risk.py tests/unit/lab/models/test_m04_quantile_risk.py` — passed.
+- Diff check on source/tests/handoff — passed.
+- Delta review: pending at exact code SHA `0896db0c28338b711fb82d6cd118c56e9784c061`.
