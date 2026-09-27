@@ -20,13 +20,11 @@ import pytest
 # These imports will fail until implementation exists — RED phase
 from indodax_lab.models.m04_quantile_risk import (
     M04Config,
-    M04FittedBundle,
     M04QuantileTrainer,
     QuantileCoverageReport,
     QuantileCrossingError,
     TailTargetLeakageError,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -138,6 +136,47 @@ def test_m04_01_contract_2():
     assert hasattr(report, "actual_coverage")
     assert 0.0 <= report.actual_coverage <= 1.0
     assert report.nominal_coverage == pytest.approx(0.80, abs=0.01)  # 0.90 - 0.10 = 0.80
+
+
+@pytest.mark.parametrize(
+    ("labels", "reason"),
+    [
+        (np.zeros(39), "COVERAGE_LABEL_COUNT_MISMATCH"),
+        (np.zeros((40, 1)), "COVERAGE_LABELS_MUST_BE_1D"),
+        (np.full(40, np.nan), "COVERAGE_LABELS_NON_FINITE"),
+        (np.full(40, np.inf), "COVERAGE_LABELS_NON_FINITE"),
+        (np.full(40, -np.inf), "COVERAGE_LABELS_NON_FINITE"),
+    ],
+)
+def test_m04_01_ac2_rejects_invalid_coverage_labels(labels, reason: str) -> None:
+    feature_names = [f"feat_{i}" for i in range(4)]
+    X = _make_features(n=200, n_features=4)
+    X.columns = feature_names  # type: ignore[assignment]
+    trainer = M04QuantileTrainer(M04Config(n_estimators=10))
+    trainer.train(X.iloc[:160], _make_returns(160), feature_names)
+    X_val = X.iloc[160:]
+
+    with pytest.raises(ValueError, match=reason):
+        trainer.evaluate_coverage(X_val, labels)
+
+
+def test_m04_01_bundle_identity_binds_fitted_state_and_training_data() -> None:
+    feature_names = [f"feat_{i}" for i in range(4)]
+    X = _make_features(n=200, n_features=4)
+    X.columns = feature_names  # type: ignore[assignment]
+    y = _make_returns(200)
+    config = M04Config(n_estimators=10, seed=13)
+
+    baseline = M04QuantileTrainer(config).train(X.iloc[:160], y[:160], feature_names)
+    repeated = M04QuantileTrainer(config).train(X.iloc[:160], y[:160], feature_names)
+    shifted = M04QuantileTrainer(config).train(X.iloc[:160], y[:160] + 100.0, feature_names)
+
+    assert baseline.bundle_hash == repeated.bundle_hash
+    assert baseline.training_data_hash == repeated.training_data_hash
+    assert baseline.fitted_state_hash == repeated.fitted_state_hash
+    assert baseline.training_data_hash != shifted.training_data_hash
+    assert baseline.fitted_state_hash != shifted.fitted_state_hash
+    assert baseline.bundle_hash != shifted.bundle_hash
 
 
 # ---------------------------------------------------------------------------

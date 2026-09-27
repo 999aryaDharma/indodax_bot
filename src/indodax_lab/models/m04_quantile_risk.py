@@ -14,13 +14,11 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Any
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sklearn.ensemble import GradientBoostingRegressor
-
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -92,6 +90,8 @@ class M04FittedBundle(BaseModel):
 
     config: M04Config
     feature_names: list[str]
+    training_data_hash: str
+    fitted_state_hash: str
     bundle_hash: str
     fitted_at_utc: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -181,10 +181,13 @@ class M04QuantileTrainer:
         self._model_lower = model_lower
         self._model_upper = model_upper
 
-        # Deterministic bundle hash
+        training_data_hash = _training_data_hash(X_tr, y_tr, feature_names)
+        fitted_state_hash = _fitted_state_hash(model_lower, model_upper)
         hash_payload = {
             "config": self.config.model_dump(mode="json"),
             "feature_names": feature_names,
+            "training_data_hash": training_data_hash,
+            "fitted_state_hash": fitted_state_hash,
         }
         raw_hash = json.dumps(hash_payload, sort_keys=True).encode("utf-8")
         bundle_hash = hashlib.sha256(raw_hash).hexdigest()
@@ -192,6 +195,8 @@ class M04QuantileTrainer:
         self._bundle = M04FittedBundle(
             config=self.config,
             feature_names=feature_names,
+            training_data_hash=training_data_hash,
+            fitted_state_hash=fitted_state_hash,
             bundle_hash=bundle_hash,
         )
         return self._bundle
@@ -234,8 +239,15 @@ class M04QuantileTrainer:
         Returns:
             A ``QuantileCoverageReport``.
         """
-        lower, upper = self.predict_interval(X_val)
         y_arr = np.asarray(y_val, dtype=np.float64)
+        if y_arr.ndim != 1:
+            raise ValueError("COVERAGE_LABELS_MUST_BE_1D")
+        if len(y_arr) != len(X_val):
+            raise ValueError("COVERAGE_LABEL_COUNT_MISMATCH")
+        if not np.isfinite(y_arr).all():
+            raise ValueError("COVERAGE_LABELS_NON_FINITE")
+
+        lower, upper = self.predict_interval(X_val)
 
         covered = (y_arr >= lower) & (y_arr <= upper)
         actual_cov = float(np.mean(covered))
@@ -248,3 +260,47 @@ class M04QuantileTrainer:
             n_samples=len(y_arr),
             violations_count=violations,
         )
+
+
+def _training_data_hash(
+    X: pd.DataFrame, y: np.ndarray, feature_names: list[str]
+) -> str:
+    digest = hashlib.sha256()
+    header = json.dumps(
+        {"feature_names": feature_names, "x_shape": X.shape, "y_shape": y.shape},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    digest.update(header)
+    for values in (X.to_numpy(dtype="<f8"), y.astype("<f8", copy=False)):
+        digest.update(np.ascontiguousarray(values).tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def _fitted_state_hash(*models: GradientBoostingRegressor) -> str:
+    digest = hashlib.sha256()
+    tree_fields = (
+        ("children_left", "<i8"),
+        ("children_right", "<i8"),
+        ("feature", "<i8"),
+        ("threshold", "<f8"),
+        ("value", "<f8"),
+        ("impurity", "<f8"),
+        ("n_node_samples", "<i8"),
+        ("weighted_n_node_samples", "<f8"),
+    )
+    for model in models:
+        digest.update(
+            json.dumps(model.get_params(deep=True), sort_keys=True, separators=(",", ":")).encode(
+                "utf-8"
+            )
+        )
+        initial = np.ascontiguousarray(np.asarray(model.init_.constant_, dtype="<f8"))
+        digest.update(initial.tobytes(order="C"))
+        for estimator in model.estimators_.ravel():
+            tree = estimator.tree_
+            digest.update(str(tree.node_count).encode("ascii"))
+            for field, dtype in tree_fields:
+                values = np.ascontiguousarray(np.asarray(getattr(tree, field), dtype=dtype))
+                digest.update(values.tobytes(order="C"))
+    return digest.hexdigest()
