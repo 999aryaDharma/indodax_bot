@@ -73,3 +73,23 @@ Full lab suite verification: 154 passed across strategies, features, labels, eva
 - **GREEN** - `python -m pytest tests/unit/lab/models/test_m02_xgboost.py -p no:cacheprovider -q` -> `8 passed` (exit 0). One test pins that the documented `inner_heldout` partition is still accepted, so the allowlist does not break the supported path. - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 - Independent review: still PENDING; the coordinator runs the delta verification pass on the committed SHA - opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/models/m02_xgboost.py (285 lines)
+  and tests (8 tests). Fresh run
+  `python -m pytest tests/unit/lab/models/test_m02_xgboost.py -q`: 8 passed,
+  0 failed, exit 0 (AC0–AC3 + alias/distinct-seed regressions + yaml/guards).
+- AC0 holds (M01 vs M02 trained and evaluated on identical folds); AC1 holds
+  (positive partition allowlist; sealed/test aliases rejected); AC2 holds
+  (3 distinct seeds enforced; median + worst recorded, worst <= median); AC3
+  holds (canonical order preserved; reorder aligned identically; missing
+  rejected).
+- MINOR (backlog, non-blocking): audit iterates raw seeds list, so a passing
+  list with a duplicated seed double-counts it in the median; predict_proba
+  silently drops extra columns instead of rejecting like ML-01 strict mode;
+  caller trusted to supply genuine inner-held-out validation data.
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
