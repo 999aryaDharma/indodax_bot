@@ -62,3 +62,14 @@ Combined suite verification (88 passed across backtest, risk, execution, ledger,
 - No new findings.
 - First review: ses_f2028e7a2ffek7Vs5W7p15tU3E. Verification: ses_f1f5b2f1bffebNCzwlaL9mq2Mv.
 - Reviewed at HEAD 28d89ba with uncommitted working-tree changes present; exact-SHA pinning pending at commit time.
+
+## Comprehensive review fix cycle 1 — claim
+
+- Reassigned to Codex `/root` after the original implementation owner is no longer active in this checkout; inspected `S02-01` paths and found no uncommitted S02 changes.
+- Base tree: `4bbf4db6bd1dfa21f381329f9fa08a1a2ec6737e`; scoped paths: `src/indodax_lab/strategies/s02.py`, `tests/unit/lab/strategies/test_s02.py`, this handoff.
+- Independent reviewer: `/root/docs_review`. Frozen Important findings: missing/non-finite volume can admit entry; invalid ATR can create unprotected BUY; stale/incomplete timestamps replay old data; incomplete/non-finite lookback can manufacture squeeze.
+- Fix cycle count: 1. Manifest remains unchanged until exact-SHA delta review and coordinator batch reconciliation.
+- Regression RED at base SHA: the new targeted cases produced 9 failures covering missing/zero/NaN volume, NaN/oversized ATR, stale/gapped bars, missing prior close, and infinite prior ATR.
+- Fix commit: `62a838983fe04a1b0a6b712282a9efb346e1c392`.
+- GREEN: `C:/Users/User/miniconda3/envs/ML/python.exe -m pytest tests/unit/lab/strategies/test_s02.py -q -p no:cacheprovider` — 14 passed; `tests/unit/lab/strategies` — 168 passed. Ruff `--select I,F401` on S02 source/test and scoped `git diff --check` passed.
+- Delta review at exact source SHA `62a838983fe04a1b0a6b712282a9efb346e1c392` is pending; sprint remains REVIEW.
