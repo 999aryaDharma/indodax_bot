@@ -16,9 +16,9 @@ opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import sqlite3
 
 import pytest
 
@@ -129,6 +129,50 @@ def test_eval_03_unseal_from_validated_still_succeeds(tmp_path: Path) -> None:
     audit = mgr.unseal_gate(cand.candidate_id, "split_v1", authorized_by="reviewer")
     assert audit.candidate_id == cand.candidate_id
     assert mgr.get_candidate(cand.candidate_id).sealed_gate_opened is True
+
+
+def test_eval_03_naive_transition_time_is_rejected_before_state_or_audit_write(
+    tmp_path: Path,
+) -> None:
+    mgr = CandidateLifecycleManager(tmp_path / "lifecycle.db")
+    cand = _candidate("cand_naive_transition_time")
+    mgr.register_candidate(cand)
+
+    with pytest.raises(ValueError, match="UTC_TIMEZONE_AWARE_REQUIRED:as_of"):
+        mgr.transition_stage(
+            cand.candidate_id,
+            CandidateStage.IMPLEMENTED,
+            as_of=datetime(2025, 1, 1),
+        )
+
+    assert mgr.get_candidate(cand.candidate_id).current_stage == CandidateStage.IDEA
+    assert mgr.get_transition_history(cand.candidate_id) == []
+
+
+def test_eval_03_naive_unseal_time_is_rejected_without_opening_gate_or_audit(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "lifecycle.db"
+    mgr = CandidateLifecycleManager(db_path)
+    cand = _candidate("cand_naive_unseal_time")
+    mgr.register_candidate(cand)
+    _advance_to_validated(mgr, cand.candidate_id)
+
+    with pytest.raises(ValueError, match="UTC_TIMEZONE_AWARE_REQUIRED:as_of"):
+        mgr.unseal_gate(
+            cand.candidate_id,
+            "split_v1",
+            authorized_by="reviewer",
+            as_of=datetime(2025, 1, 1),
+        )
+
+    assert mgr.get_candidate(cand.candidate_id).sealed_gate_opened is False
+    with sqlite3.connect(str(db_path)) as conn:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM exposure_audits WHERE candidate_id = ?",
+            (cand.candidate_id,),
+        ).fetchone()[0]
+    assert count == 0
 
 
 _FAULT_STATE: dict[str, object] = {"armed": False, "needle": ""}

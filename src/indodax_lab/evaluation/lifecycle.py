@@ -358,7 +358,7 @@ class CandidateLifecycleManager:
         transition cannot both observe the same predecessor stage and a failed audit
         insert cannot leave an advanced stage behind.
         """
-        ts = as_of or datetime.now(UTC)
+        ts = _ensure_utc(as_of or datetime.now(UTC), "as_of")
         transition_id = f"tr_{uuid.uuid4().hex[:12]}"
 
         with self._atomic() as conn:
@@ -425,7 +425,7 @@ class CandidateLifecycleManager:
                 "UNSEAL_AUTHORIZED_BY_REQUIRED: unseal requires a named authorizer"
             )
 
-        ts = as_of or datetime.now(UTC)
+        ts = _ensure_utc(as_of or datetime.now(UTC), "as_of")
         exposure_id = f"exp_{uuid.uuid4().hex[:12]}"
 
         with self._atomic() as conn:
