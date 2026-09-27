@@ -99,3 +99,26 @@ Result: **54 passed** (includes the pre-existing `test_promotion.py`, strengthen
 
 ### Isolation
 All tests use `tmp_path` and in-memory fakes only. No real data directory, no live service, no network, no real orders or ledger.
+
+## Independent review — coordinator pass (2026-09-27)
+
+- Verdict: PASS. Full read of src/indodax_lab/paper/promotion.py (364 lines) and
+  tests (4 AC tests). Fresh run
+  `python -m pytest tests/unit/lab/paper/test_promotion.py -q`: 4 passed,
+  0 failed, exit 0 (AC0–AC3). Adjacent LOB-queue promotion/evidence suites:
+  26 passed, exit 0.
+- AC0 holds (sealed + 90d + 100 trades + approval + quality → swap with
+  previous champion recorded); AC1 holds (100 trades in 10d refused, champion
+  untouched); AC2 holds (40 trades in 95d refused); AC3 holds (challenger
+  activity leaves pointer untouched).
+- Approval hardening verified: missing/blank/self/mismatched/stale/future
+  approval refused before any gate; lob_queue contract requires qualification
+  report, bar_proxy forbids it.
+- MINOR (backlog, non-blocking): rollback_last_promotion pops history instead
+  of appending a reversal entry (promotion vanishes from registry audit);
+  constructor accepts sub-contract thresholds (e.g. min_forward_days=1) —
+  deployment must pin 90/100 or add ge guards.
+- No Critical/Important findings.
+- Reviewer: coordinator inline review (implementation pre-exists committed;
+  reviewer wrote no code here). Status transition (manifest/spec) left to
+  coordinator DONE pass / main agent — not touched.
