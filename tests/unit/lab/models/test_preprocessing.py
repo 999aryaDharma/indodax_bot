@@ -10,6 +10,7 @@ Acceptance Criteria:
 from __future__ import annotations
 
 import copy
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -124,7 +125,7 @@ def test_ml_01_contract_2() -> None:
         preprocessor.transform(extra_test_df)
     assert "UNEXPECTED_EXTRA_FEATURES" in str(exc_extra.value)
 
-    # 3. Reordered features: if strict order is requested, error or deterministic alignment
+    # 3. Reordered features are rejected on the default path.
     reordered_test_df = pd.DataFrame(
         {
             "vol_ratio": [1.0, 1.1],
@@ -132,12 +133,18 @@ def test_ml_01_contract_2() -> None:
             "rsi_14": [45.0, 55.0],
         }
     )
-    # With strict_feature_order=True, mismatched order is rejected
-    strict_preprocessor = TabularPreprocessor(PreprocessorConfig(strict_feature_order=True))
-    strict_preprocessor.fit(train_df)
     with pytest.raises(FeatureAlignmentError) as exc_order:
-        strict_preprocessor.transform(reordered_test_df)
+        preprocessor.transform(reordered_test_df)
     assert "FEATURE_ORDER_MISMATCH" in str(exc_order.value)
+
+    adapter_preprocessor = TabularPreprocessor(
+        PreprocessorConfig(strict_feature_order=False)
+    )
+    adapter_preprocessor.fit(train_df)
+    pd.testing.assert_frame_equal(
+        adapter_preprocessor.transform(reordered_test_df),
+        adapter_preprocessor.transform(reordered_test_df[train_df.columns]),
+    )
 
 
 def test_ml_01_contract_3() -> None:
@@ -207,3 +214,44 @@ def test_ml_01_fitted_artifact_rejects_non_unique_feature_schema() -> None:
             upper_bounds=artifact.upper_bounds,
             config=artifact.config,
         )
+
+
+def test_ml_01_fitted_artifact_rejects_statistics_outside_feature_schema() -> None:
+    train_df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+    state = TabularPreprocessor().fit(train_df).model_dump()
+    state["feature_names"] = ["arbitrary"]
+
+    with pytest.raises(ValueError, match="FEATURE_SCHEMA_INVALID"):
+        FittedPreprocessorArtifact.model_validate(state)
+
+
+def test_ml_01_returned_artifact_is_a_defensive_copy() -> None:
+    train_df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 7.0]})
+    preprocessor = TabularPreprocessor(PreprocessorConfig(clip_outliers=False))
+    returned_artifact = preprocessor.fit(train_df)
+    expected = preprocessor.transform(train_df)
+
+    returned_artifact.medians["a"] = 100.0
+    returned_artifact.feature_names.reverse()
+
+    pd.testing.assert_frame_equal(preprocessor.transform(train_df), expected)
+    assert preprocessor.fitted_artifact.medians["a"] == 2.0
+    assert preprocessor.fitted_artifact.feature_names == ["a", "b"]
+
+
+def test_ml_01_transform_uses_config_recorded_at_fit() -> None:
+    train_df = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 7.0]})
+    preprocessor = TabularPreprocessor(PreprocessorConfig(clip_outliers=False))
+    preprocessor.fit(train_df)
+    expected = preprocessor.transform(train_df)
+
+    preprocessor.config = PreprocessorConfig(
+        impute_strategy="zero",
+        scale_strategy="standard",
+        clip_outliers=False,
+        strict_feature_order=False,
+    )
+
+    pd.testing.assert_frame_equal(preprocessor.transform(train_df), expected)
+    with pytest.raises(FeatureAlignmentError, match="FEATURE_ORDER_MISMATCH"):
+        preprocessor.transform(train_df[["b", "a"]])

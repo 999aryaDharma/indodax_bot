@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -40,11 +41,12 @@ class PreprocessorConfig(BaseModel):
     clip_outliers: bool = True
     clip_quantile_lower: float = 0.01
     clip_quantile_upper: float = 0.99
-    strict_feature_order: bool = False
+    # Explicitly opts into deterministic name-based alignment for an upstream verified adapter.
+    strict_feature_order: bool = True
 
 
 class FittedPreprocessorArtifact(BaseModel):
-    """Immutable record of fitted preprocessing statistics and feature schemas."""
+    """Record of fitted preprocessing statistics and feature schema."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -74,6 +76,12 @@ class FittedPreprocessorArtifact(BaseModel):
             raise ValueError(
                 f"FEATURE_SCHEMA_INVALID: feature_names must be non-empty and unique, got {self.feature_names}"
             )
+        expected = set(self.feature_names)
+        for field_name in ("medians", "means", "stds", "iqrs", "lower_bounds", "upper_bounds"):
+            if set(getattr(self, field_name)) != expected:
+                raise ValueError(
+                    f"FEATURE_SCHEMA_INVALID: {field_name} keys must match feature_names"
+                )
         return self
 
 
@@ -101,7 +109,7 @@ class TabularPreprocessor:
     def fitted_artifact(self) -> FittedPreprocessorArtifact:
         if self._fitted_artifact is None:
             raise NotFittedError("TabularPreprocessor has not been fitted yet.")
-        return self._fitted_artifact
+        return self._fitted_artifact.model_copy(deep=True)
 
     def fit(self, train_df: pd.DataFrame) -> FittedPreprocessorArtifact:
         """Fit preprocessor statistics on training features without accessing test data."""
@@ -158,7 +166,7 @@ class TabularPreprocessor:
             config=self.config,
             fitted_at=datetime.now(UTC),
         )
-        return self._fitted_artifact
+        return self.fitted_artifact
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """Transform input features using frozen train-only statistics.
@@ -169,6 +177,7 @@ class TabularPreprocessor:
         - Does NOT execute fit (ML-01-AC3).
         """
         artifact = self.fitted_artifact
+        config = artifact.config
         expected_features = set(artifact.feature_names)
         _reject_duplicate_columns(df.columns, "transform")
         actual_features = set(df.columns)
@@ -181,7 +190,7 @@ class TabularPreprocessor:
         if extra:
             raise FeatureAlignmentError(f"UNEXPECTED_EXTRA_FEATURES:{sorted(extra)}")
 
-        if self.config.strict_feature_order and list(df.columns) != artifact.feature_names:
+        if config.strict_feature_order and list(df.columns) != artifact.feature_names:
             raise FeatureAlignmentError(
                 f"FEATURE_ORDER_MISMATCH: expected {artifact.feature_names}, got {list(df.columns)}"
             )
@@ -191,26 +200,26 @@ class TabularPreprocessor:
 
         for col in artifact.feature_names:
             # 1. Imputation
-            if self.config.impute_strategy == "median":
+            if config.impute_strategy == "median":
                 out_df[col] = out_df[col].fillna(artifact.medians[col])
-            elif self.config.impute_strategy == "mean":
+            elif config.impute_strategy == "mean":
                 out_df[col] = out_df[col].fillna(artifact.means[col])
-            elif self.config.impute_strategy == "zero":
+            elif config.impute_strategy == "zero":
                 out_df[col] = out_df[col].fillna(0.0)
 
             # 2. Outlier clipping using train bounds
-            if self.config.clip_outliers:
+            if config.clip_outliers:
                 lb = artifact.lower_bounds[col]
                 ub = artifact.upper_bounds[col]
                 if lb <= ub:
                     out_df[col] = out_df[col].clip(lower=lb, upper=ub)
 
             # 3. Scaling using train statistics
-            if self.config.scale_strategy == "robust":
+            if config.scale_strategy == "robust":
                 med = artifact.medians[col]
                 iqr = artifact.iqrs[col]
                 out_df[col] = (out_df[col] - med) / iqr
-            elif self.config.scale_strategy == "standard":
+            elif config.scale_strategy == "standard":
                 mean_val = artifact.means[col]
                 std_val = artifact.stds[col]
                 out_df[col] = (out_df[col] - mean_val) / std_val
