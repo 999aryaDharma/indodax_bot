@@ -29,6 +29,7 @@ logs/*.bak
 
 # === Local Developer / Agent Tooling ===
 .agents/mcp_config.json
+.superpowers/
 
 # === Strategy research lab ===
 lab-data/
