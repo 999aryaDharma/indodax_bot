@@ -33,7 +33,7 @@
       "path": "docs/sprints/agent-governance/AGENT-01-governed-research-curator.md",
       "priority": "P0",
       "status": "REVIEW",
-      "implementation_owner": "Codex /root (LUNA execution)",
+      "implementation_owner": "Codex /root (LUNA execution); fix opencode (session ses_f183f2592ffe7fVQWK7RsK3F9A)",
       "independent_reviewer": "/root/architecture_doc_review",
       "recommended_branch": "feat/agent-01-governed-research-curator",
       "external_gates": [
