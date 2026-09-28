@@ -103,3 +103,86 @@ GREEN — after applying G1–G5, `python -m pytest tests/unit/lab/models/test_m
   guarded but untested — add both regression tests.
 - Integration: merged to `dev` via merge commit (reviewed content
   byte-identical; dev-side S07-01 bookkeeping united, no conflicts).
+
+## Minor fix round (Task 6 — 3 Minor backlog findings)
+
+Status: fix owner submission for independent delta review.
+
+- Owner: fix owner (OpenCode subagent session); branch `fix/minors-rw2-02`,
+  worktree `.worktrees/fix-minors-rw2-02`, base `0c0d10d`.
+- Files changed (scope exactly as briefed): `src/indodax_lab/models/registry.py`,
+  `tests/unit/lab/models/test_model_registry.py`, this handoff.
+  `src/indodax_lab/models/training_service.py` is in scope but **unchanged**;
+  no other file touched (`docs/sprints/sprint-manifest.json` untouched).
+
+### M1 — `ARCHITECTURE_LOADERS` frozen (registry.py)
+
+- `ARCHITECTURE_LOADERS` is now `MappingProxyType({"m01_logistic":
+  "portable_bundle_json_v2"})` typed `Mapping[str, str]`, so runtime mutation
+  can no longer widen the pinned architecture→loader set (same treatment as
+  `LOADER_ALLOWLIST`).
+- Test `test_architecture_loaders_is_frozen_and_pinned_set_still_resolves`:
+  item assignment and item deletion must raise `TypeError`; the pinned set
+  still resolves end to end (`set == {"m01_logistic"}`, map entry in
+  `LOADER_ALLOWLIST`, `load_verified` returns
+  `loader_id == "portable_bundle_json_v2"`, `resolve_loader("smuggled_arch")`
+  still raises `LOADER_NOT_ALLOWED`).
+
+### M2 — no silent first-artifact feeding (`load_verified`)
+
+- `load_verified` now rejects `len(manifest.artifact_refs) != 1` with
+  `ModelManifestInvalidError` / reason code `ARTIFACT_REFS_SINGLE_REQUIRED`
+  **before** any loader invocation; `artifact_bytes[0]` feeding is guarded, not
+  a convention. Registration-time `ARTIFACT_REFS_REQUIRED` for empty refs is
+  unchanged, so len 0 is blocked at the entry point and can no longer reach
+  the load path in practice; `register` still accepts multi-ref manifests
+  (every ref hash-verified) but such a manifest can no longer load —
+  fail-closed preserved, no rejection became a success.
+- Test `test_load_verified_rejects_artifact_ref_counts_other_than_one`: len 0
+  refused at registration (`ARTIFACT_REFS_REQUIRED`) and, via a forced
+  manifest reader, at load (`ARTIFACT_REFS_SINGLE_REQUIRED`); len 2 registered
+  then refused at load with **zero loader calls** (call-counting
+  `resolve_loader`); the pinned single-ref path still loads afterwards.
+
+### M3 — duplicate-path regression tests (no production change)
+
+- Both guards already existed; only tests were missing.
+- Test `test_duplicate_run_after_success_and_concurrent_identical_register_stay_guarded`:
+  (a) a second `TrainingService.run` on a `SUCCESS` job raises
+  `TrainingJobStateError` (`TRAINING_JOB_STATE`) while job status,
+  `result_artifact_path`, registry listing and model bytes stay unchanged;
+  (b) two barrier-synchronized threads register the identical manifest — both
+  pass the existing-row SELECT before either INSERT — exactly one row is
+  published, the loser receives `ImmutableVersionConflictError`
+  ("registered concurrently"), bytes equal `canonical_bytes(manifest)`, and a
+  later identical register is idempotent with no duplicate row.
+
+### TDD evidence (RED → GREEN)
+
+- RED A (tests added, guards absent): focused suite `2 failed, 11 passed`,
+  exit 1 — `DID NOT RAISE TypeError` (M1) and `DID NOT RAISE
+  ModelManifestInvalidError` for the len-2 manifest (M2). M3's guards already
+  exist, so its RED was demonstrated by temporarily removing each guard.
+- RED B (both M3 guards temporarily removed): `3 failed, 10 passed`, exit 1 —
+  duplicate run leaked `TrainingNotClaimableError` instead of
+  `TrainingJobStateError`; with the duplicate-run guard restored alone, the
+  concurrent loser leaked `sqlite3.IntegrityError` instead of
+  `ImmutableVersionConflictError`. Both guards restored immediately after.
+- GREEN (fixes applied): focused suite `13 passed`, exit 0.
+
+### Gates (worktree, in briefed order)
+
+- `python -m pytest tests/unit/lab/models/test_model_registry.py -q` →
+  13 passed, exit 0 (baseline 10 + 3 new).
+- `python -m pytest tests/unit/lab/models -q` → 271 passed, exit 0
+  (baseline 268 + 3).
+- `python -m pytest tests/unit/lab -q` → 1477 passed (1 pre-existing
+  `FutureWarning` from untouched `tests/unit/lab/strategies/test_s07.py`),
+  exit 0.
+- `python -m ruff check src/indodax_lab/models/registry.py
+  src/indodax_lab/models/training_service.py
+  tests/unit/lab/models/test_model_registry.py` → `All checks passed!`, exit 0.
+- `git diff --check` → clean, exit 0.
+- Test isolation unchanged: `pytest.tmp_path` namespaces, synthetic in-process
+  datasets/models, no network, Telegram, production DB, credentials or real
+  market data; fixture numbers are test-only.
