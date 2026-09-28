@@ -7241,7 +7241,7 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/C12-01-relative-strength-rotation.md",
       "priority": "P1",
-      "implementation_owner": "opencode (session ses_f1cbf7ed6ffeQuUybslDqpaJkM)",
+      "implementation_owner": "opencode (session ses_f19101c03ffe2XABFDRGu3p8r0; resumed WIP from cancelled ses_f1cbf7ed6ffeQuUybslDqpaJkM)",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/c12-01-relative-strength-rotation",
       "requirements": [

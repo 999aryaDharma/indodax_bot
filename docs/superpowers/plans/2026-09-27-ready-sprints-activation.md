@@ -34,7 +34,9 @@ the binding authority and is reviewed against the diff, not pre-digested here.
 - Ruling: one implementation subagent at a time — SDD skill "never dispatch
   multiple implementation subagents in parallel", reinforced by protocol
   single-writer-per-shared-path. Cost if wrong: n/a (serial is conservative).
-- Ruling: integration into `feat/feat-02-finalization` by fast-forward only,
+- Ruling: integration into `dev` by fast-forward only (working branch since
+  2026-09-28; supersedes the earlier `feat/feat-02-finalization` target after
+  the owner ordered all work consolidated to `dev`),
   and only after the independent task review passes on the sprint-branch SHA
   (fast-forward keeps the reviewed SHA identical, so no re-review of content).
 - Ruling: manifest transitions are coordinator-only (READY→IN_PROGRESS on
