@@ -1,0 +1,22 @@
+strategy_id: "C12"
+version: "1.0.0"
+family: "relative_strength_rotation"
+universe_tier: "top_liquid"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 24
+  top_k: 2
+  minimum_valid_pairs: 2
+  cash_breadth_threshold: 0.50
+  min_relative_strength: 0.0
+  max_turnover_fraction: "0.50"
+  atr_multiplier: 2.0
+risk_profile:
+  max_position_pct: 0.40
+  stop_loss_pct: 0.03
+split: "train"
+status: "active"
+description: "PIT relative strength rotation: rank top-K vs universe median return, breadth cash regime gate blocks reentry, total intent turnover bounded by available cash times max_turnover_fraction; LONG/FLAT intent only"
