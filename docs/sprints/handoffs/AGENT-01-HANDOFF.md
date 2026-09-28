@@ -119,3 +119,113 @@ No test was written for this sprint, because a behavioural regression test would
   and main agent is active there. This lane does NOT fix; routed to
   orchestration owner. Recommend BLOCKED pending routing.
 - Reviewer ses_f1eba02b2ffezu67m1vTzXEqY7.
+
+---
+
+## BLOCKING fix round — AGENT-01 (Task 10 fix owner: opencode / MiMo)
+
+Status: sprint stays **REVIEW** (dep JOB-03 gated). This section records code +
+test + handoff fixes only; no status transition, no merge, no manifest edit.
+
+- Branch: `fix/agent-01-blocking` (worktree `.worktrees/fix-agent-01-blocking`,
+  base `37ef22d`).
+- Fix commit: `394fb9b` (`fix(AGENT-01): close blocking curator policy findings
+  R1-R6, R8/R9`) — source + tests. This docs commit records it (code commit
+  first, evidence commit follows, per Handoff Requirements).
+- Files changed (scope only):
+  `src/indodax_lab/orchestration/curator_policy.py`,
+  `tests/unit/lab/orchestration/test_curator_policy.py`, this handoff.
+
+### Findings fixed (R1–R9 + coordinator deltas; R7 excluded)
+
+| ID | Severity | Fix |
+|---|---|---|
+| R1 | Critical | Per-candidate HARD_FAIL memory is recorded **before all other submit checks** (a rejected HARD_FAIL claim still marks the candidate), then enforced per `candidate_id` independent of `proposal_id`/asserted `prior_outcome`. Unknown/absent `prior_outcome` fails closed (required enum). No unblock path exists without a future CR (defect-report workflow not built). |
+| R2 | Important | Named module constants `MAX_PROPOSAL_TRIALS` (per proposal, `Field(ge=1, le=...)`) and `MAX_CUMULATIVE_CANDIDATE_TRIALS` (per candidate, engine check incl. pending). Boundaries tested: accept at cap, reject above, at both levels. **Values are initial fail-closed values pending owner ratification — not approved policy.** |
+| R3 | Important | Named `PROTECTED_BRANCH_REFS = frozenset({main, master, prod, production, release})`; blank, protected (case/whitespace-insensitive) and `..` traversal rejected — typed at construction, by the model validator, and re-checked at the engine boundary. |
+| R4 | Important | `sanitize_curator_input` is wired at the engine boundary (kept from dev hardening); tests now also assert the sanitized hypothesis is what `get_proposal()` surfaces, with an injection payload treated as data. |
+| R5 | Important | Self-approval compare is normalized (strip+casefold) — kept; **blank approver now raises `ProposalValidationError` (never APPROVEs)**; blank/non-string proposer and approver rejected typed (`IDENTITY_CANNOT_BE_BLANK` / `IDENTITY_MUST_BE_STRING`); approver stored normalized. |
+| R6 | Important | `reject_proposal` records `REJECTED` — kept; **repeated approve (incl. on APPROVED) now raises `PROPOSAL_NOT_PENDING` instead of returning/overwriting**; repeated reject likewise; `decided_at = max(now, submitted_at)` via shared `_decided_at()` — monotonic per proposal, proven under a scripted clock regression. |
+| delta | Important | Duplicate `proposal_id` on submit raises `DUPLICATE_PROPOSAL_ID` — APPROVED can never be overwritten to PENDING; bare `KeyError` on unknown id in approve/reject replaced by `ProposalValidationError` (`PROPOSAL_NOT_FOUND`). |
+| R8 | Minor | `sanitize_curator_input` rejects non-`str` with typed `ProposalValidationError` (no str-coercion). |
+| R9 | Minor | Unknown-id path raises the module's typed error (see delta). |
+| R7 | Important | **EXCLUDED from this round** — durable persistence needs an ADR/store decision. Recorded as CR backlog below; not built. |
+
+### Pre-existing partial hardening audited and kept
+
+Dev already contained: R1 per-candidate set + case-insensitive tests, R2 field
+bounds + cumulative ceiling, R3 branch checks, R4 sanitizer wiring, R5
+normalized self-approval, R6 `reject_proposal` + reject-only-from-pending.
+Those paths stayed (regression tests kept GREEN); this round closed what was
+still open: blank-approver bypass, repeated-approve overwrite, non-monotonic
+`decided_at`, duplicate-id overwrite, bare `KeyError`, untyped sanitize error,
+unvalidated model-constructed instances at the engine boundary.
+
+### TDD evidence — RED first, then GREEN
+
+Environment: Windows win32, Python 3.14.0, ruff 0.16.9, worktree
+`.worktrees/fix-agent-01-blocking` @ `394fb9b`.
+
+- **RED** (new/rewritten tests against pre-fix source):
+  `python -m pytest tests/unit/lab/orchestration/test_curator_policy.py -q`
+  → **10 failed, 17 passed**, exit 1. Bypass demonstrated per finding:
+  - `test_agent_01_r5_blank_approver_never_approves` — `"   "` approver
+    APPROVED (AC3 bypass).
+  - `test_agent_01_r5_non_string_approver_rejected_typed` — `AttributeError`,
+    not typed.
+  - `test_agent_01_r5_blank_proposer_rejected_typed_at_construction` —
+    pydantic `ValidationError`, not `ProposalValidationError`.
+  - `test_agent_01_engine_boundary_revalidates_unvalidated_instances` —
+    `model_construct` blank proposer / `main` branch accepted by engine.
+  - `test_agent_01_duplicate_proposal_id_rejected` — APPROVED record silently
+    overwritten to PENDING, approver/audit erased.
+  - `test_agent_01_r9_unknown_proposal_id_typed_error` — bare `KeyError`.
+  - `test_agent_01_r6_repeated_approve_raises_and_preserves_audit` — second
+    approve returned instead of raising.
+  - `test_agent_01_r6_decided_at_monotonic_on_approve` / `_on_reject` —
+    `decided_at` (11:00) < `submitted_at` (12:00) under clock regression.
+  - `test_agent_01_sanitize_rejects_non_string` — plain `ValueError`.
+  (R1/R2/R3/R4 had no open bypass in dev — audit above; their regression tests
+  were already GREEN at baseline.)
+- **GREEN** (same command after fix): **27 passed**, exit 0.
+
+### Gates (all inside the worktree, in order)
+
+1. `python -m pytest tests/unit/lab/orchestration/test_curator_policy.py -q`
+   → 27 passed, exit 0 (baseline was 18 passed; +9 new tests).
+2. `python -m pytest tests/unit/lab/orchestration/ -q` → 97 passed, exit 0.
+3. `python -m pytest tests/unit/lab -q` → 1500 passed, exit 0
+   (baseline 1491 + 9 new).
+4. `python -m ruff check src/indodax_lab/orchestration/curator_policy.py tests/unit/lab/orchestration/test_curator_policy.py`
+   → "All checks passed!", exit 0 (baseline had 12 findings in these files;
+   all cleared, zero findings in added lines).
+5. `git diff --check` → clean before commit.
+
+### Constants pending owner ratification (reviewer adjudicates)
+
+- `MAX_PROPOSAL_TRIALS = 10_000`
+- `MAX_CUMULATIVE_CANDIDATE_TRIALS = 10_000`
+- `PROTECTED_BRANCH_REFS = {main, master, prod, production, release}`
+
+The governance spec says "bounded" without numeric ceilings; these are initial
+fail-closed values, documented in code as PENDING OWNER RATIFICATION and not
+presented as approved policy.
+
+### R7 — CR backlog (deliberately NOT built)
+
+Durable persistence of proposals/approvals remains in-memory (`_proposals`,
+`_candidate_hard_fail`, `_candidate_cumulative_trials`). A process restart loses
+the audit trail. This requires an ADR + store decision (persistence is a
+material change per AGENTS.md change control) — **open a CR after AGENT-01
+closes; do not patch persistence into this fix round.**
+
+### Known concerns / observations
+
+- `ProposalValidationError` is importable from the module but is not (and was
+  not) re-exported by `orchestration/__init__.py`; that file is outside this
+  task's file scope, so it was not touched.
+- Budget-bound violations surface as pydantic's `ValidationError` (a `ValueError`
+  subclass) at construction because `Field(ge/le)` messages are asserted by the
+  existing AC0 test; identity/branch/audit failures use `ProposalValidationError`.
+- "No unblock path for a HARD_FAIL candidate" is intentional fail-closed
+  behavior; a formal defect-report workflow would need its own CR.
