@@ -9259,8 +9259,8 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-02-model-registry-and-offline-training-services.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
+      "status": "IN_PROGRESS",
+      "implementation_owner": "opencode (session ses_f190b4fccffe88Do68nL03opAa)",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw2-02-model-registry-and-offline-training-services",
       "external_gates": [
