@@ -19,10 +19,17 @@ Frozen deterministic v1 semantics (config `configs/strategies/C12_v1.yaml`):
   (fail-closed), and per-slot quantity rounds down to 0.0001 base units.
 - Selection: first `top_k` of pairs with positive lookback return and
   relative strength at or above `min_relative_strength` (equality qualifies).
+  The floor is non-negative: a negative `min_relative_strength` is rejected as
+  `INVALID_C12_ROTATION_PARAMETERS` at config load and before any decision,
+  because it would let a non-positive-return pair pass the strength gate and
+  misattribute its breadth rejection.
 - Stop: `close - atr_multiplier * atr_14`; missing/nonpositive ATR, close or
   stop excludes the pair from rotation (fail-closed, never traded).
 - Delisted or stale pairs (no bar at as_of) stay in the decision history as
   EXCLUDED with an explicit reason and can never re-enter on stale evidence.
+- Not-yet-listed pairs (canonical `listed_at`/`listing_date` after as_of) are
+  EXCLUDED with `C12_NOT_YET_LISTED` and never enter rotation; rows entirely
+  after as_of never reach the frame at all.
 - FLAT is an explicit history status; `c12_decide` emits only LONG intents.
 """
 
@@ -58,12 +65,66 @@ class C12DecisionRecord(BaseModel):
     intent: SignalIntent | None = None
 
 
+def _validated_rotation_parameters(
+    spec: StrategySpecification,
+) -> tuple[int, int, int, float, float, Decimal, float]:
+    """Parse and fail closed on unsafe rotation parameters before any decision.
+
+    A negative `min_relative_strength` is rejected: with a negative floor a
+    non-positive-return pair passes the strength gate, so its breadth
+    (positive-return) rejection would be misattributed as a strength rejection.
+    """
+    params = spec.parameters
+    try:
+        lookback_bars = int(params.get("lookback_bars", 24))
+        top_k = int(params.get("top_k", 2))
+        minimum_valid_pairs = int(params.get("minimum_valid_pairs", 2))
+        breadth_threshold = float(params.get("cash_breadth_threshold", 0.5))
+        min_strength = float(params.get("min_relative_strength", 0.0))
+        turnover_fraction = Decimal(str(params.get("max_turnover_fraction", "0.50")))
+        atr_multiplier = float(params.get("atr_multiplier", 2.0))
+    except (DecimalException, TypeError, ValueError) as exc:
+        raise ValueError(_INVALID_PARAMETERS) from exc
+    if (
+        lookback_bars < 1
+        or top_k < 1
+        or minimum_valid_pairs < 2
+        or not math.isfinite(breadth_threshold)
+        or breadth_threshold < 0.0
+        or breadth_threshold > 1.0
+        or not math.isfinite(min_strength)
+        or min_strength < 0.0
+        or not turnover_fraction.is_finite()
+        or turnover_fraction <= 0
+        or turnover_fraction > 1
+        or not math.isfinite(atr_multiplier)
+        or atr_multiplier <= 0
+    ):
+        raise ValueError(_INVALID_PARAMETERS)
+    return (
+        lookback_bars,
+        top_k,
+        minimum_valid_pairs,
+        breadth_threshold,
+        min_strength,
+        turnover_fraction,
+        atr_multiplier,
+    )
+
+
 def load_c12_specification(
     config_path: str | Path = "configs/strategies/C12_v1.yaml",
 ) -> StrategySpecification:
-    """Load and strictly validate canonical C12 relative strength specification."""
+    """Load and strictly validate canonical C12 relative strength specification.
+
+    Rotation parameters are validated at load time, so an unsafe config (for
+    example a negative `min_relative_strength`) is rejected here rather than at
+    the first decision.
+    """
     registry = StrategyRegistry()
-    return registry.load_specification_from_yaml(config_path)
+    specification = registry.load_specification_from_yaml(config_path)
+    _validated_rotation_parameters(specification)
+    return specification
 
 
 def _excluded(pair: str, reason_code: str) -> C12DecisionRecord:
@@ -101,32 +162,15 @@ def c12_decision_history(
     if spec is None:
         spec = load_c12_specification()
 
-    params = spec.parameters
-    try:
-        lookback_bars = int(params.get("lookback_bars", 24))
-        top_k = int(params.get("top_k", 2))
-        minimum_valid_pairs = int(params.get("minimum_valid_pairs", 2))
-        breadth_threshold = float(params.get("cash_breadth_threshold", 0.5))
-        min_strength = float(params.get("min_relative_strength", 0.0))
-        turnover_fraction = Decimal(str(params.get("max_turnover_fraction", "0.50")))
-        atr_multiplier = float(params.get("atr_multiplier", 2.0))
-    except (DecimalException, TypeError, ValueError) as exc:
-        raise ValueError(_INVALID_PARAMETERS) from exc
-    if (
-        lookback_bars < 1
-        or top_k < 1
-        or minimum_valid_pairs < 2
-        or not math.isfinite(breadth_threshold)
-        or breadth_threshold < 0.0
-        or breadth_threshold > 1.0
-        or not math.isfinite(min_strength)
-        or not turnover_fraction.is_finite()
-        or turnover_fraction <= 0
-        or turnover_fraction > 1
-        or not math.isfinite(atr_multiplier)
-        or atr_multiplier <= 0
-    ):
-        raise ValueError(_INVALID_PARAMETERS)
+    (
+        lookback_bars,
+        top_k,
+        minimum_valid_pairs,
+        breadth_threshold,
+        min_strength,
+        turnover_fraction,
+        atr_multiplier,
+    ) = _validated_rotation_parameters(spec)
 
     records: dict[str, C12DecisionRecord] = {}
     valid: list[dict] = []
@@ -142,6 +186,23 @@ def c12_decision_history(
         if pd.Timestamp(latest["decision_ts"]) != pd.Timestamp(frame.as_of):
             records[pair] = _excluded(pair, "C12_STALE_OR_DELISTED_NO_CURRENT_ROW")
             continue
+        # Explicit listing guard (mirrors C04): DecisionFrame only checks
+        # decision_ts/row_ready_at/eligible, so a pair whose canonical listing
+        # evidence is after as_of must be rejected here instead of rotating.
+        listing_column = next(
+            (column for column in ("listed_at", "listing_date") if column in p_df.columns),
+            None,
+        )
+        if listing_column is not None:
+            listing_value = latest[listing_column]
+            if pd.notna(listing_value):
+                listing_dt = pd.to_datetime(listing_value, utc=True, errors="coerce")
+                if pd.isna(listing_dt):
+                    records[pair] = _excluded(pair, "C12_INVALID_MARKET_DATA")
+                    continue
+                if listing_dt > frame.as_of:
+                    records[pair] = _excluded(pair, "C12_NOT_YET_LISTED")
+                    continue
         if len(p_df) < window_bars:
             records[pair] = _excluded(pair, "C12_INSUFFICIENT_LOOKBACK")
             continue

@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
+from pathlib import Path
 
 import pandas as pd
 
@@ -22,29 +23,34 @@ def _build_c12_pair_bars(
     return_pct: float = 0.05,
     ends_at: datetime | None = None,
     atr: float = 1500.0,
+    listed_at: datetime | None = None,
+    starts_at: datetime | None = None,
 ) -> pd.DataFrame:
     """Build causal hourly feature rows ending at `ends_at` (default: as_of).
 
     `ends_at` earlier than as_of models a delisted pair whose history stops.
+    `listed_at` attaches canonical listing evidence (C04-style). `starts_at`
+    places the first bar after as_of, modeling rows entirely in the future.
     """
     end = ends_at if ends_at is not None else as_of
-    start_dt = end - timedelta(hours=n_bars - 1)
+    start_dt = starts_at if starts_at is not None else end - timedelta(hours=n_bars - 1)
     base_price = 100000.0
     rows = []
     for i in range(n_bars):
         bar_dt = start_dt + timedelta(hours=i)
         price = base_price * (1.0 + return_pct * (i / (n_bars - 1)))
-        rows.append(
-            {
-                "pair": pair,
-                "decision_ts": bar_dt,
-                "row_ready_at": bar_dt,
-                "close": price,
-                "atr_14": atr,
-                "volume": 1000.0,
-                "eligible": True,
-            }
-        )
+        row = {
+            "pair": pair,
+            "decision_ts": bar_dt,
+            "row_ready_at": bar_dt,
+            "close": price,
+            "atr_14": atr,
+            "volume": 1000.0,
+            "eligible": True,
+        }
+        if listed_at is not None:
+            row["listed_at"] = listed_at
+        rows.append(row)
     df = pd.DataFrame(rows)
     df["decision_ts"] = pd.to_datetime(df["decision_ts"], utc=True)
     df["row_ready_at"] = pd.to_datetime(df["row_ready_at"], utc=True)
@@ -334,3 +340,103 @@ def test_c12_rejects_invalid_rotation_parameters() -> None:
             assert str(exc) == "INVALID_C12_ROTATION_PARAMETERS"
         else:
             raise AssertionError(f"accepted unsafe {key}={value}")
+
+
+def test_c12_01_negative_min_relative_strength_rejected_fail_closed(tmp_path: Path) -> None:
+    """M1: a negative min_relative_strength is rejected, never silently misattributed.
+
+    Constructed case (hand-computed): returns aaa +10%, bbb +8%, ccc -1% give
+    universe median +8% and breadth 2/3 > 0.50, so the cash-regime gate passes.
+    With `min_relative_strength = -0.10` the ccc_idr strength is
+    -0.01 - 0.08 = -0.09, which is AT OR ABOVE the configured floor, while its
+    lookback return is non-positive. Pre-fix, ccc_idr was reported FLAT with
+    `C12_STRENGTH_BELOW_MINIMUM` even though the strength gate passed: the
+    positive-return (breadth) criterion was what actually failed.
+    """
+    spec = load_c12_specification()
+    frame = _frame(
+        [
+            _build_c12_pair_bars(AS_OF, "aaa_idr", return_pct=0.10),
+            _build_c12_pair_bars(AS_OF, "bbb_idr", return_pct=0.08),
+            _build_c12_pair_bars(AS_OF, "ccc_idr", return_pct=-0.01),
+        ]
+    )
+    invalid = spec.model_copy(
+        update={"parameters": spec.parameters | {"min_relative_strength": -0.10}}
+    )
+
+    # Config/load time: the canonical config with a negative floor must not load.
+    canonical = Path("configs/strategies/C12_v1.yaml").read_text(encoding="utf-8")
+    negative_config = tmp_path / "C12_negative_min_strength.yaml"
+    negative_config.write_text(
+        canonical.replace("min_relative_strength: 0.0", "min_relative_strength: -0.10"),
+        encoding="utf-8",
+    )
+    try:
+        load_c12_specification(negative_config)
+    except ValueError as exc:
+        assert str(exc) == "INVALID_C12_ROTATION_PARAMETERS"
+    else:
+        raise AssertionError("load_c12_specification accepted negative min_relative_strength")
+
+    # Decision time: a directly injected spec must also fail closed before deciding.
+    for decide in (c12_decide, c12_decision_history):
+        try:
+            decide(frame, invalid)
+        except ValueError as exc:
+            assert str(exc) == "INVALID_C12_ROTATION_PARAMETERS"
+        else:
+            raise AssertionError("negative min_relative_strength accepted by decision path")
+
+
+def test_c12_01_not_yet_listed_and_delisted_cannot_enter_rotation() -> None:
+    """M2: dedicated proof that delisted and not-yet-listed pairs cannot rotate.
+
+    Both representations are pinned because the inherited claim that
+    DecisionFrame "structurally covers" this was not proven:
+    - rows entirely after as_of (pair listed only later) are dropped by the
+      causal DecisionFrame, so the pair never reaches the eligible universe;
+    - a not-yet-listed pair with eligible rows at as_of and canonical
+      `listed_at` in the future is NOT covered by the frame (it only checks
+      decision_ts/row_ready_at/eligible), so C12 itself must exclude it,
+      mirroring C04's explicit listed_at guard.
+    """
+    spec = load_c12_specification()
+    delisted = _build_c12_pair_bars(
+        AS_OF, "old_idr", return_pct=0.90, ends_at=AS_OF - timedelta(hours=6)
+    )
+    not_yet_listed = _build_c12_pair_bars(
+        AS_OF, "future_idr", return_pct=0.90, listed_at=AS_OF + timedelta(days=1)
+    )
+    future_only_rows = _build_c12_pair_bars(
+        AS_OF, "late_idr", return_pct=0.90, starts_at=AS_OF + timedelta(hours=1)
+    )
+    frame = _frame(
+        [
+            _build_c12_pair_bars(AS_OF, "ada_idr", return_pct=0.10),
+            _build_c12_pair_bars(AS_OF, "dot_idr", return_pct=0.10),
+            delisted,
+            not_yet_listed,
+            future_only_rows,
+        ]
+    )
+
+    # Frame boundary: rows after as_of never enter the eligible universe at all.
+    assert set(frame.eligible_pairs) == {"ada_idr", "dot_idr", "old_idr", "future_idr"}
+
+    # Both intruders carry the strongest lookback return (+90%) yet may not rotate.
+    intents = c12_decide(frame, spec)
+    assert [intent.pair for intent in intents] == ["ada_idr", "dot_idr"]
+
+    history = {record.pair: record for record in c12_decision_history(frame, spec)}
+    assert set(history) == {"ada_idr", "dot_idr", "old_idr", "future_idr"}
+    delisted_record = history["old_idr"]
+    assert delisted_record.status == "EXCLUDED"
+    assert delisted_record.reason_code == "C12_STALE_OR_DELISTED_NO_CURRENT_ROW"
+    assert delisted_record.intent is None
+    future_record = history["future_idr"]
+    assert future_record.status == "EXCLUDED"
+    assert future_record.reason_code == "C12_NOT_YET_LISTED"
+    assert future_record.intent is None
+    assert history["ada_idr"].status == "LONG"
+    assert history["dot_idr"].status == "LONG"

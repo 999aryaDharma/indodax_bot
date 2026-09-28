@@ -124,6 +124,9 @@ GREEN: `python -m pytest tests/unit/lab/strategies/test_c12.py -q` →
   `listed_at` future-listing guard — the DecisionFrame already excludes
   future rows and pairs without rows remain in history as EXCLUDED, and
   future-listing is C04's acceptance boundary, not C12-01's.
+  Both observations were revisited in the *Minor fix round* section below:
+  (a) fixed as prescribed, (b) the inherited coverage claim did not hold for
+  the canonical `listed_at` representation, so the explicit guard was added.
 - Scope: no manifest edit, no push/merge, no other sprint's files, no live
   keys/DB/orders, no subagent dispatch. Research-only candidate; not
   activated, not in default scheduler (external gate unchanged).
@@ -131,3 +134,84 @@ GREEN: `python -m pytest tests/unit/lab/strategies/test_c12.py -q` →
 ## Next eligible consumers
 
 None required by this sprint.
+
+## Minor fix round (Task 8 — two Minor notes on this parked SHA)
+
+Status: fixed on the same parked branch, ON TOP of `8af79dd`. Review and merge
+remain deferred exactly as before (owner skip order): this round is NOT
+submitted for review, no push/merge, no manifest edit, no other sprint's files.
+Commit: `fix(C12-01): ...` (short SHA recorded in
+`D:\bot-trading\.superpowers\sdd\ready-sprints\task-8-report.md`).
+
+Files touched: `src/indodax_lab/strategies/c12.py`,
+`tests/unit/lab/strategies/test_c12.py`, this handoff (append only).
+`src/indodax_lab/strategies/__init__.py` wiring left exactly as parked (future
+convergence with S07-01, not owned here); `configs/strategies/C12_v1.yaml`
+unchanged; `sprint-manifest.json` untouched.
+
+### M1 — breadth-reason misattribution with negative `min_relative_strength`
+
+Claim verified independently before any fix (constructed case, pre-fix run):
+returns aaa +10%, bbb +8%, ccc −1% ⇒ median +8%, breadth 2/3 > 0.50 (cash gate
+passes). With `min_relative_strength = -0.10`, ccc_idr strength = −0.09 ≥ floor,
+non-positive return ⇒ FLAT recorded as `C12_STRENGTH_BELOW_MINIMUM` even though
+the strength gate passed — the positive-return (breadth) criterion was what
+failed. Claim reproduced.
+
+Fix (fail closed, no silent misattribution): parameter parsing/validation was
+extracted into `_validated_rotation_parameters(spec)`, which now also rejects
+`min_relative_strength < 0`, and is called from **both** `load_c12_specification`
+(config/load time) and `c12_decision_history` (decision time, so a directly
+injected spec cannot bypass it). Rejection reason stays the established explicit
+`INVALID_C12_ROTATION_PARAMETERS`. Module docstring documents the non-negative
+floor.
+
+- RED: `python -m pytest tests/unit/lab/strategies/test_c12.py -q -k
+  negative_min_relative_strength` → `1 failed, 8 deselected`, exit 1,
+  `AssertionError: load_c12_specification accepted negative min_relative_strength`.
+- GREEN (after fix): same command → `1 passed, 8 deselected`, exit 0.
+
+### M2 — C04 `listed_at` guard not repeated in C12
+
+Claim verified independently before any fix (constructed case, pre-fix run):
+`DecisionFrame` filters only `decision_ts`/`row_ready_at`/`eligible`, so a pair
+with `listed_at = as_of + 1d`, eligible rows at `as_of` and the strongest return
+(+90%) **entered C12 rotation as rank 1 LONG**, while sibling C04 (explicit
+guard) rejected the same frame. The inherited "structurally covered by
+DecisionFrame" claim therefore did not hold for the canonical `listed_at`
+representation; per the brief, an explicit guard was added instead of arguing.
+
+Fix: C12 now mirrors C04's guard in the evidence stage (columns
+`listed_at`/`listing_date`, missing value ⇒ no listing evidence ⇒ unchanged,
+unparseable value ⇒ `C12_INVALID_MARKET_DATA` fail-closed, value after `as_of`
+⇒ `EXCLUDED` with new reason `C12_NOT_YET_LISTED`). Delisted/stale behavior and
+the frame-level drop of future-only rows are unchanged and now pinned by the
+same dedicated test.
+
+- RED: `python -m pytest tests/unit/lab/strategies/test_c12.py -q -k
+  not_yet_listed_and_delisted` → `1 failed, 9 deselected`, exit 1,
+  `AssertionError: assert ['future_idr', 'ada_idr'] == ['ada_idr', 'dot_idr']`
+  (behavioral; the frame-boundary assertion passed, isolating the missing
+  strategy-level guard).
+- GREEN (after fix): same command → `1 passed, 9 deselected`, exit 0.
+
+### Gates (inside the worktree, this round)
+
+1. `python -m pytest tests/unit/lab/strategies/test_c12.py -q` → `10 passed in 1.77s`, exit 0
+2. `python -m pytest tests/unit/lab/strategies -q` → `178 passed in 9.41s`, exit 0 (176 baseline + 2 new)
+3. `python -m ruff check src/indodax_lab/strategies/c12.py tests/unit/lab/strategies/test_c12.py` → `All checks passed!`, exit 0
+4. `git diff --check` → exit 0 (only an informational `LF will be replaced by CRLF` notice from `core.autocrlf=true`)
+
+### Residual observation recorded, NOT fixed (out of the note's prescribed scope)
+
+The M1 note's qualifier "only reachable with negative `min_relative_strength`"
+is incomplete: the same misattribution is reachable with the **default**
+`min_relative_strength = 0.0` when `cash_breadth_threshold` is lowered below
+0.50 (reproduced: threshold 0.30, returns −5%, −5%, −5%, +1%, +1% ⇒ the −5%
+pairs report `C12_STRENGTH_BELOW_MINIMUM` with strength exactly 0.0000 ≥ floor).
+Default config (`min 0.0`, threshold `0.50`) is unaffected — with breadth > 0.50
+the universe median is strictly positive, so any non-positive-return pair is
+genuinely below a non-negative floor. Fixing this needs either a distinct
+reason code for the positive-return criterion or a floor on
+`cash_breadth_threshold`; both are behavior changes beyond the prescribed note
+remedy and are left for the coordinator to scope.
