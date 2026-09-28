@@ -182,7 +182,46 @@ Declared interface implemented exactly:
 
 ## Pending external gates
 
-- Independent review of `9921b31` — not dispatched by the owner; coordinator assigns.
+- Independent review of `9921b31` - not dispatched by the owner; coordinator assigns.
 - No production activation, deployment, push or merge is authorized by this sprint.
 - RP-01 (runtime consumer of `evaluation_order` and the resolved refs) is out of scope.
 - The `CONTRACTS.md` "ordered compatible model outputs" decision (deviation 9) is pending.
+
+## Independent task review record (2026-09-28)
+
+- Reviewed SHA: `b3bc01f3853f24bbcae3ba02b8533df51bc5ce66` (tip of
+  `feat/rw2-03-typed-declarative-pipeline-composer`; code
+  `9921b31607cb533f1c50c0bb5425f562af7cd99e`), delta against BASE `e9f6a34`;
+  6 files, +1876/-0.
+- Reviewer: independent session `ses_f186d242cffeE2HA37Ie73VmQh` (did not
+  implement the change). Verdict: **Spec PASS (AC0-AC5), task quality
+  Approved-with-Minors — 0 Critical, 0 Important, 3 Minor.**
+- Evidence re-run by the reviewer in the sprint worktree: focused
+  `test_pipeline_validation.py` 9 passed (all 6 manifest names verbatim);
+  `tests/unit/lab` 1483 passed; `ruff check` on both new packages clean;
+  scope exactly the 6 owned files; worktree clean. Independent YAML probes
+  (read-only): dup→PIPELINE_YAML_DUPLICATE_KEY, `!local`→FORBIDDEN_TAG,
+  unknown→UNKNOWN_FIELD, deep→TOO_DEEP, 70KB→TOO_LARGE, roundtrip/export/
+  MCP/reorder digests all equal. Declared 5-method/3-field contract exact
+  (additive `evaluation_order` only).
+- Concern rulings: C1 "ordered compatible model outputs" RULED NOT blocking —
+  CONTRACTS.md's normative field table gives ModelManifest no output
+  dimension/order field (only ordered_feature_schema for inputs), so there is
+  nothing static to compare; runtime-resolution enforcement (verified
+  resolution, declared-input coverage, weight/threshold rules) plus
+  abstain-on-missing-output satisfies FR2/AC2; inventing a static rule would
+  violate CONTRACTS.md:3. Mitigation logged: an incompatible-output ensemble
+  could still validate — RP-01 (DONE, historical) must enforce output-compat
+  at evaluation time where the data exists; recorded here as a cross-sprint
+  constraint for any future RP-01 change (RP-01 evidence itself untouched).
+  No CR needed unless a static contract field is desired. C2 additive API
+  justified (spec Step 4 + BOT-TRADE-PROGRAM:121), do not trim. C3 narrow
+  except-clauses acceptable fail-loud (declared failures covered, no store
+  mutation before validation). C4 acknowledged (workspace.json IDE noise).
+- Backlog (Minor, non-blocking): (1) handoff/report prose misnames the
+  runtime-blocked error class — correct the name; (2) handoff attributes the
+  1 warning to langsmith, observed run shows s07 FutureWarning — one-line
+  correction; (3) duplicate-key check tracks only ScalarNode keys — optional
+  hardening to track all keys (still fail-closed downstream).
+- Integration: merged to `dev` via merge commit (reviewed content
+  byte-identical, no conflicts).
