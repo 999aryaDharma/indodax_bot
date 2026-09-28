@@ -7878,7 +7878,6 @@
       "priority": "P1",
       "implementation_owner": "opencode (session ses_f18e4eab8ffeD0ZH0ussZkyPdn)",
       "independent_reviewer": "opencode (session ses_f18c52fc7ffeAKvlC0JkKSWtwM)",
-      "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/s07-01-small-cap-rotation",
       "requirements": [
         "FR-08"
@@ -9371,8 +9370,6 @@
       "status": "DONE",
       "implementation_owner": "opencode (session ses_f18aa8bbaffe9E22xO0mt18Ib7)",
       "independent_reviewer": "opencode (session ses_f186d242cffeE2HA37Ie73VmQh)",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw2-03-typed-declarative-pipeline-composer",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9478,7 +9475,6 @@
       "priority": "P0",
       "status": "IN_PROGRESS",
       "implementation_owner": "opencode (session ses_f18465a31ffeza5YFs2iZapcjZ)",
-      "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rp-02-shared-candidate-feature-and-exit-evaluation",
       "external_gates": [
