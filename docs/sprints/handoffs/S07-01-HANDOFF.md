@@ -172,3 +172,50 @@ untouched.
   — pin one assertion in AC3 case C.
 - Integration: merged to `dev` via merge commit (reviewed content
   byte-identical; dev-side claim bookkeeping united, no conflicts).
+
+## Minor fix round (2026-09-28)
+
+Hardening only; S07-01 was already DONE + independent PASS. Findings from review
+session `ses_f18c52fc7ffeAKvlC0JkKSWtwM`, scope fixed by the coordinator task-5 brief.
+
+- **M1 (Minor)** — `tests/unit/lab/strategies/test_s07.py:142`
+  (`features_c = pd.concat(...)`): `depth=None` made the fixture column an all-None
+  **object** column, so `pd.concat` raised
+  `FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries
+  is deprecated ...` (case C, missing depth). Origin verified as **test fixture
+  construction only**: `src/indodax_lab/strategies/s07.py` contains no `pd.concat`
+  (its `pd.concat` call sites are `features/builder.py`, `features/technical.py`,
+  `paper/live_shadow_engine.py`), so production code was left byte-untouched.
+  Fix: in `_build_s07_bars`, missing depth is pinned to `float("nan")` (float64)
+  instead of `None`, mirroring the adjacent existing `atr_14` handling; fail-closed
+  semantics unchanged (`_finite_float` rejects NaN → `S07_MISSING_LIQUIDITY`).
+  - RED: `python -m pytest tests/unit/lab/strategies/test_s07.py -q -W error::FutureWarning`
+    → exit 1, `1 failed, 4 passed` with `FutureWarning ... pandas/core/internals/concat.py:491`.
+  - GREEN: same command → `6 passed`, warning-free; plain `-q` run reports no
+    `FutureWarning` (only the pre-existing environment `langsmith`/`pydantic.v1` UserWarning).
+- **M2 (Minor)** — zero-cash path (`cash=Decimal("0")`) untested although handled by
+  `cash <= 0` in `s07_evaluate` (only `None` was pinned). Added
+  `test_s07_01_zero_cash_abstains`: expects `([], ["S07_SHARED_CASH_UNAVAILABLE"])`,
+  no fallback intents.
+  - RED (assertion-bite evidence): the added assertion was run against an in-memory
+    mutant of `s07.py` whose guard was weakened from `cash is None or cash <= 0` to
+    `cash is None` → `AssertionError: ['S07_ORDER_NOT_POSITIVE:sol_idr',
+    'S07_ORDER_NOT_POSITIVE:eth_idr']` (no file on disk modified; production source
+    restored untouched). On unmodified code the assertion passes because the behavior
+    already existed — this is coverage hardening, not a behavior fix.
+  - GREEN: `6 passed` on `test_s07.py`.
+
+Gates (worktree `fix/minors-s07-01`, run before commit):
+
+| Gate | Command | Result | Exit |
+|---|---|---|---|
+| 1. Focused | `python -m pytest tests/unit/lab/strategies/test_s07.py -q` | `6 passed, 1 warning` (env warning only) | 0 |
+| Warning-free proof | `python -m pytest tests/unit/lab/strategies/test_s07.py -q -W error::FutureWarning` | `6 passed` | 0 |
+| 2. Strategies subsystem | `python -m pytest tests/unit/lab/strategies -q` | `174 passed` (173 + 1 new zero-cash test) | 0 |
+| Lint | `python -m ruff check tests/unit/lab/strategies/test_s07.py` | `All checks passed!` | 0 |
+| Diff hygiene | `git diff --check` | clean | 0 |
+
+Files changed: `tests/unit/lab/strategies/test_s07.py` only (+21/-1). No test skipped,
+weakened or deleted; `docs/sprints/sprint-manifest.json` and `src/indodax_lab/strategies/s07.py`
+untouched. Fix branch `fix/minors-s07-01`, commit `fix(S07-01): ...` (SHA recorded in
+`D:\bot-trading\.superpowers\sdd\ready-sprints\task-5-report.md`).

@@ -46,7 +46,9 @@ def _build_s07_bars(
                 "low": price * 0.99,
                 "volume": volume,
                 "spread_bps": spread_bps,
-                "depth_50bps": depth,
+                # Missing depth is NaN (float64), never None: an all-None object
+                # column makes pd.concat emit a deprecation FutureWarning.
+                "depth_50bps": depth if depth is not None else float("nan"),
                 "atr_14": atr_14 if atr_14 is not None else float("nan"),
                 "eligible": True,
                 "missing_feature_count": 0,
@@ -241,6 +243,24 @@ def test_s07_01_contract_3() -> None:
     intents_c, rejections_c = s07_evaluate(_frame(features, cash=None), spec)
     assert intents_c == [], f"missing shared cash must abstain, got {intents_c}"
     assert rejections_c == ["S07_SHARED_CASH_UNAVAILABLE"], rejections_c
+
+
+def test_s07_01_zero_cash_abstains() -> None:
+    """S07-01-AC3: zero shared cash abstains exactly like unavailable cash."""
+    spec = load_s07_specification()
+    features = pd.concat(
+        [
+            _build_s07_bars("btc_idr", return_pct=0.05),
+            _build_s07_bars("eth_idr", return_pct=0.10),
+            _build_s07_bars("sol_idr", return_pct=0.15),
+        ],
+        ignore_index=True,
+    )
+
+    intents, rejections = s07_evaluate(_frame(features, cash=Decimal("0")), spec)
+
+    assert intents == [], f"zero shared cash must abstain, got {intents}"
+    assert rejections == ["S07_SHARED_CASH_UNAVAILABLE"], rejections
 
 
 def test_s07_01_missing_atr_abstains() -> None:
