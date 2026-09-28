@@ -26,6 +26,9 @@ from indodax_lab.strategies.multitimeframe import align_closed_context
 
 UTC = timezone.utc
 
+# C02 feature columns computed by ``build_c02_feature_rows`` (RP-02).
+C02_FEATURE_COLUMNS = ("ema_fast", "ema_slow", "atr_14")
+
 
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:
     if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
@@ -398,9 +401,87 @@ def load_bars_from_parquet_dir(
     return all_bars
 
 
+def build_c02_feature_rows(
+    bars: Sequence[MarketBar],
+    *,
+    fast_period: int = 20,
+    slow_period: int = 50,
+    atr_period: int = 14,
+) -> pd.DataFrame:
+    """Compute causal C02 feature rows from closed bars (RP-02).
+
+    Reuses the FEAT-02 golden transforms: ``ema_fast``/``ema_slow`` use the
+    pinned EMA policy (first-observation seed, ``adjust=False``) and ``atr_14``
+    uses the Wilder average true range. Each row is one closed bar with
+    ``decision_ts == row_ready_at == bar close_time`` (closed-bar
+    availability). A row is ``eligible`` only when all three indicators are
+    finite and positive — warmup rows are excluded, never treated as neutral.
+
+    The bars must already be sorted ascending by ``close_time`` and causal
+    (no future rows); this function performs no temporal filtering itself.
+    """
+    import math
+
+    from indodax_lab.features.technical import atr as atr_transform
+
+    columns = [
+        "pair",
+        "decision_ts",
+        "row_ready_at",
+        "eligible",
+        "close",
+        "high",
+        "low",
+        "ema_fast",
+        "ema_slow",
+        "atr_14",
+    ]
+    if not bars:
+        return pd.DataFrame(columns=columns)
+
+    closes = pd.Series([float(bar.close) for bar in bars], dtype="float64")
+    highs = pd.Series([float(bar.high) for bar in bars], dtype="float64")
+    lows = pd.Series([float(bar.low) for bar in bars], dtype="float64")
+
+    ema_fast = closes.ewm(span=fast_period, adjust=False).mean()
+    ema_slow = closes.ewm(span=slow_period, adjust=False).mean()
+    atr_values = atr_transform(highs, lows, closes, atr_period)
+
+    rows = []
+    for index, bar in enumerate(bars):
+        fast_value = ema_fast.iloc[index]
+        slow_value = ema_slow.iloc[index]
+        atr_value = atr_values.iloc[index]
+        eligible = (
+            math.isfinite(fast_value)
+            and math.isfinite(slow_value)
+            and math.isfinite(atr_value)
+            and fast_value > 0
+            and slow_value > 0
+            and atr_value > 0
+        )
+        rows.append(
+            {
+                "pair": bar.pair,
+                "decision_ts": bar.close_time,
+                "row_ready_at": bar.close_time,
+                "eligible": eligible,
+                "close": bar.close,
+                "high": bar.high,
+                "low": bar.low,
+                "ema_fast": fast_value,
+                "ema_slow": slow_value,
+                "atr_14": atr_value,
+            }
+        )
+    return pd.DataFrame(rows, columns=columns)
+
+
 __all__ = [
+    "C02_FEATURE_COLUMNS",
     "FeatureReplayAdapter",
     "FeatureReplayConfig",
+    "build_c02_feature_rows",
     "load_bars_from_parquet",
     "load_bars_from_parquet_dir",
     "validate_no_future_leakage",
