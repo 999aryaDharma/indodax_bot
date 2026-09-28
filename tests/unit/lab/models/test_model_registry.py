@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import json
 import math
+import threading
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from indodax_lab.contracts.identity import ArtifactRef
+from indodax_lab.contracts.identity import ArtifactRef, canonical_bytes
 from indodax_lab.contracts.workbench import MetricValidity, ModelManifest
 from indodax_lab.models import registry as registry_module
 from indodax_lab.models.artifacts import PortableBundle
@@ -28,6 +29,7 @@ from indodax_lab.models.registry import (
     ImmutableVersionConflictError,
     LoaderNotAllowedError,
     ModelEntry,
+    ModelManifestInvalidError,
     ModelRegistry,
     ProbabilityVector,
     RuntimeBlockedError,
@@ -36,6 +38,7 @@ from indodax_lab.models.training_service import (
     EvaluationArtifact,
     EvaluationStatus,
     TrainingConfig,
+    TrainingJobStateError,
     TrainingService,
 )
 from indodax_lab.orchestration.jobs import JobStatus
@@ -562,3 +565,198 @@ def test_evaluate_reports_invalid_artifact_for_empty_holdout(tmp_path) -> None:
     assert artifact.failure_reason is not None
     assert "EVALUATION_SPLIT_EMPTY" in artifact.failure_reason
     assert artifact.metrics == {}, "missing evidence must never become a numeric default"
+
+
+# ---------------------------------------------------------------------------
+# Minor backlog M1: ARCHITECTURE_LOADERS is runtime-immutable like the
+# loader allowlist, and the pinned architecture set still resolves afterwards
+# ---------------------------------------------------------------------------
+
+
+def test_architecture_loaders_is_frozen_and_pinned_set_still_resolves(tmp_path) -> None:
+    """M1: runtime mutation of the pinned architecture→loader map must fail."""
+    with pytest.raises(TypeError):
+        ARCHITECTURE_LOADERS["smuggled_arch"] = "portable_bundle_json_v2"
+    with pytest.raises(TypeError):
+        del ARCHITECTURE_LOADERS["m01_logistic"]
+    assert set(ARCHITECTURE_LOADERS) == {"m01_logistic"}
+
+    # The pinned set still resolves end to end after the refused mutations.
+    assert ARCHITECTURE_LOADERS["m01_logistic"] in LOADER_ALLOWLIST
+    registry = ModelRegistry(tmp_path / "registry")
+    model_ref, _ = _register_model(registry, "rw2_02_frozen_map")
+    predictor = registry.load_verified(model_ref)
+    assert predictor.loader_id == "portable_bundle_json_v2"
+    with pytest.raises(LoaderNotAllowedError, match="LOADER_NOT_ALLOWED"):
+        registry_module.resolve_loader("smuggled_arch")
+
+
+# ---------------------------------------------------------------------------
+# Minor backlog M2: the single-bytes loader never receives a silently
+# dropped or extra artifact ref (fail closed on len(artifact_refs) != 1)
+# ---------------------------------------------------------------------------
+
+
+def test_load_verified_rejects_artifact_ref_counts_other_than_one(tmp_path, monkeypatch) -> None:
+    """M2: refuse ref counts other than one instead of feeding ``refs[0]``."""
+    registry = ModelRegistry(tmp_path / "registry")
+    two_bundle = _bundle_bytes("rw2_02_refs_two", "1.0.0", FEATURE_NAMES)
+
+    # len 0: refused at registration, so the load path cannot observe it.
+    zero_bundle_ref = registry.put_bytes(
+        two_bundle, kind="model", artifact_id="rw2_02_refs_zero_bundle", version="1.0.0"
+    )
+    zero_manifest = _manifest(
+        "rw2_02_refs_zero", "1.0.0", FEATURE_NAMES, zero_bundle_ref
+    ).model_copy(update={"artifact_refs": ()})
+    with pytest.raises(ModelManifestInvalidError, match="ARTIFACT_REFS_REQUIRED"):
+        registry.register(zero_manifest)
+
+    # len 2: every ref is hash-verified at registration, but loading must refuse
+    # instead of silently feeding only the first artifact to the loader.
+    two_bundle_ref = registry.put_bytes(
+        two_bundle, kind="model", artifact_id="rw2_02_refs_two_bundle", version="1.0.0"
+    )
+    extra_ref = registry.put_bytes(
+        b'{"part": 2}', kind="model", artifact_id="rw2_02_refs_two_extra", version="1.0.0"
+    )
+    two_manifest = _manifest(
+        "rw2_02_refs_two", "1.0.0", FEATURE_NAMES, two_bundle_ref
+    ).model_copy(update={"artifact_refs": (two_bundle_ref, extra_ref)})
+    two_ref = registry.register(two_manifest)
+
+    calls: list[bytes] = []
+    real_resolve_loader = registry_module.resolve_loader
+
+    def counting_resolve_loader(loader_id: str):
+        loader = real_resolve_loader(loader_id)
+
+        def counted(data: bytes):
+            calls.append(data)
+            return loader(data)
+
+        return counted
+
+    monkeypatch.setattr(registry_module, "resolve_loader", counting_resolve_loader)
+
+    with pytest.raises(ModelManifestInvalidError, match="ARTIFACT_REFS_SINGLE_REQUIRED"):
+        registry.load_verified(two_ref)
+    assert calls == [], "the loader must not be fed when artifact_refs is not a single ref"
+
+    # len 0 at load time, reached only by forcing the manifest reader.
+    monkeypatch.setattr(registry, "_read_manifest", lambda ref: zero_manifest)
+    with pytest.raises(ModelManifestInvalidError, match="ARTIFACT_REFS_SINGLE_REQUIRED"):
+        registry.load_verified(two_ref)
+    assert calls == []
+
+    # The pinned single-ref path still loads after the refusals.
+    monkeypatch.undo()
+    one_bundle_ref = registry.put_bytes(
+        _bundle_bytes("rw2_02_refs_one", "1.0.0", FEATURE_NAMES),
+        kind="model",
+        artifact_id="rw2_02_refs_one_bundle",
+        version="1.0.0",
+    )
+    one_ref = registry.register(
+        _manifest("rw2_02_refs_one", "1.0.0", FEATURE_NAMES, one_bundle_ref)
+    )
+    assert registry.load_verified(one_ref).model_id == "rw2_02_refs_one"
+
+
+# ---------------------------------------------------------------------------
+# Minor backlog M3: duplicate-run-after-SUCCESS and concurrent-identical
+# register guards (no state change / no duplicate effect on the duplicate path)
+# ---------------------------------------------------------------------------
+
+
+def test_duplicate_run_after_success_and_concurrent_identical_register_stay_guarded(
+    tmp_path, monkeypatch
+) -> None:
+    """M3: both duplicate paths are guarded: typed refusals, no duplicate effect."""
+    registry = ModelRegistry(tmp_path / "registry")
+    queue = _queue(tmp_path)
+    service = TrainingService(registry, queue, worker_id="rw2-02-test-worker")
+
+    # (a) Duplicate run after SUCCESS: typed refusal with no state change.
+    dataset_ref = registry.put_bytes(
+        _dataset_bytes(FEATURE_NAMES),
+        kind="dataset",
+        artifact_id="rw2_02_dup_dataset",
+        version="1",
+    )
+    config = TrainingConfig(
+        model_id="rw2_02_dup_run",
+        version="1.0.0",
+        ordered_feature_schema=tuple(FEATURE_NAMES),
+        universe=("BTC-IDR",),
+        trainer=M01Config(max_iter=50, seed=5),
+    )
+    record = service.create(config, (dataset_ref,))
+    model_ref = service.run(record.job_id)
+    model_bytes = registry.read_object(model_ref)
+    succeeded = queue.get_job(record.job_id)
+    assert succeeded.status is JobStatus.SUCCESS
+    registered_before = tuple(registry.list_models())
+
+    with pytest.raises(TrainingJobStateError, match="TRAINING_JOB_STATE"):
+        service.run(record.job_id)
+
+    after_run = queue.get_job(record.job_id)
+    assert after_run.status is JobStatus.SUCCESS, "a duplicate run must not mutate job state"
+    assert after_run.result_artifact_path == succeeded.result_artifact_path
+    assert tuple(registry.list_models()) == registered_before, "no duplicate model row"
+    assert registry.read_object(model_ref) == model_bytes
+
+    # (b) Concurrent identical register: one row only, loser gets the typed conflict.
+    bundle = _bundle_bytes("rw2_02_dup_run", "1.0.0", FEATURE_NAMES)
+    bundle_ref = registry.put_bytes(
+        bundle, kind="model", artifact_id="rw2_02_race_bundle", version="1.0.0"
+    )
+    race_manifest = _manifest("rw2_02_race", "1.0.0", FEATURE_NAMES, bundle_ref)
+
+    # Both racers pass the existing-row SELECT before either INSERTs, so the
+    # duplicate path is exercised deterministically instead of by luck.
+    barrier = threading.Barrier(2, timeout=10.0)
+    real_read_object = registry.read_object
+    syncing = True
+
+    def synced_read_object(ref: ArtifactRef) -> bytes:
+        if syncing:
+            barrier.wait()
+        return real_read_object(ref)
+
+    monkeypatch.setattr(registry, "read_object", synced_read_object)
+
+    results: list[ArtifactRef | None] = [None, None]
+    errors: list[BaseException] = []
+
+    def racer(index: int) -> None:
+        try:
+            results[index] = registry.register(race_manifest)
+        except BaseException as exc:  # surfaced to the main thread for assertions
+            errors.append(exc)
+
+    threads = [threading.Thread(target=racer, args=(index,)) for index in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+        assert not thread.is_alive(), "concurrent register must not deadlock"
+    syncing = False
+
+    winners = [result for result in results if result is not None]
+    assert len(winners) == 1, "exactly one racer publishes the identity"
+    assert len(errors) == 1 and isinstance(errors[0], ImmutableVersionConflictError)
+    assert "registered concurrently" in str(errors[0])
+    assert winners[0] == race_manifest.to_artifact_ref()
+
+    entries = [entry for entry in registry.list_models() if entry.model_id == "rw2_02_race"]
+    assert len(entries) == 1, "the duplicate path must not create a second row"
+    assert entries[0].manifest_ref == race_manifest.to_artifact_ref()
+    assert registry.read_object(winners[0]) == canonical_bytes(race_manifest)
+
+    # A later identical register is idempotent and still adds no duplicate row.
+    assert registry.register(race_manifest) == race_manifest.to_artifact_ref()
+    assert (
+        len([entry for entry in registry.list_models() if entry.model_id == "rw2_02_race"]) == 1
+    )

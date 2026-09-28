@@ -9,6 +9,9 @@ Guarantees:
 4. RW2-02-FR4: unmet runtime requirements surface as ``BLOCKED_RESOURCE``.
 5. Registered model versions are immutable: conflicting semantics under an
    existing (model_id, version) identity are refused, never merged.
+6. ``load_verified`` refuses manifests whose ``artifact_refs`` count is not
+   exactly one: extra or missing refs are never silently dropped by the
+   single-bytes loader.
 """
 
 from __future__ import annotations
@@ -91,7 +94,9 @@ _LOADER_FUNCTIONS: dict[str, Callable[[bytes], Any]] = {
     "portable_bundle_json_v2": PortableBundleLoader().load_from_bytes,
 }
 LOADER_ALLOWLIST: Mapping[str, Callable[[bytes], Any]] = MappingProxyType(_LOADER_FUNCTIONS)
-ARCHITECTURE_LOADERS: dict[str, str] = {"m01_logistic": "portable_bundle_json_v2"}
+ARCHITECTURE_LOADERS: Mapping[str, str] = MappingProxyType(
+    {"m01_logistic": "portable_bundle_json_v2"}
+)
 
 
 def resolve_loader(loader_id: str) -> Callable[[bytes], Any]:
@@ -464,9 +469,12 @@ class ModelRegistry:
             sha256=row["manifest_sha256"],
         )
         manifest = self._read_manifest(manifest_ref)
-        if not manifest.artifact_refs:
+        if len(manifest.artifact_refs) != 1:
             raise ModelManifestInvalidError(
-                "ARTIFACT_REFS_REQUIRED: manifest declares no loader artifact"
+                f"ARTIFACT_REFS_SINGLE_REQUIRED: manifest declares "
+                f"{len(manifest.artifact_refs)} loader artifact(s); the pinned loader "
+                "consumes exactly one, so a missing or extra ref is refused instead of "
+                "silently dropping everything but the first"
             )
         artifact_bytes = [self.read_object(artifact) for artifact in manifest.artifact_refs]
         loader_id = ARCHITECTURE_LOADERS.get(manifest.architecture)
@@ -481,6 +489,7 @@ class ModelRegistry:
                 f"{'; '.join(unmet)}: model {manifest.model_id}:{manifest.version} has unmet "
                 "runtime requirements"
             )
+        # Exactly one verified artifact, enforced above — no first-ref convention.
         bundle = resolve_loader(loader_id)(artifact_bytes[0])
         if not isinstance(bundle, PortableBundle):
             raise ModelManifestInvalidError(
