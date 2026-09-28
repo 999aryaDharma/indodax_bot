@@ -115,3 +115,62 @@ Full lab suite verification: 109 passed across strategies, features, labels, eva
   Pre-existing, unrelated (separate CR): unknown `cpu_load_pct` is admitted although `max_cpu_load_pct` is always enforced (no `SENSOR_UNKNOWN:cpu_load_pct`).
 - Open external gate unchanged: AC4/AC5 measured host artifact + measured mount inventory pending SSH access to `asus-server` (offline per Tailscale at last check; strictly read-only probe watcher running). Do not mark JOB-02 DONE from the offline suite.
 - Lint capability gap closed 2026-09-27: ruff 0.16.9 installed to user-site (owner ruling, recorded as R5 in the coordinator ledger); the gate now runs on every change and its repo baseline predates the gate.
+
+## Minor fix round - six backlog findings from the AC4/AC5 delta review
+
+- Branch / base: `fix/minors-job-02` on `0c0d10d`. Fix commit: `91715d3` (`fix(JOB-02): fail closed on invalid or missing capacity guard limits`). This appendix is appended in a follow-up docs commit on the same branch.
+- Files changed (scope only): `src/indodax_lab/orchestration/resources.py`, `tests/unit/lab/orchestration/test_resources.py`, plus this handoff. `docs/sprints/sprint-manifest.json` untouched; no push, merge, branch/worktree deletion.
+- Environment: Python 3.14.0, pytest 9.0.3, ruff 0.16.9. Verified before testing that pytest's `pythonpath = ["src"]` imports this worktree's `src` (temporary path-check test, deleted before commit), so no gate ran against the main checkout.
+
+### M1 - invalid limits counted as "set" (NaN age admitted a 6h-stale reading)
+
+- RED: `python -m pytest tests/unit/lab/orchestration/test_resources.py -q -p no:cacheprovider -k invalid_capacity_limits --tb=short` -> exit 1, `AssertionError: assert True is False` at `test_resources.py:913`: `NaN max_sensor_age_seconds` admitted a 6h-stale reading.
+- Pre-fix behavior probe over `evaluate_admission` (same fixture, all six cases): `admitted=True reason=None` for NaN age + stale, `inf` age + stale, NaN headroom + near deadline, negative headroom + near deadline, `disk_reserve_bytes=0`, `disk_reserve_bytes=-1`.
+- Fix: new `_capacity_limit_is_set()` helper - a limit counts as set only when it is finite and positive; anything else joins the unset list and admission reports `CAPACITY_LIMIT_UNSET:<name>`. Nothing invalid can silently disable a dimension.
+- GREEN: `python -m pytest tests/unit/lab/orchestration/test_resources.py -q -p no:cacheprovider` -> **21 passed, exit 0**.
+- Interpretation flagged for the coordinator: the brief's scenario "NaN headroom + near deadline sheds" is asserted as fail-closed with `CAPACITY_LIMIT_UNSET:production_deadline_headroom_seconds` (the finding's fix rule: invalid -> "exactly like unset ... at admission"). The near-deadline optional Research job does not admit under either reading; if `RESEARCH_SHED_PRE_DEADLINE` was the intended reason code instead, that is a one-line reorder to request.
+
+### M2 - empty `configured_storage_paths` passed vacuously
+
+- RED: `-k empty_storage_paths` -> exit 1, `assert True is False` (empty tuple admitted while the guard reported enabled).
+- Fix: an empty path tuple is appended to the unset list after the three numeric limits, so `CAPACITY_LIMIT_UNSET:max_sensor_age_seconds` keeps first priority (existing assertion unchanged) and a fully-measured policy with no paths reports `CAPACITY_LIMIT_UNSET:configured_storage_paths`.
+- GREEN: **22 passed, exit 0**.
+
+### M3 - future-dated `reading.timestamp`
+
+- RED: `-k future_sensor_timestamp` -> exit 1, `assert True is False` (reading stamped +6h admitted with negative age).
+- Fix: module constant `FUTURE_TIMESTAMP_TOLERANCE_SECONDS = 5.0`; age below `-5s` returns `SENSOR_FUTURE_TIMESTAMP:reading.timestamp:<age>s < -5s` before the stale check. The +2s-inside-tolerance case admits (it passes pre- and post-fix; reported as coverage, not RED).
+- GREEN: **23 passed, exit 0**.
+
+### M4 - embedded-NUL path raised out of the guard
+
+- RED: `-k unresolvable_path` -> exit 1 with `ValueError: stat: embedded null character in path` escaping `evaluate_admission` (raised at `operations/recovery.py:404` inside `resolve_path_mount`, previously caught only `OSError`).
+- Fix: `except (OSError, ValueError)` -> `PATH_MOUNT_UNRESOLVED:<path>:<detail>` (fails loud today, now also fails closed).
+- GREEN: **24 passed, exit 0**.
+
+### M5 - coverage gaps (no RED: these assert already-correct behavior)
+
+- (a) `SENSOR_UNKNOWN:ac_power_connected` still rejects under an enabled guard (unknown-sensor checks precede the capacity guard).
+- (b) unset `production_deadline_headroom_seconds` -> `CAPACITY_LIMIT_UNSET:production_deadline_headroom_seconds`.
+- (c) differential contention proof: `disk_reserve_bytes = shutil.disk_usage(str(tmp_path)).free // 2 + 1` -> one configured path admits, two same-device paths reject with `x 2 paths`.
+- The full test file was run 3x consecutively -> `24 passed` each time (the (c) threshold is sensitive only to a half-drive free-space swing; stable in practice).
+
+### M6 - volume-level contention scope documented, grouping key unchanged
+
+- `dev-{st_dev}` grouping deliberately kept (physical-disk scope waits for the measured mount inventory). Volume-level scope now stated in the `CapacityGuardPolicy` docstring, the `evaluate_admission` invariant 5 text, the module docstring, and the inline comment at the grouping loop.
+
+### Gates
+
+| # | Command (inside the worktree) | Result / exit |
+|---|---|---|
+| 1 | `python -m pytest tests/unit/lab/orchestration/test_resources.py -q` | 24 passed (20 pre-existing + 4 new), exit 0 |
+| 2 | `python -m pytest tests/unit/lab/orchestration/ tests/unit/lab/operations/ -q` | 117 passed (113 baseline + 4), exit 0 |
+| 3 | `python -m pytest tests/unit/lab -q` | 1478 passed = 1474 + 4 new, exit 0 (1 pre-existing `FutureWarning` in `strategies/test_s07.py`) |
+| 4 | `python -m ruff check src/indodax_lab/orchestration/resources.py tests/unit/lab/orchestration/test_resources.py` | 11 findings; byte-identical rule set to the `0c0d10d` baseline (`--stdin-filename`: resources 5, tests 6) -> 0 introduced in added lines |
+| 5 | `git diff --check` | exit 0 (before each commit) |
+
+### Legacy path preservation and contract changes
+
+- `capacity=None` is untouched: every change sits inside the `if capacity is not None:` block or is module-level, and all pre-existing tests pass unchanged (20/20 in this file before the 4 new ones were added; full lab 1478 with no edits to earlier assertions).
+- Behavior change flagged for the coordinator: an invalid limit (NaN, `inf`, or a zero/negative reserve, plus a zero/negative age/headroom) and an empty `configured_storage_paths` now reject with `CAPACITY_LIMIT_UNSET:<name>` where they previously admitted; a future-dated reading beyond 5s now rejects with `SENSOR_FUTURE_TIMESTAMP`; an unresolvable path that raised `ValueError` now returns `PATH_MOUNT_UNRESOLVED`. No owner-approved production value was invented - all limits remain unset by default.
+- Open external gate unchanged: AC4/AC5 measured host artifact + measured mount inventory remain pending; do not mark JOB-02 DONE from the offline suite.
