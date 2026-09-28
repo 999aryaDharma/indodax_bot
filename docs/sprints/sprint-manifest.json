@@ -7876,7 +7876,7 @@
       "spec": "docs/specs/10-strategy-catalog-and-protocol.md",
       "path": "docs/sprints/strategies/S07-01-small-cap-rotation.md",
       "priority": "P1",
-      "implementation_owner": "UNASSIGNED",
+      "implementation_owner": "opencode (session ses_f18e4eab8ffeD0ZH0ussZkyPdn)",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/s07-01-small-cap-rotation",
       "requirements": [
@@ -7920,7 +7920,7 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "READY",
+      "status": "IN_PROGRESS",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",
