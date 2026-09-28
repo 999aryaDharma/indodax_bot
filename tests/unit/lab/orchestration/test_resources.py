@@ -761,6 +761,30 @@ def test_job_02_capacity_4(tmp_path: Path) -> None:
     assert unset_disk.admitted is False
     assert unset_disk.reason == "CAPACITY_LIMIT_UNSET:disk_reserve_bytes"
 
+    # 1b. Unset production deadline headroom fails closed by name (M5b).
+    unset_headroom = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(
+            tmp_path, production_deadline_headroom_seconds=None
+        ),
+        production_deadline=datetime.now(UTC) + timedelta(hours=6),
+        optional_research=True,
+    )
+    assert unset_headroom.admitted is False
+    assert unset_headroom.reason == "CAPACITY_LIMIT_UNSET:production_deadline_headroom_seconds"
+
+    # 1c. An unknown required sensor still rejects under an enabled guard (M5a).
+    unknown_sensor = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(ac_power_connected=None),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+    )
+    assert unknown_sensor.admitted is False
+    assert unknown_sensor.reason == "SENSOR_UNKNOWN:ac_power_connected"
+
     # 2. Stale required sensor rejects admission.
     stale = evaluate_admission(
         job=job,
@@ -894,3 +918,162 @@ def test_job_02_mount_capacity(tmp_path: Path) -> None:
     assert shared_device.reason.startswith("DISK_RESERVE_EXCEEDED:")
     assert "x 2 paths" in shared_device.reason
     assert str(data_dir) in shared_device.reason or str(other_dir) in shared_device.reason
+
+    # 5. Differential threshold proof (M5c): a reserve just over half of the
+    #    free space on the tmp device admits one configured path, while two
+    #    same-device paths need twice that reserve and reject with "x 2 paths".
+    device_free_bytes = shutil.disk_usage(str(tmp_path)).free
+    half_free_reserve = device_free_bytes // 2 + 1
+    single_path = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(data_dir, disk_reserve_bytes=half_free_reserve),
+    )
+    assert single_path.admitted is True
+
+    differential = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(
+            data_dir,
+            disk_reserve_bytes=half_free_reserve,
+            configured_storage_paths=(str(data_dir), str(other_dir)),
+        ),
+    )
+    assert differential.admitted is False
+    assert differential.reason is not None
+    assert differential.reason.startswith("DISK_RESERVE_EXCEEDED:")
+    assert "x 2 paths" in differential.reason
+
+
+def test_job_02_invalid_capacity_limits_fail_closed(tmp_path: Path) -> None:
+    """M1: A non-finite or non-positive limit counts as unset, never as "set".
+
+    A NaN/negative limit must never silently disable its guard dimension.
+    """
+    job = _build_test_job("job_invalid_limits", resource_class=ResourceClass.HIGH)
+
+    # 1. NaN max_sensor_age_seconds + a 6h-stale reading must not admit.
+    nan_age = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(timestamp=datetime.now(UTC) - timedelta(hours=6)),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, max_sensor_age_seconds=float("nan")),
+    )
+    assert nan_age.admitted is False
+    assert nan_age.reason == "CAPACITY_LIMIT_UNSET:max_sensor_age_seconds"
+
+    # 2. Infinite max_sensor_age_seconds likewise never admits a stale reading.
+    inf_age = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(timestamp=datetime.now(UTC) - timedelta(hours=6)),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, max_sensor_age_seconds=float("inf")),
+    )
+    assert inf_age.admitted is False
+    assert inf_age.reason == "CAPACITY_LIMIT_UNSET:max_sensor_age_seconds"
+
+    # 3. NaN production_deadline_headroom_seconds + a near deadline must not
+    #    admit optional Research (the shed dimension stays armed/fail-closed).
+    nan_headroom = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(
+            tmp_path, production_deadline_headroom_seconds=float("nan")
+        ),
+        production_deadline=datetime.now(UTC) + timedelta(seconds=60),
+        optional_research=True,
+    )
+    assert nan_headroom.admitted is False
+    assert nan_headroom.reason == "CAPACITY_LIMIT_UNSET:production_deadline_headroom_seconds"
+
+    # 4. Negative headroom + a near deadline must not admit either.
+    negative_headroom = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, production_deadline_headroom_seconds=-100.0),
+        production_deadline=datetime.now(UTC) + timedelta(seconds=60),
+        optional_research=True,
+    )
+    assert negative_headroom.admitted is False
+    assert negative_headroom.reason == "CAPACITY_LIMIT_UNSET:production_deadline_headroom_seconds"
+
+    # 5. A zero disk reserve can never trip the reserve check -> unset.
+    zero_reserve = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, disk_reserve_bytes=0),
+    )
+    assert zero_reserve.admitted is False
+    assert zero_reserve.reason == "CAPACITY_LIMIT_UNSET:disk_reserve_bytes"
+
+    # 6. A negative disk reserve likewise never trips the check -> unset.
+    negative_reserve = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, disk_reserve_bytes=-1),
+    )
+    assert negative_reserve.admitted is False
+    assert negative_reserve.reason == "CAPACITY_LIMIT_UNSET:disk_reserve_bytes"
+
+
+def test_job_02_empty_storage_paths_fail_closed(tmp_path: Path) -> None:
+    """M2: An empty configured_storage_paths tuple is unset, not a vacuous pass.
+
+    Otherwise the mount dimension passes while the guard still reports enabled.
+    """
+    job = _build_test_job("job_empty_paths", resource_class=ResourceClass.HIGH)
+    empty_paths = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, configured_storage_paths=()),
+    )
+    assert empty_paths.admitted is False
+    assert empty_paths.reason == "CAPACITY_LIMIT_UNSET:configured_storage_paths"
+
+
+def test_job_02_future_sensor_timestamp_rejected(tmp_path: Path) -> None:
+    """M3: A future-dated reading outside the tolerance rejects admission,
+    while a reading inside the tolerance still admits."""
+    job = _build_test_job("job_future_timestamp", resource_class=ResourceClass.HIGH)
+
+    future = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(timestamp=datetime.now(UTC) + timedelta(hours=6)),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+    )
+    assert future.admitted is False
+    assert future.reason is not None
+    assert future.reason.startswith("SENSOR_FUTURE_TIMESTAMP")
+
+    inside_tolerance = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(timestamp=datetime.now(UTC) + timedelta(seconds=2)),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path),
+    )
+    assert inside_tolerance.admitted is True
+
+
+def test_job_02_unresolvable_path_fails_closed(tmp_path: Path) -> None:
+    """M4: A path whose stat raises ValueError (embedded NUL) fails closed with
+    PATH_MOUNT_UNRESOLVED instead of escaping evaluate_admission."""
+    job = _build_test_job("job_nul_path", resource_class=ResourceClass.HIGH)
+    nul_path = str(tmp_path / "nul\x00path")
+    unresolved = evaluate_admission(
+        job=job,
+        reading=_admissible_reading(),
+        host_profile=HostProfile.LENOVO,
+        capacity=_fully_measured_capacity(tmp_path, configured_storage_paths=(nul_path,)),
+    )
+    assert unresolved.admitted is False
+    assert unresolved.reason is not None
+    assert unresolved.reason.startswith(f"PATH_MOUNT_UNRESOLVED:{nul_path}")

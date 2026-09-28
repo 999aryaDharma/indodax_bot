@@ -6,8 +6,9 @@ Sensor UNKNOWN tidak dianggap aman.
 ASUS profile tidak mengimpor atau menjalankan training.
 Stale/unknown required sensors under the capacity guard reject admission and
 optional Research load sheds before Production deadlines (JOB-02-AC4).
-Capacity guards resolve configured paths to mounts and account for shared
-physical disk contention (JOB-02-AC5).
+Capacity guards resolve configured paths to mounts and account for contention
+between paths that share one volume (`dev-{st_dev}`) - a volume-level scope,
+not the whole physical disk (JOB-02-AC5).
 """
 
 from __future__ import annotations
@@ -23,10 +24,28 @@ from indodax_lab.orchestration.jobs import JobDefinition, JobRecord
 from indodax_lab.operations.recovery import MountCapacityInfo, resolve_path_mount
 
 
+# Clock-skew tolerance for a future-dated sensor reading (M3).
+FUTURE_TIMESTAMP_TOLERANCE_SECONDS = 5.0
+
+
 def _ensure_utc(dt: datetime, field_name: str) -> datetime:
     if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
         raise ValueError(f"UTC_TIMEZONE_AWARE_REQUIRED:{field_name}")
     return dt
+
+
+def _capacity_limit_is_set(limit_value: float | int | None) -> bool:
+    """A capacity limit counts as set only when it is finite and positive.
+
+    NaN/inf/negative values are treated exactly like unset, so an invalid
+    limit can never silently disable its guard dimension (fail closed with
+    ``CAPACITY_LIMIT_UNSET:<name>`` instead of a silent pass).
+    """
+    if limit_value is None:
+        return False
+    if isinstance(limit_value, float) and not math.isfinite(limit_value):
+        return False
+    return limit_value > 0
 
 
 class HostProfile(StrEnum):
@@ -201,6 +220,20 @@ class CapacityGuardPolicy(BaseModel):
     storage path must resolve to its actual mount and device; unknown
     mappings and unmet shared-disk reserve block admission. Test fixtures
     supply their own numbers; none of these values are production defaults.
+
+    Fail-closed shaping of this policy:
+
+    - A limit counts as set only when it is finite and positive. NaN, an
+      infinite value, or a zero/negative reserve is treated exactly like
+      unset, so an invalid limit can never silently disable a guard
+      dimension; admission reports ``CAPACITY_LIMIT_UNSET:<name>``.
+    - An empty ``configured_storage_paths`` tuple is unset as well, so the
+      storage-path dimension cannot pass vacuously while the guard reports
+      enabled.
+    - Reserve contention is grouped per volume by its device identifier
+      ``dev-{st_dev}``. This is a volume-level scope: distinct volumes of
+      one physical disk are counted separately until the measured mount
+      inventory allows physical-disk grouping.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -302,7 +335,8 @@ def evaluate_admission(
     5. When capacity guarding is requested (JOB-02-AC4/AC5), unset required
        limits fail closed, stale sensors reject admission, optional Research
        load sheds before Production deadlines, configured paths must resolve
-       to measured mounts, and shared physical disk reserve is enforced.
+       to measured mounts, and reserve demand is enforced per shared volume
+       (device identifier ``dev-{st_dev}``, not the whole physical disk).
     """
     profile = HostProfile.parse(host_profile) if isinstance(host_profile, str) else host_profile
     active_policy = policy or AdmissionPolicy()
@@ -472,23 +506,45 @@ def evaluate_admission(
         max_sensor_age = capacity.max_sensor_age_seconds
         deadline_headroom = capacity.production_deadline_headroom_seconds
         disk_reserve = capacity.disk_reserve_bytes
-        for limit_name, limit_value in (
-            ("max_sensor_age_seconds", max_sensor_age),
-            ("production_deadline_headroom_seconds", deadline_headroom),
-            ("disk_reserve_bytes", disk_reserve),
-        ):
-            if limit_value is None:
-                return AdmissionDecision(
-                    admitted=False,
-                    reason=f"CAPACITY_LIMIT_UNSET:{limit_name}",
-                    resource_class=resource_class,
-                    host_profile=profile,
-                    reading=reading,
-                    evaluated_at=now,
-                )
+        unset_limit_names = [
+            limit_name
+            for limit_name, limit_value in (
+                ("max_sensor_age_seconds", max_sensor_age),
+                ("production_deadline_headroom_seconds", deadline_headroom),
+                ("disk_reserve_bytes", disk_reserve),
+            )
+            if not _capacity_limit_is_set(limit_value)
+        ]
+        # An empty mount list is unset too: it must not make the storage-path
+        # dimension vacuously pass while the guard reports enabled (M2).
+        if not capacity.configured_storage_paths:
+            unset_limit_names.append("configured_storage_paths")
+        if unset_limit_names:
+            return AdmissionDecision(
+                admitted=False,
+                reason=f"CAPACITY_LIMIT_UNSET:{unset_limit_names[0]}",
+                resource_class=resource_class,
+                host_profile=profile,
+                reading=reading,
+                evaluated_at=now,
+            )
 
         # Stale required sensor rejects admission (AC4).
         sensor_age_seconds = (now - reading.timestamp).total_seconds()
+        if sensor_age_seconds < -FUTURE_TIMESTAMP_TOLERANCE_SECONDS:
+            # A future-dated reading would otherwise pass with a negative age
+            # and disable the staleness guard (M3): fail closed instead.
+            return AdmissionDecision(
+                admitted=False,
+                reason=(
+                    f"SENSOR_FUTURE_TIMESTAMP:reading.timestamp:{sensor_age_seconds:.0f}s"
+                    f" < -{FUTURE_TIMESTAMP_TOLERANCE_SECONDS:g}s"
+                ),
+                resource_class=resource_class,
+                host_profile=profile,
+                reading=reading,
+                evaluated_at=now,
+            )
         if sensor_age_seconds > max_sensor_age:
             return AdmissionDecision(
                 admitted=False,
@@ -533,7 +589,9 @@ def evaluate_admission(
         for raw_path in capacity.configured_storage_paths:
             try:
                 resolved_paths.append((raw_path, resolve_path_mount(Path(raw_path))))
-            except OSError as exc:
+            except (OSError, ValueError) as exc:
+                # ValueError (e.g. an embedded NUL in the path) means the
+                # mapping cannot be resolved either: fail closed, never open.
                 return AdmissionDecision(
                     admitted=False,
                     reason=f"PATH_MOUNT_UNRESOLVED:{raw_path}:{exc}",
@@ -543,8 +601,10 @@ def evaluate_admission(
                     evaluated_at=now,
                 )
 
-        # Paths sharing one physical device multiply the reserve demand, so
-        # shared physical disk contention is accounted for (AC5).
+        # Paths sharing one volume (device identifier dev-{st_dev}) multiply
+        # the reserve demand, so volume-level contention is accounted for
+        # (AC5). The grouping key stays volume-level on purpose: physical-disk
+        # grouping needs the measured mount inventory (M6).
         paths_by_device: dict[str, list[tuple[str, MountCapacityInfo]]] = {}
         for raw_path, mount_info in resolved_paths:
             paths_by_device.setdefault(mount_info.device, []).append((raw_path, mount_info))
