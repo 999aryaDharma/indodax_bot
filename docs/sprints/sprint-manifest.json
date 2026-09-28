@@ -7877,6 +7877,7 @@
       "path": "docs/sprints/strategies/S07-01-small-cap-rotation.md",
       "priority": "P1",
       "implementation_owner": "opencode (session ses_f18e4eab8ffeD0ZH0ussZkyPdn)",
+      "independent_reviewer": "opencode (session ses_f18c52fc7ffeAKvlC0JkKSWtwM)",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/s07-01-small-cap-rotation",
       "requirements": [
@@ -7920,7 +7921,13 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
-      "status": "IN_PROGRESS",
+      "evidence": {
+        "kind": "reviewed_handoff",
+        "path": "docs/sprints/handoffs/S07-01-HANDOFF.md",
+        "source_commit": "9fe21db7a6f176fc2e5befc35bad8aceaf723b6c",
+        "review": "Independent task review PASS ses_f18c52fc7ffeAKvlC0JkKSWtwM at 9fe21db (code 5f94a2a): spec-verified AC0-AC3, focused 5 passed, strategies 173 passed, ruff zero new findings; 0 Critical/Important, 2 Minor to backlog. Merged to dev unchanged."
+      },
+      "status": "DONE",
       "recovery": {
         "source_sha": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
         "source_spec_status": "PLANNED",

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-Status: IN_PROGRESS
+Status: DONE
 
 Priority: P1 | Type: feature | Domain: strategies | Portfolio: EXTENSION
 

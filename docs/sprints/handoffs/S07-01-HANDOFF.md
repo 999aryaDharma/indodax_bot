@@ -143,3 +143,32 @@ untouched.
 - Rollback: revert the scoped code commit (`git revert 5f94a2a`); no migration, no
   historical artifact overwritten.
 - Next unlocked consumers: none required by this sprint.
+
+## Independent task review record (2026-09-28)
+
+- Reviewed SHA: `9fe21db` (tip of `feat/s07-01-small-cap-rotation`; code at
+  `5f94a2a`), delta against BASE `63dd041`; 5 files, +648/-0.
+- Reviewer: independent session `ses_f18c52fc7ffeAKvlC0JkKSWtwM` (did not
+  implement the change). Verdict: **Spec PASS (AC0-AC3), task quality
+  Approved-with-Minors — 0 Critical, 0 Important, 2 Minor.**
+- Evidence re-run by the reviewer in the sprint worktree: focused
+  `test_s07.py` 5 passed; `tests/unit/lab/strategies` 173 passed (168+5);
+  `ruff check` on the 3 touched py files clean with zero new findings vs BASE
+  (`__init__.py` at BASE also clean); all 4 manifest test names present
+  verbatim + 1 additive guard; diff touches exactly the 4 owned files +
+  handoff; worktree clean.
+- Behavior confirmed: real behavior through public inputs with independent
+  expectations (rank order, exact `S07_<REASON>:<pair>` codes, Decimal reserve
+  math, positive controls); RED outputs behaviorally credible. All five
+  implementer interpretations adjudicated spec-consistent and fail-closed
+  (50bps quote-IDR depth capacity; reject-not-cap; no backfill after capacity
+  rejection; missing-cash abstain without base_qty fallback; diagnostics
+  surface required by Observability clause). `__init__.py` wiring purely
+  additive, no conflict with parked sibling wiring. House rules hold
+  (UTC frame-level, no bfill, Decimal cash, intent-only, test-only fixtures).
+- Backlog (Minor, non-blocking): (1) `pd.concat` with all-NaN depth column
+  raises FutureWarning (test line 142) — filter NA frame or pin dtype;
+  (2) zero-cash path (`Decimal("0")`) untested though handled by `cash <= 0`
+  — pin one assertion in AC3 case C.
+- Integration: merged to `dev` via merge commit (reviewed content
+  byte-identical; dev-side claim bookkeeping united, no conflicts).
