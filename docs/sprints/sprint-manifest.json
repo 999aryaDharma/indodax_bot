@@ -9266,9 +9266,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-02-model-registry-and-offline-training-services.md",
       "priority": "P1",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "implementation_owner": "opencode (session ses_f190b4fccffe88Do68nL03opAa)",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode (session ses_f18b2e183ffevXuqTz9CwgEQro)",
       "recommended_branch": "feat/rw2-02-model-registry-and-offline-training-services",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -9330,6 +9330,12 @@
           "status": "PLANNED_BEHAVIOR_MAPPING"
         }
       ],
+      "evidence": {
+        "kind": "reviewed_handoff",
+        "path": "docs/sprints/handoffs/RW2-02-HANDOFF.md",
+        "source_commit": "d47b863a695d980d3d51e9eacdfb0b85b610522f",
+        "review": "Independent task review PASS ses_f18b2e183ffevXuqTz9CwgEQro at d47b863 (code 784424e): spec-verified AC0-AC5, focused 10 passed, models 268 passed, ruff clean, diff-check clean; 0 Critical/Important, 3 Minor to backlog. Merged to dev unchanged."
+      },
       "risk_level": "high",
       "complexity": "L"
     },
@@ -9362,7 +9368,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW2-03-typed-declarative-pipeline-composer.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw2-03-typed-declarative-pipeline-composer",

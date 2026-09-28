@@ -71,4 +71,35 @@ GREEN — after applying G1–G5, `python -m pytest tests/unit/lab/models/test_m
 
 ## Review Rounds
 
-- Round 1: pending — comprehensive review of code SHA `784424e8b6a7042ee90d91d2da9ef361412ed53d`.
+- Round 1: independent task review PASS by `ses_f18b2e183ffevXuqTz9CwgEQro`
+  (did not implement the change) at tip `d47b863a695d980d3d51e9eacdfb0b85b610522f`
+  (code `784424e8b6a7042ee90d91d2da9ef361412ed53d`), delta against BASE
+  `b6e974e`; 4 files, +1890/-0. Verdict: **Spec PASS (AC0-AC5), task quality
+  Approved-with-Minors — 0 Critical, 0 Important, 3 Minor.**
+- Evidence re-run by the reviewer in the sprint worktree: focused
+  `test_model_registry.py` 10 passed; `tests/unit/lab/models` 268 passed
+  (258+10); `ruff check` on the 3 touched py files clean; `git diff --check`
+  clean; all 6 manifest test names present verbatim; diff touches exactly the
+  4 owned files (`artifacts.py` correctly untouched — pure ML-04 reuse).
+- Behavior confirmed at the public service boundary: hash-before-loader with
+  loader-call counting; pickle/remote rejection with exact allowlist sets;
+  strict schema equality; new-version training with v1 byte/prediction
+  invariance; BLOCKED_RESOURCE+FAILED_FINAL with no model published;
+  four-flag listing with NOT_REGISTERED orphans and no substitution.
+- Open concerns adjudicated clean: BLOCKED_RESOURCE-as-typed-error is
+  CONTRACTS-consistent (frozen JobStatus has no resource member; BLOCKED_DATA
+  / BLOCKED_POLICY would be wrong semantics); first-artifact feeding is safe
+  (all refs hash-verified, M01 declares exactly one); task-local dataset JSON
+  is properly distinct from RW0-01 DatasetManifest lineage; `run` correctly
+  delegates to the leased JOB-01 runner (claim/complete/fail_job with
+  fencing) while host-capacity admission takes out-of-interface inputs;
+  reuse of PortableBundle/Loader, M01 trainer, queue and MetricValue is
+  genuine.
+- Backlog (Minor, non-blocking): (1) `ARCHITECTURE_LOADERS` mutable dict vs
+  MappingProxyType allowlist — freeze it too (`registry.py:189`); (2) only
+  `artifact_refs[0]` feeds the single-bytes loader — document or fire on
+  `len != 1` for future multi-file formats (`training_service.py:579`);
+  (3) duplicate-run-after-SUCCESS and concurrent-identical-register paths are
+  guarded but untested — add both regression tests.
+- Integration: merged to `dev` via merge commit (reviewed content
+  byte-identical; dev-side S07-01 bookkeeping united, no conflicts).
