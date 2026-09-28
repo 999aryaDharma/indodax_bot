@@ -25,6 +25,7 @@ from indodax_lab.strategies.s02 import load_s02_specification, s02_decide
 from indodax_lab.strategies.s03 import load_s03_specification, s03_decide
 from indodax_lab.strategies.s05 import load_s05_specification, s05_decide
 from indodax_lab.strategies.s06 import load_s06_specification, s06_decide
+from indodax_lab.strategies.s07 import load_s07_specification, s07_decide
 from indodax_lab.strategies.store import StrategyService, StrategyStore
 
 __all__ = [
@@ -69,4 +70,6 @@ __all__ = [
     "load_s01_specification",
     "s02_decide",
     "load_s02_specification",
+    "s07_decide",
+    "load_s07_specification",
 ]
