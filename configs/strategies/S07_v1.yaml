@@ -1,0 +1,21 @@
+strategy_id: "S07"
+version: "1.0.0"
+family: "small_cap_rotation"
+universe_tier: "small_cap"
+timeframes:
+  - "1h"
+signal_timing: "bar_close"
+execution_timing: "next_bar_open"
+parameters:
+  lookback_bars: 24
+  top_k: 2
+  min_volume: 100.0
+  max_spread_bps: 30.0
+  cash_reserve_pct: 0.20
+  atr_multiplier: 2.0
+risk_profile:
+  max_position_pct: 0.25
+  stop_loss_pct: 0.02
+split: "train"
+status: "active"
+description: "Small-cap cross-sectional rank rotation with liquidity screen, depth capacity rejection, and shared-cash slot sizing"
