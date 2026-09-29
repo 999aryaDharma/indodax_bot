@@ -118,3 +118,8 @@ Full lab suite verification: 219 passed across strategies, features, labels, eva
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fix: `docs/quality/capacity-evidence.md` — summary now states no host is certified; both profile rows `QUALIFIED` → `UNVERIFIED (pending measured artifact)`; test-evidence section scoped to synthetic fixture probes only.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Files changed: `docs/quality/capacity-evidence.md`.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Still open (not code-fixable here): AC4 24h ASUS soak artifact, AC5 mount-inventory/contention mapping, AC6 12h unattended qualification; dep gates OPS-01/OPS-03/QA-01 REVIEW. Sprint stays BLOCKED pending operator artifacts + design review.
+
+## Verification - QA-03-F1 already-fixed (2026-09-29, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Triage subagent flagged QA-03-F1 (recovery.py:109/100-101) as open; direct code inspection disproves it. `_save()` is atomic (temp file + fsync + replace, no write_text) and `_load()` raises `LedgerCorruptionError` on truncation - the exact remedy the finding required. Provenance: fixed in `c7ac11a`, no new fix cycle consumed here.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fresh evidence: `test_operational_recovery.py` 5 passed exit 0; torn-write probe (truncate half, reload) raises LEDGER_CORRUPTED (loud, no silent loss); no .tmp residue; round-trip reload count correct. QA-03-F2 (AC4/AC5/AC6) unchanged: operator-physical, still BLOCKED pending 24h soak + mount mapping + 12h unattended artifacts.
