@@ -229,3 +229,9 @@ closes; do not patch persistence into this fix round.**
   existing AC0 test; identity/branch/audit failures use `ProposalValidationError`.
 - "No unblock path for a HARD_FAIL candidate" is intentional fail-closed
   behavior; a formal defect-report workflow would need its own CR.
+
+## Verification — coordinator findings 2026-09-27 re-probed (2026-09-29, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Both code findings verified already-fixed in the merged tree, no source change made: blank approver `"   "` raises `ProposalValidationError(IDENTITY_CANNOT_BE_BLANK)` (probed live); duplicate `proposal_id` resubmission raises `ProposalValidationError(DUPLICATE_PROPOSAL_ID)` with the original record intact (probed live).
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Tests: `tests/unit/lab/orchestration/test_curator_policy.py` 18 passed including `test_agent_01_r5_blank_approver_never_approves` and `test_agent_01_duplicate_proposal_id_rejected`; full file run 38 passed with `test_maintenance_fail_closed.py`, exit 0.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Remaining: dep gate REPORT-01/JOB-03 REVIEW (manifest-owned, not touched). No code action outstanding.

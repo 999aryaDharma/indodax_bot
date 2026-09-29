@@ -258,5 +258,139 @@ def test_ops_03_dry_run_false_deletes() -> None:
         assert report.freed_bytes > 0
 
 
+def test_ops_03_resolver_outage_aborts_without_deletions() -> None:
+    """Coordinator 2026-09-27 CRITICAL follow-up: a failing resolver must fail
+    closed. The scan aborts with the error; nothing is deleted."""
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        victim = root / "victim_old.db"
+        victim.write_bytes(b"v" * 64)
+        old_time = datetime.now(UTC) - timedelta(days=60)
+        os.utime(victim, (old_time.timestamp(), old_time.timestamp()))
+
+        def _outage(_root: str) -> set[str]:
+            raise RuntimeError("registry unreachable")
+
+        policy = RetentionPolicy(retention_days=30, dry_run=False)
+        cleaner = StorageCleaner(root, policy, protected_resolver=_outage)
+        with pytest.raises(RuntimeError, match="registry unreachable"):
+            cleaner.scan_and_clean(as_of=datetime.now(UTC), dry_run=False)
+        assert victim.exists()
+
+
+def test_ops_03_junction_component_rejected() -> None:
+    """Coordinator 2026-09-27 IMPORTANT: junctions must not bypass the
+    is_symlink-only guard. A path that is not a symlink but IS a junction is
+    rejected."""
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        link = root / "junction_link.db"
+        link.write_bytes(b"not a real junction")
+        old_time = datetime.now(UTC) - timedelta(days=10)
+        os.utime(link, (old_time.timestamp(), old_time.timestamp()))
+
+        with (
+            patch.object(
+                Path,
+                "is_symlink",
+                autospec=True,
+                side_effect=lambda self: False,
+            ),
+            patch.object(
+                Path,
+                "is_junction",
+                autospec=True,
+                side_effect=lambda self: self == link,
+            ),
+        ):
+            assert _is_symlink_or_junction(link) is True
+            policy = RetentionPolicy(retention_days=1, dry_run=True)
+            cleaner = StorageCleaner(root, policy)
+            report = cleaner.scan_and_clean(
+                as_of=datetime.now(UTC), dry_run=True
+            )
+        assert any("SYMLINK_DETECTED" in r for r in report.rejected_candidates)
+        assert "junction_link.db" not in report.deletion_candidates
+
+
+def test_ops_03_champion_identity_protects_registry_object() -> None:
+    """Coordinator 2026-09-27 CRITICAL: protection is by champion identity from
+    the real model registry, not by filename. A champion object file older than
+    the retention cutoff survives the clean when the registry adapter is wired,
+    even though its filename matches nothing in the policy."""
+    import numpy as np
+    import pandas as pd
+
+    from indodax_lab.contracts.workbench import ModelManifest
+    from indodax_lab.models.artifacts import PortableBundle
+    from indodax_lab.models.m01_logistic import M01Config, M01LogisticTrainer
+    from indodax_lab.models.registry import ModelRegistry
+    from indodax_lab.orchestration.maintenance import (
+        champion_registry_resolver,
+    )
+
+    feature_names = ["feat_a", "feat_b", "feat_c"]
+    rng = np.random.default_rng(7)
+    frame = pd.DataFrame(
+        rng.standard_normal((300, len(feature_names))), columns=feature_names
+    )
+    labels = pd.Series([i % 2 for i in range(300)])
+    trainer = M01LogisticTrainer(
+        config=M01Config(model_id="champ", version="9.9.9", max_iter=50, seed=7)
+    )
+    fitted = trainer.train_and_calibrate(
+        X_train=frame.iloc[:240],
+        y_train=labels.iloc[:240],
+        X_val=frame.iloc[240:],
+        y_val=labels.iloc[240:],
+        feature_names=feature_names,
+    )
+    with tempfile.TemporaryDirectory() as root_dir:
+        root = Path(root_dir)
+        registry = ModelRegistry(root / "models")
+        bundle_ref = registry.put_bytes(
+            PortableBundle.from_m01(bundle=fitted, trainer=trainer).to_bytes(),
+            kind="model",
+            artifact_id="champ_bundle",
+            version="9.9.9",
+        )
+        manifest = ModelManifest(
+            model_id="champ",
+            architecture="m01_logistic",
+            version="9.9.9",
+            artifact_refs=(bundle_ref,),
+            ordered_feature_schema=tuple(feature_names),
+            universe=("BTC-IDR",),
+            runtime_requirements={},
+        )
+        registry.register(manifest)
+
+        # Age every champion object past the retention cutoff.
+        old_time = datetime.now(UTC) - timedelta(days=60)
+        champion_files = [
+            p
+            for p in (root / "models").rglob("*")
+            if p.is_file() and p.suffix != ".sqlite"
+        ]
+        assert champion_files, "expected champion objects on disk"
+        for p in champion_files:
+            os.utime(p, (old_time.timestamp(), old_time.timestamp()))
+
+        policy = RetentionPolicy(retention_days=30, dry_run=False)
+        cleaner = StorageCleaner(
+            root / "models",
+            policy,
+            protected_resolver=champion_registry_resolver(
+                root / "models", "champ", "9.9.9"
+            ),
+        )
+        report = cleaner.scan_and_clean(
+            as_of=datetime.now(UTC), dry_run=False
+        )
+        assert report.deleted_files == []
+        for p in champion_files:
+            assert p.exists()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-p", "no:cacheprovider"])

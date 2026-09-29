@@ -3,14 +3,17 @@
 > Evidence qualification, 2026-09-24: the historical statements below do not certify co-resident ASUS Production + WebSocket + multi-strategy shadow capacity. OPS-01/QA-03 remain REVIEW. See [current cross-check](../implementation/ASUS-BOT-CAPACITY-CROSSCHECK.md); new mixed-load measurements are pending.
 
 ## Host Qualification Summary
-This document certifies host capacity constraints, crash survival, and storage recovery mechanisms for the Indodax Research Lab release candidate.
+This document records host capacity evidence, crash survival mechanisms, and
+storage recovery behavior for the Indodax Research Lab release candidate. No
+host is certified by this document: every profile below is UNVERIFIED pending a
+measured artifact from the target host (24h mixed-load soak, mount inventory).
 
 ## Empirical Host Profile Benchmarks
 
-| Host Profile | Max Workers | Memory Allocation | Storage Root | Role | Verified Baseline |
+| Host Profile | Max Workers | Memory Allocation | Storage Root | Role | Measured Baseline |
 |---|---|---|---|---|---|
-| **LenovoThinkPad** | 2 workers | 4,096 MB | `/var/data/indodax_lab` | Background ML trainer & shadow trader | **QUALIFIED** |
-| **AsusZenBook** | 4 workers | 8,192 MB | `/var/data/indodax_lab` | Research batch evaluator & pipeline | **QUALIFIED** |
+| **LenovoThinkPad** | 2 workers | 4,096 MB | `/var/data/indodax_lab` | Background ML trainer & shadow trader | **UNVERIFIED (pending measured artifact)** |
+| **AsusZenBook** | 4 workers | 8,192 MB | `/var/data/indodax_lab` | Research batch evaluator & pipeline | **UNVERIFIED (pending measured artifact)** |
 
 ## Invariants and Verified Failure Behaviors
 
@@ -29,4 +32,6 @@ This document certifies host capacity constraints, crash survival, and storage r
 
 ## Test Evidence
 - Test suite: `tests/integration/lab/test_operational_recovery.py`
-- All 4 tests pass with 100% assertion coverage.
+- All 4 tests pass with 100% assertion coverage. These are synthetic,
+  fixture-based probes only: they exercise the guard/ledger/validator
+  mechanisms, not a measured host. They do not constitute host qualification.

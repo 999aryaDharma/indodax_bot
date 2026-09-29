@@ -26,9 +26,15 @@ def _ensure_utc(dt: datetime, field_name: str = "timestamp") -> datetime:
 def _is_symlink_or_junction(path: Path) -> bool:
     """Check if path is a symlink or junction, without raising on permission errors."""
     try:
-        return path.is_symlink()
+        if path.is_symlink():
+            return True
     except OSError:
         return False
+    try:
+        is_junction = path.is_junction()
+    except (OSError, AttributeError):
+        return False
+    return bool(is_junction)
 
 
 def _assert_no_symlink_or_junction(path: Path, root: Path) -> None:
@@ -50,6 +56,46 @@ def _assert_no_symlink_or_junction(path: Path, root: Path) -> None:
 
 class SymlinkEscapeError(ValueError):
     """Raised when an artifact or target path escapes the allowed storage boundary or is a symlink/junction."""
+
+
+def champion_registry_resolver(
+    registry_root: Path | str, model_id: str, version: str
+) -> Callable[[str], set[str]]:
+    """Build a protected-resolver from the real model registry.
+
+    Resolves the champion manifest plus every artifact object it references
+    into absolute, resolved path strings. Any registry outage (missing row,
+    corrupt manifest, unreadable DB) raises instead of returning an empty set,
+    so the cleaner fails closed. Lazy import keeps the orchestration layer free
+    of a hard models-layer dependency.
+    """
+
+    def _resolve(_storage_root: str) -> set[str]:
+        from indodax_lab.models.registry import ModelRegistry
+
+        registry = ModelRegistry(registry_root)
+        with registry._connection() as conn:
+            row = conn.execute(
+                "SELECT manifest_json FROM model_registry "
+                "WHERE model_id = ? AND version = ?",
+                (model_id, version),
+            ).fetchone()
+        if row is None:
+            raise ValueError(
+                f"CHAMPION_NOT_REGISTERED: no published model for {model_id}:{version}"
+            )
+        from indodax_lab.contracts.workbench import ModelManifest
+
+        manifest = ModelManifest.model_validate_json(row["manifest_json"])
+        paths = {
+            str(registry.object_path(manifest.to_artifact_ref()).resolve()),
+            str((Path(registry_root) / "registry.sqlite").resolve()),
+        }
+        for ref in manifest.artifact_refs:
+            paths.add(str(registry.object_path(ref).resolve()))
+        return paths
+
+    return _resolve
 
 
 class RetentionPolicy(BaseModel):
@@ -101,12 +147,14 @@ class StorageCleaner:
         self._protected_resolver = protected_resolver
 
     def _get_protected_artifact_ids(self) -> set[str]:
-        """Resolve protected artifact IDs from registry, falling back to policy names."""
+        """Resolve protected artifact IDs from registry.
+
+        Fail closed: a resolver outage aborts the whole scan (the caller lets
+        the error propagate before any deletion) instead of silently
+        downgrading to policy names.
+        """
         if self._protected_resolver:
-            try:
-                return self._protected_resolver(str(self.storage_root))
-            except Exception:
-                pass
+            return self._protected_resolver(str(self.storage_root))
         return set(self.policy.protected_artifact_ids)
 
     def validate_safe_path(self, target_path: str | Path) -> Path:
@@ -166,6 +214,11 @@ class StorageCleaner:
             )
 
         protected_ids = self._get_protected_artifact_ids()
+        protected_abs = {
+            str(Path(p).resolve())
+            for p in protected_ids
+            if os.path.isabs(p)
+        }
         scanned_count = 0
         candidates: list[Path] = []
         candidate_relpaths: list[str] = []
@@ -187,8 +240,12 @@ class StorageCleaner:
                 # Relative path from storage root
                 rel_path = safe_path.relative_to(self.storage_root).as_posix()
 
-                # Invariant 1: Check protected names/IDs (OPS-03-AC1, R2, R3)
+                # Invariant 1: Check protected names/IDs (OPS-03-AC1, R2, R3).
+                # Registry adapters contribute resolved absolute paths; match
+                # those by identity, not by filename.
                 if fname in protected_ids or rel_path in protected_ids:
+                    continue
+                if str(safe_path.resolve()) in protected_abs:
                     continue
 
                 # Invariant 2: Check age vs retention cutoff

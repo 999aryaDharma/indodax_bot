@@ -111,3 +111,10 @@ Full lab suite verification: 219 passed across strategies, features, labels, eva
 - CONCUR with handoff: set BLOCKED, not DONE; needs operator-owned 24h soak +
   design review, not another unit patch. REL-01/PM-06 stay locked behind it.
 - Reviewer ses_f1eba02afffeaDtrRY4NbHiocz.
+
+## Fix cycle — coordinator evidence-doc finding (2026-09-29, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Scope: the evidence-doc IMPORTANT only (`capacity-evidence.md` certifying hosts the code returns UNVERIFIED for). AC4/AC5/AC6 measured artifacts remain operator-owned and are NOT claimed here.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fix: `docs/quality/capacity-evidence.md` — summary now states no host is certified; both profile rows `QUALIFIED` → `UNVERIFIED (pending measured artifact)`; test-evidence section scoped to synthetic fixture probes only.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Files changed: `docs/quality/capacity-evidence.md`.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Still open (not code-fixable here): AC4 24h ASUS soak artifact, AC5 mount-inventory/contention mapping, AC6 12h unattended qualification; dep gates OPS-01/OPS-03/QA-01 REVIEW. Sprint stays BLOCKED pending operator artifacts + design review.
