@@ -45,3 +45,9 @@ Collected read-only over SSH (`asus-server`, user kesawa) for QA-03 AC4/AC5, OPS
 - Single physical disk sda 465.8G; LVM: / (98G, 75% used, 24G free), /srv/storage (295G, 1%), /var/lib/docker (49G, 1%), /boot (2G, 15%). All data mounts share one spindle - shared-disk contention applies (AC5).
 - Co-resident load at snapshot: docker bimbel-staging/nextcloud/rbta stacks (healthy, weeks-old uptimes); no bot/trade/indodax/research service or container observed running.
 - Still missing (needs soak/watch design): 24h mixed-load soak with preregistered budgets (AC4), mount-inventory/contention mapping against guard paths (AC5), 12h unattended incident qualification (AC6).
+
+## ASUS 24h soak - collector running since 2026-09-29T15:50Z (IN PROGRESS, not evidence yet)
+
+- Collector: `/tmp/qa03soak/collect.sh` on asus-server (PID 1243199 at launch, `nice -n 19`), 1 sample/min: timestamp, loadavg, mem total/avail, `/` avail KB, thermal mC -> `/tmp/qa03soak/soak.log` (~170KB/24h). No installs, no host changes besides /tmp scratch.
+- Stop: `pkill -f collect.sh` (careful: self-matching pattern) or `kill <PID>`; fetch: `scp asus-server:/tmp/qa03soak/soak.log .`. First two samples sane (load ~0.7-0.9, mem avail ~1.7GB, thermal 45C).
+- This soak alone does not satisfy AC4 (needs preregistered budgets + stepped pair-agent counts + representative co-resident Production/Research workload, none observed running) nor AC6 (12h unattended incidents).
