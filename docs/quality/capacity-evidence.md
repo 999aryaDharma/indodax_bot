@@ -35,3 +35,13 @@ measured artifact from the target host (24h mixed-load soak, mount inventory).
 - All 4 tests pass with 100% assertion coverage. These are synthetic,
   fixture-based probes only: they exercise the guard/ledger/validator
   mechanisms, not a measured host. They do not constitute host qualification.
+
+## ASUS measured baseline - raw snapshot 2026-09-29 (UNVERIFIED, uncertified)
+
+Collected read-only over SSH (`asus-server`, user kesawa) for QA-03 AC4/AC5, OPS-01 and JOB-02 AC4/AC5 evidence. Raw numbers only - no host is certified by this section.
+
+- Host up 51 days; load avg 1.38/1.62/1.70; 4 CPUs (Intel i3-6006U 2C/4T @ 2.00GHz).
+- RAM 3GB total / 1GB used / 1GB available (tight). Thermal zone0 63C at snapshot.
+- Single physical disk sda 465.8G; LVM: / (98G, 75% used, 24G free), /srv/storage (295G, 1%), /var/lib/docker (49G, 1%), /boot (2G, 15%). All data mounts share one spindle - shared-disk contention applies (AC5).
+- Co-resident load at snapshot: docker bimbel-staging/nextcloud/rbta stacks (healthy, weeks-old uptimes); no bot/trade/indodax/research service or container observed running.
+- Still missing (needs soak/watch design): 24h mixed-load soak with preregistered budgets (AC4), mount-inventory/contention mapping against guard paths (AC5), 12h unattended incident qualification (AC6).
