@@ -123,3 +123,8 @@ Full lab suite verification: 219 passed across strategies, features, labels, eva
 
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Triage subagent flagged QA-03-F1 (recovery.py:109/100-101) as open; direct code inspection disproves it. `_save()` is atomic (temp file + fsync + replace, no write_text) and `_load()` raises `LedgerCorruptionError` on truncation - the exact remedy the finding required. Provenance: fixed in `c7ac11a`, no new fix cycle consumed here.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fresh evidence: `test_operational_recovery.py` 5 passed exit 0; torn-write probe (truncate half, reload) raises LEDGER_CORRUPTED (loud, no silent loss); no .tmp residue; round-trip reload count correct. QA-03-F2 (AC4/AC5/AC6) unchanged: operator-physical, still BLOCKED pending 24h soak + mount mapping + 12h unattended artifacts.
+
+## Evidence - AC5 measured mount inventory (2026-09-29, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | stdlib-only probe run on asus-server over SSH for 7 candidate guard paths. `/`+`/tmp`+`/var/tmp`+`/home/kesawa` share mount `/` (st_dev 64768); `/var/lib/docker` and `/srv/storage` are separate volumes; all LVM volumes sit on single spindle sda. Full table in `docs/quality/capacity-evidence.md` (commit `5d51f3f`), recorded UNVERIFIED pending coordinator sign-off.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Design note for coordinator: per-volume reserve multiplication in `orchestration/resources.py` treats the 3 LVs as independent, but they share one spindle; `resolve_path_mount().shared_with` still hardcoded `[]`. No code changed here.
