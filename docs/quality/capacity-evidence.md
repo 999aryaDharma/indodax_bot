@@ -51,3 +51,13 @@ Collected read-only over SSH (`asus-server`, user kesawa) for QA-03 AC4/AC5, OPS
 - Collector: `/tmp/qa03soak/collect.sh` on asus-server (PID 1243199 at launch, `nice -n 19`), 1 sample/min: timestamp, loadavg, mem total/avail, `/` avail KB, thermal mC -> `/tmp/qa03soak/soak.log` (~170KB/24h). No installs, no host changes besides /tmp scratch.
 - Stop: `pkill -f collect.sh` (careful: self-matching pattern) or `kill <PID>`; fetch: `scp asus-server:/tmp/qa03soak/soak.log .`. First two samples sane (load ~0.7-0.9, mem avail ~1.7GB, thermal 45C).
 - This soak alone does not satisfy AC4 (needs preregistered budgets + stepped pair-agent counts + representative co-resident Production/Research workload, none observed running) nor AC6 (12h unattended incidents).
+
+## ASUS measured mount inventory - AC5 mapping 2026-09-29 (raw, UNVERIFIED pending coordinator sign-off)
+
+Probe: stdlib-only `mount_probe.py` run on asus-server (python 3.10), one JSON line per candidate guard path. All three LVM volumes sit on the single spindle sda (lsblk: sda3 462G holds ubuntu--vg LVs), so every data mount shares one physical disk.
+
+- `/`, `/tmp`, `/var/tmp`, `/home/kesawa` -> mount `/` (ext4, /dev/mapper/ubuntu--vg-ubuntu--lv, st_dev 64768, total 105089261568B, free 25540202496B at probe time). Contention group of 4: a reserve on any one path consumes the same pool.
+- `/var/lib/docker` -> own mount (ext4, ubuntu--vg-docker, st_dev 64770, total 52521566208B, free 49467281408B). Separate volume, same spindle sda.
+- `/srv/storage` -> own mount (ext4, ubuntu--vg-projects, st_dev 64769, total 315926315008B, free 298633129984B). Separate volume, same spindle sda. Candidate home for large Research artifacts (279G free).
+- `/boot` -> /dev/sda2 (ext4, total 2040373248B, free 1643663360B). Irrelevant to guards, recorded for completeness.
+- Guard implication (for coordinator/design review, not a code change here): per-volume reserve multiplication in `resources.py` (AC5) treats the three LVs as independent devices, but all share sda - a spindle-level reserve is the correct contention unit. `resolve_path_mount().shared_with` still returns [] in code; the measured groups above are the M6 inventory it must consume.
