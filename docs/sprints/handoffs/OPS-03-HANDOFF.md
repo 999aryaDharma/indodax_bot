@@ -124,3 +124,9 @@ No test was written and no test was run against `maintenance.py` for this sprint
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Lint: ruff 0.16.8 on changed files — 0 new findings vs HEAD baseline (5 pre-existing in `maintenance.py`, unchanged).
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Files changed: `src/indodax_lab/orchestration/maintenance.py`, `tests/unit/lab/orchestration/test_maintenance_fail_closed.py`.
 - Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Deferred (Minor): AC3 partial-progress journal (R8) still absent — FileNotFoundError tolerance only, recorded as backlog; does not block DONE.
+
+## Advisory delta re-review of fix cycle 2 (2026-09-29, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Reviewer: subagent ses_f121e7e7bffeTc7DSU18A33cr7 (advisory only, NOT an independent PASS). Range fa61068..b9a88bd, fix diff only.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Verdict: FIX-VERIFIED. (1) resolver-outage fail-closed ADDRESSED (maintenance.py:149-157, resolve-before-walk:216); (2) champion_registry_resolver from real ModelRegistry ADDRESSED (:61-98, raises on missing row :83-86, abs-path match :217-221,248-249); (3) is_junction guard ADDRESSED (:26-37); (4) regression tests pin all three and would fail pre-fix (:261,:281,:316). No blocking new breakage; 3 backlog minors (OSError early-return skips junction check; private registry._connection coupling; resolver auto-protects registry.sqlite).
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Still needs: independent PASS (implementer cannot self-approve) + coordinator manifest move. Deps OPS-02/EVAL-01 DONE satisfied.
