@@ -31,7 +31,6 @@ from indodax_lab.control.mode import (
     InvalidModeTransitionError,
     validate_mode_transition,
 )
-from indodax_lab.execution.indodax_trading import IndodaxTradingClient
 from indodax_lab.execution.oms import OmsOrder, OmsOrderState
 from indodax_lab.execution.oms_store import OmsStore
 from indodax_lab.execution.order_router import OrderRouter
@@ -112,7 +111,11 @@ class TradingPipeline:
         self.quantity_precision = quantity_precision
         self.max_risk_amount_by_strategy = dict(max_risk_amount_by_strategy or {})
 
-        # Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter
+        # Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter.
+        # The live client is imported function-local (RP-04 Step 5) so the
+        # shared core carries no module-level live-client dependency.
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
         if self.mode == ExecutionMode.SHADOW and isinstance(
             self.order_router.venue, IndodaxTradingClient
         ):
@@ -126,6 +129,8 @@ class TradingPipeline:
             raise InvalidModeTransitionError(
                 f"ILLEGAL_MODE_TRANSITION:{self.mode.value}->{new_mode.value}"
             )
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
         if new_mode == ExecutionMode.SHADOW and isinstance(
             self.order_router.venue, IndodaxTradingClient
         ):
@@ -166,6 +171,8 @@ class TradingPipeline:
             )
 
         # 2. Structural SHADOW isolation: SHADOW mode MUST NOT use real live venue adapter
+        from indodax_lab.execution.indodax_trading import IndodaxTradingClient
+
         if self.mode == ExecutionMode.SHADOW and isinstance(
             self.order_router.venue, IndodaxTradingClient
         ):

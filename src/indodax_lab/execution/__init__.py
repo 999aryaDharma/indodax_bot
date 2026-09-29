@@ -22,7 +22,6 @@ from indodax_lab.execution.indodax_readonly import (
     VenueOrder,
     VenueReadError,
 )
-from indodax_lab.execution.indodax_trading import IndodaxTradingVenue
 from indodax_lab.execution.oms import (
     OmsOrder,
     OmsOrderState,
@@ -58,6 +57,11 @@ from indodax_lab.execution.reconciliation_store import (
     ReconciliationCursorCorruptionError,
     ReconciliationCursorStore,
 )
+from indodax_lab.execution.shadow_venue import ShadowVenueAdapter
+from indodax_lab.execution.simulator_venue import (
+    SimulatedOutcome,
+    SimulatorVenueAdapter,
+)
 from indodax_lab.execution.venue import (
     TradingVenue,
     UncertainVenueSubmissionError,
@@ -90,6 +94,9 @@ __all__ = [
     "ReconciliationPolicy",
     "ReconciliationReport",
     "ReconciliationStatus",
+    "ShadowVenueAdapter",
+    "SimulatedOutcome",
+    "SimulatorVenueAdapter",
     "TradingVenue",
     "UncertainVenueSubmissionError",
     "UnresolvedOrderStateError",
@@ -103,3 +110,18 @@ __all__ = [
     "VenueRejectError",
     "normalize_venue_fill",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """Lazily resolve the live trading venue (RP-04 Step 5).
+
+    Importing this package must not pull the live write client into the
+    process; production wiring imports the name explicitly and pays the cost
+    deliberately. Research composition never touches it (see
+    runtime/composition.py, which refuses live writers by MRO).
+    """
+    if name == "IndodaxTradingVenue":
+        from indodax_lab.execution.indodax_trading import IndodaxTradingVenue
+
+        return IndodaxTradingVenue
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
