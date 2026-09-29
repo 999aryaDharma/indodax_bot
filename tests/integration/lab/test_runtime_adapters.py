@@ -118,10 +118,29 @@ def test_rp_04_1() -> None:
     with pytest.raises(SubscriberGapError) as exc_info:
         list(slow)
     assert "GAP_DETECTED" in str(exc_info.value)
+    assert exc_info.value.dropped == 1
+    assert exc_info.value.resume_sequence == 3
 
-    # Cursor resumes after the gap without replays or silent skips past it.
+    # Cursor resumes after the gap with every missed event redelivered once.
     resumed = feed.subscribe("ns", after_sequence=exc_info.value.resume_sequence)
-    assert [e.sequence for e in resumed] == [7]
+    assert [e.sequence for e in resumed] == [4, 5, 6, 7]
+
+
+def test_rp_04_1_no_replay_duplication() -> None:
+    """Mid-replay polls must not duplicate delivery (review fix-cycle regression)."""
+    from indodax_lab.market.event_feed import EventFeed
+
+    upstream = FakeUpstream([_event("stream-a", seq) for seq in range(1, 4)])
+    feed = EventFeed(upstream, max_queue=10)
+
+    sub = feed.subscribe("ns", after_sequence=0)
+    assert [next(sub).sequence for _ in range(3)] == [1, 2, 3]
+
+    # Upstream advances while the consumer is suspended mid-replay; the queue
+    # holds everything, so no gap and no duplicates are expected.
+    upstream._events.extend(_event("stream-a", seq) for seq in range(4, 8))
+    feed.poll("stream-a")
+    assert [e.sequence for e in sub] == [4, 5, 6, 7]
 
 
 def _oms_order(
@@ -308,6 +327,7 @@ def _kernel(
     candidate: object | None = None,
     namespace: str = "research",
     risk_stage: Callable | None = None,
+    oms_store: object | None = None,
 ) -> RuntimeKernel:
     from indodax_lab.execution.simulator_venue import SimulatorVenueAdapter
     from indodax_lab.execution.state_store import ExecutionStateStore
@@ -327,6 +347,7 @@ def _kernel(
         venue=venue or SimulatorVenueAdapter(),
         venue_name="simulator",
         risk_stage=risk_stage or (lambda intents, _state: tuple(intents)),
+        oms_store=oms_store,
     )
 
 
@@ -537,3 +558,101 @@ def test_rp_04_capacity_7(tmp_path: Path) -> None:
     assert not hasattr(kernel._venue, "_api_key")
     assert not hasattr(kernel._venue, "_secret_key")
     assert not hasattr(kernel._venue, "submit_live_order")
+
+
+def test_rp_04_multi_intent_distinct_orders(tmp_path: Path) -> None:
+    """One event producing two intents must yield two distinct orders, two
+    outbox rows, and no shared submission identity (review fix-cycle)."""
+    import sqlite3
+
+    intents = (_entry_intent("intent_multi_a"), _entry_intent("intent_multi_b"))
+    kernel = _kernel(tmp_path, candidate=_stub_candidate(intents=intents))
+    result = kernel.process(_event("stream-a", 1))
+    assert result.status == "ACKNOWLEDGED"
+
+    orders = kernel._store.restore().orders
+    assert len(orders) == 2
+    internal_ids = list(orders.keys())
+    client_ids = [o["client_order_id"] for o in orders.values()]
+    assert len(set(internal_ids)) == 2
+    assert len(set(client_ids)) == 2
+
+    conn = sqlite3.connect(str(tmp_path / "research.db"))
+    try:
+        outbox = conn.execute(
+            "SELECT outbox_id, status FROM events_outbox"
+        ).fetchall()
+    finally:
+        conn.close()
+    assert len(outbox) == 2
+    assert {row[1] for row in outbox} == {"SUBMITTED"}
+
+
+def test_rp_04_partial_mirror(tmp_path: Path) -> None:
+    """A PARTIAL simulator fill through process() must mirror PARTIALLY_FILLED
+    with quantity and price evidence (review fix-cycle)."""
+    from indodax_lab.execution.oms import OmsOrderState
+    from indodax_lab.execution.oms_store import OmsStore
+    from indodax_lab.execution.simulator_venue import (
+        SimulatedOutcome,
+        SimulatorVenueAdapter,
+    )
+
+    venue = SimulatorVenueAdapter(
+        outcome=SimulatedOutcome(kind="PARTIAL", fill_qty=Decimal("0.0004"))
+    )
+    oms = OmsStore(tmp_path / "oms.db")
+    kernel = _kernel(
+        tmp_path,
+        venue=venue,
+        candidate=_stub_candidate(
+            intents=(_entry_intent("intent_partial_001", qty="0.001"),)
+        ),
+        oms_store=oms,
+    )
+    result = kernel.process(_event("stream-a", 1))
+    assert result.status == "ACKNOWLEDGED"
+
+    order = oms.load_order("ord_intent_parti")
+    assert order is not None
+    assert order.state == OmsOrderState.PARTIALLY_FILLED
+    assert order.filled_qty == Decimal("0.0004")
+    assert order.average_fill_price == Decimal("100000000")
+    assert order.venue_order_id is not None
+
+
+def test_rp_04_2_delegating_wrapper_refused() -> None:
+    """A composition (non-subclass) wrapper holding a live client must be
+    refused like any other wrapper injection (review fix-cycle)."""
+    from indodax_lab.execution.indodax_trading import IndodaxTradingVenue
+    from indodax_lab.runtime.composition import (
+        ResearchBoundaryError,
+        build_research_runtime,
+    )
+
+    live = IndodaxTradingVenue(api_key="dummy", secret_key="dummy")
+
+    class DelegatingWrapper:
+        """Holds a live writer and delegates; no live class in its MRO."""
+
+        def __init__(self, inner: object) -> None:
+            self._inner = inner
+
+        def submit_order(self, order: object) -> object:
+            return self._inner.submit_order(order)  # type: ignore[union-attr]
+
+        def cancel_order(self, **kwargs: object) -> object:
+            return self._inner.cancel_order(**kwargs)  # type: ignore[union-attr]
+
+        def get_order(self, pair: str, venue_order_id: str) -> object:
+            return self._inner.get_order(pair, venue_order_id)  # type: ignore[union-attr]
+
+        def get_order_by_client_order_id(
+            self, pair: str, client_order_id: str
+        ) -> object:
+            return self._inner.get_order_by_client_order_id(  # type: ignore[union-attr]
+                pair, client_order_id
+            )
+
+    with pytest.raises(ResearchBoundaryError, match="LIVE_WRITER_FORBIDDEN"):
+        build_research_runtime({"venue": DelegatingWrapper(live)})

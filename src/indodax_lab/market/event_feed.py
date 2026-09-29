@@ -80,11 +80,21 @@ class EventFeed:
                     continue
                 if len(sub.queue) >= self._max_queue:
                     sub.queue.popleft()
-                    sub.gap = SubscriberGapError(
-                        target,
-                        resume_sequence=sub.queue[-1].sequence if sub.queue else sub.cursor,
-                        dropped=sub.gap.dropped + 1 if sub.gap else 1,
-                    )
+                    if sub.gap is None:
+                        # Resume from the last delivered position so the first
+                        # dropped event and everything after it is replayable
+                        # from the buffer; never skip past undelivered events.
+                        sub.gap = SubscriberGapError(
+                            target,
+                            resume_sequence=sub.cursor,
+                            dropped=1,
+                        )
+                    else:
+                        sub.gap = SubscriberGapError(
+                            target,
+                            resume_sequence=sub.gap.resume_sequence,
+                            dropped=sub.gap.dropped + 1,
+                        )
                 sub.queue.append(event)
         self._polled_once = True
         return fresh
@@ -94,19 +104,23 @@ class EventFeed:
     ) -> Iterator[CanonicalMarketEvent]:
         """Replay buffered events above ``after_sequence``, then stream live ones.
 
-        Replay is delivered directly (never queued); only events arriving via
-        later polls use the bounded live queue, where overflow raises an
-        explicit gap instead of silently skipping.
+        Replay is delivered from a snapshot taken at subscribe time (never
+        queued); only events arriving via later polls use the bounded live
+        queue, where overflow raises an explicit gap instead of silently
+        skipping. The queue drain is sequence-guarded against the cursor so a
+        poll landing mid-replay can never duplicate delivery.
         """
         if not self._polled_once:
             self.poll(self._feed_id)
+        replay = [e for e in self._buffer if e.sequence > after_sequence]
         sub = _Subscriber(namespace=namespace, cursor=after_sequence)
         self._subscribers.append(sub)
         try:
-            for event in self._buffer:
-                if event.sequence > after_sequence:
-                    yield event
-                    sub.cursor = event.sequence
+            # Cursor tracks the last handed-out sequence (set before yield)
+            # so a poll landing mid-replay sees an accurate position.
+            for event in replay:
+                sub.cursor = event.sequence
+                yield event
             while True:
                 if sub.gap is not None:
                     gap, sub.gap = sub.gap, None
@@ -114,6 +128,8 @@ class EventFeed:
                 if not sub.queue:
                     return
                 event = sub.queue.popleft()
+                if event.sequence <= sub.cursor:
+                    continue
                 sub.cursor = event.sequence
                 yield event
         finally:

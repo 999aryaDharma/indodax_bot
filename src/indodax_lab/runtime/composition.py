@@ -28,12 +28,14 @@ class ResearchBoundaryError(Exception):
     """A live execution writer was offered to the research composition."""
 
 
-def _is_live_writer(venue: Any) -> bool:
+def _is_live_writer(venue: Any, _depth: int = 0) -> bool:
     """Detect live writers transitively: exact class, subclass, or wrapper.
 
     A wrapper subclass inherits the live MRO, so checking every class in the
     method-resolution order (by qualified name and defining module) catches
-    factory/wrapper injection, not just the concrete client.
+    factory/wrapper injection, not just the concrete client. A composition
+    wrapper *holding* a live client is caught by walking one level of
+    instance attributes; deeper nesting is out of scope and documented.
     """
     for klass in type(venue).__mro__:
         name = f"{klass.__module__}.{klass.__qualname__}".lower()
@@ -41,7 +43,13 @@ def _is_live_writer(venue: Any) -> bool:
             return True
         if _LIVE_MODULE_MARKER in klass.__module__.lower() and "readonly" not in name:
             return True
-    return False
+    if _depth >= 1:
+        return False
+    try:
+        held = list(vars(venue).values())
+    except TypeError:
+        return False
+    return any(_is_live_writer(value, _depth + 1) for value in held)
 
 
 def _resolve_venue(spec: Mapping[str, Any]) -> tuple[TradingVenue, str]:
@@ -86,6 +94,10 @@ def build_research_runtime(
     ``spec`` carries ``venue`` (``'simulator'`` | ``'shadow'`` | a
     ``TradingVenue`` instance) or ``venue_factory`` (resolved then vetted),
     plus kernel wiring passed through to ``kernel_factory``.
+
+    Scope note: a caller-supplied ``kernel_factory`` receives the vetted
+    venue but may ignore it, so the no-live-adapter guarantee holds for the
+    default factory; custom factories are an explicit test seam.
     """
     venue, venue_name = _resolve_venue(spec)
     factory = kernel_factory or RuntimeKernel.minimal

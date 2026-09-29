@@ -127,7 +127,14 @@ class RuntimeKernel:
         state = self._runtime_state(event)
         intents = tuple(self._candidate.evaluate(event, state))
         approved = tuple(self._risk_stage(intents, state))
-        orders = [self._intent_to_order(intent, event) for intent in approved]
+        # One event may approve several intents: give each a stable per-event
+        # ordinal so restarts derive identical but distinct order identities.
+        # Single-intent events keep the legacy unsuffixed IDs.
+        multi = len(approved) > 1
+        orders = [
+            self._intent_to_order(intent, event, idx if multi else None)
+            for idx, intent in enumerate(approved)
+        ]
 
         next_state = self._next_state(event, state)
         decided = self._store.commit_decision(
@@ -201,12 +208,15 @@ class RuntimeKernel:
     # -- orders -----------------------------------------------------------------
 
     @staticmethod
-    def _intent_to_order(intent: Any, event: CanonicalMarketEvent) -> OmsOrder:
+    def _intent_to_order(
+        intent: Any, event: CanonicalMarketEvent, ordinal: int | None = None
+    ) -> OmsOrder:
         """Deterministic NEW order per intent: restarts derive identical IDs."""
         digest = str(intent.intent_id if hasattr(intent, "intent_id") else event.event_id)
+        suffix = "" if ordinal is None else f"_{ordinal}"
         return OmsOrder(
-            internal_order_id=f"ord_{digest[:12]}",
-            client_order_id=f"cl_{digest[:12]}",
+            internal_order_id=f"ord_{digest[:12]}{suffix}",
+            client_order_id=f"cl_{digest[:12]}{suffix}",
             pair=str(intent.pair if hasattr(intent, "pair") else event.pair),
             side=intent.side,
             desired_qty=intent.desired_qty,
@@ -218,16 +228,28 @@ class RuntimeKernel:
     def _mirror_oms_new(self, order: OmsOrder, event: CanonicalMarketEvent) -> None:
         if self._oms_store is None:
             return
-        self._oms_store.create_order(order, event_id=f"kernel_{event.event_id}")
+        self._oms_store.create_order(
+            order, event_id=f"kernel_{order.internal_order_id}_new"
+        )
 
     def _mirror_oms_outcome(self, order: OmsOrder, outcome: dict[str, Any]) -> None:
         if self._oms_store is None:
             return
+        from decimal import Decimal as _Decimal
+
         status = str(outcome.get("status", "UNKNOWN")).upper()
-        target = {
-            "SUBMITTED": OmsOrderState.ACKNOWLEDGED,
-            "REJECTED": OmsOrderState.REJECTED,
-        }.get(status, OmsOrderState.UNKNOWN)
+        venue_order_id = outcome.get("venue_order_id")
+        filled_qty = None
+        average_fill_price = None
+        if status == "SUBMITTED" and outcome.get("partial"):
+            target = OmsOrderState.PARTIALLY_FILLED
+            filled_qty = _Decimal(str(outcome.get("executed_qty", "0")))
+            average_fill_price = _Decimal(str(outcome.get("price", "0")))
+        else:
+            target = {
+                "SUBMITTED": OmsOrderState.ACKNOWLEDGED,
+                "REJECTED": OmsOrderState.REJECTED,
+            }.get(status, OmsOrderState.UNKNOWN)
         current = self._oms_store.load_order(order.internal_order_id)
         if current is None:
             return
@@ -239,14 +261,24 @@ class RuntimeKernel:
                 reason="KERNEL_DISPATCHED",
             )
             self._oms_store.apply_transition(
-                current, submitting, event_id=f"kernel_{current.internal_order_id}"
+                current,
+                submitting,
+                event_id=f"kernel_{current.internal_order_id}_dispatch",
             )
             current = submitting
         transitioned = OmsStateMachine.transition(
-            current, target, at=current.updated_at, reason=f"KERNEL_{status}"
+            current,
+            target,
+            at=current.updated_at,
+            reason=f"KERNEL_{status}",
+            venue_order_id=venue_order_id,
+            filled_qty=filled_qty,
+            average_fill_price=average_fill_price,
         )
         self._oms_store.apply_transition(
-            current, transitioned, event_id=f"kernel_{current.internal_order_id}"
+            current,
+            transitioned,
+            event_id=f"kernel_{current.internal_order_id}_{status.lower()}",
         )
 
     def _submit(self, order: OmsOrder) -> dict[str, Any]:
@@ -261,10 +293,14 @@ class RuntimeKernel:
             return {"status": "REJECTED", "reason": f"VENUE_INVALID:{exc}"}
         except Exception as exc:  # timeout/crash after dispatch is UNKNOWN
             return {"status": "UNKNOWN", "reason": f"VENUE_ERROR:{exc}"}
+        executed = receipt.executed_qty
         return {
             "status": "SUBMITTED",
             "venue_order_id": receipt.order_id,
-            "executed_qty": str(receipt.executed_qty),
+            "executed_qty": str(executed),
+            "remaining_qty": str(receipt.remaining_qty),
+            "price": str(receipt.price),
+            "partial": bool(executed < order.desired_qty),
         }
 
 

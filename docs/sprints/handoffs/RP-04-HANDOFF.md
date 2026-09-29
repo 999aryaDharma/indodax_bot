@@ -53,3 +53,14 @@ Gates: focused file 10 passed; affected (runtime+execution+market+control+regist
 ## Pending external gates
 - No production activation; real-data/host runs need source/license/cost/resource evidence.
 - Coordinator: manifest READY→IN_PROGRESS→REVIEW transitions and DONE promotion after independent PASS.
+
+## Fix cycle 1 (advisory review NEEDS-FIX → addressed)
+- Reviewer: subagent session `ses_f13f181b1ffejvek67vrgl2YKA` (advisory only, not final approval). Verdict NEEDS-FIX, 0 Critical, 5 Important, 2 Minor. All accepted as blocking; fixed in one batch below.
+- I1 replay/queue double-delivery + spurious gap (`event_feed.py`): replay now from subscribe-time snapshot; queue drain sequence-guarded; cursor set before yield. Pinned by `test_rp_04_1_no_replay_duplication`.
+- I2 lossy gap cursor (`event_feed.py`): first-drop resume keeps last-delivered cursor; dropped count accumulates; `test_rp_04_1` resume corrected `[7]`→`[4,5,6,7]` with `dropped==1`, `resume==3`.
+- I3 multi-intent order-ID collision (`kernel.py`): stable per-event ordinal suffix when >1 intent; single-intent IDs unchanged (backward compat with bootstrap/restart evidence). Pinned by `test_rp_04_multi_intent_distinct_orders`.
+- I4 PARTIAL evidence loss (`kernel.py`): `_submit` propagates price/executed/partial; mirror transitions PARTIALLY_FILLED with qty+price and always carries venue_order_id; per-transition OMS event IDs (`_new`/`_dispatch`/`_<status>`). Pinned by `test_rp_04_partial_mirror`.
+- I5 delegation-wrapper bypass (`composition.py`): `_is_live_writer` walks one level of held attributes; deeper nesting documented out of scope. Pinned by `test_rp_04_2_delegating_wrapper_refused`.
+- M1 `kernel_factory` scope documented; M2 simulator keeps receipt index so `get_order*` supports reconcile-by-ID.
+- Evidence: 14/14 focused pass; affected gate 139 passed (runtime+execution+market+control+registry); ruff clean on touched files. Full-repo gate reuses prior result (only change since is this batch; affected gate covers blast radius).
+- Not DONE: implementer cannot final-approve own work; manifest untouched (coordinator single-writer). Needs independent PASS + coordinator promotion.

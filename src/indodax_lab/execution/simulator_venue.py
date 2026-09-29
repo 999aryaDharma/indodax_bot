@@ -58,6 +58,7 @@ class SimulatorVenueAdapter(TradingVenue):
         self._outcome = outcome or SimulatedOutcome()
         self._clock = clock or (lambda: datetime.now(UTC))
         self._sequence = 0
+        self._receipts: dict[str, VenueOrder] = {}
 
     def submit_order(self, order: OmsOrder) -> VenueOrder:
         """Submit through the injected fill model, returning a normalized fill."""
@@ -83,7 +84,7 @@ class SimulatorVenueAdapter(TradingVenue):
         else:
             executed = order.desired_qty
         now = self._clock()
-        return VenueOrder(
+        receipt = VenueOrder(
             order_id=f"sim_{self._sequence:06d}",
             client_order_id=order.client_order_id,
             pair=order.pair,
@@ -96,6 +97,8 @@ class SimulatorVenueAdapter(TradingVenue):
             remaining_qty=order.desired_qty - executed,
             submitted_at=now,
         )
+        self._receipts[receipt.order_id] = receipt
+        return receipt
 
     def cancel_order(
         self,
@@ -109,13 +112,17 @@ class SimulatorVenueAdapter(TradingVenue):
         raise VenueRejectError("SIMULATED_CANCEL_UNTRACKED: no live order book")
 
     def get_order(self, pair: str, venue_order_id: str) -> VenueOrder | None:
-        """Simulator keeps no order book; fills are returned at submit time."""
-        return None
+        """Look up a previously returned simulator receipt (reconcile, no resend)."""
+        receipt = self._receipts.get(venue_order_id)
+        return receipt if receipt is not None and receipt.pair == pair else None
 
     def get_order_by_client_order_id(
         self, pair: str, client_order_id: str
     ) -> VenueOrder | None:
-        """Simulator keeps no order book; fills are returned at submit time."""
+        """Look up a previously returned simulator receipt by client ID."""
+        for receipt in self._receipts.values():
+            if receipt.pair == pair and receipt.client_order_id == client_order_id:
+                return receipt
         return None
 
 
