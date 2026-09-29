@@ -33,3 +33,9 @@
 - Real Indodax account freshness was not exercised; the route test uses a fake provider with a server timestamp. No live service, credential, or account state was accessed.
 - The `/portfolio` API route returns the real-account read model, but this sprint does not build the portfolio page. UI-02 owns the operator-facing account/balance view.
 - Production startup still needs trusted auth middleware and the existing Production-owned view-only account provider plus the exact Production state root/namespace. No API deployment or ASUS host change was performed.
+
+## CI defect record - Linux runner failure 2026-09-29 (needs CR, DONE sprint untouched)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | External audit reports CI dev red: 6 failures in tests/integration/lab/api/test_production_routes.py, all `ValueError: PRODUCTION_STATE_ROOT_MUST_BE_ABSOLUTE`.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Root cause verified by stdlib semantics at dev HEAD: fixture `production_state_root="D:/var/lib/indodax"` is absolute on Windows (PureWindowsPath.is_absolute True) but NOT on POSIX (PurePosixPath.is_absolute False), so Linux CI trips the intentional fail-closed guard in src/indodax_lab/api/app.py:42-43. Production-code guard is correct; the DONE test fixture is non-portable. No code changed (DONE sprint - fix needs defect/CR + owner).
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Proposed minimal fix for CR scoping: test-only, replace the `D:/...` literal with a platform-absolute path (e.g. tmp_path fixture); intent `valid absolute root` preserved, zero production behavior change.
