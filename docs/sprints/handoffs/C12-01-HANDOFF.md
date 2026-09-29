@@ -215,3 +215,8 @@ genuinely below a non-negative floor. Fixing this needs either a distinct
 reason code for the positive-return criterion or a floor on
 `cash_breadth_threshold`; both are behavior changes beyond the prescribed note
 remedy and are left for the coordinator to scope.
+
+## Takeover verification on dev HEAD (2026-09-29)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Dead-session branch `feat/c12-01-relative-strength-rotation` (ca08f82, clean worktree) merged to dev as `df461c6` (additive, +1012/-0). Post-merge on dev HEAD: `test_c12.py + test_s08.py + test_versioned_registry.py` = 29 passed; S09 gate `test_research_tail_risk_gate.py` = 24 passed; full strategies dir = 184 passed; ruff clean. No code changed by takeover beyond the merge.
+- Still needs: independent reviewer (takeover owner cannot self-PASS) + coordinator manifest move IN_PROGRESS->REVIEW->DONE. Spec boxes stay unchecked until then.
