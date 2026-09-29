@@ -7,6 +7,15 @@ Guarantees:
 2. OPS-01-AC1: Cold boot single-writer lock strictly prevents two concurrent writers (ConcurrentWriterLockError).
 3. OPS-01-AC2: SIGTERM signal triggers buffer flush and releases active lease lock.
 4. OPS-01-AC3: Missing secrets fail closed without printing secret contents in error messages or logs.
+5. OPS-01-AC4: Supervised start admits only within a configured thread budget that
+   preserves Production headroom; Research load breaching headroom is rejected.
+6. OPS-01-AC5: Supervised start resolves each configured storage path to its
+   actual mount/device (via recovery.resolve_path_mount) and enforces a shared
+   per-device reserve; unresolvable paths fail closed.
+7. OPS-01-AC6: Unattended-recovery windows are recorded as operator-pending
+   artifacts; blind order retry or bypassed entry blocks can never be recorded.
+8. ADR-009: Production vs Research domain split is verified fail-closed
+   (distinct names, data roots, credentials, writer resources).
 """
 
 from __future__ import annotations
@@ -14,10 +23,16 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import tempfile
-from typing import BinaryIO, Callable, Mapping, Sequence
-from pydantic import BaseModel, ConfigDict, Field
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, BinaryIO
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+if TYPE_CHECKING:
+    from indodax_lab.operations.recovery import MountCapacityInfo
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +50,83 @@ class MissingSecretError(ValueError):
 
 class LifecycleOperationError(RuntimeError):
     """Raised when no concrete lifecycle hook exists or a hook fails."""
+
+
+# ---------------------------------------------------------------------------
+# Service domains (ADR-009) and capacity budgets (OPS-01-AC4)
+# ---------------------------------------------------------------------------
+
+_SERVICE_DOMAINS = ("production", "research", "unspecified")
+
+
+class ServiceCapacityBudget(BaseModel):
+    """Thread budget for one host with a reserved Production headroom (OPS-01-AC4).
+
+    Test fixtures supply their own numbers; none of these values are measured
+    production defaults. The 24h soak / measured ASUS numbers remain an
+    operator-owned pending item: this model enforces the admission arithmetic,
+    not the physical measurement.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    max_total_threads: int = Field(ge=1)
+    production_reserved_threads: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def _check_reserve_within_total(self) -> ServiceCapacityBudget:
+        if self.production_reserved_threads > self.max_total_threads:
+            raise ValueError("PRODUCTION_RESERVE_EXCEEDS_TOTAL")
+        return self
+
+    @property
+    def research_headroom_threads(self) -> int:
+        """Threads Research may occupy without touching Production headroom."""
+        return self.max_total_threads - self.production_reserved_threads
+
+
+def verify_production_research_isolation(services: Sequence[ManagedService]) -> None:
+    """Fail closed when Production and Research authority domains overlap (ADR-009).
+
+    Production Main owns live credentials and write paths; Research Runtime
+    must not share them. Every violation raises LifecycleOperationError with a
+    stable code. Credential *names* are never echoed: AC3 redaction applies to
+    isolation diagnostics too.
+    """
+    productions = [
+        s for s in services if getattr(s, "service_domain", "unspecified") == "production"
+    ]
+    researches = [
+        s for s in services if getattr(s, "service_domain", "unspecified") == "research"
+    ]
+    for prod in productions:
+        for res in researches:
+            if prod.service_name == res.service_name:
+                raise LifecycleOperationError(
+                    "DOMAIN_ISOLATION_VIOLATION:SHARED_SERVICE_NAME: Production and Research "
+                    "must run as distinct service identities (ADR-009)."
+                )
+            if prod.profile.data_root == res.profile.data_root:
+                raise LifecycleOperationError(
+                    "DOMAIN_ISOLATION_VIOLATION:SHARED_DATA_ROOT: Production and Research "
+                    "must not share one data root (ADR-009)."
+                )
+            if set(prod.required_secrets) & set(res.required_secrets):
+                raise LifecycleOperationError(
+                    "DOMAIN_ISOLATION_VIOLATION:SHARED_CREDENTIAL: Production and Research "
+                    "declare overlapping credential requirements (ADR-009)."
+                )
+            prod_lock = getattr(prod, "writer_lock", None)
+            res_lock = getattr(res, "writer_lock", None)
+            if (
+                prod_lock is not None
+                and res_lock is not None
+                and prod_lock.lock_path == res_lock.lock_path
+            ):
+                raise LifecycleOperationError(
+                    "DOMAIN_ISOLATION_VIOLATION:SHARED_WRITER_LOCK: Production and Research "
+                    "must hold distinct writer resources (ADR-009)."
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +264,15 @@ class ManagedService:
         flush_hook: Callable[[], bool] | None = None,
         required_secrets: Sequence[str] = (),
         secret_resolver: Callable[[str], str] | None = None,
+        writer_lock: SingleWriterLock | None = None,
+        writer_id: str | None = None,
+        service_domain: str = "unspecified",
+        worker_threads: int = 1,
     ) -> None:
+        if service_domain not in _SERVICE_DOMAINS:
+            raise ValueError(f"UNKNOWN_SERVICE_DOMAIN:{service_domain}")
+        if worker_threads < 1:
+            raise ValueError("WORKER_THREADS_MUST_BE_POSITIVE")
         self.service_name = service_name
         self.profile = profile
         self.status = "STOPPED"
@@ -183,6 +283,13 @@ class ManagedService:
         self._stop_hook = stop_hook
         self._flush_hook = flush_hook
         self._secret_resolver = secret_resolver
+        # OPS-01-AC1: the writer lock is acquired at start, not merely available.
+        self.writer_lock = writer_lock
+        self.writer_id = writer_id or service_name
+        # ADR-009: authority domain this service runs in.
+        self.service_domain = service_domain
+        # OPS-01-AC4: thread demand counted against the host capacity budget.
+        self.worker_threads = worker_threads
 
     def _verify_required_secrets(self) -> None:
         """Fail closed before any start hook runs when a credential is unset.
@@ -210,18 +317,49 @@ class ManagedService:
         if succeeded is not True:
             raise LifecycleOperationError(f"{operation.upper()}_FAILED")
 
+    def _acquire_writer_lock(self) -> bool:
+        """Acquire the writer lock when one is configured (OPS-01-AC1).
+
+        Returns True when this call took ownership. A lock held by another
+        writer raises ConcurrentWriterLockError and the service never starts.
+        """
+        lock = self.writer_lock
+        if lock is None:
+            return False
+        if lock.is_locked and lock.current_writer == self.writer_id:
+            return False
+        lock.acquire(self.writer_id)
+        return True
+
+    def _release_writer_lock(self) -> None:
+        """Release the writer lock when this service owns it."""
+        lock = self.writer_lock
+        if lock is None:
+            return
+        if lock.current_writer == self.writer_id:
+            lock.release(self.writer_id)
+
     def start(self) -> None:
         """Start the managed service, refusing to run unconfigured."""
         # Credentials are resolved first: a start hook must never observe a
         # half-configured process, and a refusal must publish no RUNNING state.
         self._verify_required_secrets()
-        self._run_hook("start", self._start_hook)
+        # OPS-01-AC1: take the single-writer lease before any start hook runs,
+        # so a duplicate writer can never reach RUNNING beside us.
+        acquired_here = self._acquire_writer_lock()
+        try:
+            self._run_hook("start", self._start_hook)
+        except BaseException:
+            if acquired_here:
+                self._release_writer_lock()
+            raise
         self.status = "RUNNING"
         self.is_flushed = False
 
     def stop(self) -> None:
         """Stop the managed service."""
         self._run_hook("stop", self._stop_hook)
+        self._release_writer_lock()
         self.status = "STOPPED"
 
     def restart(self) -> None:
@@ -240,9 +378,89 @@ class ManagedService:
             # process-stop evidence has completed.
             self._run_hook("flush", self._flush_hook)
             self._run_hook("stop", self._stop_hook)
+            self._release_writer_lock()
             self.is_flushed = True
             self.active_lease = None
             self.status = "STOPPED"
+
+
+# ---------------------------------------------------------------------------
+# Unattended recovery recording (OPS-01-AC6)
+# ---------------------------------------------------------------------------
+
+
+class UnattendedRecoveryRecord(BaseModel):
+    """Recorded intent for a 12-hour unattended incident window (OPS-01-AC6).
+
+    The recording framework validates the safety shape (entry blocks
+    preserved, manual resume required, no blind order retry) and persists the
+    artifact. The physical 12-hour watch itself cannot be synthesized: a fresh
+    record stays UNVERIFIED with no operator acknowledgement until an operator
+    completes the run on the host.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    host_name: str
+    window_started_at_utc: datetime
+    window_hours: int = 12
+    scenarios: tuple[str, ...]
+    entry_blocks_preserved: bool = True
+    manual_resume_required: bool = True
+    blind_order_retry_detected: bool = False
+    operator_acknowledged_at_utc: datetime | None = None
+    workload_status: str = "UNVERIFIED"
+
+
+def record_unattended_recovery(
+    host_name: str,
+    output_path: Path,
+    scenarios: Sequence[str],
+    *,
+    window_hours: int = 12,
+    entry_blocks_preserved: bool = True,
+    manual_resume_required: bool = True,
+    blind_order_retry_detected: bool = False,
+) -> UnattendedRecoveryRecord:
+    """Record an unattended-recovery qualification window (OPS-01-AC6).
+
+    Fail-closed validation: a record that bypasses entry blocks, drops the
+    manual-resume requirement, or reports a blind order retry is refused and
+    nothing is persisted.
+    """
+    if not host_name or not host_name.strip():
+        raise LifecycleOperationError("UNATTENDED_RECORD_INVALID:HOST_NAME_REQUIRED")
+    if not scenarios:
+        raise LifecycleOperationError("UNATTENDED_RECORD_INVALID:SCENARIOS_EMPTY")
+    if window_hours <= 0:
+        raise LifecycleOperationError("UNATTENDED_RECORD_INVALID:WINDOW_MUST_BE_POSITIVE")
+    if blind_order_retry_detected:
+        raise LifecycleOperationError(
+            "UNATTENDED_RECORD_INVALID:BLIND_ORDER_RETRY: uncertain orders must resume "
+            "manually, never via blind retry (OPS-01-AC6)."
+        )
+    if not entry_blocks_preserved:
+        raise LifecycleOperationError(
+            "UNATTENDED_RECORD_INVALID:ENTRY_BLOCKS_BYPASSED: operator absence must not "
+            "bypass entry blocks (OPS-01-AC6)."
+        )
+    if not manual_resume_required:
+        raise LifecycleOperationError(
+            "UNATTENDED_RECORD_INVALID:MANUAL_RESUME_REQUIRED: recovery after stale feed, "
+            "disconnection, process death or uncertain orders requires manual resume "
+            "(OPS-01-AC6)."
+        )
+    report = UnattendedRecoveryRecord(
+        host_name=host_name,
+        window_started_at_utc=datetime.now(UTC),
+        window_hours=window_hours,
+        scenarios=tuple(scenarios),
+        entry_blocks_preserved=True,
+        manual_resume_required=True,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -264,6 +482,13 @@ class ServiceManager:
         # None means "consult the live process environment at resolve time";
         # an injected mapping makes the credential source explicit and testable.
         self._env = env
+        # OPS-01-AC4: unset until the operator configures a budget; supervised
+        # starts refuse while it is unset (fail closed, never a silent pass).
+        self._capacity_budget: ServiceCapacityBudget | None = None
+        # OPS-01-AC5: configured storage paths + per-device reserve, unset until
+        # the operator configures them.
+        self._storage_paths: tuple[str, ...] = ()
+        self._storage_reserve_bytes: int = 0
 
     def _current_env(self) -> Mapping[str, str]:
         return os.environ if self._env is None else self._env
@@ -276,6 +501,10 @@ class ServiceManager:
         stop_hook: Callable[[], bool] | None = None,
         flush_hook: Callable[[], bool] | None = None,
         required_secrets: Sequence[str] = (),
+        writer_lock: SingleWriterLock | None = None,
+        writer_id: str | None = None,
+        service_domain: str = "unspecified",
+        worker_threads: int = 1,
     ) -> ManagedService:
         """Register a new service under this manager's host profile.
 
@@ -296,6 +525,10 @@ class ServiceManager:
             flush_hook=flush_hook,
             required_secrets=required_secrets,
             secret_resolver=self._resolve_for_service,
+            writer_lock=writer_lock,
+            writer_id=writer_id,
+            service_domain=service_domain,
+            worker_threads=worker_threads,
         )
         self._services[service_name] = srv
         return srv
@@ -303,6 +536,112 @@ class ServiceManager:
     def get_service(self, service_name: str) -> ManagedService | None:
         """Return the registered service, or None when it was never registered."""
         return self._services.get(service_name)
+
+    def verify_isolation(self) -> None:
+        """Verify the ADR-009 Production/Research split across registered services."""
+        verify_production_research_isolation(list(self._services.values()))
+
+    def configure_capacity_budget(self, budget: ServiceCapacityBudget) -> None:
+        """Install the host thread budget (OPS-01-AC4)."""
+        self._capacity_budget = budget
+
+    def configure_storage_paths(
+        self, paths: Sequence[str | Path], *, reserve_bytes: int
+    ) -> None:
+        """Install configured storage paths + per-device reserve (OPS-01-AC5)."""
+        if not paths:
+            raise ValueError("STORAGE_PATHS_CANNOT_BE_EMPTY")
+        if reserve_bytes < 1:
+            raise ValueError("STORAGE_RESERVE_MUST_BE_POSITIVE")
+        self._storage_paths = tuple(str(p) for p in paths)
+        self._storage_reserve_bytes = reserve_bytes
+
+    def inventory_mounts(self, paths: Sequence[str | Path]) -> dict[str, MountCapacityInfo]:
+        """Resolve each configured path to its mount + device (OPS-01-AC5).
+
+        Reuses the recovery.py mount resolver; unknown mappings fail closed
+        with PATH_MOUNT_UNRESOLVED instead of a silent pass.
+        """
+        from indodax_lab.operations.recovery import resolve_path_mount
+
+        inventory: dict[str, MountCapacityInfo] = {}
+        for raw in paths:
+            try:
+                inventory[str(raw)] = resolve_path_mount(Path(raw))
+            except (OSError, ValueError) as exc:
+                raise LifecycleOperationError(
+                    f"PATH_MOUNT_UNRESOLVED:{raw}: mount cannot be determined (OPS-01-AC5)."
+                ) from exc
+        return inventory
+
+    def _check_capacity_admission(self, service: ManagedService) -> None:
+        """Enforce thread budget + Production headroom before start (OPS-01-AC4)."""
+        budget = self._capacity_budget
+        if budget is None:
+            raise LifecycleOperationError(
+                "CAPACITY_BUDGET_UNCONFIGURED: supervised start requires a configured "
+                "capacity budget preserving Production headroom (OPS-01-AC4)."
+            )
+        running = [s for s in self._services.values() if s.status == "RUNNING"]
+        total = sum(s.worker_threads for s in running)
+        if total + service.worker_threads > budget.max_total_threads:
+            raise LifecycleOperationError(
+                f"CAPACITY_BUDGET_EXCEEDED: admitting '{service.service_name}' "
+                f"({service.worker_threads} threads) would exceed host budget "
+                f"{budget.max_total_threads} (OPS-01-AC4)."
+            )
+        if service.service_domain != "production":
+            nonprod = sum(s.worker_threads for s in running if s.service_domain != "production")
+            if nonprod + service.worker_threads > budget.research_headroom_threads:
+                raise LifecycleOperationError(
+                    f"PRODUCTION_HEADROOM_EXCEEDED: admitting '{service.service_name}' "
+                    f"({service.worker_threads} threads) would consume Production "
+                    f"headroom of {budget.production_reserved_threads} threads (OPS-01-AC4)."
+                )
+
+    def _check_storage_admission(self) -> None:
+        """Enforce per-device mount reserve before start (OPS-01-AC5)."""
+        if not self._storage_paths:
+            return
+        inventory = self.inventory_mounts(self._storage_paths)
+        by_device: dict[str, list[str]] = {}
+        for raw, info in inventory.items():
+            by_device.setdefault(info.device, []).append(raw)
+        for device, raws in by_device.items():
+            required = self._storage_reserve_bytes * len(raws)
+            free = inventory[raws[0]].free_bytes
+            if free < required:
+                raise LifecycleOperationError(
+                    f"MOUNT_RESERVE_EXCEEDED:{device}: {free} bytes free below reserve "
+                    f"{required} bytes for {len(raws)} path(s) sharing the device "
+                    "(OPS-01-AC5)."
+                )
+
+    def _lookup(self, service_name: str) -> ManagedService:
+        service = self._services.get(service_name)
+        if service is None:
+            raise LifecycleOperationError(f"UNKNOWN_SERVICE:{service_name}")
+        return service
+
+    def start_service(self, service_name: str) -> ManagedService:
+        """Supervised start: isolation + budget + mount guards, then start."""
+        service = self._lookup(service_name)
+        self.verify_isolation()
+        self._check_capacity_admission(service)
+        self._check_storage_admission()
+        service.start()
+        return service
+
+    def stop_service(self, service_name: str) -> ManagedService:
+        """Supervised stop: stop hook, then release the writer lock."""
+        service = self._lookup(service_name)
+        service.stop()
+        return service
+
+    def restart_service(self, service_name: str) -> ManagedService:
+        """Supervised restart: stop, then re-admit and start."""
+        self.stop_service(service_name)
+        return self.start_service(service_name)
 
     def _resolve_for_service(self, secret_key: str) -> str:
         return self.resolve_secret(secret_key, self._current_env())

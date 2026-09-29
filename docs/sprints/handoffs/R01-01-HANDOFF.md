@@ -39,6 +39,9 @@ Status: REVIEW
 | R01-01-AC3 (GREEN) | `test_r01_01_contract_3` | `python -m pytest tests/research/test_rl_reward_contract.py::test_r01_01_contract_3` | Exit 0 (Passed, live scheduler export strictly forbidden) | `1c24f9b` |
 
 All 4 tests in `tests/research/test_rl_reward_contract.py` passed (1.95s).
+
+Update 2026-09-29 (branch `dev`): suite is now 12 tests, all passing.
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fresh run `python -m pytest tests/research/test_rl_reward_contract.py -q -p no:cacheprovider`: 12 passed, exit 0. Doc-vs-code IMPORTANT verified closed in the tree (`rl-feasibility.md` recommends INCONCLUSIVE/unevaluated with explicit retraction of the withdrawn NOT_RECOMMENDED Sharpe claim). Remaining: dep gates QA-01/SHADOW-02 REVIEW (manifest-owned, untouched).
 Full lab suite verification: 231 passed across all domains.
 
 ## Review

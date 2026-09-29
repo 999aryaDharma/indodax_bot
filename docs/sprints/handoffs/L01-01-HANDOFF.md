@@ -81,3 +81,7 @@ Full lab suite verification: 271 passed across all domains (13.17s).
   check into entry paths. New test file 11 passed; lob dir 43 passed (pyarrow
   collects excluded as ENV-GAP). Residual: real train()/predict() torch loop,
   when added, must call through the gateways.
+
+## Confirmation (2026-09-29, branch `dev`, pyarrow 25.0.1 present)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free) | Fresh run `python -m pytest tests/integration/lab/test_tlob_smoke.py tests/integration/lab/test_deeplob_smoke.py -q -p no:cacheprovider`: 8 passed, exit 0. Smoke evidence still established on this tree. Remaining gate: dep L01-01→D01-01 chain (D01-01 DELTA-PASS, manifest-owned, untouched).
