@@ -13,6 +13,9 @@ Guarantees (docs/implementation/CONTRACTS.md):
   reason; prior committed evidence is preserved.
 - Duplicate same-bytes events are no-op replays via store idempotency;
   conflicting bytes halt only the affected agent.
+- Restart restores exactly: kernel feature/exit windows, cursor and risk
+  revision are rehydrated from the durable inbox journal on kernel
+  rebuild (no invented state; undecodable bars fail closed).
 - Corruption halts the affected agent with an incident ref; others trade on.
 - Retire preserves every evidence row; retired agents reject processing.
 - Lifecycle: REGISTERED -> RUNNING <-> PAUSED -> RETIRED; failures enter
@@ -255,8 +258,71 @@ class AgentFactory:
             venue_name=_venue_name(venue),
             risk_stage=lambda intents, _state: tuple(intents),
         )
+        self._rehydrate_kernel(kernel, store, agent_id)
         self._kernels[key] = kernel
         return kernel
+
+    def _rehydrate_kernel(
+        self, kernel: RuntimeKernel, store: ExecutionStateStore, agent_id: str
+    ) -> None:
+        """Rebuild in-memory feature/exit windows from the durable journal.
+
+        The store persists every acknowledged event's canonical bytes
+        (events_inbox.event_data_json); bars are deserialized back into
+        MarketBar observations in sequence order, the bounded feature
+        window is restored, exit state is re-derived by deterministic
+        replay, and cursor/risk revision are restored. Nothing is
+        invented: a bar that fails validation fails closed with
+        AGENT_WINDOW_REHYDRATE_FAILED.
+        """
+        from indodax_lab.backtest.events import MarketBar
+        from indodax_lab.runtime.candidate import MarketCursor
+        from indodax_lab.runtime.exits import ExitState, advance_exit_state
+
+        conn = sqlite3.connect(str(store.db_path), timeout=30.0)
+        try:
+            conn.row_factory = sqlite3.Row
+            try:
+                rows = conn.execute(
+                    "SELECT status, event_data_json FROM events_inbox "
+                    "ORDER BY sequence_num ASC"
+                ).fetchall()
+            except sqlite3.Error:
+                return  # Fresh store: nothing durable yet.
+        finally:
+            conn.close()
+        bars = []
+        for row in rows:
+            if row["status"] != "ACKNOWLEDGED":
+                continue
+            try:
+                payload = json.loads(row["event_data_json"])
+                bars.append(MarketBar.model_validate(payload["observation"]))
+            except (ValueError, KeyError, TypeError) as exc:
+                raise AgentError(
+                    f"AGENT_WINDOW_REHYDRATE_FAILED:{agent_id}:{exc}"
+                ) from exc
+        window = max(1, getattr(kernel, "_feature_window", 50))
+        kernel._bars = list(bars[-window:])  # noqa: SLF001
+        exits = ExitState()
+        for bar in bars:
+            exits = advance_exit_state(exits, bar)
+        kernel._exits = exits  # noqa: SLF001
+        kernel._risk_revision = len(rows)  # noqa: SLF001
+        try:
+            feed_cursor = store.restore().feed_cursor
+        except CorruptStateError:
+            feed_cursor = None
+        if feed_cursor and ":" in feed_cursor:
+            feed_id, _, seq = feed_cursor.rpartition(":")
+            try:
+                kernel._cursor = MarketCursor(  # noqa: SLF001
+                    feed_id=feed_id,
+                    last_event_id=feed_cursor,
+                    last_sequence=int(seq),
+                )
+            except ValueError:
+                kernel._cursor = None  # noqa: SLF001
 
     # -- lifecycle ----------------------------------------------------------
 
@@ -411,6 +477,17 @@ class AgentFactory:
             )
 
     def get(self, agent_id: str, version: str = "v1") -> AgentRecord:
+        """Pure read: returns the stored record and never writes.
+
+        The cursor shown is the last cursor persisted by a write path
+        (process/pause/retire/recover). Cursor re-sync from the durable
+        store is explicit via sync_cursor(), so CLI show/list are
+        read-only.
+        """
+        return self._record(self._row(agent_id, version))
+
+    def sync_cursor(self, agent_id: str, version: str = "v1") -> AgentRecord:
+        """Explicit read-through sync of the stored cursor from the store."""
         row = self._row(agent_id, version)
         cursor = self._store_cursor(row)
         if cursor != row["cursor"]:

@@ -508,3 +508,237 @@ def test_rw5_01_capacity_6(tmp_path: Path) -> None:
     assert factory.get("agent_a").cursor == "feed-p:3"
     assert len(_snapshot(factory, "agent_a").orders) == 3
     assert len(_snapshot(factory, "agent_b").orders) == 3
+
+
+def test_rw5_01_2_window_rehydration(tmp_path: Path) -> None:
+    """RW5-01-AC2 (windows): restart rehydrates feature/exit windows from
+    the durable inbox journal — the resumed agent observes the same
+    feature-bar count and exit state as an uninterrupted agent."""
+    seen_restarted: list = []
+    seen_control: list = []
+
+    def _recorder(seen: list):
+        def _evaluate(event: CanonicalMarketEvent, state: object) -> tuple:
+            bars = state.feature_state.bars if state.feature_state else ()
+            seen.append((event.sequence, len(bars), state.exit_state))
+            return ()
+
+        return _evaluate
+
+    bindings = {("cand_exp1", "v1"): _binding(SHA_A)}
+    root = tmp_path / "agents"
+    factory = _factory(
+        root,
+        behaviors={"agent_a": _recorder(seen_restarted)},
+        bindings=bindings,
+    )
+    factory.register(_manifest("agent_a"))
+    factory.start("agent_a")
+    events = [_event("feed-p", seq, price=str(100 + seq)) for seq in range(1, 4)]
+    for event in events:
+        factory.process("agent_a", event)
+    assert [row[1] for row in seen_restarted] == [0, 1, 2]
+
+    control = _factory(
+        tmp_path / "control",
+        behaviors={"agent_a": _recorder(seen_control)},
+        bindings=bindings,
+    )
+    control.register(_manifest("agent_a"))
+    control.start("agent_a")
+    for event in events:
+        control.process("agent_a", event)
+    fourth = _event("feed-p", 4, price="104")
+    control.process("agent_a", fourth)
+    assert seen_control[-1][1] == 3
+
+    restarted = _factory(root, behaviors={}, bindings=bindings)
+    restarted.recover("agent_a")
+    restarted.start("agent_a")
+    # Duplicate replay re-evaluates nothing.
+    restarted._kernels.clear()
+    before = len(seen_restarted)
+    for event in events:
+        result = restarted.process("agent_a", event)
+        assert result.status == "ACKNOWLEDGED"
+    assert len(seen_restarted) == before
+    # A fresh behavior on the rebuilt kernel observes the rehydrated window.
+    restarted._kernels.clear()
+    restarted._resolve_behavior = lambda _agent_id: _recorder(seen_restarted)
+    restarted.process("agent_a", fourth)
+    assert seen_restarted[-1][1] == 3
+    assert seen_restarted[-1] == seen_control[-1]
+
+
+def test_rw5_01_5_registry_bound_candidate(tmp_path: Path) -> None:
+    """RW5-01-AC5 (binding): the agent register path consumes a real
+    RW4-01 CandidateRegistry package (SUCCESS experiment + verify) and a
+    real CandidateRuntime.load evaluator, not fake digest namespaces."""
+    import hashlib
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
+
+    from indodax_lab.contracts.workbench import (
+        PipelineManifest,
+        PipelineNode,
+        RuntimePlan,
+        VerifiedRuntimePlan,
+    )
+    from indodax_lab.evaluation.candidates import CandidateRegistry, ExperimentEvidence
+    from indodax_lab.runtime.candidate import CandidateRuntime
+    from indodax_lab.strategies.base import RegisteredStrategy, StrategySpecification
+
+    now = _datetime(2026, 1, 1, 12, 0, tzinfo=_UTC)
+    blobs: dict[str, bytes] = {}
+
+    def _put(payload: bytes) -> str:
+        digest = hashlib.sha256(payload).hexdigest()
+        blobs[digest] = payload
+        return digest
+
+    def _resolve(ref: ArtifactRef) -> bytes:
+        try:
+            return blobs[ref.sha256]
+        except KeyError as exc:
+            raise LookupError(f"EVIDENCE_MISSING:{ref.kind}:{ref.id}") from exc
+
+    policy = ArtifactRef(kind="policy", id="pol", version="v1", sha256=_put(b"policy-bytes"))
+    strategy_ref = ArtifactRef(
+        kind="strategy_manifest", id="strat_rw5", version="v1", sha256=_put(b"strat-bytes")
+    )
+    pipeline = PipelineManifest(
+        pipeline_id="pipe_rw5",
+        version="1.0.0",
+        nodes=(PipelineNode(node_id="strat_rw5", kind="ta", output_port="out"),),
+        edges=(),
+        component_refs=(strategy_ref,),
+        dataset_timeframe_constraints={},
+        sizing_policy_ref=policy,
+        exit_policy_ref=policy,
+        risk_policy_ref=policy,
+        cost_policy_ref=policy,
+        execution_policy_ref=policy,
+    )
+    pipeline_ref = ArtifactRef(
+        kind="pipeline",
+        id="pipe_rw5",
+        version="1.0.0",
+        sha256=hashlib.sha256(pipeline.model_dump_json().encode()).hexdigest(),
+    )
+    blobs[pipeline_ref.sha256] = pipeline.model_dump_json().encode()
+    plan = RuntimePlan(
+        plan_id="plan_rw5",
+        version="1.0.0",
+        universe=("btc_idr",),
+        timeframe="1h",
+        dataset_refs=(),
+        pipeline_ref=pipeline_ref,
+        feature_schema_hash=_put(b"features"),
+        ordered_feature_names=("ema_fast", "ema_slow", "atr_14"),
+        sizing_policy_ref=policy,
+        exit_policy_ref=policy,
+        risk_policy_ref=policy,
+        cost_policy_ref=policy,
+        execution_policy_ref=policy,
+        git_sha="aa" * 20,
+        environment_digest="bb" * 32,
+        seed=7,
+    )
+    verified_plan = VerifiedRuntimePlan(
+        plan=plan, plan_digest=manifest_digest(plan), verified_at_utc=now
+    )
+    result_path = tmp_path / "result.json"
+    result_path.write_bytes(b'{"result_digest":"digest-1"}')
+    experiment = ExperimentEvidence(
+        experiment_id="exp_rw5_001",
+        status="SUCCESS",
+        plan=verified_plan,
+        result_digest="digest-1",
+        artifact_path=str(result_path),
+    )
+    registry = CandidateRegistry(
+        root=tmp_path / "candidates", clock=lambda: now, artifact_resolver=_resolve
+    )
+    manifest = registry.package(experiment.experiment_id, "review-pass-001", experiment=experiment)
+    ref = manifest.to_artifact_ref()
+    assert registry.get(ref) == manifest
+    verified = registry.verify(ref)
+    assert verified.candidate_digest == manifest_digest(manifest)
+
+    def _decide(frame: object) -> list:
+        # Stateless w.r.t. the logic hash (which covers closure values):
+        # emit once, on the first feed minute only.
+        minute = getattr(frame, "as_of", BASE_TS).minute
+        if minute == 1:
+            return [
+                SignalIntent(
+                    intent_id="raw_first",
+                    decision_ts=BASE_TS,
+                    pair="btc_idr",
+                    side=OrderSide.BUY,
+                    desired_qty=Decimal("0.001"),
+                    limit_price=Decimal("100000000"),
+                    stop_loss=Decimal("99000000"),
+                    take_profit=Decimal("102000000"),
+                )
+            ]
+        return []
+
+    strategy = RegisteredStrategy(
+        specification=StrategySpecification(
+            strategy_id="strat_rw5",
+            version="v1",
+            family="ta",
+            timeframes=["1h"],
+            parameters={},
+            risk_profile={},
+            split="test",
+        ),
+        decide_fn=_decide,
+    )
+    runtime = CandidateRuntime.load(
+        verified, plan=verified_plan, pipeline=pipeline, strategy_resolver=lambda _ref: strategy
+    )
+
+    root = tmp_path / "agents"
+    factory = AgentFactory(
+        root,
+        candidate_resolver=lambda _ref: runtime,
+        behavior_resolver=lambda _agent_id: runtime.evaluate,
+    )
+    record = factory.register(
+        AgentManifest(
+            agent_id="agent_real",
+            version="v1",
+            candidate_ref=ref,
+            cohort_id="cohort_rw5",
+            initial_virtual_cash=CASH,
+            currency="IDR",
+            runtime_policy_refs=(),
+            namespace_id="ns_agent_real",
+            canonical_feed_identity="feed-p",
+        )
+    )
+    assert record.candidate_ref.sha256 == verified.candidate_digest
+    factory.start("agent_real")
+    events = [_event("feed-p", 1), _event("feed-p", 2)]
+    for event in events:
+        assert factory.process("agent_real", event).status == "ACKNOWLEDGED"
+    # The real evaluator's one entry intent became exactly one kernel order.
+    assert len(_snapshot(factory, "agent_real").orders) == 1
+    assert factory.get("agent_real").cursor == "feed-p:2"
+
+    # Restart over the same root: duplicate replay is a no-op and the real
+    # evaluator keeps passing feature identity on new events.
+    restarted = AgentFactory(
+        root,
+        candidate_resolver=lambda _ref: runtime,
+        behavior_resolver=lambda _agent_id: runtime.evaluate,
+    )
+    restarted.recover("agent_real")
+    restarted.start("agent_real")
+    for event in events:
+        assert restarted.process("agent_real", event).status == "ACKNOWLEDGED"
+    assert len(_snapshot(restarted, "agent_real").orders) == 1
+    assert restarted.process("agent_real", _event("feed-p", 3)).status == "ACKNOWLEDGED"
+    assert restarted.get("agent_real").cursor == "feed-p:3"
