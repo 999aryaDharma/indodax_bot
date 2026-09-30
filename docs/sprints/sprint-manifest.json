@@ -791,9 +791,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/D01-01-tabular-mlp-baseline.md",
       "priority": "P1",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/d01-01-tabular-mlp-baseline",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -818,35 +818,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/D01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "DELTA-PASS; fix cycle 2 (commit 2642833) resolved AdamW optimizer state dictionary restoration; smoke 6 passed."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "D01-01-AC0",
           "test_case": "test_d01_01_valid_contract",
           "behavior": "MLP menguji manfaat nonlinearitas dengan fitur tabular yang sama seperti M01/M02",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D01-01-AC1",
           "test_case": "test_d01_01_contract_1",
           "behavior": "Same sample comparator dijaga",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D01-01-AC2",
           "test_case": "test_d01_01_contract_2",
           "behavior": "Tiga finalist seed tidak cherry-pick",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D01-01-AC3",
           "test_case": "test_d01_01_contract_3",
           "behavior": "Training interrupted dapat resume pada best checkpoint",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -889,9 +888,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/D02-01-causal-tcn-baseline.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/d02-01-causal-tcn-baseline",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -914,35 +913,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/D02-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 4 unit tests pass; upstream dependency D01-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "D02-01-AC0",
           "test_case": "test_d02_01_valid_contract",
           "behavior": "Eksperimen D02-01 menghasilkan forecast yang tunduk pada evaluator bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D02-01-AC1",
           "test_case": "test_d02_01_contract_1",
           "behavior": "Future token perturbation tidak mengubah output historis",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D02-01-AC2",
           "test_case": "test_d02_01_contract_2",
           "behavior": "Finite loss pada tiny fixture",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D02-01-AC3",
           "test_case": "test_d02_01_contract_3",
           "behavior": "Parameter dan compute budget tercatat",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -985,9 +983,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/D03-01-resnet-lstm-challenger.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/d03-01-resnet-lstm-challenger",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -1007,35 +1005,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/D03-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 6 unit tests pass; upstream dependency D02-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "D03-01-AC0",
           "test_case": "test_d03_01_valid_contract",
           "behavior": "Eksperimen D03-01 menghasilkan forecast yang tunduk pada evaluator bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D03-01-AC1",
           "test_case": "test_d03_01_contract_1",
           "behavior": "No bidirectional future leakage",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D03-01-AC2",
           "test_case": "test_d03_01_contract_2",
           "behavior": "Mask menjaga padded sequence",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D03-01-AC3",
           "test_case": "test_d03_01_contract_3",
           "behavior": "Common evaluation cost dan folds digunakan",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -1077,9 +1074,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/D04-01-compact-itransformer-challenger.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/d04-01-compact-itransformer-challenger",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -1099,35 +1096,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/D04-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 4 unit tests pass; upstream dependency D02-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "D04-01-AC0",
           "test_case": "test_d04_01_valid_contract",
           "behavior": "Eksperimen D04-01 menghasilkan forecast yang tunduk pada evaluator bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D04-01-AC1",
           "test_case": "test_d04_01_contract_1",
           "behavior": "Shape time-feature tidak tertukar",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D04-01-AC2",
           "test_case": "test_d04_01_contract_2",
           "behavior": "Missing variate masking diuji",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "D04-01-AC3",
           "test_case": "test_d04_01_contract_3",
           "behavior": "Tidak memakai future universe",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -1454,9 +1450,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/F01-02-staged-foundation-adaptation.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/f01-02-staged-foundation-adaptation",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -1476,35 +1472,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/F01-02-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "DELTA-PASS; 11 unit tests pass; upstream dependencies F01-01 and D01-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "F01-02-AC0",
           "test_case": "test_f01_02_valid_contract",
           "behavior": "Eksperimen F01-02 menghasilkan forecast yang tunduk pada evaluator bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "F01-02-AC1",
           "test_case": "test_f01_02_contract_1",
           "behavior": "Stage sebelumnya harus terdokumentasi",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "F01-02-AC2",
           "test_case": "test_f01_02_contract_2",
           "behavior": "Full fine tune bukan default",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "F01-02-AC3",
           "test_case": "test_f01_02_contract_3",
           "behavior": "Contaminated dates tidak menjadi sealed claim",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -1547,9 +1542,9 @@
       "spec": "docs/specs/15-deep-learning-and-provenance.md",
       "path": "docs/sprints/deep-learning/G01-01-point-in-time-graph-challenger.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/g01-01-point-in-time-graph-challenger",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -1569,35 +1564,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/G01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 14 unit tests pass; upstream dependency D01-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "G01-01-AC0",
           "test_case": "test_g01_01_valid_contract",
           "behavior": "Eksperimen G01-01 menghasilkan forecast yang tunduk pada evaluator bersama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "G01-01-AC1",
           "test_case": "test_g01_01_contract_1",
           "behavior": "Full sample adjacency ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "G01-01-AC2",
           "test_case": "test_g01_01_contract_2",
           "behavior": "New listing tidak masuk graph lama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "G01-01-AC3",
           "test_case": "test_g01_01_contract_3",
           "behavior": "Dibandingkan no-edge MLP dan panel regression",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -3273,9 +3267,9 @@
       "spec": "docs/specs/16-order-book-research.md",
       "path": "docs/sprints/microstructure/L01-01-deeplob-baseline.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/l01-01-deeplob-baseline",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -3297,35 +3291,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/L01-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "DELTA-PASS; 4 integration smoke tests pass; upstream dependency D01-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "L01-01-AC0",
           "test_case": "test_l01_01_valid_contract",
           "behavior": "DeepLOB mengukur short-horizon edge setelah spread dan latency melalui book dataset terverifikasi",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L01-01-AC1",
           "test_case": "test_l01_01_contract_1",
           "behavior": "Mid-price accuracy tinggi belum berarti net profitable",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L01-01-AC2",
           "test_case": "test_l01_01_contract_2",
           "behavior": "Gapped book blocks run",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L01-01-AC3",
           "test_case": "test_l01_01_contract_3",
           "behavior": "Baseline MLP memakai sample identik",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
@@ -3367,9 +3360,9 @@
       "spec": "docs/specs/16-order-book-research.md",
       "path": "docs/sprints/microstructure/L02-01-tlob-style-challenger.md",
       "priority": "P2",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/l02-01-tlob-style-challenger",
       "external_gates": [
         "Portfolio backlog activation by owner; not in default scheduler",
@@ -3389,35 +3382,34 @@
         "docs/research/dataset-feature-contracts.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/L02-01-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 4 integration smoke tests pass; upstream dependency L01-01 cleared."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "L02-01-AC0",
           "test_case": "test_l02_01_valid_contract",
           "behavior": "Attention LOB challenger dibandingkan dengan DeepLOB pada biaya dan budget yang sama",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L02-01-AC1",
           "test_case": "test_l02_01_contract_1",
           "behavior": "No perfect queue fill assumption",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L02-01-AC2",
           "test_case": "test_l02_01_contract_2",
           "behavior": "Batas budget menghentikan search",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "L02-01-AC3",
           "test_case": "test_l02_01_contract_3",
           "behavior": "Poor valid result diarsipkan",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "medium",
