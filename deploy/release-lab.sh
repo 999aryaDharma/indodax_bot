@@ -72,7 +72,42 @@ if [ "${SW_STATUS}" != "READY" ]; then
     exit 1
 fi
 
+# Step 4: Package immutable manifest (PM-05). Shell-only, offline, no live
+# effects: no orders, no credentials, no production state changes. The script
+# no longer just prints READY; it writes a read-only manifest file whose own
+# sha256 covers the release identity, and refuses to package when NOT_READY
+# (guarded above).
+MANIFEST_OUT="${RELEASE_MANIFEST_OUT:-${ROOT_DIR}/release-manifest-${RELEASE_TAG}.json}"
+echo ">>> Packaging immutable release manifest: ${MANIFEST_OUT}"
+python - "${MANIFEST_PATH}" "${RELEASE_TAG}" "${GIT_SHA}" "${MANIFEST_OUT}" <<'EOF'
+import hashlib
+import json
+import sys
+from datetime import UTC, datetime
+
+manifest_path, tag, sha, out_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+manifest_bytes = open(manifest_path, "rb").read()
+manifest = {
+    "schema_version": 1,
+    "release_tag": tag,
+    "git_sha": sha,
+    "software_rc_status": "READY",
+    "champion_status": "PENDING_FORWARD_EVALUATION",
+    "sprint_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+    "packaged_at_utc": datetime.now(UTC).isoformat(),
+    "note": "Offline release-provenance record only. Not a deployment or activation proof.",
+}
+canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+manifest["manifest_sha256"] = hashlib.sha256(canonical).hexdigest()
+with open(out_path, "w", encoding="utf-8") as fh:
+    json.dump(manifest, fh, indent=2, sort_keys=True)
+    fh.write("\n")
+print(f"manifest_sha256={manifest['manifest_sha256']}")
+EOF
+chmod 444 "${MANIFEST_OUT}"
+
 echo "================================================================"
-echo " Release Candidate ${RELEASE_TAG} verified and packaged cleanly."
+echo " Release Candidate ${RELEASE_TAG} packaged as immutable manifest:"
+echo " ${MANIFEST_OUT} (read-only)"
 echo " Runbook & Rollback Target: documented in docs/quality/release-evidence.md"
 echo "================================================================"

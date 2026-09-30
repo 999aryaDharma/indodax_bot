@@ -17,6 +17,13 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from indodax_lab.verification.release_bundle import (
+    ProductionReleaseManifest,
+    ReleaseBundle,
+    ReleaseProvenanceError,
+    verify_production_artifact_bytes,
+)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -400,3 +407,212 @@ class ReleaseCandidateManager:
             "champion_status": "QUALIFIED",
             "reason": "All release and champion forward gates satisfied",
         }
+
+
+# ---------------------------------------------------------------------------
+# PM-05 — Candidate-bound release provenance (offline verification only)
+# ---------------------------------------------------------------------------
+
+#: Authenticity reported only when a detached signature covering the manifest
+#: digest verifies against caller-supplied offline trust roots. Anything else
+#: is content-integrity checksum evidence, never a signature.
+SIGNATURE_VERIFIED = "SIGNATURE_VERIFIED"
+CHECKSUM_ONLY = "CHECKSUM_ONLY"
+
+
+class DetachedSignature(BaseModel):
+    """Offline detached-signature capability record (PM-05-AC2/AC5).
+
+    The module holds no keys. Callers supply the offline trust roots via
+    :class:`TrustPolicy`; verification only checks that a signature record
+    covers this manifest digest under a trusted key id. Asymmetric
+    cryptography itself is operator-provided outside this module.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    key_id: str
+    covered_digest: str
+    signature: str
+
+
+class TrustPolicy(BaseModel):
+    """Offline verification inputs supplied by the operator (PM-05).
+
+    No keys are added here; ``trusted_key_ids`` are caller-supplied offline
+    trust roots. ``request_origin="research"`` can never yield eligibility.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    trusted_key_ids: tuple[str, ...] = Field(default_factory=tuple)
+    signatures: dict[str, DetachedSignature] = Field(default_factory=dict)
+    gate_evidence: dict[str, dict] = Field(default_factory=dict)
+    aggregate_evidence: dict = Field(default_factory=dict)
+    known_dependency_digests: tuple[str, ...] = Field(default_factory=tuple)
+    source_clean: bool = True
+    request_origin: str = "production"
+
+
+class VerifiedRelease(BaseModel):
+    """Result of offline release verification (PM-05).
+
+    ``deployed`` is set only by :func:`mark_deployed` under production
+    origin with full eligibility; research requests can never mark deployed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", protected_namespaces=())
+
+    release_id: str
+    eligible: bool
+    authenticity: str = CHECKSUM_ONLY
+    deployed: bool = False
+    reasons: list[str] = Field(default_factory=list)
+
+
+def canonical_evidence_bytes(evidence: dict) -> bytes:
+    """Canonical JSON bytes for aggregate/gate evidence digests."""
+    return json.dumps(evidence, sort_keys=True, separators=(",", ":"), default=str).encode(
+        "utf-8"
+    )
+
+
+def verify_release(
+    manifest: ProductionReleaseManifest | ReleaseBundle,
+    artifacts: dict[str, str | bytes],
+    trust_policy: TrustPolicy,
+) -> VerifiedRelease:
+    """Verify a candidate-bound release manifest fail-closed (PM-05).
+
+    Raises for corrupt identity/bytes; returns an ineligible
+    :class:`VerifiedRelease` (never deployed) when activation evidence is
+    insufficient. A local SHA-256 checksum is reported as ``CHECKSUM_ONLY``
+    and never described as a signature.
+    """
+    if isinstance(manifest, ReleaseBundle):
+        raise ReleaseProvenanceError(
+            "LEGACY_BUNDLE_NOT_AUTHENTIC: digest-only legacy bundles remain readable "
+            "evidence but cannot claim release authenticity; package a "
+            "ProductionReleaseManifest with a detached signature (PM-05-AC2)."
+        )
+    if not isinstance(manifest, ProductionReleaseManifest):
+        raise ReleaseProvenanceError(
+            f"UNKNOWN_MANIFEST_TYPE: verify_release requires a ProductionReleaseManifest, "
+            f"got {type(manifest).__name__} (PM-05-AC0)."
+        )
+
+    verify_production_artifact_bytes(manifest, artifacts)
+
+    reasons: list[str] = []
+
+    signature = trust_policy.signatures.get(manifest.release_id)
+    if (
+        signature is not None
+        and signature.key_id in trust_policy.trusted_key_ids
+        and signature.covered_digest == manifest.manifest_digest
+        and isinstance(signature.signature, str)
+        and signature.signature.strip()
+        and isinstance(signature.key_id, str)
+        and signature.key_id.strip()
+    ):
+        authenticity = SIGNATURE_VERIFIED
+    else:
+        authenticity = CHECKSUM_ONLY
+        reasons.append(
+            "SIGNATURE_NOT_VERIFIED: no detached signature covering this manifest digest "
+            "verified against the offline trust roots; local SHA-256 checksums are "
+            "content-integrity evidence only, not a signature (PM-05-AC2)."
+        )
+
+    for candidate_id in manifest.candidate_ids:
+        ref = manifest.qualification_refs.get(candidate_id)
+        evidence = trust_policy.gate_evidence.get(ref or "")
+        if ref is None or not isinstance(ref, str) or not ref.strip():
+            reasons.append(
+                f"GATE_EVIDENCE_MISSING: candidate {candidate_id!r} has no qualification "
+                "ref; activation refused without independent gate evidence (PM-05-AC5)."
+            )
+        elif not isinstance(evidence, dict) or not evidence.get("qualified"):
+            reasons.append(
+                f"CANDIDATE_NOT_QUALIFIED: qualification ref {ref!r} for candidate "
+                f"{candidate_id!r} is missing or not qualified; activation refused "
+                "without independent gate evidence (PM-05-AC5)."
+            )
+
+    actual_aggregate = hashlib.sha256(
+        canonical_evidence_bytes(trust_policy.aggregate_evidence)
+    ).hexdigest()
+    if actual_aggregate != manifest.aggregate_evidence_digest:
+        reasons.append(
+            f"AGGREGATE_EVIDENCE_MISMATCH: shared-capital evidence digest {actual_aggregate} "
+            f"does not match manifest {manifest.aggregate_evidence_digest}; activation "
+            "refused (PM-05-AC6)."
+        )
+
+    if not trust_policy.source_clean:
+        reasons.append(
+            "SOURCE_DIRTY: source tree or dependency identity is dirty/unknown; "
+            "cannot produce an eligible release (PM-05-AC3)."
+        )
+    if manifest.dependency_digest not in set(trust_policy.known_dependency_digests):
+        reasons.append(
+            "UNKNOWN_DEPENDENCY_IDENTITY: manifest dependency digest is not among the "
+            "known offline dependency identities; cannot produce an eligible "
+            "release (PM-05-AC3)."
+        )
+
+    if trust_policy.request_origin.strip().lower() == "research":
+        reasons.append(
+            "RESEARCH_NEVER_ELIGIBLE: research requests can never be eligible for "
+            "production activation (PM-05-AC4)."
+        )
+
+    for pair, owner in manifest.pair_owner_map.items():
+        if owner not in manifest.candidate_digests:
+            reasons.append(
+                f"PAIR_OWNER_UNKNOWN: pair {pair!r} owned by unknown candidate {owner!r} "
+                "(PM-05-AC5)."
+            )
+
+    # Deduplicate while preserving order.
+    unique_reasons = list(dict.fromkeys(reasons))
+    return VerifiedRelease(
+        release_id=manifest.release_id,
+        eligible=not unique_reasons,
+        authenticity=authenticity,
+        deployed=False,
+        reasons=unique_reasons,
+    )
+
+
+def mark_deployed(
+    verified: VerifiedRelease, *, request_origin: str, actor: str = "operator"
+) -> VerifiedRelease:
+    """Mark a verified release deployed under production authority only (PM-05-AC4).
+
+    Research requests always raise ``RESEARCH_CANNOT_DEPLOY``. Production
+    requests raise ``ACTIVATION_NOT_ELIGIBLE`` unless the release is fully
+    eligible with a verified detached signature. This function changes no
+    production state; it returns an updated offline record.
+    """
+    _ = actor
+    if request_origin.strip().lower() == "research":
+        raise ReleaseProvenanceError(
+            f"RESEARCH_CANNOT_DEPLOY: release {verified.release_id!r} from a research "
+            "request cannot mark deployed; research paths never gain production "
+            "write authority (PM-05-AC4)."
+        )
+    if verified.deployed:
+        return verified
+    if not verified.eligible:
+        raise ReleaseProvenanceError(
+            f"ACTIVATION_NOT_ELIGIBLE: release {verified.release_id!r} is not eligible "
+            f"({'; '.join(verified.reasons) or 'no reasons'}); refused (PM-05)."
+        )
+    if verified.authenticity != SIGNATURE_VERIFIED:
+        raise ReleaseProvenanceError(
+            f"AUTHENTICITY_INSUFFICIENT: release {verified.release_id!r} has authenticity "
+            f"{verified.authenticity!r}; a verified detached signature is required "
+            "for deployment (PM-05-AC2)."
+        )
+    return verified.model_copy(update={"deployed": True})
