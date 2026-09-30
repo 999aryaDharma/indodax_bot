@@ -116,36 +116,45 @@ class IndodaxCandleAdapter:
         pair: str,
         interval: str,
         ingested_at: datetime,
+        venue_symbol: str | None = None,
     ) -> ParseBatch:
         if isinstance(payload, list):
             return parse_pascal_rows(
-                payload, pair=pair, interval=interval, ingested_at=ingested_at
+                payload, pair=pair, interval=interval, ingested_at=ingested_at,
+                venue_symbol=venue_symbol,
             )
         elif isinstance(payload, dict):
             return parse_columnar(
-                payload, pair=pair, interval=interval, ingested_at=ingested_at
+                payload, pair=pair, interval=interval, ingested_at=ingested_at,
+                venue_symbol=venue_symbol,
             )
         else:
             raise InvalidCandlePayload(type(payload).__name__)
 
 
 def parse_pascal_rows(
-    payload: object, *, pair: str, interval: str, ingested_at: datetime
+    payload: object, *, pair: str, interval: str, ingested_at: datetime,
+    venue_symbol: str | None = None,
 ) -> ParseBatch:
     """Parse the documented list-of-PascalCase-objects response without I/O."""
     if not isinstance(payload, list):
         raise InvalidCandlePayload("pascal_shape_must_be_list")
-    return _parse_rows(payload, pair=pair, interval=interval, ingested_at=ingested_at)
+    return _parse_rows(
+        payload, pair=pair, interval=interval, ingested_at=ingested_at,
+        venue_symbol=venue_symbol,
+    )
 
 
 def parse_columnar(
-    payload: object, *, pair: str, interval: str, ingested_at: datetime
+    payload: object, *, pair: str, interval: str, ingested_at: datetime,
+    venue_symbol: str | None = None,
 ) -> ParseBatch:
     """Parse the documented t/o/h/l/c/v response without I/O."""
     if not isinstance(payload, dict):
         raise InvalidCandlePayload("columnar_shape_must_be_object")
     return _parse_rows(
-        _columnar_rows(payload), pair=pair, interval=interval, ingested_at=ingested_at
+        _columnar_rows(payload), pair=pair, interval=interval, ingested_at=ingested_at,
+        venue_symbol=venue_symbol,
     )
 
 
@@ -173,8 +182,9 @@ class IndodaxCandleClient:
         start: datetime,
         end: datetime,
         received_at: datetime,
+        venue_symbol: str | None = None,
     ) -> CandleFetch:
-        venue_symbol = _venue_symbol(pair)
+        venue_symbol = venue_symbol or _venue_symbol(pair)
         _interval_seconds(interval)
         _require_utc(start, "start")
         _require_utc(end, "end")
@@ -214,7 +224,8 @@ class IndodaxCandleClient:
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise InvalidCandlePayload("invalid_json") from error
         batch = self._adapter.parse(
-            payload, pair=pair, interval=interval, ingested_at=wire.received_at
+            payload, pair=pair, interval=interval, ingested_at=wire.received_at,
+            venue_symbol=venue_symbol,
         )
         return CandleFetch(wire=wire, batch=_constrain_to_window(batch, start=start, end=end))
 
@@ -246,10 +257,11 @@ def _columnar_rows(payload: Mapping[object, object]) -> list[object]:
 
 
 def _parse_rows(
-    rows: Sequence[object], *, pair: str, interval: str, ingested_at: datetime
+    rows: Sequence[object], *, pair: str, interval: str, ingested_at: datetime,
+    venue_symbol: str | None = None,
 ) -> ParseBatch:
     canonical_pair = CanonicalPair(pair=pair)
-    venue_symbol = _venue_symbol(pair)
+    venue_symbol = venue_symbol or _venue_symbol(pair)
     interval_seconds = _interval_seconds(interval)
     _require_utc(ingested_at, "ingested_at")
     parsed: dict[str, list[tuple[int, ParsedCandle, tuple[Decimal, ...]]]] = {}
