@@ -99,6 +99,7 @@ def test_rp_05_4_fresh_interpreter_imports_no_live_trading() -> None:
     entries = ",".join(f"indodax_lab.{entry}" for entry in RESEARCH_ENTRIES)
     code = (
         "import sys; "
+        "sys.path.insert(0, 'src'); "
         f"import {entries}; "
         "live = [m for m in sys.modules if m == 'indodax_lab.execution.indodax_trading']; "
         "assert not live, live; "
