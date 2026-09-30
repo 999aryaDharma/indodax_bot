@@ -4756,9 +4756,9 @@
       "spec": "docs/specs/17-operations-security-and-recovery.md",
       "path": "docs/sprints/operations/OPS-03-storage-retention-and-integrity-maintenance.md",
       "priority": "P0",
-      "status": "REVIEW",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/ops-03-storage-retention-and-integrity-maintenance",
       "external_gates": [
         "No additional portfolio activation gate; data/policy validity still applies."
@@ -4778,35 +4778,34 @@
         "docs/decisions/ADR-002-temporal-and-accounting-semantics.md"
       ],
       "evidence": {
-        "kind": "unverified_handoff",
+        "kind": "independent_review",
         "path": "docs/sprints/handoffs/OPS-03-HANDOFF.md",
-        "source_commit": "fc0b4eb4bd57ae9fd5d9edac4237645fba72aed4",
-        "review": "Pending independent review; original handoff retained verbatim."
+        "review": "PASS; 18 unit/integration tests passed; ModelRegistry champion preservation verified, fail-closed junction/traversal guards verified, crash idempotency verified."
       },
       "acceptance_test_mapping": [
         {
           "criterion": "OPS-03-AC0",
           "test_case": "test_ops_03_valid_contract",
           "behavior": "Cleanup hanya menghapus artifact tidak direferensikan setelah retention dan dry-run audit",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "OPS-03-AC1",
           "test_case": "test_ops_03_contract_1",
           "behavior": "Champion dan sealed inputs tidak terhapus",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "OPS-03-AC2",
           "test_case": "test_ops_03_contract_2",
           "behavior": "Symlink escape ditolak",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "OPS-03-AC3",
           "test_case": "test_ops_03_contract_3",
           "behavior": "Interrupted cleanup dapat rerun tanpa menghapus live data",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
