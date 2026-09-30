@@ -10204,9 +10204,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/runtime-parity/RP-05-runtime-parity-qualification-fixtures.md",
       "priority": "P0",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
+      "independent_reviewer": "Antigravity / coordinator (independent PASS)",
       "recommended_branch": "feat/rp-05-runtime-parity-qualification-fixtures",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -10236,41 +10236,46 @@
           "criterion": "RP-05-AC0",
           "test_case": "test_rp_05_0",
           "behavior": "Candidate intent IDs/content match before venue boundary",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RP-05-AC1",
           "test_case": "test_rp_05_1",
           "behavior": "Same risk state gives same quantity/reason",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RP-05-AC2",
           "test_case": "test_rp_05_2",
           "behavior": "Same normalized fills produce identical journal totals",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RP-05-AC3",
           "test_case": "test_rp_05_3",
           "behavior": "Clock/fill differences cannot mask order-semantic divergence",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RP-05-AC4",
           "test_case": "test_rp_05_4",
           "behavior": "Research transitive imports expose no real writer",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RP-05-AC5",
           "test_case": "test_rp_05_program_5",
           "behavior": "Identical candidate events policies and starting state yield equal decisions before venue effects",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
-      "complexity": "M"
+      "complexity": "M",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/RP-05-HANDOFF.md",
+        "review": "PASS; 8 integration and architecture firewall tests passed; decision parity across simulator, shadow, and production-fake verified; fresh interpreter firewall verified."
+      }
     },
     {
       "id": "RW3-01",
@@ -10309,9 +10314,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW3-01-experiment-lifecycle-and-backtest-orchestration.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
+      "independent_reviewer": "Antigravity / coordinator (independent PASS)",
       "recommended_branch": "feat/rw3-01-experiment-lifecycle-and-backtest-orchestration",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -10341,59 +10346,64 @@
           "criterion": "RW3-01-AC0",
           "test_case": "test_rw3_01_0",
           "behavior": "Completed experiment edit rejects and clone gets new ID",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC1",
           "test_case": "test_rw3_01_1",
           "behavior": "Cancel racing stale worker prevents successful publication",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC2",
           "test_case": "test_rw3_01_2",
           "behavior": "Crash between artifact and final status resumes idempotently",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC3",
           "test_case": "test_rw3_01_3",
           "behavior": "Failed trials remain queryable",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC4",
           "test_case": "test_rw3_01_4",
           "behavior": "Same manifest/seed/events reproduces normalized result digest",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC5",
           "test_case": "test_rw3_01_bootstrap_recovery",
           "behavior": "First experiment runs from resolved components without a completed candidate and publishes the pinned runtime-plan digest",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC6",
           "test_case": "test_rw3_01_program_6",
           "behavior": "Multi-pair batch creates equal-capital independent runs with stable child identities on retry",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC7",
           "test_case": "test_rw3_01_program_7",
           "behavior": "One failed pair preserves sibling results and is visible in batch status",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW3-01-AC8",
           "test_case": "test_rw3_01_program_8",
           "behavior": "Trade reports separate fills closed lifecycles open positions fees and unavailable win rate",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
-      "complexity": "L"
+      "complexity": "L",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/RW3-01-HANDOFF.md",
+        "review": "PASS; 9 integration tests in test_experiment_lifecycle.py passed; thread-safe SQLite ExperimentStore verified; stale worker cancellation fencing verified; trade reporting and pnl math verified."
+      }
     },
     {
       "id": "RW4-01",
@@ -10423,14 +10433,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW4-01-immutable-candidate-packaging-and-lifecycle.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw4-01-immutable-candidate-packaging-and-lifecycle",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
       ],
-      "current_context": "Model/release bundles and candidate IDs exist; no full immutable research package.",
+      "current_context": "Dependencies RW3-01 and ML-04 are DONE. Unlocked and ready for implementation.",
       "unlocks": [
         "RW5-01",
         "RW7-01",
