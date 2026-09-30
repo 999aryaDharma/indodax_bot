@@ -257,18 +257,38 @@ class D01MLPTrainer:
                 }
                 tracker.best_weights = best_weights_tensor
             # Restore optimizer state
-            def list_to_tensor(obj):
-                if isinstance(obj, dict):
-                    return {k: list_to_tensor(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
-                    # Check if this looks like a tensor (list of numbers)
-                    if all(isinstance(x, (int, float)) for x in obj):
-                        return torch.tensor(obj, dtype=torch.float32)
-                    return [list_to_tensor(x) for x in obj]
-                else:
-                    return obj
-            
-            optimizer_state_restored = list_to_tensor(checkpoint.optimizer_state)
+            def _restore_opt_state(opt_data: dict[str, Any]) -> dict[str, Any]:
+                state: dict[int, Any] = {}
+                for k, v in opt_data.get("state", {}).items():
+                    param_id = int(k) if isinstance(k, str) and k.isdigit() else k
+                    p_state: dict[str, Any] = {}
+                    for sk, sv in v.items():
+                        if isinstance(sv, list):
+                            p_state[sk] = torch.tensor(sv, dtype=torch.float32)
+                        elif isinstance(sv, (int, float)):
+                            if sk == "step":
+                                p_state[sk] = torch.tensor(sv, dtype=torch.float32)
+                            else:
+                                p_state[sk] = sv
+                        else:
+                            p_state[sk] = sv
+                    state[param_id] = p_state
+
+                param_groups = []
+                for g in opt_data.get("param_groups", []):
+                    pg: dict[str, Any] = {}
+                    for gk, gv in g.items():
+                        if gk == "params" and isinstance(gv, list):
+                            pg[gk] = [int(p) for p in gv]
+                        elif gk == "betas" and isinstance(gv, (list, tuple)):
+                            pg[gk] = tuple(float(b) for b in gv)
+                        else:
+                            pg[gk] = gv
+                    param_groups.append(pg)
+
+                return {"state": state, "param_groups": param_groups}
+
+            optimizer_state_restored = _restore_opt_state(checkpoint.optimizer_state)
             optimizer.load_state_dict(optimizer_state_restored)
             # Restore RNG states
             rng = checkpoint.rng_state

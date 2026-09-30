@@ -71,3 +71,12 @@ Full lab suite verification: 235 passed across all domains.
   best_weights+best_epoch; resume restores all three (sibling authoritative);
   comparator fails closed on index/feature divergence. Smoke 6 passed, exit 0;
   resume-equals-uninterrupted confirmed (max prob diff 0.0).
+
+## Fix cycle 2 — AdamW optimizer state restoration (2026-09-30, branch `dev`)
+
+- Actor: opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)
+- Scope: Fix optimizer state dictionary deserialization in `src/indodax_lab/models/dl/d01_mlp.py`.
+- Problem: `list_to_tensor` left string parameter IDs (`"0"`, `"1"`) in optimizer state dict, and converted `param_groups['params']` to float tensors instead of `list[int]`. PyTorch AdamW ignored the state and reset step/momentum to zero upon resumption, causing `test_d01_01_contract_3_resume_restores_global_best` to fail (`assert 8 == 5`).
+- Fix: Added `_restore_opt_state` to properly cast parameter IDs back to integers, cast `step` and momentum buffers to float tensors, and preserve `params` as integer lists and `betas` as float tuples.
+- Verification: `tests/integration/lab/test_d01_training_smoke.py` 6 passed, exit 0. Full downstream suite (`D01` through `L02`: 8 test suites) 53 passed, exit 0.
+
