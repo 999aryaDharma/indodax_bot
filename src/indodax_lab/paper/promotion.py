@@ -362,3 +362,18 @@ class ChampionRegistry:
         self.active_champion_id = decision.previous_champion_id
         self.active_champion_version = decision.previous_champion_version
         return decision
+
+
+def check_qualification_decision(decision: Any) -> bool:
+    """Validate that a tournament agent satisfied forward qualification (RW5-02)."""
+    if not getattr(decision, "qualified", False):
+        return False
+    if getattr(decision, "elapsed_days", 0) < 90:
+        return False
+    if getattr(decision, "closed_forward_trades", 0) < 100:
+        return False
+    if len(getattr(decision, "incident_refs", ())) > 0:
+        return False
+    if len(getattr(decision, "rejection_reasons", ())) > 0:
+        return False
+    return True

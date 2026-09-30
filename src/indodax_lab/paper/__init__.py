@@ -36,6 +36,22 @@ from indodax_lab.paper.promotion import (
     StalePromotionEvidenceError,
     UnsealedCandidatePromotionError,
 )
+from indodax_lab.paper.tournament_service import (
+    CohortManifest,
+    CohortNotFoundError,
+    CohortRecord,
+    ComparisonMetricRow,
+    ComparisonReport,
+    DuplicateCandidateCohortError,
+    IncomparableCohortError,
+    Leaderboard,
+    LeaderboardExcludedRow,
+    LeaderboardRankRow,
+    QualificationDecision,
+    SubjectPolicyInfo,
+    TournamentError,
+    TournamentService,
+)
 
 __all__ = [
     # SHADOW-01
@@ -71,4 +87,19 @@ __all__ = [
     "SelfApprovedPromotionError",
     "StalePromotionEvidenceError",
     "UnsealedCandidatePromotionError",
+    # RW5-02
+    "CohortManifest",
+    "CohortNotFoundError",
+    "CohortRecord",
+    "ComparisonMetricRow",
+    "ComparisonReport",
+    "DuplicateCandidateCohortError",
+    "IncomparableCohortError",
+    "Leaderboard",
+    "LeaderboardExcludedRow",
+    "LeaderboardRankRow",
+    "QualificationDecision",
+    "SubjectPolicyInfo",
+    "TournamentError",
+    "TournamentService",
 ]
