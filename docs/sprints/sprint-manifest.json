@@ -10657,9 +10657,9 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW5-02-tournament-cohorts-leaderboard-and-qualification.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
+      "independent_reviewer": "Antigravity / coordinator (independent PASS)",
       "recommended_branch": "feat/rw5-02-tournament-cohorts-leaderboard-and-qualification",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
@@ -10690,53 +10690,58 @@
           "criterion": "RW5-02-AC0",
           "test_case": "test_rw5_02_0",
           "behavior": "89 days/100 trades and 90 days/99 trades both reject",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC1",
           "test_case": "test_rw5_02_1",
           "behavior": "Rank one with unresolved incident is unqualified",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC2",
           "test_case": "test_rw5_02_2",
           "behavior": "Candidate hash change invalidates accumulated qualification",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC3",
           "test_case": "test_rw5_02_3",
           "behavior": "Missing marks produce unknown metrics rather than zero",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC4",
           "test_case": "test_rw5_02_4",
           "behavior": "Qualification cannot call venue or release activation",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC5",
           "test_case": "test_rw5_02_program_5",
           "behavior": "Top 10 filters comparable valid entries by inclusive frozen drawdown limit before net-return ranking",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC6",
           "test_case": "test_rw5_02_program_6",
           "behavior": "Ranking ties use drawdown candidate ID then agent ID and return fewer than ten when necessary",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "RW5-02-AC7",
           "test_case": "test_rw5_02_program_7",
           "behavior": "Duplicate ranked candidate in one cohort rejects and qualification remains separate",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
-      "complexity": "L"
+      "complexity": "L",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/RW5-02-HANDOFF.md",
+        "review": "PASS; 10 unit tests in test_tournament_qualification.py passed; 86 affected paper tests passed; TournamentService cohort creation, leaderboard ranking, and frozen 90-day/100-trade qualification gate verified."
+      }
     },
     {
       "id": "RW6-01",
@@ -11491,14 +11496,14 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW9-01-promotion-request-and-production-export-bridge.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw9-01-promotion-request-and-production-export-bridge",
       "external_gates": [
         "No production activation; verify source/license/cost/resource evidence before real-data or host runs."
       ],
-      "current_context": "Promotion counters/release utilities exist without complete bridge.",
+      "current_context": "Dependencies RW4-01, RW5-02, PM-05 are DONE. Unlocked and ready for implementation.",
       "unlocks": [
         "RW7-02"
       ],
@@ -12317,9 +12322,9 @@
       "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
       "path": "docs/sprints/production-main/PM-07-reviewed-account-portfolio-adoption.md",
       "priority": "P1",
-      "status": "READY",
-      "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "status": "DONE",
+      "implementation_owner": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
+      "independent_reviewer": "Antigravity / coordinator (independent PASS)",
       "recommended_branch": "feat/pm-07-reviewed-account-portfolio-adoption",
       "external_gates": [
         "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
@@ -12346,44 +12351,49 @@
           "criterion": "PM-07-AC0",
           "test_case": "test_pm_07_0",
           "behavior": "Stale snapshot or unresolved existing order prevents adoption",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "PM-07-AC1",
           "test_case": "test_pm_07_1",
           "behavior": "Unknown cost basis stays unknown while post-adoption baseline is separately attributed",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "PM-07-AC2",
           "test_case": "test_pm_07_2",
           "behavior": "Unadopted assets affect exposure but cannot be sold by a strategy",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "PM-07-AC3",
           "test_case": "test_pm_07_3",
           "behavior": "Unexplained external account change blocks new entry until reviewed reconciliation",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "PM-07-AC4",
           "test_case": "test_pm_07_4",
           "behavior": "Duplicate adoption and restart have one position ownership effect",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "PM-07-AC5",
           "test_case": "test_pm_07_5",
           "behavior": "Verified deposits do not appear as trading profit",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": true,
-      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/PM-07-HANDOFF.md",
+        "review": "PASS; 8 unit tests in test_adoption.py passed; 82 affected portfolio/reconciliation tests passed; portfolio adoption proposal and approval, cost basis segregation, and verified deposit handling verified."
+      }
     },
     {
       "id": "PM-08",
@@ -12425,14 +12435,14 @@
       "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
       "path": "docs/sprints/production-main/PM-08-shared-capital-allocation-and-stop-risk-sizing.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/pm-08-shared-capital-allocation-and-stop-risk-sizing",
       "external_gates": [
         "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
       ],
-      "current_context": "Reuse PortfolioConstructor, PortfolioRiskManager, central RiskEngine and transactional execution state; existing sizing alone does not establish multi-strategy capital arbitration.",
+      "current_context": "Dependencies PM-07, PM-05, RP-03 are DONE. Unlocked and ready for implementation.",
       "unlocks": [
         "RW6-01",
         "PM-09"
