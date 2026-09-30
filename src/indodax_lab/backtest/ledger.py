@@ -107,6 +107,7 @@ class ResearchLedger:
         self._processed_fill_ids: set[str] = set()
         self._total_fees_paid = Decimal("0")
         self._total_realized_gross_pnl = Decimal("0")
+        self._total_deposits = Decimal("0")
 
         if self._cash > Decimal("0"):
             ts = init_timestamp or datetime.now(UTC)
@@ -134,6 +135,53 @@ class ResearchLedger:
     def initial_cash(self) -> Decimal:
         """Initial deposited quote-currency cash."""
         return self._initial_cash
+
+    @property
+    def total_deposits(self) -> Decimal:
+        """Total cumulative verified external deposits."""
+        return self._total_deposits
+
+    @property
+    def adjusted_capital_baseline(self) -> Decimal:
+        """Cash-flow adjusted capital baseline (initial cash + verified deposits)."""
+        return self._initial_cash + self._total_deposits
+
+    def deposit(
+        self,
+        amount: Decimal,
+        timestamp: datetime | None = None,
+        deposit_id: str | None = None,
+    ) -> LedgerTransaction:
+        """Apply a verified external deposit into cash and capital without affecting PnL."""
+        amount = Decimal(str(amount))
+        if not amount.is_finite() or amount <= 0:
+            raise ValueError("INVALID_DEPOSIT_AMOUNT")
+        ts = timestamp or datetime.now(UTC)
+        _ensure_utc(ts, "timestamp")
+        with self.allocation_lock:
+            self._cash += amount
+            self._total_deposits += amount
+            tx_id = deposit_id or f"tx-deposit-{len(self.transactions) + 1}"
+            p_cash = Posting(
+                account=AccountType.CASH,
+                amount=amount,
+                currency=self.valuation_currency,
+            )
+            p_cap = Posting(
+                account=AccountType.CAPITAL,
+                amount=-amount,
+                currency=self.valuation_currency,
+            )
+            tx = LedgerTransaction(
+                transaction_id=tx_id,
+                fill_id=None,
+                timestamp=ts,
+                postings=(p_cash, p_cap),
+                base_qty_delta=Decimal("0"),
+                pair=None,
+            )
+            self.transactions.append(tx)
+            return tx
 
     @property
     def reservations(self) -> Mapping[str, Decimal]:
@@ -346,6 +394,7 @@ class ResearchLedger:
                 "schema_version": 1,
                 "valuation_currency": self.valuation_currency,
                 "initial_cash": str(self._initial_cash),
+                "total_deposits": str(self._total_deposits),
                 "cash": str(self._cash),
                 "reservations": {key: str(value) for key, value in self._reservations.items()},
                 "transactions": [
@@ -371,13 +420,14 @@ class ResearchLedger:
 
         ledger = cls(initial_cash=Decimal("0"), valuation_currency=valuation_currency)
         initial_cash = Decimal(str(data.get("initial_cash")))
+        total_deposits = Decimal(str(data.get("total_deposits", "0")))
         cash = Decimal(str(data.get("cash")))
         total_fees = Decimal(str(data.get("total_fees_paid")))
         gross_pnl = Decimal(str(data.get("total_realized_gross_pnl")))
-        decimals = (initial_cash, cash, total_fees, gross_pnl)
+        decimals = (initial_cash, total_deposits, cash, total_fees, gross_pnl)
         if any(not value.is_finite() for value in decimals):
             raise ValueError("LEDGER_STATE_NONFINITE")
-        if initial_cash < 0 or cash < 0 or total_fees < 0:
+        if initial_cash < 0 or total_deposits < 0 or cash < 0 or total_fees < 0:
             raise ValueError("LEDGER_STATE_NEGATIVE_BALANCE")
 
         raw_transactions = data.get("transactions")
@@ -448,7 +498,7 @@ class ResearchLedger:
             ),
             Decimal("0"),
         )
-        if capital_from_postings != initial_cash:
+        if capital_from_postings != initial_cash + total_deposits:
             raise ValueError("LEDGER_STATE_INITIAL_CAPITAL_MISMATCH")
         if cash_from_postings != cash:
             raise ValueError("LEDGER_STATE_CASH_MISMATCH")
@@ -482,6 +532,7 @@ class ResearchLedger:
                 raise ValueError(f"LEDGER_STATE_COST_BASIS_MISMATCH:{pair}")
 
         ledger._initial_cash = initial_cash
+        ledger._total_deposits = total_deposits
         ledger._cash = cash
         ledger._reservations = reservations
         ledger.transactions = transactions
