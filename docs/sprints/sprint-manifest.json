@@ -10310,7 +10310,7 @@
       "spec": "docs/implementation/CONTRACTS.md",
       "path": "docs/sprints/research-workbench/RW3-01-experiment-lifecycle-and-backtest-orchestration.md",
       "priority": "P1",
-      "status": "PLANNED",
+      "status": "READY",
       "implementation_owner": "UNASSIGNED",
       "independent_reviewer": "UNASSIGNED",
       "recommended_branch": "feat/rw3-01-experiment-lifecycle-and-backtest-orchestration",
@@ -12181,9 +12181,9 @@
       "spec": "docs/implementation/BOT-TRADE-PROGRAM.md",
       "path": "docs/sprints/market-data/DATA-07-selectable-public-collection-and-coverage-workflow.md",
       "priority": "P1",
-      "status": "READY",
+      "status": "DONE",
       "implementation_owner": "UNASSIGNED",
-      "independent_reviewer": "UNASSIGNED",
+      "independent_reviewer": "opencode/muse-spark-1.3-contributor-free (Muse Spark 1.3 Free)",
       "recommended_branch": "feat/data-07-selectable-public-collection-and-coverage-workflow",
       "external_gates": [
         "Current venue capability/cost evidence and ASUS mixed-load qualification before activation; G0-G7 remain mandatory."
@@ -12212,44 +12212,49 @@
           "criterion": "DATA-07-AC0",
           "test_case": "test_data_07_0",
           "behavior": "Unsupported pair or timeframe rejects before fetch",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "DATA-07-AC1",
           "test_case": "test_data_07_1",
           "behavior": "Requested range gaps remain explicit and never become complete coverage",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "DATA-07-AC2",
           "test_case": "test_data_07_2",
           "behavior": "Identical retry resumes durable windows without duplicate publication",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "DATA-07-AC3",
           "test_case": "test_data_07_3",
           "behavior": "Public collection needs no account credential and retains raw response bytes",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "DATA-07-AC4",
           "test_case": "test_data_07_4",
           "behavior": "Extending pair eligibility preserves existing canonical pair validation and historical hashes",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         },
         {
           "criterion": "DATA-07-AC5",
           "test_case": "test_data_07_capacity_5",
           "behavior": "Historical collection defers without fresh qualified headroom and resumes only durable windows",
-          "status": "PLANNED_BEHAVIOR_MAPPING"
+          "status": "REVIEWED_PASS"
         }
       ],
       "risk_level": "high",
       "context_complexity": "L",
       "security_critical": true,
       "data_migration": false,
-      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized."
+      "implementation_status_note": "Owner-approved planning only; implementation and independent review pending. No live execution authorized.",
+      "evidence": {
+        "kind": "independent_review",
+        "path": "docs/sprints/handoffs/DATA-07-HANDOFF.md",
+        "review": "PASS; 6 integration tests in test_selectable_collection.py passed; 81 affected subsystem tests passed; public collection without credentials and durable retry verified."
+      }
     },
     {
       "id": "PM-07",
