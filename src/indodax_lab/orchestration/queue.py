@@ -134,8 +134,19 @@ class SqliteJobQueue:
             )
         return self.get_job(job_def.job_id)
 
-    def claim_job(self, worker_id: str, as_of: datetime | None = None) -> JobRecord | None:
-        """Atomically claim the next eligible job and increment lease generation."""
+    def claim_job(
+        self,
+        worker_id: str,
+        as_of: datetime | None = None,
+        *,
+        only_job_id: str | None = None,
+    ) -> JobRecord | None:
+        """Atomically claim the next eligible job and increment lease generation.
+
+        ``only_job_id`` restricts the claim to one job so a caller that owns a
+        specific job (RW3-01) can never take another job's lease from a shared
+        queue. ``None`` keeps the original oldest-eligible behavior.
+        """
         if as_of is None:
             as_of = datetime.now(UTC)
         as_of = _ensure_utc(as_of, "as_of")
@@ -181,6 +192,7 @@ class SqliteJobQueue:
                     OR status = ?
                     OR (status = ? AND lease_expires_at <= ?)
                   )
+                  AND (? IS NULL OR job_id = ?)
                 ORDER BY created_at ASC
                 LIMIT 1
                 """,
@@ -190,6 +202,8 @@ class SqliteJobQueue:
                     JobStatus.FAILED_RETRYABLE.value,
                     JobStatus.RUNNING.value,
                     as_of_iso,
+                    only_job_id,
+                    only_job_id,
                 ),
             )
             row = cursor.fetchone()
@@ -630,6 +644,85 @@ class SqliteJobQueue:
                 """,
                 (new_status, error_message, as_of_iso, job_id, generation),
             )
+            conn.execute("COMMIT;")
+            return self.get_job(job_id)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def cancel_job(
+        self,
+        job_id: str,
+        *,
+        reason: str,
+        as_of: datetime | None = None,
+    ) -> JobRecord:
+        """Cancel a queued or running job so no worker can publish SUCCESS.
+
+        PENDING jobs transition directly. RUNNING jobs transition and have
+        their lease generation bumped, which fences the holding worker: its
+        later complete_job fails the live-lease check (status must be
+        RUNNING with matching owner and generation). Terminal jobs reject.
+        """
+        if not reason or not str(reason).strip():
+            raise ValueError("CANCEL_REASON_REQUIRED")
+        if as_of is None:
+            as_of = datetime.now(UTC)
+        as_of = _ensure_utc(as_of, "as_of")
+        as_of_iso = as_of.isoformat()
+
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            row = conn.execute(
+                "SELECT status, generation FROM jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            if row is None:
+                conn.execute("ROLLBACK;")
+                raise KeyError(f"JOB_NOT_FOUND:{job_id}")
+            status = row[0]
+            if status in (
+                JobStatus.SUCCESS.value,
+                JobStatus.FAILED_FINAL.value,
+                JobStatus.CANCELLED.value,
+            ):
+                conn.execute("ROLLBACK;")
+                raise ValueError(
+                    f"TERMINAL_JOB_CANNOT_CANCEL:{job_id}:{status}"
+                )
+            if status == JobStatus.RUNNING.value:
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, generation = generation + 1,
+                        owner_id = NULL, lease_expires_at = NULL,
+                        error_message = ?, updated_at = ?
+                    WHERE job_id = ?
+                    """,
+                    (
+                        JobStatus.CANCELLED.value,
+                        reason,
+                        as_of_iso,
+                        job_id,
+                    ),
+                )
+            elif status == JobStatus.PENDING.value:
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = ?, error_message = ?, updated_at = ?
+                    WHERE job_id = ?
+                    """,
+                    (JobStatus.CANCELLED.value, reason, as_of_iso, job_id),
+                )
+            else:
+                conn.execute("ROLLBACK;")
+                raise ValueError(
+                    f"JOB_STATE_CANNOT_CANCEL:{job_id}:{status}"
+                )
             conn.execute("COMMIT;")
             return self.get_job(job_id)
         except Exception:
